@@ -1,6 +1,9 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { createServer } from 'node:http';
+
+import Fastify from 'fastify';
+import fastifySwagger from '@fastify/swagger';
+import fastifySwaggerUi from '@fastify/swagger-ui';
 
 import { getMirrorBrainConfig } from '../../shared/config/index.js';
 import type {
@@ -47,55 +50,136 @@ interface MirrorBrainHttpServer {
   stop(): Promise<void>;
 }
 
-function sendJson(
-  response: {
-    statusCode: number;
-    setHeader(name: string, value: string): void;
-    end(body?: string): void;
+const authorizationScopeSchema = {
+  type: 'object',
+  properties: {
+    upstreamSource: { type: 'string' },
+    checkpoint: { type: 'string' },
   },
-  statusCode: number,
-  body: unknown,
-) {
-  response.statusCode = statusCode;
-  response.setHeader('content-type', 'application/json');
-  response.end(JSON.stringify(body));
+  required: ['upstreamSource', 'checkpoint'],
+} as const;
+
+const memoryEventSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    sourceType: { type: 'string' },
+    sourceRef: { anyOf: [{ type: 'string' }, { type: 'number' }] },
+    timestamp: { type: 'string' },
+    authorizationScopeId: { type: 'string' },
+    content: {
+      type: 'object',
+      additionalProperties: true,
+    },
+    captureMetadata: authorizationScopeSchema,
+  },
+  required: [
+    'id',
+    'sourceType',
+    'sourceRef',
+    'timestamp',
+    'authorizationScopeId',
+    'content',
+    'captureMetadata',
+  ],
+} as const;
+
+const candidateMemorySchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    memoryEventIds: {
+      type: 'array',
+      items: { type: 'string' },
+    },
+    reviewState: { type: 'string', enum: ['pending'] },
+  },
+  required: ['id', 'memoryEventIds', 'reviewState'],
+} as const;
+
+const reviewedMemorySchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    candidateMemoryId: { type: 'string' },
+    decision: { type: 'string', enum: ['keep', 'discard'] },
+  },
+  required: ['id', 'candidateMemoryId', 'decision'],
+} as const;
+
+const knowledgeArtifactSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    draftState: { type: 'string', enum: ['draft', 'published'] },
+    sourceReviewedMemoryIds: {
+      type: 'array',
+      items: { type: 'string' },
+    },
+  },
+  required: ['id', 'draftState', 'sourceReviewedMemoryIds'],
+} as const;
+
+const skillArtifactSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    approvalState: { type: 'string', enum: ['draft', 'approved'] },
+    workflowEvidenceRefs: {
+      type: 'array',
+      items: { type: 'string' },
+    },
+    executionSafetyMetadata: {
+      type: 'object',
+      properties: {
+        requiresConfirmation: { type: 'boolean' },
+      },
+      required: ['requiresConfirmation'],
+    },
+  },
+  required: [
+    'id',
+    'approvalState',
+    'workflowEvidenceRefs',
+    'executionSafetyMetadata',
+  ],
+} as const;
+
+const browserSyncSummarySchema = {
+  type: 'object',
+  properties: {
+    sourceKey: { type: 'string' },
+    strategy: { type: 'string', enum: ['initial-backfill', 'incremental'] },
+    importedCount: { type: 'number' },
+    lastSyncedAt: { type: 'string' },
+  },
+  required: ['sourceKey', 'strategy', 'importedCount', 'lastSyncedAt'],
+} as const;
+
+function createItemsResponseSchema(itemSchema: Record<string, unknown>) {
+  return {
+    type: 'object',
+    properties: {
+      items: {
+        type: 'array',
+        items: itemSchema,
+      },
+    },
+    required: ['items'],
+  } as const;
 }
 
-function sendText(
-  response: {
-    statusCode: number;
-    setHeader(name: string, value: string): void;
-    end(body?: string): void;
-  },
-  statusCode: number,
-  contentType: string,
-  body: string,
+function createArtifactResponseSchema(
+  key: string,
+  schema: Record<string, unknown>,
 ) {
-  response.statusCode = statusCode;
-  response.setHeader('content-type', contentType);
-  response.end(body);
-}
-
-async function readJsonBody<T>(request: {
-  on(event: 'data', listener: (chunk: Buffer) => void): void;
-  on(event: 'end', listener: () => void): void;
-}): Promise<T> {
-  const chunks: Buffer[] = [];
-
-  return new Promise((resolve, reject) => {
-    request.on('data', (chunk) => {
-      chunks.push(Buffer.from(chunk));
-    });
-    request.on('end', () => {
-      try {
-        const rawBody = Buffer.concat(chunks).toString('utf8');
-
-        resolve((rawBody.length > 0 ? JSON.parse(rawBody) : {}) as T);
-      } catch (error) {
-        reject(error);
-      }
-    });
-  });
+  return {
+    type: 'object',
+    properties: {
+      [key]: schema,
+    },
+    required: [key],
+  } as const;
 }
 
 export async function startMirrorBrainHttpServer(
@@ -104,186 +188,287 @@ export async function startMirrorBrainHttpServer(
   const config = input.service.service.config ?? getMirrorBrainConfig();
   const host = input.host ?? config.service.host;
   const port = input.port ?? config.service.port;
-  const server = createServer(async (request, response) => {
-    const requestMethod = request.method ?? 'GET';
-    const requestUrl = new URL(request.url ?? '/', `http://${host}:${port}`);
+  const app = Fastify();
 
-    try {
-      if (input.staticDir !== undefined) {
-        const staticAssetMap: Record<string, { fileName: string; contentType: string }> =
-          {
-            '/': {
-              fileName: 'index.html',
-              contentType: 'text/html; charset=utf-8',
-            },
-            '/styles.css': {
-              fileName: 'styles.css',
-              contentType: 'text/css; charset=utf-8',
-            },
-            '/main.js': {
-              fileName: 'main.js',
-              contentType: 'application/javascript; charset=utf-8',
-            },
-          };
-        const staticAsset = staticAssetMap[requestUrl.pathname];
-
-        if (staticAsset !== undefined) {
-          sendText(
-            response,
-            200,
-            staticAsset.contentType,
-            await readFile(join(input.staticDir, staticAsset.fileName), 'utf8'),
-          );
-
-          return;
-        }
-      }
-
-      if (requestMethod === 'GET' && requestUrl.pathname === '/health') {
-        sendJson(response, 200, {
-          status: input.service.service.status,
-          config,
-        });
-
-        return;
-      }
-
-      if (requestMethod === 'GET' && requestUrl.pathname === '/memory') {
-        sendJson(response, 200, {
-          items: await input.service.queryMemory(),
-        });
-
-        return;
-      }
-
-      if (requestMethod === 'GET' && requestUrl.pathname === '/knowledge') {
-        sendJson(response, 200, {
-          items: await input.service.listKnowledge(),
-        });
-
-        return;
-      }
-
-      if (requestMethod === 'GET' && requestUrl.pathname === '/skills') {
-        sendJson(response, 200, {
-          items: await input.service.listSkillDrafts(),
-        });
-
-        return;
-      }
-
-      if (requestMethod === 'POST' && requestUrl.pathname === '/sync/browser') {
-        sendJson(response, 202, {
-          sync: await input.service.syncBrowserMemory(),
-        });
-
-        return;
-      }
-
-      if (
-        requestMethod === 'POST' &&
-        requestUrl.pathname === '/candidate-memories'
-      ) {
-        const body = await readJsonBody<{ memoryEvents: MemoryEvent[] }>(request);
-
-        sendJson(response, 201, {
-          candidate: await input.service.createCandidateMemory(body.memoryEvents),
-        });
-
-        return;
-      }
-
-      if (
-        requestMethod === 'POST' &&
-        requestUrl.pathname === '/reviewed-memories'
-      ) {
-        const body = await readJsonBody<{
-          candidate: CandidateMemory;
-          review: { decision: ReviewedMemory['decision'] };
-        }>(request);
-
-        sendJson(response, 201, {
-          reviewedMemory: await input.service.reviewCandidateMemory(
-            body.candidate,
-            body.review,
-          ),
-        });
-
-        return;
-      }
-
-      if (
-        requestMethod === 'POST' &&
-        requestUrl.pathname === '/knowledge/generate'
-      ) {
-        const body = await readJsonBody<{ reviewedMemories: ReviewedMemory[] }>(
-          request,
-        );
-
-        sendJson(response, 201, {
-          artifact: await input.service.generateKnowledgeFromReviewedMemories(
-            body.reviewedMemories,
-          ),
-        });
-
-        return;
-      }
-
-      if (
-        requestMethod === 'POST' &&
-        requestUrl.pathname === '/skills/generate'
-      ) {
-        const body = await readJsonBody<{ reviewedMemories: ReviewedMemory[] }>(
-          request,
-        );
-
-        sendJson(response, 201, {
-          artifact: await input.service.generateSkillDraftFromReviewedMemories(
-            body.reviewedMemories,
-          ),
-        });
-
-        return;
-      }
-
-      sendJson(response, 404, {
-        error: 'not_found',
-      });
-    } catch (error) {
-      sendJson(response, 500, {
-        error: error instanceof Error ? error.message : 'unknown_error',
-      });
-    }
+  await app.register(fastifySwagger, {
+    openapi: {
+      openapi: '3.0.3',
+      info: {
+        title: 'MirrorBrain Local API',
+        version: '0.1.0',
+        description:
+          'Local-first MirrorBrain Phase 1 API for memory sync, review, knowledge, and skill flows.',
+      },
+    },
+  });
+  await app.register(fastifySwaggerUi, {
+    routePrefix: '/docs',
   });
 
-  await new Promise<void>((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(port, host, () => {
-      server.off('error', reject);
-      resolve();
+  if (input.staticDir !== undefined) {
+    app.get('/', async (_request, reply) => {
+      reply.type('text/html; charset=utf-8');
+      return readFile(join(input.staticDir!, 'index.html'), 'utf8');
     });
+    app.get('/styles.css', async (_request, reply) => {
+      reply.type('text/css; charset=utf-8');
+      return readFile(join(input.staticDir!, 'styles.css'), 'utf8');
+    });
+    app.get('/main.js', async (_request, reply) => {
+      reply.type('application/javascript; charset=utf-8');
+      return readFile(join(input.staticDir!, 'main.js'), 'utf8');
+    });
+  }
+
+  app.get(
+    '/openapi.json',
+    {
+      schema: {
+        hide: true,
+      },
+    },
+    async () => app.swagger(),
+  );
+
+  app.get(
+    '/health',
+    {
+      schema: {
+        summary: 'Get service health',
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              status: { type: 'string', enum: ['running', 'stopped'] },
+              config: {
+                type: 'object',
+                additionalProperties: true,
+              },
+            },
+            required: ['status', 'config'],
+          },
+        },
+      },
+    },
+    async () => ({
+      status: input.service.service.status,
+      config,
+    }),
+  );
+
+  app.get(
+    '/memory',
+    {
+      schema: {
+        summary: 'List imported memory events',
+        response: {
+          200: createItemsResponseSchema(memoryEventSchema),
+        },
+      },
+    },
+    async () => ({
+      items: await input.service.queryMemory(),
+    }),
+  );
+
+  app.get(
+    '/knowledge',
+    {
+      schema: {
+        summary: 'List knowledge artifacts',
+        response: {
+          200: createItemsResponseSchema(knowledgeArtifactSchema),
+        },
+      },
+    },
+    async () => ({
+      items: await input.service.listKnowledge(),
+    }),
+  );
+
+  app.get(
+    '/skills',
+    {
+      schema: {
+        summary: 'List skill drafts',
+        response: {
+          200: createItemsResponseSchema(skillArtifactSchema),
+        },
+      },
+    },
+    async () => ({
+      items: await input.service.listSkillDrafts(),
+    }),
+  );
+
+  app.post(
+    '/sync/browser',
+    {
+      schema: {
+        summary: 'Trigger browser memory sync',
+        response: {
+          202: createArtifactResponseSchema('sync', browserSyncSummarySchema),
+        },
+      },
+    },
+    async (_request, reply) => {
+      reply.code(202);
+      return {
+        sync: await input.service.syncBrowserMemory(),
+      };
+    },
+  );
+
+  app.post<{ Body: { memoryEvents: MemoryEvent[] } }>(
+    '/candidate-memories',
+    {
+      schema: {
+        summary: 'Create a candidate memory from imported events',
+        body: {
+          type: 'object',
+          properties: {
+            memoryEvents: {
+              type: 'array',
+              items: memoryEventSchema,
+            },
+          },
+          required: ['memoryEvents'],
+        },
+        response: {
+          201: createArtifactResponseSchema('candidate', candidateMemorySchema),
+        },
+      },
+    },
+    async (request, reply) => {
+      reply.code(201);
+      return {
+        candidate: await input.service.createCandidateMemory(
+          request.body.memoryEvents,
+        ),
+      };
+    },
+  );
+
+  app.post<{
+    Body: {
+      candidate: CandidateMemory;
+      review: { decision: ReviewedMemory['decision'] };
+    };
+  }>(
+    '/reviewed-memories',
+    {
+      schema: {
+        summary: 'Review a candidate memory',
+        body: {
+          type: 'object',
+          properties: {
+            candidate: candidateMemorySchema,
+            review: {
+              type: 'object',
+              properties: {
+                decision: { type: 'string', enum: ['keep', 'discard'] },
+              },
+              required: ['decision'],
+            },
+          },
+          required: ['candidate', 'review'],
+        },
+        response: {
+          201: createArtifactResponseSchema(
+            'reviewedMemory',
+            reviewedMemorySchema,
+          ),
+        },
+      },
+    },
+    async (request, reply) => {
+      reply.code(201);
+      return {
+        reviewedMemory: await input.service.reviewCandidateMemory(
+          request.body.candidate,
+          request.body.review,
+        ),
+      };
+    },
+  );
+
+  app.post<{ Body: { reviewedMemories: ReviewedMemory[] } }>(
+    '/knowledge/generate',
+    {
+      schema: {
+        summary: 'Generate a knowledge artifact from reviewed memories',
+        body: {
+          type: 'object',
+          properties: {
+            reviewedMemories: {
+              type: 'array',
+              items: reviewedMemorySchema,
+            },
+          },
+          required: ['reviewedMemories'],
+        },
+        response: {
+          201: createArtifactResponseSchema('artifact', knowledgeArtifactSchema),
+        },
+      },
+    },
+    async (request, reply) => {
+      reply.code(201);
+      return {
+        artifact: await input.service.generateKnowledgeFromReviewedMemories(
+          request.body.reviewedMemories,
+        ),
+      };
+    },
+  );
+
+  app.post<{ Body: { reviewedMemories: ReviewedMemory[] } }>(
+    '/skills/generate',
+    {
+      schema: {
+        summary: 'Generate a skill draft from reviewed memories',
+        body: {
+          type: 'object',
+          properties: {
+            reviewedMemories: {
+              type: 'array',
+              items: reviewedMemorySchema,
+            },
+          },
+          required: ['reviewedMemories'],
+        },
+        response: {
+          201: createArtifactResponseSchema('artifact', skillArtifactSchema),
+        },
+      },
+    },
+    async (request, reply) => {
+      reply.code(201);
+      return {
+        artifact: await input.service.generateSkillDraftFromReviewedMemories(
+          request.body.reviewedMemories,
+        ),
+      };
+    },
+  );
+
+  await app.listen({
+    host,
+    port,
   });
 
-  const address = server.address();
+  const address = app.server.address();
 
   if (address === null || typeof address === 'string') {
-    throw new Error('MirrorBrain HTTP server failed to bind to a TCP address.');
+    throw new Error('Failed to resolve MirrorBrain HTTP server address');
   }
 
   return {
     origin: `http://${host}:${address.port}`,
     host,
     port: address.port,
-    stop: () =>
-      new Promise<void>((resolve, reject) => {
-        server.close((error) => {
-          if (error) {
-            reject(error);
-            return;
-          }
-
-          resolve();
-        });
-      }),
+    async stop() {
+      await app.close();
+    },
   };
 }

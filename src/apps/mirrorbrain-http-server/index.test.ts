@@ -381,4 +381,47 @@ describe('mirrorbrain http server', () => {
     expect(mainResponse.status).toBe(200);
     expect(await mainResponse.text()).toContain('mirrorbrain');
   });
+
+  it('serves OpenAPI schema and Swagger UI docs for the local HTTP API', async () => {
+    const service = {
+      service: {
+        status: 'running' as const,
+        config: getMirrorBrainConfig(),
+        stop: vi.fn(),
+      },
+      queryMemory: vi.fn(async () => []),
+      listKnowledge: vi.fn(async () => []),
+      listSkillDrafts: vi.fn(async () => []),
+      syncBrowserMemory: vi.fn(async () => ({
+        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:00:00.000Z',
+      })),
+      createCandidateMemory: vi.fn(),
+      reviewCandidateMemory: vi.fn(),
+      generateKnowledgeFromReviewedMemories: vi.fn(),
+      generateSkillDraftFromReviewedMemories: vi.fn(),
+      publishKnowledge: vi.fn(),
+      publishSkillDraft: vi.fn(),
+    };
+
+    const server = await startMirrorBrainHttpServer({
+      service,
+      port: 0,
+    });
+    servers.push(server);
+
+    const docsResponse = await fetch(`${server.origin}/docs`);
+    const schemaResponse = await fetch(`${server.origin}/openapi.json`);
+    const schemaBody = await schemaResponse.json();
+
+    expect(docsResponse.status).toBe(200);
+    expect(await docsResponse.text()).toContain('Swagger UI');
+    expect(schemaResponse.status).toBe(200);
+    expect(schemaBody.openapi).toBe('3.0.3');
+    expect(schemaBody.paths['/health']).toBeDefined();
+    expect(schemaBody.paths['/sync/browser']).toBeDefined();
+    expect(schemaBody.paths['/candidate-memories']).toBeDefined();
+  });
 });

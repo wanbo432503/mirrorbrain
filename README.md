@@ -1,6 +1,6 @@
 # MirrorBrain
 
-[中文说明 / README 中文版](./README_CN.md)
+[README 中文版](./README_CN.md)
 
 MirrorBrain / 镜像大脑 is the memory and capability layer for `openclaw`.
 
@@ -138,6 +138,12 @@ Then open:
 
 ```text
 http://127.0.0.1:3007
+```
+
+API docs:
+
+```text
+http://127.0.0.1:3007/docs
 ```
 
 ### 6. Verify the MVP Flow
