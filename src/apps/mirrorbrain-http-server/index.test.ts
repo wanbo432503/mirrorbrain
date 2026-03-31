@@ -7,12 +7,47 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getMirrorBrainConfig } from '../../shared/config/index.js';
 import type {
   CandidateMemory,
+  CandidateReviewSuggestion,
   KnowledgeArtifact,
   MemoryEvent,
   ReviewedMemory,
   SkillArtifact,
 } from '../../shared/types/index.js';
 import { startMirrorBrainHttpServer } from './index.js';
+
+function createCandidateMemoryFixture(input: {
+  id: string;
+  memoryEventIds: string[];
+}): CandidateMemory {
+  return {
+    id: input.id,
+    memoryEventIds: input.memoryEventIds,
+    title: 'Docs Example Com / guides',
+    summary: `${input.memoryEventIds.length} browser events about Docs Example Com / guides on 2026-03-20.`,
+    theme: 'docs.example.com / guides',
+    reviewDate: '2026-03-20',
+    timeRange: {
+      startAt: '2026-03-20T08:00:00.000Z',
+      endAt: '2026-03-20T08:15:00.000Z',
+    },
+    reviewState: 'pending',
+  };
+}
+
+function createReviewedMemoryFixture(): ReviewedMemory {
+  return {
+    id: 'reviewed:candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
+    candidateMemoryId:
+      'candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
+    candidateTitle: 'Docs Example Com / guides',
+    candidateSummary: '1 browser event about Docs Example Com / guides on 2026-03-20.',
+    candidateTheme: 'docs.example.com / guides',
+    memoryEventIds: ['browser:aw-event-1'],
+    reviewDate: '2026-03-20',
+    decision: 'keep',
+    reviewedAt: '2026-03-20T10:00:00.000Z',
+  };
+}
 
 describe('mirrorbrain http server', () => {
   const servers: Array<{ stop(): Promise<void> }> = [];
@@ -78,7 +113,8 @@ describe('mirrorbrain http server', () => {
       listKnowledge,
       listSkillDrafts,
       syncBrowserMemory,
-      createCandidateMemory: vi.fn(),
+      createDailyCandidateMemories: vi.fn(),
+      suggestCandidateReviews: vi.fn(),
       reviewCandidateMemory: vi.fn(),
       generateKnowledgeFromReviewedMemories: vi.fn(),
       generateSkillDraftFromReviewedMemories: vi.fn(),
@@ -165,22 +201,39 @@ describe('mirrorbrain http server', () => {
   });
 
   it('serves candidate review and artifact generation endpoints through the local HTTP API', async () => {
-    const createCandidateMemory = vi.fn(
-      async (memoryEvents: MemoryEvent[]): Promise<CandidateMemory> => ({
-        id: 'candidate:browser:aw-event-1',
-        memoryEventIds: memoryEvents.map((event) => event.id),
-        reviewState: 'pending',
-      }),
+    const createDailyCandidateMemories = vi.fn(
+      async (_reviewDate: string): Promise<CandidateMemory[]> => [
+        createCandidateMemoryFixture({
+          id: 'candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
+          memoryEventIds: ['browser:aw-event-1'],
+        }),
+        createCandidateMemoryFixture({
+          id: 'candidate:2026-03-20:activitywatch-browser:github-com:example',
+          memoryEventIds: ['browser:aw-event-2'],
+        }),
+      ],
+    );
+    const suggestCandidateReviews = vi.fn(
+      async (_candidates: CandidateMemory[]): Promise<CandidateReviewSuggestion[]> => [
+        {
+          candidateMemoryId:
+            'candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
+          recommendation: 'keep',
+          confidenceScore: 0.8,
+          priorityScore: 2,
+          rationale:
+            'This daily stream has repeated activity and is a strong keep candidate.',
+        },
+      ],
     );
     const reviewCandidateMemory = vi.fn(
       async (
         candidate: CandidateMemory,
-        review: { decision: ReviewedMemory['decision'] },
-      ): Promise<ReviewedMemory> => ({
-        id: `reviewed:${candidate.id}`,
-        candidateMemoryId: candidate.id,
-        decision: review.decision,
-      }),
+        _review: {
+          decision: ReviewedMemory['decision'];
+          reviewedAt: string;
+        },
+      ): Promise<ReviewedMemory> => createReviewedMemoryFixture(),
     );
     const generateKnowledgeFromReviewedMemories = vi.fn(
       async (reviewedMemories: ReviewedMemory[]): Promise<KnowledgeArtifact> => ({
@@ -214,7 +267,8 @@ describe('mirrorbrain http server', () => {
         importedCount: 0,
         lastSyncedAt: '2026-03-20T10:00:00.000Z',
       })),
-      createCandidateMemory,
+      createDailyCandidateMemories,
+      suggestCandidateReviews,
       reviewCandidateMemory,
       generateKnowledgeFromReviewedMemories,
       generateSkillDraftFromReviewedMemories,
@@ -228,46 +282,41 @@ describe('mirrorbrain http server', () => {
     });
     servers.push(server);
 
-    const candidateResponse = await fetch(`${server.origin}/candidate-memories`, {
+    const candidateResponse = await fetch(`${server.origin}/candidate-memories/daily`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        memoryEvents: [
-          {
-            id: 'browser:aw-event-1',
-            sourceType: 'activitywatch-browser',
-            sourceRef: 'aw-event-1',
-            timestamp: '2026-03-20T08:00:00.000Z',
-            authorizationScopeId: 'scope-browser',
-            content: {
-              url: 'https://example.com/tasks',
-            },
-            captureMetadata: {
-              upstreamSource: 'activitywatch',
-              checkpoint: '2026-03-20T08:00:00.000Z',
-            },
-          },
-        ],
+        reviewDate: '2026-03-20',
       }),
     });
     const candidateBody = await candidateResponse.json();
 
-    const reviewedMemory: ReviewedMemory = {
-      id: 'reviewed:candidate:browser:aw-event-1',
-      candidateMemoryId: 'candidate:browser:aw-event-1',
-      decision: 'keep',
-    };
+    const suggestionResponse = await fetch(
+      `${server.origin}/candidate-reviews/suggestions`,
+      {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          candidates: candidateBody.candidates,
+        }),
+      },
+    );
+    const suggestionBody = await suggestionResponse.json();
+
     const reviewResponse = await fetch(`${server.origin}/reviewed-memories`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        candidate: candidateBody.candidate,
+        candidate: candidateBody.candidates[0],
         review: {
           decision: 'keep',
+          reviewedAt: '2026-03-20T10:00:00.000Z',
         },
       }),
     });
@@ -278,7 +327,7 @@ describe('mirrorbrain http server', () => {
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        reviewedMemories: [reviewedMemory],
+        reviewedMemories: [createReviewedMemoryFixture()],
       }),
     });
     const knowledgeBody = await knowledgeResponse.json();
@@ -288,41 +337,60 @@ describe('mirrorbrain http server', () => {
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        reviewedMemories: [reviewedMemory],
+        reviewedMemories: [createReviewedMemoryFixture()],
       }),
     });
     const skillBody = await skillResponse.json();
 
     expect(candidateResponse.status).toBe(201);
     expect(candidateBody).toEqual({
-      candidate: {
-        id: 'candidate:browser:aw-event-1',
-        memoryEventIds: ['browser:aw-event-1'],
-        reviewState: 'pending',
-      },
+      candidates: [
+        createCandidateMemoryFixture({
+          id: 'candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
+          memoryEventIds: ['browser:aw-event-1'],
+        }),
+        createCandidateMemoryFixture({
+          id: 'candidate:2026-03-20:activitywatch-browser:github-com:example',
+          memoryEventIds: ['browser:aw-event-2'],
+        }),
+      ],
+    });
+    expect(suggestionResponse.status).toBe(200);
+    expect(suggestionBody).toEqual({
+      suggestions: [
+        {
+          candidateMemoryId:
+            'candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
+          recommendation: 'keep',
+          confidenceScore: 0.8,
+          priorityScore: 2,
+          rationale:
+            'This daily stream has repeated activity and is a strong keep candidate.',
+        },
+      ],
     });
     expect(reviewResponse.status).toBe(201);
     expect(reviewBody).toEqual({
-      reviewedMemory: {
-        id: 'reviewed:candidate:browser:aw-event-1',
-        candidateMemoryId: 'candidate:browser:aw-event-1',
-        decision: 'keep',
-      },
+      reviewedMemory: createReviewedMemoryFixture(),
     });
     expect(knowledgeResponse.status).toBe(201);
     expect(knowledgeBody).toEqual({
       artifact: {
-        id: 'knowledge-draft:reviewed:candidate:browser:aw-event-1',
+        id: 'knowledge-draft:reviewed:candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
         draftState: 'draft',
-        sourceReviewedMemoryIds: ['reviewed:candidate:browser:aw-event-1'],
+        sourceReviewedMemoryIds: [
+          'reviewed:candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
+        ],
       },
     });
     expect(skillResponse.status).toBe(201);
     expect(skillBody).toEqual({
       artifact: {
-        id: 'skill-draft:reviewed:candidate:browser:aw-event-1',
+        id: 'skill-draft:reviewed:candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
         approvalState: 'draft',
-        workflowEvidenceRefs: ['reviewed:candidate:browser:aw-event-1'],
+        workflowEvidenceRefs: [
+          'reviewed:candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
+        ],
         executionSafetyMetadata: {
           requiresConfirmation: true,
         },
@@ -355,7 +423,8 @@ describe('mirrorbrain http server', () => {
         importedCount: 0,
         lastSyncedAt: '2026-03-20T10:00:00.000Z',
       })),
-      createCandidateMemory: vi.fn(),
+      createDailyCandidateMemories: vi.fn(),
+      suggestCandidateReviews: vi.fn(),
       reviewCandidateMemory: vi.fn(),
       generateKnowledgeFromReviewedMemories: vi.fn(),
       generateSkillDraftFromReviewedMemories: vi.fn(),
@@ -398,7 +467,8 @@ describe('mirrorbrain http server', () => {
         importedCount: 0,
         lastSyncedAt: '2026-03-20T10:00:00.000Z',
       })),
-      createCandidateMemory: vi.fn(),
+      createDailyCandidateMemories: vi.fn(),
+      suggestCandidateReviews: vi.fn(),
       reviewCandidateMemory: vi.fn(),
       generateKnowledgeFromReviewedMemories: vi.fn(),
       generateSkillDraftFromReviewedMemories: vi.fn(),
@@ -422,7 +492,8 @@ describe('mirrorbrain http server', () => {
     expect(schemaBody.openapi).toBe('3.0.3');
     expect(schemaBody.paths['/health']).toBeDefined();
     expect(schemaBody.paths['/sync/browser']).toBeDefined();
-    expect(schemaBody.paths['/candidate-memories']).toBeDefined();
+    expect(schemaBody.paths['/candidate-memories/daily']).toBeDefined();
+    expect(schemaBody.paths['/candidate-reviews/suggestions']).toBeDefined();
   });
 
   it('hides static asset routes from the OpenAPI schema', async () => {
@@ -450,7 +521,8 @@ describe('mirrorbrain http server', () => {
         importedCount: 0,
         lastSyncedAt: '2026-03-20T10:00:00.000Z',
       })),
-      createCandidateMemory: vi.fn(),
+      createDailyCandidateMemories: vi.fn(),
+      suggestCandidateReviews: vi.fn(),
       reviewCandidateMemory: vi.fn(),
       generateKnowledgeFromReviewedMemories: vi.fn(),
       generateSkillDraftFromReviewedMemories: vi.fn(),

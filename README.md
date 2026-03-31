@@ -19,7 +19,7 @@ What works now:
 - browser source only, via `ActivityWatch` + `aw-watcher-web`
 - local storage and retrieval via `OpenViking`
 - local HTTP service and standalone web UI
-- browser sync, candidate creation, reviewed memory, knowledge draft, and skill draft flow
+- browser sync, daily candidate stream generation, AI review suggestions, reviewed memory, knowledge draft, and skill draft flow
 
 What is not implemented yet:
 
@@ -151,15 +151,19 @@ http://127.0.0.1:3007/docs
 In the web UI:
 
 1. Click `Sync Browser Memory`
-2. Click `Create Candidate`
-3. Click `Keep Candidate`
-4. Click `Generate Knowledge`
-5. Click `Generate Skill`
+2. Open the `Review` tab and click `Create Candidate`
+3. Select one daily candidate stream
+4. Optionally inspect the AI review suggestion
+5. Click `Keep Candidate`
+6. Open the `Artifacts` tab
+7. Click `Generate Knowledge`
+8. Click `Generate Skill`
 
 Expected result:
 
 - memory events appear in the page
-- one candidate id is shown
+- one or more daily candidate streams are shown
+- the selected candidate shows a title, summary, and suggestion
 - one reviewed memory id is shown
 - one knowledge draft id is shown
 - one skill draft id is shown

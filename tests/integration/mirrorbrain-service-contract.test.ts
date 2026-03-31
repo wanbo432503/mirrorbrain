@@ -7,6 +7,36 @@ import type {
   ReviewedMemory,
 } from '../../src/shared/types/index.js';
 
+function createCandidateMemoryFixture(): CandidateMemory {
+  return {
+    id: 'candidate:2026-03-20:activitywatch-browser:example-com:tasks',
+    memoryEventIds: ['browser:aw-event-1'],
+    title: 'Example Com / tasks',
+    summary: '1 browser event about Example Com / tasks on 2026-03-20.',
+    theme: 'example.com / tasks',
+    reviewDate: '2026-03-20',
+    timeRange: {
+      startAt: '2026-03-20T08:00:00.000Z',
+      endAt: '2026-03-20T08:00:00.000Z',
+    },
+    reviewState: 'pending',
+  };
+}
+
+function createReviewedMemoryFixture(): ReviewedMemory {
+  return {
+    id: 'reviewed:candidate:2026-03-20:activitywatch-browser:example-com:tasks',
+    candidateMemoryId: 'candidate:2026-03-20:activitywatch-browser:example-com:tasks',
+    candidateTitle: 'Example Com / tasks',
+    candidateSummary: '1 browser event about Example Com / tasks on 2026-03-20.',
+    candidateTheme: 'example.com / tasks',
+    memoryEventIds: ['browser:aw-event-1'],
+    reviewDate: '2026-03-20',
+    decision: 'keep',
+    reviewedAt: '2026-03-20T10:00:00.000Z',
+  };
+}
+
 describe('mirrorbrain service contract integration', () => {
   const expectedOpenVikingBaseUrl = getMirrorBrainConfig().openViking.baseUrl;
 
@@ -110,13 +140,7 @@ describe('mirrorbrain service contract integration', () => {
       kind: 'knowledge' | 'skill';
       payload: unknown;
     }> = [];
-    const reviewedMemories = [
-      {
-        id: 'reviewed:candidate:browser:aw-event-1',
-        candidateMemoryId: 'candidate:browser:aw-event-1',
-        decision: 'keep' as const,
-      },
-    ];
+    const reviewedMemories = [createReviewedMemoryFixture()];
 
     const api = createMirrorBrainService(
       {
@@ -245,31 +269,85 @@ describe('mirrorbrain service contract integration', () => {
     await expect(
       api.reviewCandidateMemory(
         {
-          id: 'candidate:browser:aw-event-1',
+          id: 'candidate:2026-03-20:activitywatch-browser:example-com:tasks',
           memoryEventIds: ['browser:aw-event-1'],
+          title: 'Example Com / tasks',
+          summary: '1 browser event about Example Com / tasks on 2026-03-20.',
+          theme: 'example.com / tasks',
+          reviewDate: '2026-03-20',
+          timeRange: {
+            startAt: '2026-03-20T08:00:00.000Z',
+            endAt: '2026-03-20T08:00:00.000Z',
+          },
           reviewState: 'pending',
         },
         {
           decision: 'keep',
+          reviewedAt: '2026-03-20T10:00:00.000Z',
         },
       ),
-    ).resolves.toEqual({
-      id: 'reviewed:candidate:browser:aw-event-1',
-      candidateMemoryId: 'candidate:browser:aw-event-1',
-      decision: 'keep',
-    });
-    expect(published).toEqual([
-      {
-        id: 'reviewed:candidate:browser:aw-event-1',
-        candidateMemoryId: 'candidate:browser:aw-event-1',
-        decision: 'keep',
-      },
-    ]);
+    ).resolves.toEqual(createReviewedMemoryFixture());
+    expect(published).toEqual([createReviewedMemoryFixture()]);
   });
 
-  it('creates candidate memories from raw memory events through the service contract', async () => {
+  it('creates daily candidate memories from imported memory through the service contract', async () => {
     const published: CandidateMemory[] = [];
+    const memoryEvents = [
+      {
+        id: 'browser:aw-event-1',
+        sourceType: 'activitywatch-browser',
+        sourceRef: 'aw-event-1',
+        timestamp: '2026-03-20T08:00:00.000Z',
+        authorizationScopeId: 'scope-browser',
+        content: {
+          url: 'https://example.com/tasks',
+          title: 'Example Tasks',
+        },
+        captureMetadata: {
+          upstreamSource: 'activitywatch',
+          checkpoint: '2026-03-20T08:00:00.000Z',
+        },
+      },
+    ];
 
+    const api = createMirrorBrainService(
+      {
+        service: {
+          status: 'running',
+          config: getMirrorBrainConfig(),
+          syncBrowserMemory: async () => ({
+            sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+            strategy: 'incremental' as const,
+            importedCount: 0,
+            lastSyncedAt: '2026-03-20T10:00:00.000Z',
+          }),
+          stop: () => undefined,
+        },
+      },
+      {
+        queryMemory: async () => memoryEvents,
+        listKnowledge: async () => [],
+        listSkillDrafts: async () => [],
+        publishCandidateMemory: async (input) => {
+          published.push(input.artifact);
+
+          return {
+            sourcePath: '/tmp/mirrorbrain-workspace/candidate.json',
+            rootUri:
+              'viking://resources/mirrorbrain/candidate-memories/candidate:browser:aw-event-1.json',
+          };
+        },
+      },
+    );
+
+    await expect(
+      api.createDailyCandidateMemories('2026-03-20'),
+    ).resolves.toEqual([createCandidateMemoryFixture()]);
+    expect(published).toEqual([createCandidateMemoryFixture()]);
+  });
+
+  it('returns candidate review suggestions without promoting candidates', async () => {
+    const candidate = createCandidateMemoryFixture();
     const api = createMirrorBrainService(
       {
         service: {
@@ -288,46 +366,19 @@ describe('mirrorbrain service contract integration', () => {
         queryMemory: async () => [],
         listKnowledge: async () => [],
         listSkillDrafts: async () => [],
-        publishCandidateMemory: async (input) => {
-          published.push(input.artifact);
-
-          return {
-            sourcePath: '/tmp/mirrorbrain-workspace/candidate.json',
-            rootUri:
-              'viking://resources/mirrorbrain/candidate-memories/candidate:browser:aw-event-1.json',
-          };
-        },
       },
     );
 
     await expect(
-      api.createCandidateMemory([
-        {
-          id: 'browser:aw-event-1',
-          sourceType: 'activitywatch-browser',
-          sourceRef: 'aw-event-1',
-          timestamp: '2026-03-20T08:00:00.000Z',
-          authorizationScopeId: 'scope-browser',
-          content: {
-            url: 'https://example.com/tasks',
-            title: 'Example Tasks',
-          },
-          captureMetadata: {
-            upstreamSource: 'activitywatch',
-            checkpoint: '2026-03-20T08:00:00.000Z',
-          },
-        },
-      ]),
-    ).resolves.toEqual({
-      id: 'candidate:browser:aw-event-1',
-      memoryEventIds: ['browser:aw-event-1'],
-      reviewState: 'pending',
-    });
-    expect(published).toEqual([
+      api.suggestCandidateReviews([candidate]),
+    ).resolves.toEqual([
       {
-        id: 'candidate:browser:aw-event-1',
-        memoryEventIds: ['browser:aw-event-1'],
-        reviewState: 'pending',
+        candidateMemoryId: candidate.id,
+        recommendation: 'review',
+        confidenceScore: 0.55,
+        priorityScore: 1,
+        rationale:
+          'This daily stream has limited evidence and should stay in human review.',
       },
     ]);
   });

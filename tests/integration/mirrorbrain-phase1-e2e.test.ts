@@ -2,7 +2,10 @@ import { readFileSync } from 'node:fs';
 
 import { describe, expect, it } from 'vitest';
 
-import { createCandidateMemory, reviewCandidateMemory } from '../../src/modules/memory-review/index.js';
+import {
+  createCandidateMemories,
+  reviewCandidateMemory,
+} from '../../src/modules/memory-review/index.js';
 import {
   normalizeActivityWatchBrowserEvent,
   persistMemoryEvent,
@@ -51,9 +54,13 @@ describe('mirrorbrain phase 1 e2e', () => {
       }),
     );
 
-    const candidateMemory = createCandidateMemory(memoryEvents as MemoryEvent[]);
+    const [candidateMemory] = createCandidateMemories({
+      reviewDate: '2026-03-20',
+      memoryEvents: memoryEvents as MemoryEvent[],
+    });
     const reviewedMemory = reviewCandidateMemory(candidateMemory, {
       decision: 'keep',
+      reviewedAt: '2026-03-20T10:00:00.000Z',
     });
     const knowledgeDraft = runDailyReview({
       reviewedMemories: [reviewedMemory],

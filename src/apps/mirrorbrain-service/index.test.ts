@@ -1,7 +1,54 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { getMirrorBrainConfig } from '../../shared/config/index.js';
+import type {
+  CandidateMemory,
+  CandidateReviewSuggestion,
+  ReviewedMemory,
+} from '../../shared/types/index.js';
 import { createMirrorBrainService, startMirrorBrainService } from './index.js';
+
+function createCandidateMemoryFixture(input: {
+  id: string;
+  memoryEventIds: string[];
+  reviewDate?: string;
+}): CandidateMemory {
+  return {
+    id: input.id,
+    memoryEventIds: input.memoryEventIds,
+    title: 'Docs Example Com / guides',
+    summary: `${input.memoryEventIds.length} browser events about Docs Example Com / guides on ${
+      input.reviewDate ?? '2026-03-20'
+    }.`,
+    theme: 'docs.example.com / guides',
+    reviewDate: input.reviewDate ?? '2026-03-20',
+    timeRange: {
+      startAt: '2026-03-20T08:00:00.000Z',
+      endAt: '2026-03-20T08:15:00.000Z',
+    },
+    reviewState: 'pending',
+  };
+}
+
+function createReviewedMemoryFixture(input?: {
+  id?: string;
+  candidateMemoryId?: string;
+  decision?: ReviewedMemory['decision'];
+}): ReviewedMemory {
+  return {
+    id: input?.id ?? 'reviewed:candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
+    candidateMemoryId:
+      input?.candidateMemoryId ??
+      'candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
+    candidateTitle: 'Docs Example Com / guides',
+    candidateSummary: '1 browser event about Docs Example Com / guides on 2026-03-20.',
+    candidateTheme: 'docs.example.com / guides',
+    memoryEventIds: ['browser:aw-event-1'],
+    reviewDate: '2026-03-20',
+    decision: input?.decision ?? 'keep',
+    reviewedAt: '2026-03-20T10:00:00.000Z',
+  };
+}
 
 describe('mirrorbrain service', () => {
   const expectedOpenVikingBaseUrl = getMirrorBrainConfig().openViking.baseUrl;
@@ -216,13 +263,7 @@ describe('mirrorbrain service', () => {
       })),
       stop: vi.fn(),
     };
-    const reviewedMemories = [
-      {
-        id: 'reviewed:candidate:browser:aw-event-1',
-        candidateMemoryId: 'candidate:browser:aw-event-1',
-        decision: 'keep' as const,
-      },
-    ];
+    const reviewedMemories = [createReviewedMemoryFixture()];
     const generateKnowledge = vi.fn(() => ({
       id: 'knowledge-draft:reviewed:candidate:browser:aw-event-1',
       draftState: 'draft' as const,
@@ -300,11 +341,9 @@ describe('mirrorbrain service', () => {
       })),
       stop: vi.fn(),
     };
-    const reviewMemory = vi.fn((_candidate, _input) => ({
-      id: 'reviewed:candidate:browser:aw-event-1',
-      candidateMemoryId: 'candidate:browser:aw-event-1',
-      decision: 'keep' as const,
-    }));
+    const reviewMemory = vi.fn((_candidate, _input) =>
+      createReviewedMemoryFixture(),
+    );
     const publishReviewedMemory = vi.fn(async () => ({
       sourcePath: '/tmp/mirrorbrain-workspace/reviewed.json',
       rootUri:
@@ -324,42 +363,52 @@ describe('mirrorbrain service', () => {
     await expect(
       api.reviewCandidateMemory(
         {
-          id: 'candidate:browser:aw-event-1',
+          id: 'candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
           memoryEventIds: ['browser:aw-event-1'],
+          title: 'Docs Example Com / guides',
+          summary: '1 browser event about Docs Example Com / guides on 2026-03-20.',
+          theme: 'docs.example.com / guides',
+          reviewDate: '2026-03-20',
+          timeRange: {
+            startAt: '2026-03-20T08:00:00.000Z',
+            endAt: '2026-03-20T08:00:00.000Z',
+          },
           reviewState: 'pending',
         },
         {
           decision: 'keep',
+          reviewedAt: '2026-03-20T10:00:00.000Z',
         },
       ),
-    ).resolves.toEqual({
-      id: 'reviewed:candidate:browser:aw-event-1',
-      candidateMemoryId: 'candidate:browser:aw-event-1',
-      decision: 'keep',
-    });
+    ).resolves.toEqual(createReviewedMemoryFixture());
 
     expect(reviewMemory).toHaveBeenCalledWith(
       {
-        id: 'candidate:browser:aw-event-1',
+        id: 'candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
         memoryEventIds: ['browser:aw-event-1'],
+        title: 'Docs Example Com / guides',
+        summary: '1 browser event about Docs Example Com / guides on 2026-03-20.',
+        theme: 'docs.example.com / guides',
+        reviewDate: '2026-03-20',
+        timeRange: {
+          startAt: '2026-03-20T08:00:00.000Z',
+          endAt: '2026-03-20T08:00:00.000Z',
+        },
         reviewState: 'pending',
       },
       {
         decision: 'keep',
+        reviewedAt: '2026-03-20T10:00:00.000Z',
       },
     );
     expect(publishReviewedMemory).toHaveBeenCalledWith({
       baseUrl: expectedOpenVikingBaseUrl,
       workspaceDir: process.cwd(),
-      artifact: {
-        id: 'reviewed:candidate:browser:aw-event-1',
-        candidateMemoryId: 'candidate:browser:aw-event-1',
-        decision: 'keep',
-      },
+      artifact: createReviewedMemoryFixture(),
     });
   });
 
-  it('creates a candidate memory from raw memory events through the service contract', async () => {
+  it('creates daily candidate memory streams through the service contract', async () => {
     const service = {
       status: 'running' as const,
       config: getMirrorBrainConfig(),
@@ -371,52 +420,7 @@ describe('mirrorbrain service', () => {
       })),
       stop: vi.fn(),
     };
-    const createCandidate = vi.fn((memoryEvents) => ({
-      id: 'candidate:browser:aw-event-1',
-      memoryEventIds: memoryEvents.map((event: { id: string }) => event.id),
-      reviewState: 'pending' as const,
-    }));
-    const publishCandidateMemory = vi.fn(async () => ({
-      sourcePath: '/tmp/mirrorbrain-workspace/candidate.json',
-      rootUri:
-        'viking://resources/mirrorbrain/candidate-memories/candidate:browser:aw-event-1.json',
-    }));
-
-    const api = createMirrorBrainService(
-      {
-        service,
-      },
-      {
-        createCandidate,
-        publishCandidateMemory,
-      },
-    );
-
-    await expect(
-      api.createCandidateMemory([
-        {
-          id: 'browser:aw-event-1',
-          sourceType: 'activitywatch-browser',
-          sourceRef: 'aw-event-1',
-          timestamp: '2026-03-20T08:00:00.000Z',
-          authorizationScopeId: 'scope-browser',
-          content: {
-            url: 'https://example.com/tasks',
-            title: 'Example Tasks',
-          },
-          captureMetadata: {
-            upstreamSource: 'activitywatch',
-            checkpoint: '2026-03-20T08:00:00.000Z',
-          },
-        },
-      ]),
-    ).resolves.toEqual({
-      id: 'candidate:browser:aw-event-1',
-      memoryEventIds: ['browser:aw-event-1'],
-      reviewState: 'pending',
-    });
-
-    expect(createCandidate).toHaveBeenCalledWith([
+    const memoryEvents = [
       {
         id: 'browser:aw-event-1',
         sourceType: 'activitywatch-browser',
@@ -424,23 +428,137 @@ describe('mirrorbrain service', () => {
         timestamp: '2026-03-20T08:00:00.000Z',
         authorizationScopeId: 'scope-browser',
         content: {
-          url: 'https://example.com/tasks',
-          title: 'Example Tasks',
+          url: 'https://docs.example.com/guides/mirrorbrain',
+          title: 'MirrorBrain Guide',
         },
         captureMetadata: {
           upstreamSource: 'activitywatch',
           checkpoint: '2026-03-20T08:00:00.000Z',
         },
       },
-    ]);
-    expect(publishCandidateMemory).toHaveBeenCalledWith({
-      baseUrl: expectedOpenVikingBaseUrl,
-      workspaceDir: process.cwd(),
-      artifact: {
-        id: 'candidate:browser:aw-event-1',
-        memoryEventIds: ['browser:aw-event-1'],
-        reviewState: 'pending',
+      {
+        id: 'browser:aw-event-2',
+        sourceType: 'activitywatch-browser',
+        sourceRef: 'aw-event-2',
+        timestamp: '2026-03-20T08:15:00.000Z',
+        authorizationScopeId: 'scope-browser',
+        content: {
+          url: 'https://github.com/example/mirrorbrain/issues/42',
+          title: 'Fix review workflow',
+        },
+        captureMetadata: {
+          upstreamSource: 'activitywatch',
+          checkpoint: '2026-03-20T08:15:00.000Z',
+        },
       },
+    ];
+    const queryMemory = vi.fn(async () => memoryEvents);
+    const createCandidateMemories = vi.fn(() => [
+      createCandidateMemoryFixture({
+        id: 'candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
+        memoryEventIds: ['browser:aw-event-1'],
+      }),
+      createCandidateMemoryFixture({
+        id: 'candidate:2026-03-20:activitywatch-browser:github-com:example',
+        memoryEventIds: ['browser:aw-event-2'],
+      }),
+    ]);
+    const publishCandidateMemory = vi.fn(async () => ({
+      sourcePath: '/tmp/mirrorbrain-workspace/candidate.json',
+      rootUri:
+        'viking://resources/mirrorbrain/candidate-memories/candidate:2026-03-20:activitywatch-browser:docs-example-com:guides.json',
+    }));
+
+    const api = createMirrorBrainService(
+      {
+        service,
+      },
+      {
+        queryMemory,
+        createCandidateMemories,
+        publishCandidateMemory,
+      },
+    );
+
+    await expect(
+      api.createDailyCandidateMemories('2026-03-20'),
+    ).resolves.toEqual([
+      createCandidateMemoryFixture({
+        id: 'candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
+        memoryEventIds: ['browser:aw-event-1'],
+      }),
+      createCandidateMemoryFixture({
+        id: 'candidate:2026-03-20:activitywatch-browser:github-com:example',
+        memoryEventIds: ['browser:aw-event-2'],
+      }),
+    ]);
+
+    expect(queryMemory).toHaveBeenCalledWith({
+      baseUrl: expectedOpenVikingBaseUrl,
     });
+    expect(createCandidateMemories).toHaveBeenCalledWith({
+      reviewDate: '2026-03-20',
+      memoryEvents,
+    });
+    expect(publishCandidateMemory).toHaveBeenCalledTimes(2);
+  });
+
+  it('returns candidate review suggestions without publishing review artifacts', async () => {
+    const service = {
+      status: 'running' as const,
+      config: getMirrorBrainConfig(),
+      syncBrowserMemory: vi.fn(async () => ({
+        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:00:00.000Z',
+      })),
+      stop: vi.fn(),
+    };
+    const candidates = [
+      createCandidateMemoryFixture({
+        id: 'candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
+        memoryEventIds: ['browser:aw-event-1', 'browser:aw-event-2'],
+      }),
+    ];
+    const suggestCandidateReviews = vi.fn(
+      (): CandidateReviewSuggestion[] => [
+        {
+          candidateMemoryId:
+            'candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
+          recommendation: 'keep',
+          confidenceScore: 0.8,
+          priorityScore: 2,
+          rationale:
+            'This daily stream has repeated activity and is a strong keep candidate.',
+        },
+      ],
+    );
+    const publishReviewedMemory = vi.fn();
+
+    const api = createMirrorBrainService(
+      {
+        service,
+      },
+      {
+        suggestCandidateReviews,
+        publishReviewedMemory,
+      },
+    );
+
+    await expect(api.suggestCandidateReviews(candidates)).resolves.toEqual([
+      {
+        candidateMemoryId:
+          'candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
+        recommendation: 'keep',
+        confidenceScore: 0.8,
+        priorityScore: 2,
+        rationale:
+          'This daily stream has repeated activity and is a strong keep candidate.',
+      },
+    ]);
+
+    expect(suggestCandidateReviews).toHaveBeenCalledWith(candidates);
+    expect(publishReviewedMemory).not.toHaveBeenCalled();
   });
 });

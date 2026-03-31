@@ -11,7 +11,7 @@ This component is responsible for:
 - reporting service health and effective runtime config
 - exposing a browser sync trigger endpoint
 - exposing read endpoints for memory, knowledge, and skill drafts
-- exposing write endpoints for candidate creation, review, and artifact generation
+- exposing write endpoints for daily candidate creation, candidate review suggestions, explicit review decisions, and artifact generation
 - exposing OpenAPI schema output and Swagger UI docs for local exploration
 
 This component is not responsible for:
@@ -33,7 +33,8 @@ Those concerns remain in the service, workflow, module, and integration layers.
 - `GET /memory`
 - `GET /knowledge`
 - `GET /skills`
-- `POST /candidate-memories`
+- `POST /candidate-memories/daily`
+- `POST /candidate-reviews/suggestions`
 - `POST /reviewed-memories`
 - `POST /knowledge/generate`
 - `POST /skills/generate`
@@ -45,6 +46,7 @@ Those concerns remain in the service, workflow, module, and integration layers.
 3. `Fastify` routes each request to the corresponding service method.
 4. OpenAPI metadata is registered alongside the routes and published through Swagger UI.
 5. The server serializes the domain result as JSON and returns an HTTP status that matches the action.
+6. Daily candidate creation and AI suggestions stay separate so suggestion reads cannot silently write reviewed memory.
 
 ## Dependencies
 
@@ -61,6 +63,8 @@ Those concerns remain in the service, workflow, module, and integration layers.
 - malformed JSON or schema-invalid request bodies are rejected by `Fastify`
 - this server is intentionally local-first and not yet production-hardened
 - authentication and multi-user concerns are out of scope for the Phase 1 MVP
+- daily candidate creation expects an explicit `reviewDate`
+- reviewed-memory writes require an explicit `reviewedAt` timestamp for auditability
 
 ## Test Strategy
 

@@ -234,6 +234,14 @@ describe('openviking store adapter', () => {
         artifact: {
           id: 'candidate:browser:aw-event-1',
           memoryEventIds: ['browser:aw-event-1'],
+          title: 'Example Com / tasks',
+          summary: '1 browser event about Example Com / tasks on 2026-03-20.',
+          theme: 'example.com / tasks',
+          reviewDate: '2026-03-20',
+          timeRange: {
+            startAt: '2026-03-20T08:00:00.000Z',
+            endAt: '2026-03-20T08:00:00.000Z',
+          },
           reviewState: 'pending',
         },
       },
@@ -268,6 +276,14 @@ describe('openviking store adapter', () => {
     expect(importedPayload).toEqual({
       id: 'candidate:browser:aw-event-1',
       memoryEventIds: ['browser:aw-event-1'],
+      title: 'Example Com / tasks',
+      summary: '1 browser event about Example Com / tasks on 2026-03-20.',
+      theme: 'example.com / tasks',
+      reviewDate: '2026-03-20',
+      timeRange: {
+        startAt: '2026-03-20T08:00:00.000Z',
+        endAt: '2026-03-20T08:00:00.000Z',
+      },
       reviewState: 'pending',
     });
     expect(requests).toEqual([
@@ -303,7 +319,13 @@ describe('openviking store adapter', () => {
         artifact: {
           id: 'reviewed:candidate:browser:aw-event-1',
           candidateMemoryId: 'candidate:browser:aw-event-1',
+          candidateTitle: 'Example Com / tasks',
+          candidateSummary: '1 browser event about Example Com / tasks on 2026-03-20.',
+          candidateTheme: 'example.com / tasks',
+          memoryEventIds: ['browser:aw-event-1'],
+          reviewDate: '2026-03-20',
           decision: 'keep',
+          reviewedAt: '2026-03-20T10:00:00.000Z',
         },
       },
       async (input, init) => {
@@ -337,7 +359,13 @@ describe('openviking store adapter', () => {
     expect(importedPayload).toEqual({
       id: 'reviewed:candidate:browser:aw-event-1',
       candidateMemoryId: 'candidate:browser:aw-event-1',
+      candidateTitle: 'Example Com / tasks',
+      candidateSummary: '1 browser event about Example Com / tasks on 2026-03-20.',
+      candidateTheme: 'example.com / tasks',
+      memoryEventIds: ['browser:aw-event-1'],
+      reviewDate: '2026-03-20',
       decision: 'keep',
+      reviewedAt: '2026-03-20T10:00:00.000Z',
     });
     expect(requests).toEqual([
       {

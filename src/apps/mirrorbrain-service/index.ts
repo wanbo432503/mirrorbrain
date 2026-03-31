@@ -24,11 +24,13 @@ import {
 import { runDailyReview } from '../../workflows/daily-review/index.js';
 import { buildSkillDraftFromReviewedMemories } from '../../workflows/skill-draft-builder/index.js';
 import {
-  createCandidateMemory,
+  createCandidateMemories,
   reviewCandidateMemory,
+  suggestCandidateReviews,
 } from '../../modules/memory-review/index.js';
 import type {
   CandidateMemory,
+  CandidateReviewSuggestion,
   KnowledgeArtifact,
   MemoryEvent,
   ReviewedMemory,
@@ -78,7 +80,8 @@ interface CreateMirrorBrainServiceDependencies {
   generateKnowledge?: typeof runDailyReview;
   generateSkillDraft?: typeof buildSkillDraftFromReviewedMemories;
   reviewMemory?: typeof reviewCandidateMemory;
-  createCandidate?: typeof createCandidateMemory;
+  createCandidateMemories?: typeof createCandidateMemories;
+  suggestCandidateReviews?: typeof suggestCandidateReviews;
 }
 
 function createOpenVikingMemoryEventWriter(input: {
@@ -181,7 +184,10 @@ export function createMirrorBrainService(
   const generateSkillDraft =
     dependencies.generateSkillDraft ?? buildSkillDraftFromReviewedMemories;
   const reviewMemory = dependencies.reviewMemory ?? reviewCandidateMemory;
-  const createCandidate = dependencies.createCandidate ?? createCandidateMemory;
+  const buildCandidateMemories =
+    dependencies.createCandidateMemories ?? createCandidateMemories;
+  const analyzeCandidateReviews =
+    dependencies.suggestCandidateReviews ?? suggestCandidateReviews;
 
   return {
     service: input.service,
@@ -252,10 +258,44 @@ export function createMirrorBrainService(
 
       return artifact;
     },
+    createDailyCandidateMemories: async (
+      reviewDate: string,
+    ): Promise<CandidateMemory[]> => {
+      const memoryEvents = await queryMemory({
+        baseUrl,
+      });
+      const artifacts = await buildCandidateMemories({
+        reviewDate,
+        memoryEvents,
+      });
+
+      await Promise.all(
+        artifacts.map((artifact) =>
+          publishCandidateMemory({
+            baseUrl,
+            workspaceDir,
+            artifact,
+          }),
+        ),
+      );
+
+      return artifacts;
+    },
+    suggestCandidateReviews: async (
+      candidates: CandidateMemory[],
+    ): Promise<CandidateReviewSuggestion[]> =>
+      analyzeCandidateReviews(candidates),
     createCandidateMemory: async (
       memoryEvents: MemoryEvent[],
     ): Promise<CandidateMemory> => {
-      const artifact = await createCandidate(memoryEvents);
+      const [artifact] = await buildCandidateMemories({
+        reviewDate: memoryEvents[0]?.timestamp.slice(0, 10) ?? '',
+        memoryEvents,
+      });
+
+      if (!artifact) {
+        throw new Error('No candidate memory could be created.');
+      }
 
       await publishCandidateMemory({
         baseUrl,

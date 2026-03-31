@@ -19,7 +19,7 @@ MirrorBrain / 镜像大脑 是 `openclaw` 的 memory 和 capability layer。
 - 只支持浏览器来源，通过 `ActivityWatch` + `aw-watcher-web`
 - 使用 `OpenViking` 做本地存储和检索
 - 提供本地 HTTP 服务和独立 Web UI
-- 支持浏览器同步、candidate 创建、reviewed memory、knowledge draft、skill draft 这条最小闭环
+- 支持浏览器同步、按天生成 candidate stream、AI review suggestion、reviewed memory、knowledge draft、skill draft 这条最小闭环
 
 当前还没做：
 
@@ -151,15 +151,19 @@ http://127.0.0.1:3007/docs
 进入网页后依次点击：
 
 1. `Sync Browser Memory`
-2. `Create Candidate`
-3. `Keep Candidate`
-4. `Generate Knowledge`
-5. `Generate Skill`
+2. 打开 `Review` tab，点击 `Create Candidate`
+3. 选择一个当天的 candidate stream
+4. 查看 AI 给出的 review suggestion
+5. 点击 `Keep Candidate`
+6. 打开 `Artifacts` tab
+7. 点击 `Generate Knowledge`
+8. 点击 `Generate Skill`
 
 预期结果：
 
 - 页面里能看到 memory events
-- 页面显示一个 candidate id
+- 页面会显示一个或多个当天的 candidate stream
+- 选中的 candidate 会显示 title、summary 和 suggestion
 - 页面显示一个 reviewed memory id
 - 页面显示一个 knowledge draft id
 - 页面显示一个 skill draft id

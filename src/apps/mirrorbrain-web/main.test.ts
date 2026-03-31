@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type {
   CandidateMemory,
+  CandidateReviewSuggestion,
   KnowledgeArtifact,
   MemoryEvent,
   ReviewedMemory,
@@ -9,45 +10,106 @@ import type {
 } from '../../shared/types/index.js';
 import { createMirrorBrainWebApp, renderMirrorBrainWebApp } from './main.js';
 
+function createMemoryEvent(id: string, title: string, timestamp: string): MemoryEvent {
+  return {
+    id,
+    sourceType: 'activitywatch-browser',
+    sourceRef: id.replace('browser:', ''),
+    timestamp,
+    authorizationScopeId: 'scope-browser',
+    content: {
+      title,
+      url: `https://example.com/${id}`,
+    },
+    captureMetadata: {
+      upstreamSource: 'activitywatch',
+      checkpoint: timestamp,
+    },
+  };
+}
+
+function createCandidateMemory(input: {
+  id: string;
+  memoryEventIds: string[];
+  title: string;
+  summary: string;
+  theme: string;
+}): CandidateMemory {
+  return {
+    id: input.id,
+    memoryEventIds: input.memoryEventIds,
+    title: input.title,
+    summary: input.summary,
+    theme: input.theme,
+    reviewDate: '2026-03-20',
+    timeRange: {
+      startAt: '2026-03-20T08:00:00.000Z',
+      endAt: '2026-03-20T08:15:00.000Z',
+    },
+    reviewState: 'pending',
+  };
+}
+
+function createReviewedMemory(candidate: CandidateMemory): ReviewedMemory {
+  return {
+    id: `reviewed:${candidate.id}`,
+    candidateMemoryId: candidate.id,
+    candidateTitle: candidate.title,
+    candidateSummary: candidate.summary,
+    candidateTheme: candidate.theme,
+    memoryEventIds: candidate.memoryEventIds,
+    reviewDate: candidate.reviewDate,
+    decision: 'keep',
+    reviewedAt: '2026-03-20T10:00:00.000Z',
+  };
+}
+
 describe('mirrorbrain web app', () => {
-  it('renders only the active tab and shows explicit review and artifact details', () => {
+  it('renders review tab with multiple daily candidate streams and AI suggestions', () => {
+    const primaryCandidate = createCandidateMemory({
+      id: 'candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
+      memoryEventIds: ['browser:aw-event-1', 'browser:aw-event-2'],
+      title: 'Docs Example Com / guides',
+      summary: '2 browser events about Docs Example Com / guides on 2026-03-20.',
+      theme: 'docs.example.com / guides',
+    });
+    const secondaryCandidate = createCandidateMemory({
+      id: 'candidate:2026-03-20:activitywatch-browser:github-com:example',
+      memoryEventIds: ['browser:aw-event-3'],
+      title: 'Github Com / example',
+      summary: '1 browser event about Github Com / example on 2026-03-20.',
+      theme: 'github.com / example',
+    });
+
     const html = renderMirrorBrainWebApp({
       serviceStatus: 'running',
-      memoryEvents: [
+      memoryEvents: [createMemoryEvent('browser:aw-event-1', 'Example Tasks', '2026-03-20T08:00:00.000Z')],
+      candidateMemories: [primaryCandidate, secondaryCandidate],
+      selectedCandidateId: primaryCandidate.id,
+      candidateReviewSuggestions: [
         {
-          id: 'browser:aw-event-1',
-          sourceType: 'activitywatch-browser',
-          sourceRef: 'aw-event-1',
-          timestamp: '2026-03-20T08:00:00.000Z',
-          authorizationScopeId: 'scope-browser',
-          content: {
-            title: 'Example Tasks',
-          },
-          captureMetadata: {
-            upstreamSource: 'activitywatch',
-            checkpoint: '2026-03-20T08:00:00.000Z',
-          },
+          candidateMemoryId: primaryCandidate.id,
+          recommendation: 'keep',
+          confidenceScore: 0.8,
+          priorityScore: 2,
+          rationale:
+            'This daily stream has repeated activity and is a strong keep candidate.',
         },
       ],
-      candidateMemory: {
-        id: 'candidate:browser:aw-event-1',
-        memoryEventIds: ['browser:aw-event-1'],
-        reviewState: 'pending',
-      },
-      reviewedMemory: {
-        id: 'reviewed:candidate:browser:aw-event-1',
-        candidateMemoryId: 'candidate:browser:aw-event-1',
-        decision: 'keep',
-      },
+      reviewedMemory: createReviewedMemory(primaryCandidate),
       knowledgeArtifact: {
-        id: 'knowledge-draft:reviewed:candidate:browser:aw-event-1',
+        id: 'knowledge-draft:reviewed:candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
         draftState: 'draft',
-        sourceReviewedMemoryIds: ['reviewed:candidate:browser:aw-event-1'],
+        sourceReviewedMemoryIds: [
+          'reviewed:candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
+        ],
       },
       skillArtifact: {
-        id: 'skill-draft:reviewed:candidate:browser:aw-event-1',
+        id: 'skill-draft:reviewed:candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
         approvalState: 'draft',
-        workflowEvidenceRefs: ['reviewed:candidate:browser:aw-event-1'],
+        workflowEvidenceRefs: [
+          'reviewed:candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
+        ],
         executionSafetyMetadata: {
           requiresConfirmation: true,
         },
@@ -60,47 +122,37 @@ describe('mirrorbrain web app', () => {
       },
       feedback: {
         kind: 'success',
-        message: 'Candidate created: candidate:browser:aw-event-1',
+        message: 'Generated 2 daily candidates for 2026-03-20.',
       },
       activeTab: 'review',
       memoryPage: 1,
     });
 
-    expect(html).toContain('MirrorBrain Phase 1 MVP');
-    expect(html).toContain('Service Status: running');
-    expect(html).toContain('data-tab="review"');
-    expect(html).toContain('Candidate Memory');
-    expect(html).toContain('Reviewed Memory');
-    expect(html).toContain('candidate:browser:aw-event-1');
-    expect(html).toContain('reviewed:candidate:browser:aw-event-1');
-    expect(html).toContain('Decision');
-    expect(html).not.toContain('knowledge-draft:reviewed:candidate:browser:aw-event-1');
-    expect(html).not.toContain('skill-draft:reviewed:candidate:browser:aw-event-1');
-    expect(html).toContain('Memory Event IDs');
-    expect(html).toContain('activitywatch-browser:aw-watcher-web-chrome');
-    expect(html).toContain('Status: Candidate created: candidate:browser:aw-event-1');
+    expect(html).toContain('Daily Candidate Streams');
+    expect(html).toContain(primaryCandidate.title);
+    expect(html).toContain(secondaryCandidate.title);
+    expect(html).toContain(primaryCandidate.summary);
+    expect(html).toContain('AI Review Suggestion');
+    expect(html).toContain('Recommendation');
+    expect(html).toContain('strong keep candidate');
+    expect(html).not.toContain('knowledge-draft:reviewed:candidate:2026-03-20:activitywatch-browser:docs-example-com:guides');
   });
 
   it('renders memory pagination with 20 events per page', () => {
-    const memoryEvents = Array.from({ length: 25 }, (_, index) => ({
-      id: `browser:aw-event-${index + 1}`,
-      sourceType: 'activitywatch-browser',
-      sourceRef: `aw-event-${index + 1}`,
-      timestamp: `2026-03-20T08:${String(index).padStart(2, '0')}:00.000Z`,
-      authorizationScopeId: 'scope-browser',
-      content: {
-        title: `Example ${index + 1}`,
-      },
-      captureMetadata: {
-        upstreamSource: 'activitywatch',
-        checkpoint: `2026-03-20T08:${String(index).padStart(2, '0')}:00.000Z`,
-      },
-    }));
+    const memoryEvents = Array.from({ length: 25 }, (_, index) =>
+      createMemoryEvent(
+        `browser:aw-event-${index + 1}`,
+        `Example ${index + 1}`,
+        `2026-03-20T08:${String(index).padStart(2, '0')}:00.000Z`,
+      ),
+    );
 
     const html = renderMirrorBrainWebApp({
       serviceStatus: 'running',
       memoryEvents,
-      candidateMemory: null,
+      candidateMemories: [],
+      selectedCandidateId: null,
+      candidateReviewSuggestions: [],
       reviewedMemory: null,
       knowledgeArtifact: null,
       skillArtifact: null,
@@ -114,15 +166,15 @@ describe('mirrorbrain web app', () => {
     expect(html).toContain('browser:aw-event-21');
     expect(html).toContain('browser:aw-event-25');
     expect(html).not.toContain('browser:aw-event-20');
-    expect(html).toContain('data-action="memory-prev-page"');
-    expect(html).toContain('data-action="memory-next-page"');
   });
 
   it('shows only the actions that belong to the active tab', () => {
     const baseState = {
       serviceStatus: 'running' as const,
       memoryEvents: [] as MemoryEvent[],
-      candidateMemory: null,
+      candidateMemories: [] as CandidateMemory[],
+      selectedCandidateId: null,
+      candidateReviewSuggestions: [] as CandidateReviewSuggestion[],
       reviewedMemory: null,
       knowledgeArtifact: null,
       skillArtifact: null,
@@ -145,60 +197,44 @@ describe('mirrorbrain web app', () => {
     });
 
     expect(memoryHtml).toContain('data-action="sync-browser"');
-    expect(memoryHtml).not.toContain('data-action="create-candidate"');
-    expect(memoryHtml).not.toContain('data-action="keep-candidate"');
-    expect(memoryHtml).not.toContain('data-action="generate-knowledge"');
-    expect(memoryHtml).not.toContain('data-action="generate-skill"');
-
-    expect(reviewHtml).not.toContain('data-action="sync-browser"');
     expect(reviewHtml).toContain('data-action="create-candidate"');
     expect(reviewHtml).toContain('data-action="keep-candidate"');
-    expect(reviewHtml).not.toContain('data-action="generate-knowledge"');
-    expect(reviewHtml).not.toContain('data-action="generate-skill"');
-
-    expect(artifactsHtml).not.toContain('data-action="sync-browser"');
-    expect(artifactsHtml).not.toContain('data-action="create-candidate"');
-    expect(artifactsHtml).not.toContain('data-action="keep-candidate"');
+    expect(reviewHtml).toContain('data-action="discard-candidate"');
     expect(artifactsHtml).toContain('data-action="generate-knowledge"');
     expect(artifactsHtml).toContain('data-action="generate-skill"');
   });
 
-  it('loads, syncs, reviews, and generates artifacts through the web app controller', async () => {
+  it('loads, creates daily candidates, reviews the selected candidate, and generates artifacts', async () => {
     const memoryEvents: MemoryEvent[] = [
-      {
-        id: 'browser:aw-event-1',
-        sourceType: 'activitywatch-browser',
-        sourceRef: 'aw-event-1',
-        timestamp: '2026-03-20T08:00:00.000Z',
-        authorizationScopeId: 'scope-browser',
-        content: {
-          title: 'Example Tasks',
-        },
-        captureMetadata: {
-          upstreamSource: 'activitywatch',
-          checkpoint: '2026-03-20T08:00:00.000Z',
-        },
-      },
+      createMemoryEvent('browser:aw-event-1', 'Example Tasks', '2026-03-20T08:00:00.000Z'),
+      createMemoryEvent('browser:aw-event-2', 'Example API', '2026-03-20T08:15:00.000Z'),
     ];
-    const candidateMemory: CandidateMemory = {
-      id: 'candidate:browser:aw-event-1',
-      memoryEventIds: ['browser:aw-event-1'],
-      reviewState: 'pending',
-    };
-    const reviewedMemory: ReviewedMemory = {
-      id: 'reviewed:candidate:browser:aw-event-1',
-      candidateMemoryId: 'candidate:browser:aw-event-1',
-      decision: 'keep',
-    };
+    const candidates = [
+      createCandidateMemory({
+        id: 'candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
+        memoryEventIds: ['browser:aw-event-1', 'browser:aw-event-2'],
+        title: 'Docs Example Com / guides',
+        summary: '2 browser events about Docs Example Com / guides on 2026-03-20.',
+        theme: 'docs.example.com / guides',
+      }),
+      createCandidateMemory({
+        id: 'candidate:2026-03-20:activitywatch-browser:github-com:example',
+        memoryEventIds: ['browser:aw-event-3'],
+        title: 'Github Com / example',
+        summary: '1 browser event about Github Com / example on 2026-03-20.',
+        theme: 'github.com / example',
+      }),
+    ];
+    const reviewedMemory = createReviewedMemory(candidates[1]);
     const knowledgeArtifact: KnowledgeArtifact = {
-      id: 'knowledge-draft:reviewed:candidate:browser:aw-event-1',
+      id: `knowledge-draft:${reviewedMemory.id}`,
       draftState: 'draft',
-      sourceReviewedMemoryIds: ['reviewed:candidate:browser:aw-event-1'],
+      sourceReviewedMemoryIds: [reviewedMemory.id],
     };
     const skillArtifact: SkillArtifact = {
-      id: 'skill-draft:reviewed:candidate:browser:aw-event-1',
+      id: `skill-draft:${reviewedMemory.id}`,
       approvalState: 'draft',
-      workflowEvidenceRefs: ['reviewed:candidate:browser:aw-event-1'],
+      workflowEvidenceRefs: [reviewedMemory.id],
       executionSafetyMetadata: {
         requiresConfirmation: true,
       },
@@ -213,10 +249,20 @@ describe('mirrorbrain web app', () => {
       syncBrowser: vi.fn(async () => ({
         sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
         strategy: 'incremental' as const,
-        importedCount: 1,
+        importedCount: 2,
         lastSyncedAt: '2026-03-20T09:00:00.000Z',
       })),
-      createCandidateMemory: vi.fn(async () => candidateMemory),
+      createDailyCandidates: vi.fn(async () => candidates),
+      suggestCandidateReviews: vi.fn(async () => [
+        {
+          candidateMemoryId: candidates[1].id,
+          recommendation: 'review' as const,
+          confidenceScore: 0.55,
+          priorityScore: 1,
+          rationale:
+            'This daily stream has limited evidence and should stay in human review.',
+        },
+      ]),
       reviewCandidateMemory: vi.fn(async () => reviewedMemory),
       generateKnowledge: vi.fn(async () => knowledgeArtifact),
       generateSkill: vi.fn(async () => skillArtifact),
@@ -224,62 +270,55 @@ describe('mirrorbrain web app', () => {
 
     const app = createMirrorBrainWebApp({
       api,
+      now: () => '2026-03-20T10:00:00.000Z',
     });
 
     await app.load();
     await app.syncBrowserMemory();
-    await app.createCandidateMemory(['browser:aw-event-1']);
-    expect(app.state.feedback).toEqual({
-      kind: 'success',
-      message: 'Candidate created: candidate:browser:aw-event-1',
-    });
-    await app.reviewCurrentCandidate('keep');
-    expect(app.state.feedback).toEqual({
-      kind: 'success',
-      message: 'Candidate kept: reviewed:candidate:browser:aw-event-1',
-    });
+    await app.createDailyCandidates();
+    app.selectCandidate(candidates[1].id);
+    await app.reviewSelectedCandidate('keep');
     await app.generateKnowledge();
-    expect(app.state.feedback).toEqual({
-      kind: 'success',
-      message: 'Knowledge generated: knowledge-draft:reviewed:candidate:browser:aw-event-1',
-    });
     await app.generateSkill();
 
     expect(app.state.serviceStatus).toBe('running');
     expect(app.state.memoryEvents).toEqual(memoryEvents);
     expect(app.state.activeTab).toBe('artifacts');
-    expect(app.state.memoryPage).toBe(1);
-    expect(app.state.candidateMemory).toEqual(candidateMemory);
+    expect(app.state.candidateMemories).toEqual(candidates);
+    expect(app.state.selectedCandidateId).toBe(candidates[1].id);
+    expect(app.state.candidateReviewSuggestions).toEqual([
+      {
+        candidateMemoryId: candidates[1].id,
+        recommendation: 'review',
+        confidenceScore: 0.55,
+        priorityScore: 1,
+        rationale:
+          'This daily stream has limited evidence and should stay in human review.',
+      },
+    ]);
     expect(app.state.reviewedMemory).toEqual(reviewedMemory);
     expect(app.state.knowledgeArtifact).toEqual(knowledgeArtifact);
     expect(app.state.skillArtifact).toEqual(skillArtifact);
     expect(app.state.feedback).toEqual({
       kind: 'success',
-      message: 'Skill generated: skill-draft:reviewed:candidate:browser:aw-event-1',
+      message: `Skill generated: ${skillArtifact.id}`,
     });
-    expect(api.createCandidateMemory).toHaveBeenCalledWith(memoryEvents);
-    expect(api.reviewCandidateMemory).toHaveBeenCalledWith(candidateMemory, {
+    expect(api.createDailyCandidates).toHaveBeenCalledWith('2026-03-20');
+    expect(api.suggestCandidateReviews).toHaveBeenCalledWith(candidates);
+    expect(api.reviewCandidateMemory).toHaveBeenCalledWith(candidates[1], {
       decision: 'keep',
+      reviewedAt: '2026-03-20T10:00:00.000Z',
     });
-    expect(api.generateKnowledge).toHaveBeenCalledWith([reviewedMemory]);
-    expect(api.generateSkill).toHaveBeenCalledWith([reviewedMemory]);
   });
 
   it('tracks active tab selection and memory pagination in the controller state', async () => {
-    const memoryEvents: MemoryEvent[] = Array.from({ length: 25 }, (_, index) => ({
-      id: `browser:aw-event-${index + 1}`,
-      sourceType: 'activitywatch-browser',
-      sourceRef: `aw-event-${index + 1}`,
-      timestamp: `2026-03-20T08:${String(index).padStart(2, '0')}:00.000Z`,
-      authorizationScopeId: 'scope-browser',
-      content: {
-        title: `Example ${index + 1}`,
-      },
-      captureMetadata: {
-        upstreamSource: 'activitywatch',
-        checkpoint: `2026-03-20T08:${String(index).padStart(2, '0')}:00.000Z`,
-      },
-    }));
+    const memoryEvents: MemoryEvent[] = Array.from({ length: 25 }, (_, index) =>
+      createMemoryEvent(
+        `browser:aw-event-${index + 1}`,
+        `Example ${index + 1}`,
+        `2026-03-20T08:${String(index).padStart(2, '0')}:00.000Z`,
+      ),
+    );
 
     const app = createMirrorBrainWebApp({
       api: {
@@ -290,11 +329,13 @@ describe('mirrorbrain web app', () => {
         listKnowledge: vi.fn(async () => [] as KnowledgeArtifact[]),
         listSkills: vi.fn(async () => [] as SkillArtifact[]),
         syncBrowser: vi.fn(),
-        createCandidateMemory: vi.fn(),
+        createDailyCandidates: vi.fn(),
+        suggestCandidateReviews: vi.fn(),
         reviewCandidateMemory: vi.fn(),
         generateKnowledge: vi.fn(),
         generateSkill: vi.fn(),
       },
+      now: () => '2026-03-20T10:00:00.000Z',
     });
 
     await app.load();
@@ -315,24 +356,26 @@ describe('mirrorbrain web app', () => {
         listKnowledge: vi.fn(async () => [] as KnowledgeArtifact[]),
         listSkills: vi.fn(async () => [] as SkillArtifact[]),
         syncBrowser: vi.fn(),
-        createCandidateMemory: vi.fn(),
+        createDailyCandidates: vi.fn(),
+        suggestCandidateReviews: vi.fn(),
         reviewCandidateMemory: vi.fn(),
         generateKnowledge: vi.fn(),
         generateSkill: vi.fn(),
       },
+      now: () => '2026-03-20T10:00:00.000Z',
     });
 
     await app.load();
-    await app.createCandidateMemory([]);
+    await app.createDailyCandidates();
     expect(app.state.feedback).toEqual({
       kind: 'error',
-      message: 'No memory events are available to create a candidate.',
+      message: 'No memory events are available for today\'s candidate review.',
     });
 
-    await app.reviewCurrentCandidate('keep');
+    await app.reviewSelectedCandidate('keep');
     expect(app.state.feedback).toEqual({
       kind: 'error',
-      message: 'Create a candidate before reviewing it.',
+      message: 'Select a candidate before reviewing it.',
     });
 
     await app.generateKnowledge();

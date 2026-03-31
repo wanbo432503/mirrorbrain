@@ -2,7 +2,7 @@
 
 ## Summary
 
-The Phase 1 review UI is the smallest standalone surface that lets a user inspect imported memory, create a candidate, review it, and generate knowledge and skill drafts.
+The Phase 1 review UI is the smallest standalone surface that lets a user inspect imported memory, generate daily candidate streams, see AI review suggestions, explicitly keep or discard a selected candidate, and then generate knowledge and skill drafts.
 
 ## Responsibility Boundary
 
@@ -10,11 +10,13 @@ This UI is responsible for:
 
 - showing local service status
 - showing imported memory through a dedicated tab with paging
-- exposing candidate creation and review actions
+- exposing daily candidate generation and explicit review actions
+- showing multiple candidate streams instead of a single current candidate
+- showing AI review suggestions as advisory detail, not final state
 - exposing knowledge and skill generation actions
 - separating memory, review, and artifacts into distinct tabs instead of stacking all content on one page
 - placing sync, review, and artifact actions inside their corresponding tabs instead of a single global action bar
-- rendering review and artifact states with explicit field-level detail
+- rendering candidate, suggestion, reviewed-memory, and artifact states with explicit field-level detail
 - showing visible action feedback for success and prerequisite errors
 
 This UI is not responsible for:
@@ -33,10 +35,12 @@ This UI is not responsible for:
 1. The UI loads health, memory, knowledge, and skill data from the local service API.
 2. The user browses memory through the paged memory tab.
 3. The user triggers browser sync when needed.
-4. The user creates a candidate from selected memory.
-5. The user reviews the candidate through the review tab.
-6. The user generates knowledge and skill drafts and inspects them through the artifacts tab.
-7. The UI renders a visible status message after each action so the workflow is not silent.
+4. The user generates daily candidates for the current day from the review tab.
+5. The UI lists multiple candidate streams and lets the user pick one.
+6. The UI shows AI review suggestions for the selected candidate without auto-reviewing it.
+7. The user explicitly keeps or discards the selected candidate.
+8. The user generates knowledge and skill drafts and inspects them through the artifacts tab.
+9. The UI renders a visible status message after each action so the workflow is not silent.
 
 ## Test Strategy
 
@@ -48,3 +52,5 @@ This UI is not responsible for:
 - the current implementation is intentionally minimal and favors operational clarity over visual completeness
 - the UI depends on the local HTTP service and asset preparation performed by `pnpm dev`
 - memory paging is purely client-side in the current MVP and does not yet reduce backend payload size
+- candidate grouping still depends on backend deterministic stream rules rather than richer semantic clustering
+- AI suggestions are advisory placeholders in Phase 1

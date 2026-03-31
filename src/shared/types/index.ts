@@ -48,13 +48,35 @@ export interface MemoryEvent {
 export interface CandidateMemory {
   id: string;
   memoryEventIds: string[];
+  title: string;
+  summary: string;
+  theme: string;
+  reviewDate: string;
+  timeRange: {
+    startAt: string;
+    endAt: string;
+  };
   reviewState: 'pending';
 }
 
 export interface ReviewedMemory {
   id: string;
   candidateMemoryId: string;
+  candidateTitle: string;
+  candidateSummary: string;
+  candidateTheme: string;
+  memoryEventIds: string[];
+  reviewDate: string;
   decision: 'keep' | 'discard';
+  reviewedAt: string;
+}
+
+export interface CandidateReviewSuggestion {
+  candidateMemoryId: string;
+  recommendation: 'keep' | 'discard' | 'review';
+  confidenceScore: number;
+  priorityScore: number;
+  rationale: string;
 }
 
 export interface KnowledgeArtifact {

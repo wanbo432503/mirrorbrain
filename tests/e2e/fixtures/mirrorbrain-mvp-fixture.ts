@@ -4,37 +4,34 @@ import { join } from 'node:path';
 
 import { startMirrorBrainHttpServer } from '../../../src/apps/mirrorbrain-http-server/index.js';
 import { getMirrorBrainConfig } from '../../../src/shared/config/index.js';
+import type {
+  CandidateMemory,
+  ReviewedMemory,
+} from '../../../src/shared/types/index.js';
 import { prepareMirrorBrainWebAssets } from '../../../scripts/start-mirrorbrain-dev.js';
 
 export async function startMirrorBrainMvpFixture() {
   const workspaceDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-e2e-workspace-'));
   const staticDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-e2e-web-'));
+  const reviewDate = new Date().toISOString().slice(0, 10);
   const memoryEvents = [
     {
       id: 'browser:aw-event-1',
       sourceType: 'activitywatch-browser',
       sourceRef: 'aw-event-1',
-      timestamp: '2026-03-20T08:00:00.000Z',
+      timestamp: `${reviewDate}T08:00:00.000Z`,
       authorizationScopeId: 'scope-browser',
       content: {
         title: 'Example Tasks',
       },
       captureMetadata: {
         upstreamSource: 'activitywatch',
-        checkpoint: '2026-03-20T08:00:00.000Z',
+        checkpoint: `${reviewDate}T08:00:00.000Z`,
       },
     },
   ];
-  let candidateMemory: {
-    id: string;
-    memoryEventIds: string[];
-    reviewState: 'pending';
-  } | null = null;
-  let reviewedMemory: {
-    id: string;
-    candidateMemoryId: string;
-    decision: 'keep';
-  } | null = null;
+  let candidateMemory: CandidateMemory | null = null;
+  let reviewedMemory: ReviewedMemory | null = null;
   let knowledgeArtifact: {
     id: string;
     draftState: 'draft';
@@ -71,23 +68,48 @@ export async function startMirrorBrainMvpFixture() {
       queryMemory: async () => memoryEvents,
       listKnowledge: async () => (knowledgeArtifact === null ? [] : [knowledgeArtifact]),
       listSkillDrafts: async () => (skillArtifact === null ? [] : [skillArtifact]),
-      createCandidateMemory: async (events) => {
+      createDailyCandidateMemories: async (_reviewDate: string) => {
         candidateMemory = {
-          id: `candidate:${events[0]?.id ?? 'empty'}`,
-          memoryEventIds: events.map((event) => event.id),
+          id: `candidate:${memoryEvents[0]?.id ?? 'empty'}`,
+          memoryEventIds: memoryEvents.map((event) => event.id),
+          title: 'Fixture Candidate',
+          summary: `Fixture candidate for ${memoryEvents.length} events.`,
+          theme: 'fixture / browser',
+          reviewDate,
+          timeRange: {
+            startAt: memoryEvents[0]?.timestamp ?? `${reviewDate}T08:00:00.000Z`,
+            endAt:
+              memoryEvents[memoryEvents.length - 1]?.timestamp ??
+              `${reviewDate}T08:00:00.000Z`,
+          },
           reviewState: 'pending',
         };
 
-        return candidateMemory;
+        return candidateMemory === null ? [] : [candidateMemory];
       },
+      suggestCandidateReviews: async (candidates: CandidateMemory[]) =>
+        candidates.map((candidate) => ({
+          candidateMemoryId: candidate.id,
+          recommendation: 'review' as const,
+          confidenceScore: 0.55,
+          priorityScore: candidate.memoryEventIds.length,
+          rationale:
+            'This daily stream has limited evidence and should stay in human review.',
+        })),
       reviewCandidateMemory: async (candidate, review) => {
         reviewedMemory = {
           id: `reviewed:${candidate.id}`,
           candidateMemoryId: candidate.id,
-          decision: review.decision as 'keep',
+          candidateTitle: candidate.title,
+          candidateSummary: candidate.summary,
+          candidateTheme: candidate.theme,
+          memoryEventIds: candidate.memoryEventIds,
+          reviewDate: candidate.reviewDate,
+          decision: review.decision,
+          reviewedAt: review.reviewedAt,
         };
 
-        return reviewedMemory;
+        return reviewedMemory as ReviewedMemory;
       },
       generateKnowledgeFromReviewedMemories: async (reviewedMemories) => {
         knowledgeArtifact = {

@@ -25,13 +25,13 @@ This slice is not responsible for:
 - `ingestReviewedMemoryToOpenViking(...)`
 - `listMirrorBrainCandidateMemoriesFromOpenViking(...)`
 - `listMirrorBrainReviewedMemoriesFromOpenViking(...)`
-- `createMirrorBrainService(...).createCandidateMemory(...)`
+- `createMirrorBrainService(...).createDailyCandidateMemories(...)`
 - `createMirrorBrainService(...).reviewCandidateMemory(...)`
 
 ## Data Flow
 
-1. Domain logic creates a `CandidateMemory` from raw `MemoryEvent[]`.
-2. The service persists that candidate into OpenViking resource storage.
+1. Domain logic creates one or more daily `CandidateMemory` streams from raw `MemoryEvent[]`.
+2. The service persists each candidate stream into OpenViking resource storage.
 3. A user review decision produces a `ReviewedMemory`.
 4. The service persists that reviewed memory into OpenViking resource storage.
 5. Later workflows can reload stored candidates or reviewed memories for UI or generation flows.

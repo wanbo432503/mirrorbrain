@@ -6,6 +6,7 @@ test('runs the phase 1 MVP review flow through the standalone UI', async ({
   page,
 }) => {
   const fixture = await startMirrorBrainMvpFixture();
+  const reviewDate = new Date().toISOString().slice(0, 10);
 
   try {
     await page.goto(fixture.origin);
@@ -19,26 +20,35 @@ test('runs the phase 1 MVP review flow through the standalone UI', async ({
       page.getByText('Status: Browser sync completed: 1 events imported.'),
     ).toBeVisible();
 
+    await page.getByRole('button', { name: 'Review' }).click();
     await page.getByRole('button', { name: 'Create Candidate' }).click();
     await expect(
-      page.getByText('Candidate: candidate:browser:aw-event-1'),
+      page.getByRole('button', { name: /Fixture Candidate/ }),
     ).toBeVisible();
     await expect(
-      page.getByText('Status: Candidate created: candidate:browser:aw-event-1'),
+      page.getByText(`Status: Generated 1 daily candidates for ${reviewDate}.`),
+    ).toBeVisible();
+    await expect(
+      page.getByText('This daily stream has limited evidence and should stay in human review.'),
     ).toBeVisible();
 
     await page.getByRole('button', { name: 'Keep Candidate' }).click();
     await expect(
-      page.getByText('Reviewed: reviewed:candidate:browser:aw-event-1'),
+      page.getByText('Reviewed ID'),
+    ).toBeVisible();
+    await expect(
+      page.getByText('reviewed:candidate:browser:aw-event-1', { exact: true }),
     ).toBeVisible();
     await expect(
       page.getByText('Status: Candidate kept: reviewed:candidate:browser:aw-event-1'),
     ).toBeVisible();
 
+    await page.getByRole('button', { name: 'Artifacts' }).click();
     await page.getByRole('button', { name: 'Generate Knowledge' }).click();
     await expect(
       page.getByText(
-        'Knowledge: knowledge-draft:reviewed:candidate:browser:aw-event-1',
+        'knowledge-draft:reviewed:candidate:browser:aw-event-1',
+        { exact: true },
       ),
     ).toBeVisible();
     await expect(
@@ -50,7 +60,8 @@ test('runs the phase 1 MVP review flow through the standalone UI', async ({
     await page.getByRole('button', { name: 'Generate Skill' }).click();
     await expect(
       page.getByText(
-        'Skill: skill-draft:reviewed:candidate:browser:aw-event-1',
+        'skill-draft:reviewed:candidate:browser:aw-event-1',
+        { exact: true },
       ),
     ).toBeVisible();
     await expect(

@@ -10,7 +10,13 @@ describe('daily review knowledge', () => {
           {
             id: 'reviewed:candidate:browser:aw-event-1',
             candidateMemoryId: 'candidate:browser:aw-event-1',
+            candidateTitle: 'Example Com / tasks',
+            candidateSummary: '1 browser event about Example Com / tasks on 2026-03-20.',
+            candidateTheme: 'example.com / tasks',
+            memoryEventIds: ['browser:aw-event-1'],
+            reviewDate: '2026-03-20',
             decision: 'keep',
+            reviewedAt: '2026-03-20T10:00:00.000Z',
           },
         ],
       }),

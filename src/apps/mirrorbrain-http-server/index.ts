@@ -8,6 +8,7 @@ import fastifySwaggerUi from '@fastify/swagger-ui';
 import { getMirrorBrainConfig } from '../../shared/config/index.js';
 import type {
   CandidateMemory,
+  CandidateReviewSuggestion,
   KnowledgeArtifact,
   MemoryEvent,
   ReviewedMemory,
@@ -23,10 +24,16 @@ interface MirrorBrainHttpService {
   queryMemory(): Promise<MemoryEvent[]>;
   listKnowledge(): Promise<KnowledgeArtifact[]>;
   listSkillDrafts(): Promise<SkillArtifact[]>;
-  createCandidateMemory(memoryEvents: MemoryEvent[]): Promise<CandidateMemory>;
+  createDailyCandidateMemories(reviewDate: string): Promise<CandidateMemory[]>;
+  suggestCandidateReviews(
+    candidates: CandidateMemory[],
+  ): Promise<CandidateReviewSuggestion[]>;
   reviewCandidateMemory(
     candidate: CandidateMemory,
-    review: { decision: ReviewedMemory['decision'] },
+    review: {
+      decision: ReviewedMemory['decision'];
+      reviewedAt: string;
+    },
   ): Promise<ReviewedMemory>;
   generateKnowledgeFromReviewedMemories(
     reviewedMemories: ReviewedMemory[],
@@ -92,9 +99,30 @@ const candidateMemorySchema = {
       type: 'array',
       items: { type: 'string' },
     },
+    title: { type: 'string' },
+    summary: { type: 'string' },
+    theme: { type: 'string' },
+    reviewDate: { type: 'string' },
+    timeRange: {
+      type: 'object',
+      properties: {
+        startAt: { type: 'string' },
+        endAt: { type: 'string' },
+      },
+      required: ['startAt', 'endAt'],
+    },
     reviewState: { type: 'string', enum: ['pending'] },
   },
-  required: ['id', 'memoryEventIds', 'reviewState'],
+  required: [
+    'id',
+    'memoryEventIds',
+    'title',
+    'summary',
+    'theme',
+    'reviewDate',
+    'timeRange',
+    'reviewState',
+  ],
 } as const;
 
 const reviewedMemorySchema = {
@@ -102,9 +130,49 @@ const reviewedMemorySchema = {
   properties: {
     id: { type: 'string' },
     candidateMemoryId: { type: 'string' },
+    candidateTitle: { type: 'string' },
+    candidateSummary: { type: 'string' },
+    candidateTheme: { type: 'string' },
+    memoryEventIds: {
+      type: 'array',
+      items: { type: 'string' },
+    },
+    reviewDate: { type: 'string' },
     decision: { type: 'string', enum: ['keep', 'discard'] },
+    reviewedAt: { type: 'string' },
   },
-  required: ['id', 'candidateMemoryId', 'decision'],
+  required: [
+    'id',
+    'candidateMemoryId',
+    'candidateTitle',
+    'candidateSummary',
+    'candidateTheme',
+    'memoryEventIds',
+    'reviewDate',
+    'decision',
+    'reviewedAt',
+  ],
+} as const;
+
+const candidateReviewSuggestionSchema = {
+  type: 'object',
+  properties: {
+    candidateMemoryId: { type: 'string' },
+    recommendation: {
+      type: 'string',
+      enum: ['keep', 'discard', 'review'],
+    },
+    confidenceScore: { type: 'number' },
+    priorityScore: { type: 'number' },
+    rationale: { type: 'string' },
+  },
+  required: [
+    'candidateMemoryId',
+    'recommendation',
+    'confidenceScore',
+    'priorityScore',
+    'rationale',
+  ],
 } as const;
 
 const knowledgeArtifactSchema = {
@@ -343,31 +411,37 @@ export async function startMirrorBrainHttpServer(
     },
   );
 
-  app.post<{ Body: { memoryEvents: MemoryEvent[] } }>(
-    '/candidate-memories',
+  app.post<{ Body: { reviewDate: string } }>(
+    '/candidate-memories/daily',
     {
       schema: {
-        summary: 'Create a candidate memory from imported events',
+        summary: 'Create daily candidate memories from imported events',
         body: {
           type: 'object',
           properties: {
-            memoryEvents: {
-              type: 'array',
-              items: memoryEventSchema,
-            },
+            reviewDate: { type: 'string' },
           },
-          required: ['memoryEvents'],
+          required: ['reviewDate'],
         },
         response: {
-          201: createArtifactResponseSchema('candidate', candidateMemorySchema),
+          201: {
+            type: 'object',
+            properties: {
+              candidates: {
+                type: 'array',
+                items: candidateMemorySchema,
+              },
+            },
+            required: ['candidates'],
+          },
         },
       },
     },
     async (request, reply) => {
       reply.code(201);
       return {
-        candidate: await input.service.createCandidateMemory(
-          request.body.memoryEvents,
+        candidates: await input.service.createDailyCandidateMemories(
+          request.body.reviewDate,
         ),
       };
     },
@@ -375,8 +449,51 @@ export async function startMirrorBrainHttpServer(
 
   app.post<{
     Body: {
+      candidates: CandidateMemory[];
+    };
+  }>(
+    '/candidate-reviews/suggestions',
+    {
+      schema: {
+        summary: 'Suggest review outcomes for candidate memories',
+        body: {
+          type: 'object',
+          properties: {
+            candidates: {
+              type: 'array',
+              items: candidateMemorySchema,
+            },
+          },
+          required: ['candidates'],
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              suggestions: {
+                type: 'array',
+                items: candidateReviewSuggestionSchema,
+              },
+            },
+            required: ['suggestions'],
+          },
+        },
+      },
+    },
+    async (request) => ({
+      suggestions: await input.service.suggestCandidateReviews(
+        request.body.candidates,
+      ),
+    }),
+  );
+
+  app.post<{
+    Body: {
       candidate: CandidateMemory;
-      review: { decision: ReviewedMemory['decision'] };
+      review: {
+        decision: ReviewedMemory['decision'];
+        reviewedAt: string;
+      };
     };
   }>(
     '/reviewed-memories',
@@ -391,8 +508,9 @@ export async function startMirrorBrainHttpServer(
               type: 'object',
               properties: {
                 decision: { type: 'string', enum: ['keep', 'discard'] },
+                reviewedAt: { type: 'string' },
               },
-              required: ['decision'],
+              required: ['decision', 'reviewedAt'],
             },
           },
           required: ['candidate', 'review'],

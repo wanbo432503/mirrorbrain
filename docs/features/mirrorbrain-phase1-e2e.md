@@ -8,7 +8,7 @@ This feature documents the first vertical slice of MirrorBrain:
 - normalization into `MemoryEvent`
 - OpenViking record persistence
 - local sync checkpoint persistence for incremental polling
-- candidate memory review
+- daily candidate memory stream review
 - daily review knowledge draft generation
 - skill draft generation
 - `openclaw` plugin-facing retrieval
@@ -23,7 +23,7 @@ This feature validates the Phase 1 path end to end as a user-runnable MVP. It is
 - `normalizeActivityWatchBrowserEvent(...)`
 - `persistMemoryEvent(...)`
 - `runBrowserMemorySyncOnce(...)`
-- `createCandidateMemory(...)`
+- `createCandidateMemories(...)`
 - `reviewCandidateMemory(...)`
 - `runDailyReview(...)`
 - `buildSkillDraftFromReviewedMemories(...)`
@@ -38,12 +38,13 @@ This feature validates the Phase 1 path end to end as a user-runnable MVP. It is
 3. MirrorBrain normalizes each event into a `MemoryEvent`.
 4. The event is wrapped for OpenViking persistence and stored.
 5. MirrorBrain advances the browser sync checkpoint.
-6. Related memory events are grouped into a candidate memory.
-7. A user review decision creates reviewed memory.
-8. Daily review creates a knowledge draft.
-9. Workflow evidence creates a skill draft.
-10. A user-facing MVP surface exposes review and generation actions for the first flow.
-11. The `openclaw` plugin API reads the resulting artifacts back from OpenViking-compatible storage adapters.
+6. Same-day memory events are grouped into one or more candidate memory streams.
+7. The UI shows suggestion-only AI review hints for those streams.
+8. A user review decision creates reviewed memory.
+9. Daily review creates a knowledge draft.
+10. Workflow evidence creates a skill draft.
+11. A user-facing MVP surface exposes review and generation actions for the first flow.
+12. The `openclaw` plugin API reads the resulting artifacts back from OpenViking-compatible storage adapters.
 
 ## Test Strategy
 

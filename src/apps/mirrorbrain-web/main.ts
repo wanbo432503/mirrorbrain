@@ -1,5 +1,6 @@
 import type {
   CandidateMemory,
+  CandidateReviewSuggestion,
   KnowledgeArtifact,
   MemoryEvent,
   ReviewedMemory,
@@ -18,7 +19,9 @@ type MirrorBrainWebTab = 'memory' | 'review' | 'artifacts';
 interface MirrorBrainWebAppState {
   serviceStatus: 'running' | 'stopped' | 'unknown';
   memoryEvents: MemoryEvent[];
-  candidateMemory: CandidateMemory | null;
+  candidateMemories: CandidateMemory[];
+  selectedCandidateId: string | null;
+  candidateReviewSuggestions: CandidateReviewSuggestion[];
   reviewedMemory: ReviewedMemory | null;
   knowledgeArtifact: KnowledgeArtifact | null;
   skillArtifact: SkillArtifact | null;
@@ -39,10 +42,16 @@ interface MirrorBrainWebAppApi {
   listKnowledge(): Promise<KnowledgeArtifact[]>;
   listSkills(): Promise<SkillArtifact[]>;
   syncBrowser(): Promise<BrowserSyncSummary>;
-  createCandidateMemory(memoryEvents: MemoryEvent[]): Promise<CandidateMemory>;
+  createDailyCandidates(reviewDate: string): Promise<CandidateMemory[]>;
+  suggestCandidateReviews(
+    candidates: CandidateMemory[],
+  ): Promise<CandidateReviewSuggestion[]>;
   reviewCandidateMemory(
     candidate: CandidateMemory,
-    review: { decision: ReviewedMemory['decision'] },
+    review: {
+      decision: ReviewedMemory['decision'];
+      reviewedAt: string;
+    },
   ): Promise<ReviewedMemory>;
   generateKnowledge(
     reviewedMemories: ReviewedMemory[],
@@ -52,6 +61,7 @@ interface MirrorBrainWebAppApi {
 
 interface CreateMirrorBrainWebAppInput {
   api: MirrorBrainWebAppApi;
+  now?: () => string;
 }
 
 interface MountMirrorBrainWebAppInput {
@@ -139,36 +149,105 @@ function renderDetailRows(
     .join('');
 }
 
+function getSelectedCandidate(
+  state: MirrorBrainWebAppState,
+): CandidateMemory | null {
+  if (state.selectedCandidateId === null) {
+    return null;
+  }
+
+  return (
+    state.candidateMemories.find(
+      (candidate) => candidate.id === state.selectedCandidateId,
+    ) ?? null
+  );
+}
+
+function getSelectedCandidateSuggestion(
+  state: MirrorBrainWebAppState,
+): CandidateReviewSuggestion | null {
+  if (state.selectedCandidateId === null) {
+    return null;
+  }
+
+  return (
+    state.candidateReviewSuggestions.find(
+      (suggestion) => suggestion.candidateMemoryId === state.selectedCandidateId,
+    ) ?? null
+  );
+}
+
+function renderCandidateList(state: MirrorBrainWebAppState): string {
+  if (state.candidateMemories.length === 0) {
+    return '<p>No daily candidates generated yet.</p>';
+  }
+
+  return state.candidateMemories
+    .map((candidate) => {
+      const isSelected = candidate.id === state.selectedCandidateId;
+      return [
+        `<button type="button" class="mirrorbrain-candidate${
+          isSelected ? ' is-selected' : ''
+        }" data-action="select-candidate" data-candidate-id="${candidate.id}">`,
+        `<strong>${candidate.title}</strong>`,
+        `<span>${candidate.summary}</span>`,
+        `<span>${candidate.memoryEventIds.length} events</span>`,
+        '</button>',
+      ].join('');
+    })
+    .join('');
+}
+
 function renderReviewPanel(state: MirrorBrainWebAppState): string {
-  const candidate = state.candidateMemory;
-  const reviewed = state.reviewedMemory;
+  const candidate = getSelectedCandidate(state);
+  const suggestion = getSelectedCandidateSuggestion(state);
 
   return [
     '<section class="mirrorbrain-panel">',
     '<h2>Review</h2>',
-    '<div class="mirrorbrain-actions"><button type="button" data-action="create-candidate">Create Candidate</button><button type="button" data-action="keep-candidate">Keep Candidate</button></div>',
-    '<div class="mirrorbrain-detail-grid">',
+    '<p>Generate daily candidates, inspect a work stream, and then keep or discard it.</p>',
+    '<div class="mirrorbrain-actions"><button type="button" data-action="create-candidate">Create Candidate</button><button type="button" data-action="keep-candidate">Keep Candidate</button><button type="button" data-action="discard-candidate">Discard Candidate</button></div>',
+    '<div class="mirrorbrain-review-layout">',
     '<article class="mirrorbrain-detail-card">',
-    '<h3>Candidate Memory</h3>',
+    '<h3>Daily Candidate Streams</h3>',
+    `<div class="mirrorbrain-candidate-list">${renderCandidateList(state)}</div>`,
+    '</article>',
+    '<article class="mirrorbrain-detail-card">',
+    '<h3>Selected Candidate</h3>',
     candidate === null
-      ? '<p>No candidate memory created yet.</p>'
+      ? '<p>Select a candidate stream to review it.</p>'
       : renderDetailRows([
           { label: 'Candidate ID', value: candidate.id },
+          { label: 'Title', value: candidate.title },
+          { label: 'Theme', value: candidate.theme },
+          { label: 'Summary', value: candidate.summary },
           {
             label: 'Memory Event IDs',
             value: candidate.memoryEventIds.join(', '),
           },
-          { label: 'Review State', value: candidate.reviewState },
+          { label: 'Review Date', value: candidate.reviewDate },
+        ]),
+    '</article>',
+    '<article class="mirrorbrain-detail-card">',
+    '<h3>AI Review Suggestion</h3>',
+    suggestion === null
+      ? '<p>No AI suggestion yet.</p>'
+      : renderDetailRows([
+          { label: 'Recommendation', value: suggestion.recommendation },
+          { label: 'Confidence', value: String(suggestion.confidenceScore) },
+          { label: 'Priority', value: String(suggestion.priorityScore) },
+          { label: 'Rationale', value: suggestion.rationale },
         ]),
     '</article>',
     '<article class="mirrorbrain-detail-card">',
     '<h3>Reviewed Memory</h3>',
-    reviewed === null
+    state.reviewedMemory === null
       ? '<p>No reviewed memory yet.</p>'
       : renderDetailRows([
-          { label: 'Reviewed ID', value: reviewed.id },
-          { label: 'Candidate ID', value: reviewed.candidateMemoryId },
-          { label: 'Decision', value: reviewed.decision },
+          { label: 'Reviewed ID', value: state.reviewedMemory.id },
+          { label: 'Candidate ID', value: state.reviewedMemory.candidateMemoryId },
+          { label: 'Decision', value: state.reviewedMemory.decision },
+          { label: 'Reviewed At', value: state.reviewedMemory.reviewedAt },
         ]),
     '</article>',
     '</div>',
@@ -269,10 +348,13 @@ export function renderMirrorBrainWebApp(
 }
 
 export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
+  const now = input.now ?? (() => new Date().toISOString());
   const state: MirrorBrainWebAppState = {
     serviceStatus: 'unknown',
     memoryEvents: [],
-    candidateMemory: null,
+    candidateMemories: [],
+    selectedCandidateId: null,
+    candidateReviewSuggestions: [],
     reviewedMemory: null,
     knowledgeArtifact: null,
     skillArtifact: null,
@@ -290,6 +372,9 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
     state,
     setActiveTab(tab: MirrorBrainWebTab) {
       state.activeTab = tab;
+    },
+    selectCandidate(candidateId: string) {
+      state.selectedCandidateId = candidateId;
     },
     goToNextMemoryPage() {
       state.memoryPage = clampMemoryPage(state.memoryEvents, state.memoryPage + 1);
@@ -326,47 +411,50 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
         message: `Browser sync completed: ${state.lastSyncSummary.importedCount} events imported.`,
       });
     },
-    async createCandidateMemory(memoryEventIds: string[]) {
-      const selectedEvents = state.memoryEvents.filter((event) =>
-        memoryEventIds.includes(event.id),
+    async createDailyCandidates() {
+      const reviewDate = now().slice(0, 10);
+      const todaysEvents = state.memoryEvents.filter((event) =>
+        event.timestamp.startsWith(reviewDate),
       );
 
-      if (selectedEvents.length === 0) {
+      if (todaysEvents.length === 0) {
         setFeedback({
           kind: 'error',
-          message: 'No memory events are available to create a candidate.',
+          message: "No memory events are available for today's candidate review.",
         });
-
         return;
       }
 
-      state.candidateMemory = await input.api.createCandidateMemory(selectedEvents);
+      state.candidateMemories = await input.api.createDailyCandidates(reviewDate);
+      state.candidateReviewSuggestions = await input.api.suggestCandidateReviews(
+        state.candidateMemories,
+      );
+      state.selectedCandidateId = state.candidateMemories[0]?.id ?? null;
       state.activeTab = 'review';
       setFeedback({
         kind: 'success',
-        message: `Candidate created: ${state.candidateMemory.id}`,
+        message: `Generated ${state.candidateMemories.length} daily candidates for ${reviewDate}.`,
       });
     },
-    async reviewCurrentCandidate(decision: ReviewedMemory['decision']) {
-      if (state.candidateMemory === null) {
+    async reviewSelectedCandidate(decision: ReviewedMemory['decision']) {
+      const candidate = getSelectedCandidate(state);
+
+      if (candidate === null) {
         setFeedback({
           kind: 'error',
-          message: 'Create a candidate before reviewing it.',
+          message: 'Select a candidate before reviewing it.',
         });
-
         return;
       }
 
-      state.reviewedMemory = await input.api.reviewCandidateMemory(
-        state.candidateMemory,
-        {
-          decision,
-        },
-      );
+      state.reviewedMemory = await input.api.reviewCandidateMemory(candidate, {
+        decision,
+        reviewedAt: now(),
+      });
       state.activeTab = 'review';
       setFeedback({
         kind: 'success',
-        message: `Candidate kept: ${state.reviewedMemory.id}`,
+        message: `Candidate ${decision === 'keep' ? 'kept' : 'discarded'}: ${state.reviewedMemory.id}`,
       });
     },
     async generateKnowledge() {
@@ -375,7 +463,6 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
           kind: 'error',
           message: 'Keep a reviewed memory before generating knowledge.',
         });
-
         return;
       }
 
@@ -394,7 +481,6 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
           kind: 'error',
           message: 'Keep a reviewed memory before generating a skill draft.',
         });
-
         return;
       }
 
@@ -456,21 +542,37 @@ export function createMirrorBrainBrowserApi(
 
       return body.sync;
     },
-    async createCandidateMemory(memoryEvents) {
-      const response = await fetch(`${baseUrl}/candidate-memories`, {
+    async createDailyCandidates(reviewDate) {
+      const response = await fetch(`${baseUrl}/candidate-memories/daily`, {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
         },
         body: JSON.stringify({
-          memoryEvents,
+          reviewDate,
         }),
       });
       const body = (await response.json()) as {
-        candidate: CandidateMemory;
+        candidates: CandidateMemory[];
       };
 
-      return body.candidate;
+      return body.candidates;
+    },
+    async suggestCandidateReviews(candidates) {
+      const response = await fetch(`${baseUrl}/candidate-reviews/suggestions`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          candidates,
+        }),
+      });
+      const body = (await response.json()) as {
+        suggestions: CandidateReviewSuggestion[];
+      };
+
+      return body.suggestions;
     },
     async reviewCandidateMemory(candidate, review) {
       const response = await fetch(`${baseUrl}/reviewed-memories`, {
@@ -540,6 +642,11 @@ export async function mountMirrorBrainWebApp(
       createMirrorBrainBrowserApi(input.baseUrl ?? window.location.origin),
   });
 
+  const render = () => {
+    root.innerHTML = renderMirrorBrainWebApp(app.state);
+    bindActions();
+  };
+
   const bindActions = () => {
     root
       .querySelector('[data-action="sync-browser"]')
@@ -550,13 +657,19 @@ export async function mountMirrorBrainWebApp(
     root
       .querySelector('[data-action="create-candidate"]')
       ?.addEventListener('click', async () => {
-        await app.createCandidateMemory(app.state.memoryEvents.map((event) => event.id));
+        await app.createDailyCandidates();
         render();
       });
     root
       .querySelector('[data-action="keep-candidate"]')
       ?.addEventListener('click', async () => {
-        await app.reviewCurrentCandidate('keep');
+        await app.reviewSelectedCandidate('keep');
+        render();
+      });
+    root
+      .querySelector('[data-action="discard-candidate"]')
+      ?.addEventListener('click', async () => {
+        await app.reviewSelectedCandidate('discard');
         render();
       });
     root
@@ -584,6 +697,18 @@ export async function mountMirrorBrainWebApp(
         });
       });
     root
+      .querySelectorAll<HTMLElement>('[data-action="select-candidate"]')
+      .forEach((element) => {
+        element.addEventListener('click', () => {
+          const candidateId = element.dataset.candidateId;
+
+          if (candidateId) {
+            app.selectCandidate(candidateId);
+            render();
+          }
+        });
+      });
+    root
       .querySelector('[data-action="memory-prev-page"]')
       ?.addEventListener('click', () => {
         app.goToPreviousMemoryPage();
@@ -595,10 +720,6 @@ export async function mountMirrorBrainWebApp(
         app.goToNextMemoryPage();
         render();
       });
-  };
-  const render = () => {
-    root.innerHTML = renderMirrorBrainWebApp(app.state);
-    bindActions();
   };
 
   render();
