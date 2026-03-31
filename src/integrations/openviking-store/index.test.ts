@@ -519,6 +519,295 @@ describe('openviking store adapter', () => {
     ]);
   });
 
+  it('recombines multi-part OpenViking memory resources before parsing JSON', async () => {
+    const result = await listMirrorBrainMemoryEventsFromOpenViking(
+      {
+        baseUrl: 'http://127.0.0.1:1933',
+      },
+      async (input) => {
+        if (
+          String(input) ===
+          'http://127.0.0.1:1933/api/v1/fs/ls?uri=viking%3A%2F%2Fresources%2F&output=original'
+        ) {
+          return new Response(
+            JSON.stringify({
+              status: 'ok',
+              result: [
+                {
+                  name: 'browser1368',
+                  uri: 'viking://resources/browser1368',
+                  isDir: true,
+                },
+              ],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+
+        if (
+          String(input) ===
+          'http://127.0.0.1:1933/api/v1/fs/ls?uri=viking%3A%2F%2Fresources%2Fbrowser1368&output=original'
+        ) {
+          return new Response(
+            JSON.stringify({
+              status: 'ok',
+              result: [
+                {
+                  name: 'browser1368_2.md',
+                  uri: 'viking://resources/browser1368/browser1368_2.md',
+                  isDir: false,
+                },
+                {
+                  name: 'browser1368_1.md',
+                  uri: 'viking://resources/browser1368/browser1368_1.md',
+                  isDir: false,
+                },
+              ],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+
+        if (
+          String(input) ===
+          'http://127.0.0.1:1933/api/v1/content/read?uri=viking%3A%2F%2Fresources%2Fbrowser1368%2Fbrowser1368_1.md'
+        ) {
+          return new Response(
+            JSON.stringify({
+              status: 'ok',
+              result:
+                '{\n  "id": "browser:1368",\n  "sourceType": "activitywatch-browser",\n  "sourceRef": 1368,\n  "timestamp": "2026-03-20T07:56:25.354000+00:00",\n  "authorizationScopeId": "scope-browser",\n  "content": {\n    "url": "https://example.com/very-long-page",\n    "title": "A title that forces OpenViking to split resource bodies across fragments because it is long enough to overflow the first chunk',
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+
+        return new Response(
+          JSON.stringify({
+            status: 'ok',
+            result:
+              '"\n  },\n  "captureMetadata": {\n    "upstreamSource": "activitywatch",\n    "checkpoint": "2026-03-20T07:56:25.354000+00:00"\n  }\n}',
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      },
+    );
+
+    expect(result).toEqual([
+      {
+        id: 'browser:1368',
+        sourceType: 'activitywatch-browser',
+        sourceRef: 1368,
+        timestamp: '2026-03-20T07:56:25.354000+00:00',
+        authorizationScopeId: 'scope-browser',
+        content: {
+          url: 'https://example.com/very-long-page',
+          title:
+            'A title that forces OpenViking to split resource bodies across fragments because it is long enough to overflow the first chunk',
+        },
+        captureMetadata: {
+          upstreamSource: 'activitywatch',
+          checkpoint: '2026-03-20T07:56:25.354000+00:00',
+        },
+      },
+    ]);
+  });
+
+  it('can recover legacy flat browser resources by parsing payload shape from the root resource list', async () => {
+    const result = await listMirrorBrainMemoryEventsFromOpenViking(
+      {
+        baseUrl: 'http://127.0.0.1:1933',
+      },
+      async (input) => {
+        if (
+          String(input) ===
+          'http://127.0.0.1:1933/api/v1/fs/ls?uri=viking%3A%2F%2Fresources%2F&output=original'
+        ) {
+          return new Response(
+            JSON.stringify({
+              status: 'ok',
+              result: [
+                {
+                  name: 'browser503',
+                  uri: 'viking://resources/browser503',
+                  isDir: true,
+                },
+              ],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+
+        if (
+          String(input) ===
+          'http://127.0.0.1:1933/api/v1/fs/ls?uri=viking%3A%2F%2Fresources%2Fbrowser503&output=original'
+        ) {
+          return new Response(
+            JSON.stringify({
+              status: 'ok',
+              result: [
+                {
+                  name: 'browser503.md',
+                  uri: 'viking://resources/browser503/browser503.md',
+                  isDir: false,
+                },
+              ],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+
+        return new Response(
+          JSON.stringify({
+            status: 'ok',
+            result: JSON.stringify({
+              id: 'browser:503',
+              sourceType: 'activitywatch-browser',
+              sourceRef: '503',
+              timestamp: '2026-03-20T08:00:00.000Z',
+              authorizationScopeId: 'scope-browser',
+              content: {
+                title: 'Legacy Resource',
+              },
+              captureMetadata: {
+                upstreamSource: 'activitywatch',
+                checkpoint: '2026-03-20T08:00:00.000Z',
+              },
+            }),
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      },
+    );
+
+    expect(result).toEqual([
+      {
+        id: 'browser:503',
+        sourceType: 'activitywatch-browser',
+        sourceRef: '503',
+        timestamp: '2026-03-20T08:00:00.000Z',
+        authorizationScopeId: 'scope-browser',
+        content: {
+          title: 'Legacy Resource',
+        },
+        captureMetadata: {
+          upstreamSource: 'activitywatch',
+          checkpoint: '2026-03-20T08:00:00.000Z',
+        },
+      },
+    ]);
+  });
+
+  it('deduplicates memory events when legacy and prefixed OpenViking resources contain the same event id', async () => {
+    const result = await listMirrorBrainMemoryEventsFromOpenViking(
+      {
+        baseUrl: 'http://127.0.0.1:1933',
+      },
+      async (input) => {
+        if (
+          String(input) ===
+          'http://127.0.0.1:1933/api/v1/fs/ls?uri=viking%3A%2F%2Fresources%2F&output=original'
+        ) {
+          return new Response(
+            JSON.stringify({
+              status: 'ok',
+              result: [
+                {
+                  name: 'browser503',
+                  uri: 'viking://resources/browser503',
+                  isDir: true,
+                },
+                {
+                  name: 'mirrorbrain-memory-events-browser-503',
+                  uri: 'viking://resources/mirrorbrain-memory-events-browser-503',
+                  isDir: true,
+                },
+              ],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+
+        if (
+          String(input) ===
+          'http://127.0.0.1:1933/api/v1/fs/ls?uri=viking%3A%2F%2Fresources%2Fbrowser503&output=original'
+        ) {
+          return new Response(
+            JSON.stringify({
+              status: 'ok',
+              result: [
+                {
+                  name: 'browser503.md',
+                  uri: 'viking://resources/browser503/browser503.md',
+                  isDir: false,
+                },
+              ],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+
+        if (
+          String(input) ===
+          'http://127.0.0.1:1933/api/v1/fs/ls?uri=viking%3A%2F%2Fresources%2Fmirrorbrain-memory-events-browser-503&output=original'
+        ) {
+          return new Response(
+            JSON.stringify({
+              status: 'ok',
+              result: [
+                {
+                  name: 'browser-503.json',
+                  uri: 'viking://resources/mirrorbrain-memory-events-browser-503/browser-503.json',
+                  isDir: false,
+                },
+              ],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+
+        return new Response(
+          JSON.stringify({
+            status: 'ok',
+            result: JSON.stringify({
+              id: 'browser:503',
+              sourceType: 'activitywatch-browser',
+              sourceRef: '503',
+              timestamp: '2026-03-20T08:00:00.000Z',
+              authorizationScopeId: 'scope-browser',
+              content: {
+                title: 'Duplicated Resource',
+              },
+              captureMetadata: {
+                upstreamSource: 'activitywatch',
+                checkpoint: '2026-03-20T08:00:00.000Z',
+              },
+            }),
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      },
+    );
+
+    expect(result).toEqual([
+      {
+        id: 'browser:503',
+        sourceType: 'activitywatch-browser',
+        sourceRef: '503',
+        timestamp: '2026-03-20T08:00:00.000Z',
+        authorizationScopeId: 'scope-browser',
+        content: {
+          title: 'Duplicated Resource',
+        },
+        captureMetadata: {
+          upstreamSource: 'activitywatch',
+          checkpoint: '2026-03-20T08:00:00.000Z',
+        },
+      },
+    ]);
+  });
+
+
   it('lists knowledge artifacts from OpenViking resources', async () => {
     const result = await listMirrorBrainKnowledgeArtifactsFromOpenViking(
       {
@@ -974,197 +1263,4 @@ describe('openviking store adapter', () => {
     ).resolves.toEqual([[], [], [], [], []]);
   });
 
-  it('can recover legacy flat browser resources by parsing payload shape from the root resource list', async () => {
-    const result = await listMirrorBrainMemoryEventsFromOpenViking(
-      {
-        baseUrl: 'http://127.0.0.1:1933',
-      },
-      async (input) => {
-        if (
-          String(input) ===
-          'http://127.0.0.1:1933/api/v1/fs/ls?uri=viking%3A%2F%2Fresources%2F&output=original'
-        ) {
-          return new Response(
-            JSON.stringify({
-              status: 'ok',
-              result: [
-                {
-                  name: 'browser503',
-                  uri: 'viking://resources/browser503',
-                  isDir: true,
-                },
-              ],
-            }),
-            { status: 200, headers: { 'Content-Type': 'application/json' } },
-          );
-        }
-
-        if (
-          String(input) ===
-          'http://127.0.0.1:1933/api/v1/fs/ls?uri=viking%3A%2F%2Fresources%2Fbrowser503&output=original'
-        ) {
-          return new Response(
-            JSON.stringify({
-              status: 'ok',
-              result: [
-                {
-                  name: 'browser503.md',
-                  uri: 'viking://resources/browser503/browser503.md',
-                  isDir: false,
-                },
-              ],
-            }),
-            { status: 200, headers: { 'Content-Type': 'application/json' } },
-          );
-        }
-
-        return new Response(
-          JSON.stringify({
-            status: 'ok',
-            result: JSON.stringify({
-              id: 'browser:503',
-              sourceType: 'activitywatch-browser',
-              sourceRef: '503',
-              timestamp: '2026-03-20T08:00:00.000Z',
-              authorizationScopeId: 'scope-browser',
-              content: {
-                title: 'Legacy Resource',
-              },
-              captureMetadata: {
-                upstreamSource: 'activitywatch',
-                checkpoint: '2026-03-20T08:00:00.000Z',
-              },
-            }),
-          }),
-          { status: 200, headers: { 'Content-Type': 'application/json' } },
-        );
-      },
-    );
-
-    expect(result).toEqual([
-      {
-        id: 'browser:503',
-        sourceType: 'activitywatch-browser',
-        sourceRef: '503',
-        timestamp: '2026-03-20T08:00:00.000Z',
-        authorizationScopeId: 'scope-browser',
-        content: {
-          title: 'Legacy Resource',
-        },
-        captureMetadata: {
-          upstreamSource: 'activitywatch',
-          checkpoint: '2026-03-20T08:00:00.000Z',
-        },
-      },
-    ]);
-  });
-
-  it('deduplicates memory events when legacy and prefixed OpenViking resources contain the same event id', async () => {
-    const result = await listMirrorBrainMemoryEventsFromOpenViking(
-      {
-        baseUrl: 'http://127.0.0.1:1933',
-      },
-      async (input) => {
-        if (
-          String(input) ===
-          'http://127.0.0.1:1933/api/v1/fs/ls?uri=viking%3A%2F%2Fresources%2F&output=original'
-        ) {
-          return new Response(
-            JSON.stringify({
-              status: 'ok',
-              result: [
-                {
-                  name: 'browser503',
-                  uri: 'viking://resources/browser503',
-                  isDir: true,
-                },
-                {
-                  name: 'mirrorbrain-memory-events-browser-503',
-                  uri: 'viking://resources/mirrorbrain-memory-events-browser-503',
-                  isDir: true,
-                },
-              ],
-            }),
-            { status: 200, headers: { 'Content-Type': 'application/json' } },
-          );
-        }
-
-        if (
-          String(input) ===
-          'http://127.0.0.1:1933/api/v1/fs/ls?uri=viking%3A%2F%2Fresources%2Fbrowser503&output=original'
-        ) {
-          return new Response(
-            JSON.stringify({
-              status: 'ok',
-              result: [
-                {
-                  name: 'browser503.md',
-                  uri: 'viking://resources/browser503/browser503.md',
-                  isDir: false,
-                },
-              ],
-            }),
-            { status: 200, headers: { 'Content-Type': 'application/json' } },
-          );
-        }
-
-        if (
-          String(input) ===
-          'http://127.0.0.1:1933/api/v1/fs/ls?uri=viking%3A%2F%2Fresources%2Fmirrorbrain-memory-events-browser-503&output=original'
-        ) {
-          return new Response(
-            JSON.stringify({
-              status: 'ok',
-              result: [
-                {
-                  name: 'browser-503.json',
-                  uri: 'viking://resources/mirrorbrain-memory-events-browser-503/browser-503.json',
-                  isDir: false,
-                },
-              ],
-            }),
-            { status: 200, headers: { 'Content-Type': 'application/json' } },
-          );
-        }
-
-        return new Response(
-          JSON.stringify({
-            status: 'ok',
-            result: JSON.stringify({
-              id: 'browser:503',
-              sourceType: 'activitywatch-browser',
-              sourceRef: '503',
-              timestamp: '2026-03-20T08:00:00.000Z',
-              authorizationScopeId: 'scope-browser',
-              content: {
-                title: 'Duplicated Resource',
-              },
-              captureMetadata: {
-                upstreamSource: 'activitywatch',
-                checkpoint: '2026-03-20T08:00:00.000Z',
-              },
-            }),
-          }),
-          { status: 200, headers: { 'Content-Type': 'application/json' } },
-        );
-      },
-    );
-
-    expect(result).toEqual([
-      {
-        id: 'browser:503',
-        sourceType: 'activitywatch-browser',
-        sourceRef: '503',
-        timestamp: '2026-03-20T08:00:00.000Z',
-        authorizationScopeId: 'scope-browser',
-        content: {
-          title: 'Duplicated Resource',
-        },
-        captureMetadata: {
-          upstreamSource: 'activitywatch',
-          checkpoint: '2026-03-20T08:00:00.000Z',
-        },
-      },
-    ]);
-  });
 });

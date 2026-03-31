@@ -31,6 +31,7 @@ This component is the Phase 1 storage adapter that maps MirrorBrain artifacts in
 4. Because OpenViking may flatten imported resources at the root, MirrorBrain encodes logical namespaces into resource names such as `mirrorbrain-memory-events-...` and `mirrorbrain-skill-drafts-...` instead of assuming nested directories will exist under `viking://resources/`.
 5. Retrieval uses `GET /api/v1/fs/ls` at `viking://resources/`, filters by the MirrorBrain namespace prefixes, resolves directory-backed resources to their inner files, and then loads content with `GET /api/v1/content/read`.
 6. Memory retrieval also tolerates legacy flat browser resources such as `browser503` and deduplicates by `MemoryEvent.id` when both legacy and prefixed resources contain the same event.
+7. Some OpenViking resources may be exposed as multiple sibling content fragments such as `browser1368_1.md` and `browser1368_2.md`; retrieval concatenates these fragments in file-name order before parsing the artifact.
 
 ## Operational Note
 
@@ -44,6 +45,7 @@ For local setup and startup expectations around OpenViking, see the repository [
 - unit tests verify HTTP request payloads for memory, candidate, reviewed, knowledge, and skill imports
 - unit tests verify HTTP-based listing and content reads for memory, candidate, reviewed, knowledge, and skill retrieval
 - unit tests verify legacy resource compatibility and duplicate suppression during memory reads
+- unit tests verify multi-part OpenViking resource fragments are recombined before parsing
 
 ## Known Limitations
 

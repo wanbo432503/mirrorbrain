@@ -383,14 +383,14 @@ async function readOpenVikingContent(
   return payload.result ?? '';
 }
 
-async function resolveReadableContentUri(
+async function resolveReadableContentUris(
   input: OpenVikingReadInput & {
     entry: OpenVikingFsEntry;
   },
   fetchImpl: FetchLike,
-): Promise<string | null> {
+): Promise<string[]> {
   if (input.entry.isDir === false) {
-    return input.entry.uri;
+    return [input.entry.uri];
   }
 
   const childEntries = await listOpenVikingEntries(
@@ -400,9 +400,11 @@ async function resolveReadableContentUri(
     },
     fetchImpl,
   );
-  const firstFile = childEntries.find((entry) => entry.isDir === false);
 
-  return firstFile?.uri ?? null;
+  return childEntries
+    .filter((entry) => entry.isDir === false)
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .map((entry) => entry.uri);
 }
 
 function parseKnowledgeArtifact(markdown: string): KnowledgeArtifact {
@@ -554,7 +556,7 @@ export async function listMirrorBrainMemoryEventsFromOpenViking(
         entry.name.startsWith(MIRRORBRAIN_MEMORY_EVENTS_PREFIX) ||
         entry.name.startsWith('browser'),
     ).map(async (entry) => {
-      const contentUri = await resolveReadableContentUri(
+      const contentUris = await resolveReadableContentUris(
         {
           ...input,
           entry,
@@ -562,17 +564,23 @@ export async function listMirrorBrainMemoryEventsFromOpenViking(
         fetchImpl,
       );
 
-      if (contentUri === null) {
+      if (contentUris.length === 0) {
         return null;
       }
 
-      const content = await readOpenVikingContent(
-        {
-          ...input,
-          uri: contentUri,
-        },
-        fetchImpl,
-      );
+      const content = (
+        await Promise.all(
+          contentUris.map((uri) =>
+            readOpenVikingContent(
+              {
+                ...input,
+                uri,
+              },
+              fetchImpl,
+            ),
+          ),
+        )
+      ).join('');
       const parsed = JSON.parse(content) as unknown;
 
       return isMirrorBrainMemoryEvent(parsed) ? parsed : null;
@@ -602,7 +610,7 @@ export async function listMirrorBrainKnowledgeArtifactsFromOpenViking(
       isKnowledgeResourceEntry,
     )
       .map(async (entry) => {
-        const contentUri = await resolveReadableContentUri(
+        const contentUris = await resolveReadableContentUris(
           {
             ...input,
             entry,
@@ -610,18 +618,24 @@ export async function listMirrorBrainKnowledgeArtifactsFromOpenViking(
           fetchImpl,
         );
 
-        if (contentUri === null) {
+        if (contentUris.length === 0) {
           return null;
         }
 
         return parseKnowledgeArtifact(
-          await readOpenVikingContent(
-            {
-              ...input,
-              uri: contentUri,
-            },
-            fetchImpl,
-          ),
+          (
+            await Promise.all(
+              contentUris.map((uri) =>
+                readOpenVikingContent(
+                  {
+                    ...input,
+                    uri,
+                  },
+                  fetchImpl,
+                ),
+              ),
+            )
+          ).join(''),
         );
       }),
   ).then((items) =>
@@ -649,7 +663,7 @@ export async function listMirrorBrainCandidateMemoriesFromOpenViking(
       isCandidateMemoryResourceEntry,
     )
       .map(async (entry) => {
-        const contentUri = await resolveReadableContentUri(
+        const contentUris = await resolveReadableContentUris(
           {
             ...input,
             entry,
@@ -657,17 +671,23 @@ export async function listMirrorBrainCandidateMemoriesFromOpenViking(
           fetchImpl,
         );
 
-        if (contentUri === null) {
+        if (contentUris.length === 0) {
           return null;
         }
 
-        const content = await readOpenVikingContent(
-          {
-            ...input,
-            uri: contentUri,
-          },
-          fetchImpl,
-        );
+        const content = (
+          await Promise.all(
+            contentUris.map((uri) =>
+              readOpenVikingContent(
+                {
+                  ...input,
+                  uri,
+                },
+                fetchImpl,
+              ),
+            ),
+          )
+        ).join('');
 
         const parsed = JSON.parse(content) as unknown;
 
@@ -698,7 +718,7 @@ export async function listMirrorBrainReviewedMemoriesFromOpenViking(
       isReviewedMemoryResourceEntry,
     )
       .map(async (entry) => {
-        const contentUri = await resolveReadableContentUri(
+        const contentUris = await resolveReadableContentUris(
           {
             ...input,
             entry,
@@ -706,17 +726,23 @@ export async function listMirrorBrainReviewedMemoriesFromOpenViking(
           fetchImpl,
         );
 
-        if (contentUri === null) {
+        if (contentUris.length === 0) {
           return null;
         }
 
-        const content = await readOpenVikingContent(
-          {
-            ...input,
-            uri: contentUri,
-          },
-          fetchImpl,
-        );
+        const content = (
+          await Promise.all(
+            contentUris.map((uri) =>
+              readOpenVikingContent(
+                {
+                  ...input,
+                  uri,
+                },
+                fetchImpl,
+              ),
+            ),
+          )
+        ).join('');
 
         const parsed = JSON.parse(content) as unknown;
 
@@ -747,7 +773,7 @@ export async function listMirrorBrainSkillArtifactsFromOpenViking(
       isSkillDraftResourceEntry,
     )
       .map(async (entry) => {
-        const contentUri = await resolveReadableContentUri(
+        const contentUris = await resolveReadableContentUris(
           {
             ...input,
             entry,
@@ -755,18 +781,24 @@ export async function listMirrorBrainSkillArtifactsFromOpenViking(
           fetchImpl,
         );
 
-        if (contentUri === null) {
+        if (contentUris.length === 0) {
           return null;
         }
 
         return parseSkillArtifact(
-          await readOpenVikingContent(
-            {
-              ...input,
-              uri: contentUri,
-            },
-            fetchImpl,
-          ),
+          (
+            await Promise.all(
+              contentUris.map((uri) =>
+                readOpenVikingContent(
+                  {
+                    ...input,
+                    uri,
+                  },
+                  fetchImpl,
+                ),
+              ),
+            )
+          ).join(''),
         );
       }),
   ).then((items) =>
