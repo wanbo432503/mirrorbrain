@@ -13,6 +13,8 @@ interface BrowserSyncSummary {
   lastSyncedAt: string;
 }
 
+type MirrorBrainWebTab = 'memory' | 'review' | 'artifacts';
+
 interface MirrorBrainWebAppState {
   serviceStatus: 'running' | 'stopped' | 'unknown';
   memoryEvents: MemoryEvent[];
@@ -25,6 +27,8 @@ interface MirrorBrainWebAppState {
     kind: 'success' | 'error' | 'info';
     message: string;
   } | null;
+  activeTab: MirrorBrainWebTab;
+  memoryPage: number;
 }
 
 interface MirrorBrainWebAppApi {
@@ -56,23 +60,161 @@ interface MountMirrorBrainWebAppInput {
   doc?: Document;
 }
 
-function renderMemoryList(memoryEvents: MemoryEvent[]): string {
+const MEMORY_PAGE_SIZE = 20;
+
+function getMemoryPageCount(memoryEvents: MemoryEvent[]): number {
+  return Math.max(1, Math.ceil(memoryEvents.length / MEMORY_PAGE_SIZE));
+}
+
+function clampMemoryPage(memoryEvents: MemoryEvent[], page: number): number {
+  return Math.min(Math.max(1, page), getMemoryPageCount(memoryEvents));
+}
+
+function renderTabButton(
+  tab: MirrorBrainWebTab,
+  activeTab: MirrorBrainWebTab,
+  label: string,
+): string {
+  return `<button type="button" class="mirrorbrain-tab${
+    activeTab === tab ? ' is-active' : ''
+  }" data-action="switch-tab" data-tab="${tab}" aria-pressed="${
+    activeTab === tab ? 'true' : 'false'
+  }">${label}</button>`;
+}
+
+function renderMemoryList(memoryEvents: MemoryEvent[], page: number): string {
   if (memoryEvents.length === 0) {
     return '<li>No memory events imported yet.</li>';
   }
 
-  return memoryEvents
+  const currentPage = clampMemoryPage(memoryEvents, page);
+  const startIndex = (currentPage - 1) * MEMORY_PAGE_SIZE;
+  const pageEvents = memoryEvents.slice(startIndex, startIndex + MEMORY_PAGE_SIZE);
+
+  return pageEvents
     .map(
       (event) =>
-        `<li><strong>${event.id}</strong> <span>${event.sourceType}</span></li>`,
+        [
+          '<li class="mirrorbrain-record">',
+          `<strong>${event.id}</strong>`,
+          `<span>${event.sourceType}</span>`,
+          `<span>${String(event.content.title ?? event.content.url ?? 'Untitled')}</span>`,
+          `<span>${event.timestamp}</span>`,
+          '</li>',
+        ].join(''),
     )
     .join('');
 }
 
-function renderArtifact(label: string, artifact: { id: string } | null): string {
-  return artifact === null
-    ? `<p>${label}: not generated</p>`
-    : `<p>${label}: ${artifact.id}</p>`;
+function renderMemoryPanel(state: MirrorBrainWebAppState): string {
+  const pageCount = getMemoryPageCount(state.memoryEvents);
+  const currentPage = clampMemoryPage(state.memoryEvents, state.memoryPage);
+
+  return [
+    '<section class="mirrorbrain-panel">',
+    '<h2>Memory</h2>',
+    '<p>Imported browser events with page-level browsing to keep the list readable.</p>',
+    `<div class="mirrorbrain-pagination"><button type="button" data-action="memory-prev-page"${
+      currentPage === 1 ? ' disabled' : ''
+    }>Previous</button><span>Page ${currentPage} of ${pageCount}</span><button type="button" data-action="memory-next-page"${
+      currentPage === pageCount ? ' disabled' : ''
+    }>Next</button></div>`,
+    `<ul class="mirrorbrain-record-list">${renderMemoryList(
+      state.memoryEvents,
+      currentPage,
+    )}</ul>`,
+    '</section>',
+  ].join('');
+}
+
+function renderDetailRows(
+  rows: Array<{ label: string; value: string }>,
+): string {
+  return rows
+    .map(
+      (row) =>
+        `<div class="mirrorbrain-detail-row"><span>${row.label}</span><strong>${row.value}</strong></div>`,
+    )
+    .join('');
+}
+
+function renderReviewPanel(state: MirrorBrainWebAppState): string {
+  const candidate = state.candidateMemory;
+  const reviewed = state.reviewedMemory;
+
+  return [
+    '<section class="mirrorbrain-panel">',
+    '<h2>Review</h2>',
+    '<div class="mirrorbrain-detail-grid">',
+    '<article class="mirrorbrain-detail-card">',
+    '<h3>Candidate Memory</h3>',
+    candidate === null
+      ? '<p>No candidate memory created yet.</p>'
+      : renderDetailRows([
+          { label: 'Candidate ID', value: candidate.id },
+          {
+            label: 'Memory Event IDs',
+            value: candidate.memoryEventIds.join(', '),
+          },
+          { label: 'Review State', value: candidate.reviewState },
+        ]),
+    '</article>',
+    '<article class="mirrorbrain-detail-card">',
+    '<h3>Reviewed Memory</h3>',
+    reviewed === null
+      ? '<p>No reviewed memory yet.</p>'
+      : renderDetailRows([
+          { label: 'Reviewed ID', value: reviewed.id },
+          { label: 'Candidate ID', value: reviewed.candidateMemoryId },
+          { label: 'Decision', value: reviewed.decision },
+        ]),
+    '</article>',
+    '</div>',
+    '</section>',
+  ].join('');
+}
+
+function renderArtifactsPanel(state: MirrorBrainWebAppState): string {
+  const knowledge = state.knowledgeArtifact;
+  const skill = state.skillArtifact;
+
+  return [
+    '<section class="mirrorbrain-panel">',
+    '<h2>Artifacts</h2>',
+    '<div class="mirrorbrain-detail-grid">',
+    '<article class="mirrorbrain-detail-card">',
+    '<h3>Knowledge Artifact</h3>',
+    knowledge === null
+      ? '<p>No knowledge artifact generated yet.</p>'
+      : renderDetailRows([
+          { label: 'Knowledge ID', value: knowledge.id },
+          { label: 'Draft State', value: knowledge.draftState },
+          {
+            label: 'Reviewed Inputs',
+            value: knowledge.sourceReviewedMemoryIds.join(', '),
+          },
+        ]),
+    '</article>',
+    '<article class="mirrorbrain-detail-card">',
+    '<h3>Skill Artifact</h3>',
+    skill === null
+      ? '<p>No skill artifact generated yet.</p>'
+      : renderDetailRows([
+          { label: 'Skill ID', value: skill.id },
+          { label: 'Approval State', value: skill.approvalState },
+          {
+            label: 'Workflow Evidence',
+            value: skill.workflowEvidenceRefs.join(', '),
+          },
+          {
+            label: 'Requires Confirmation',
+            value: String(skill.executionSafetyMetadata.requiresConfirmation),
+          },
+        ]),
+    '</article>',
+    '</div>',
+    '</section>',
+  ].join('');
 }
 
 function renderFeedback(
@@ -83,6 +225,18 @@ function renderFeedback(
   }
 
   return `<p data-feedback-kind="${feedback.kind}">Status: ${feedback.message}</p>`;
+}
+
+function renderActivePanel(state: MirrorBrainWebAppState): string {
+  if (state.activeTab === 'review') {
+    return renderReviewPanel(state);
+  }
+
+  if (state.activeTab === 'artifacts') {
+    return renderArtifactsPanel(state);
+  }
+
+  return renderMemoryPanel(state);
 }
 
 export function renderMirrorBrainWebApp(
@@ -107,21 +261,13 @@ export function renderMirrorBrainWebApp(
     '<button type="button" data-action="generate-knowledge">Generate Knowledge</button>',
     '<button type="button" data-action="generate-skill">Generate Skill</button>',
     '</div>',
+    '<nav class="mirrorbrain-tabs" aria-label="MirrorBrain sections">',
+    renderTabButton('memory', state.activeTab, 'Memory'),
+    renderTabButton('review', state.activeTab, 'Review'),
+    renderTabButton('artifacts', state.activeTab, 'Artifacts'),
+    '</nav>',
+    renderActivePanel(state),
     '</header>',
-    '<section>',
-    '<h2>Memory</h2>',
-    `<ul>${renderMemoryList(state.memoryEvents)}</ul>`,
-    '</section>',
-    '<section>',
-    '<h2>Review</h2>',
-    renderArtifact('Candidate', state.candidateMemory),
-    renderArtifact('Reviewed', state.reviewedMemory),
-    '</section>',
-    '<section>',
-    '<h2>Artifacts</h2>',
-    renderArtifact('Knowledge', state.knowledgeArtifact),
-    renderArtifact('Skill', state.skillArtifact),
-    '</section>',
     '</main>',
   ].join('');
 }
@@ -136,6 +282,8 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
     skillArtifact: null,
     lastSyncSummary: null,
     feedback: null,
+    activeTab: 'memory',
+    memoryPage: 1,
   };
 
   const setFeedback = (feedback: MirrorBrainWebAppState['feedback']) => {
@@ -144,6 +292,15 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
 
   return {
     state,
+    setActiveTab(tab: MirrorBrainWebTab) {
+      state.activeTab = tab;
+    },
+    goToNextMemoryPage() {
+      state.memoryPage = clampMemoryPage(state.memoryEvents, state.memoryPage + 1);
+    },
+    goToPreviousMemoryPage() {
+      state.memoryPage = clampMemoryPage(state.memoryEvents, state.memoryPage - 1);
+    },
     async load() {
       const [health, memoryEvents, knowledgeArtifacts, skillArtifacts] =
         await Promise.all([
@@ -155,6 +312,7 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
 
       state.serviceStatus = health.status;
       state.memoryEvents = memoryEvents;
+      state.memoryPage = clampMemoryPage(memoryEvents, state.memoryPage);
       state.knowledgeArtifact = knowledgeArtifacts[0] ?? null;
       state.skillArtifact = skillArtifacts[0] ?? null;
       setFeedback({
@@ -165,6 +323,8 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
     async syncBrowserMemory() {
       state.lastSyncSummary = await input.api.syncBrowser();
       state.memoryEvents = await input.api.listMemory();
+      state.memoryPage = 1;
+      state.activeTab = 'memory';
       setFeedback({
         kind: 'success',
         message: `Browser sync completed: ${state.lastSyncSummary.importedCount} events imported.`,
@@ -185,6 +345,7 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
       }
 
       state.candidateMemory = await input.api.createCandidateMemory(selectedEvents);
+      state.activeTab = 'review';
       setFeedback({
         kind: 'success',
         message: `Candidate created: ${state.candidateMemory.id}`,
@@ -206,6 +367,7 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
           decision,
         },
       );
+      state.activeTab = 'review';
       setFeedback({
         kind: 'success',
         message: `Candidate kept: ${state.reviewedMemory.id}`,
@@ -224,6 +386,7 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
       state.knowledgeArtifact = await input.api.generateKnowledge([
         state.reviewedMemory,
       ]);
+      state.activeTab = 'artifacts';
       setFeedback({
         kind: 'success',
         message: `Knowledge generated: ${state.knowledgeArtifact.id}`,
@@ -240,6 +403,7 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
       }
 
       state.skillArtifact = await input.api.generateSkill([state.reviewedMemory]);
+      state.activeTab = 'artifacts';
       setFeedback({
         kind: 'success',
         message: `Skill generated: ${state.skillArtifact.id}`,
@@ -409,6 +573,30 @@ export async function mountMirrorBrainWebApp(
       .querySelector('[data-action="generate-skill"]')
       ?.addEventListener('click', async () => {
         await app.generateSkill();
+        render();
+      });
+    root
+      .querySelectorAll<HTMLElement>('[data-action="switch-tab"]')
+      .forEach((element) => {
+        element.addEventListener('click', () => {
+          const tab = element.dataset.tab as MirrorBrainWebTab | undefined;
+
+          if (tab !== undefined) {
+            app.setActiveTab(tab);
+            render();
+          }
+        });
+      });
+    root
+      .querySelector('[data-action="memory-prev-page"]')
+      ?.addEventListener('click', () => {
+        app.goToPreviousMemoryPage();
+        render();
+      });
+    root
+      .querySelector('[data-action="memory-next-page"]')
+      ?.addEventListener('click', () => {
+        app.goToNextMemoryPage();
         render();
       });
   };

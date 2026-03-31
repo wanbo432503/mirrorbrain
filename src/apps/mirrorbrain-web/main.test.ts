@@ -10,7 +10,7 @@ import type {
 import { createMirrorBrainWebApp, renderMirrorBrainWebApp } from './main.js';
 
 describe('mirrorbrain web app', () => {
-  it('renders service health, memory, candidate review state, and generated artifacts', () => {
+  it('renders only the active tab and shows explicit review and artifact details', () => {
     const html = renderMirrorBrainWebApp({
       serviceStatus: 'running',
       memoryEvents: [
@@ -62,17 +62,60 @@ describe('mirrorbrain web app', () => {
         kind: 'success',
         message: 'Candidate created: candidate:browser:aw-event-1',
       },
+      activeTab: 'review',
+      memoryPage: 1,
     });
 
     expect(html).toContain('MirrorBrain Phase 1 MVP');
     expect(html).toContain('Service Status: running');
-    expect(html).toContain('browser:aw-event-1');
+    expect(html).toContain('data-tab="review"');
+    expect(html).toContain('Candidate Memory');
+    expect(html).toContain('Reviewed Memory');
     expect(html).toContain('candidate:browser:aw-event-1');
     expect(html).toContain('reviewed:candidate:browser:aw-event-1');
-    expect(html).toContain('knowledge-draft:reviewed:candidate:browser:aw-event-1');
-    expect(html).toContain('skill-draft:reviewed:candidate:browser:aw-event-1');
+    expect(html).toContain('Decision');
+    expect(html).not.toContain('knowledge-draft:reviewed:candidate:browser:aw-event-1');
+    expect(html).not.toContain('skill-draft:reviewed:candidate:browser:aw-event-1');
+    expect(html).toContain('Memory Event IDs');
     expect(html).toContain('activitywatch-browser:aw-watcher-web-chrome');
     expect(html).toContain('Status: Candidate created: candidate:browser:aw-event-1');
+  });
+
+  it('renders memory pagination with 20 events per page', () => {
+    const memoryEvents = Array.from({ length: 25 }, (_, index) => ({
+      id: `browser:aw-event-${index + 1}`,
+      sourceType: 'activitywatch-browser',
+      sourceRef: `aw-event-${index + 1}`,
+      timestamp: `2026-03-20T08:${String(index).padStart(2, '0')}:00.000Z`,
+      authorizationScopeId: 'scope-browser',
+      content: {
+        title: `Example ${index + 1}`,
+      },
+      captureMetadata: {
+        upstreamSource: 'activitywatch',
+        checkpoint: `2026-03-20T08:${String(index).padStart(2, '0')}:00.000Z`,
+      },
+    }));
+
+    const html = renderMirrorBrainWebApp({
+      serviceStatus: 'running',
+      memoryEvents,
+      candidateMemory: null,
+      reviewedMemory: null,
+      knowledgeArtifact: null,
+      skillArtifact: null,
+      lastSyncSummary: null,
+      feedback: null,
+      activeTab: 'memory',
+      memoryPage: 2,
+    });
+
+    expect(html).toContain('Page 2 of 2');
+    expect(html).toContain('browser:aw-event-21');
+    expect(html).toContain('browser:aw-event-25');
+    expect(html).not.toContain('browser:aw-event-20');
+    expect(html).toContain('data-action="memory-prev-page"');
+    expect(html).toContain('data-action="memory-next-page"');
   });
 
   it('loads, syncs, reviews, and generates artifacts through the web app controller', async () => {
@@ -159,6 +202,8 @@ describe('mirrorbrain web app', () => {
 
     expect(app.state.serviceStatus).toBe('running');
     expect(app.state.memoryEvents).toEqual(memoryEvents);
+    expect(app.state.activeTab).toBe('artifacts');
+    expect(app.state.memoryPage).toBe(1);
     expect(app.state.candidateMemory).toEqual(candidateMemory);
     expect(app.state.reviewedMemory).toEqual(reviewedMemory);
     expect(app.state.knowledgeArtifact).toEqual(knowledgeArtifact);
@@ -173,6 +218,46 @@ describe('mirrorbrain web app', () => {
     });
     expect(api.generateKnowledge).toHaveBeenCalledWith([reviewedMemory]);
     expect(api.generateSkill).toHaveBeenCalledWith([reviewedMemory]);
+  });
+
+  it('tracks active tab selection and memory pagination in the controller state', async () => {
+    const memoryEvents: MemoryEvent[] = Array.from({ length: 25 }, (_, index) => ({
+      id: `browser:aw-event-${index + 1}`,
+      sourceType: 'activitywatch-browser',
+      sourceRef: `aw-event-${index + 1}`,
+      timestamp: `2026-03-20T08:${String(index).padStart(2, '0')}:00.000Z`,
+      authorizationScopeId: 'scope-browser',
+      content: {
+        title: `Example ${index + 1}`,
+      },
+      captureMetadata: {
+        upstreamSource: 'activitywatch',
+        checkpoint: `2026-03-20T08:${String(index).padStart(2, '0')}:00.000Z`,
+      },
+    }));
+
+    const app = createMirrorBrainWebApp({
+      api: {
+        getHealth: vi.fn(async () => ({
+          status: 'running' as const,
+        })),
+        listMemory: vi.fn(async () => memoryEvents),
+        listKnowledge: vi.fn(async () => [] as KnowledgeArtifact[]),
+        listSkills: vi.fn(async () => [] as SkillArtifact[]),
+        syncBrowser: vi.fn(),
+        createCandidateMemory: vi.fn(),
+        reviewCandidateMemory: vi.fn(),
+        generateKnowledge: vi.fn(),
+        generateSkill: vi.fn(),
+      },
+    });
+
+    await app.load();
+    app.setActiveTab('review');
+    app.goToNextMemoryPage();
+
+    expect(app.state.activeTab).toBe('review');
+    expect(app.state.memoryPage).toBe(2);
   });
 
   it('reports a visible error state instead of silently ignoring invalid actions', async () => {
