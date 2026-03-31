@@ -118,6 +118,51 @@ describe('mirrorbrain web app', () => {
     expect(html).toContain('data-action="memory-next-page"');
   });
 
+  it('shows only the actions that belong to the active tab', () => {
+    const baseState = {
+      serviceStatus: 'running' as const,
+      memoryEvents: [] as MemoryEvent[],
+      candidateMemory: null,
+      reviewedMemory: null,
+      knowledgeArtifact: null,
+      skillArtifact: null,
+      lastSyncSummary: null,
+      feedback: null,
+      memoryPage: 1,
+    };
+
+    const memoryHtml = renderMirrorBrainWebApp({
+      ...baseState,
+      activeTab: 'memory',
+    });
+    const reviewHtml = renderMirrorBrainWebApp({
+      ...baseState,
+      activeTab: 'review',
+    });
+    const artifactsHtml = renderMirrorBrainWebApp({
+      ...baseState,
+      activeTab: 'artifacts',
+    });
+
+    expect(memoryHtml).toContain('data-action="sync-browser"');
+    expect(memoryHtml).not.toContain('data-action="create-candidate"');
+    expect(memoryHtml).not.toContain('data-action="keep-candidate"');
+    expect(memoryHtml).not.toContain('data-action="generate-knowledge"');
+    expect(memoryHtml).not.toContain('data-action="generate-skill"');
+
+    expect(reviewHtml).not.toContain('data-action="sync-browser"');
+    expect(reviewHtml).toContain('data-action="create-candidate"');
+    expect(reviewHtml).toContain('data-action="keep-candidate"');
+    expect(reviewHtml).not.toContain('data-action="generate-knowledge"');
+    expect(reviewHtml).not.toContain('data-action="generate-skill"');
+
+    expect(artifactsHtml).not.toContain('data-action="sync-browser"');
+    expect(artifactsHtml).not.toContain('data-action="create-candidate"');
+    expect(artifactsHtml).not.toContain('data-action="keep-candidate"');
+    expect(artifactsHtml).toContain('data-action="generate-knowledge"');
+    expect(artifactsHtml).toContain('data-action="generate-skill"');
+  });
+
   it('loads, syncs, reviews, and generates artifacts through the web app controller', async () => {
     const memoryEvents: MemoryEvent[] = [
       {

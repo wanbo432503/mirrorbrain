@@ -13,6 +13,7 @@ This UI is responsible for:
 - exposing candidate creation and review actions
 - exposing knowledge and skill generation actions
 - separating memory, review, and artifacts into distinct tabs instead of stacking all content on one page
+- placing sync, review, and artifact actions inside their corresponding tabs instead of a single global action bar
 - rendering review and artifact states with explicit field-level detail
 - showing visible action feedback for success and prerequisite errors
 

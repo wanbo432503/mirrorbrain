@@ -114,6 +114,7 @@ function renderMemoryPanel(state: MirrorBrainWebAppState): string {
     '<section class="mirrorbrain-panel">',
     '<h2>Memory</h2>',
     '<p>Imported browser events with page-level browsing to keep the list readable.</p>',
+    '<div class="mirrorbrain-actions"><button type="button" data-action="sync-browser">Sync Browser Memory</button></div>',
     `<div class="mirrorbrain-pagination"><button type="button" data-action="memory-prev-page"${
       currentPage === 1 ? ' disabled' : ''
     }>Previous</button><span>Page ${currentPage} of ${pageCount}</span><button type="button" data-action="memory-next-page"${
@@ -145,6 +146,7 @@ function renderReviewPanel(state: MirrorBrainWebAppState): string {
   return [
     '<section class="mirrorbrain-panel">',
     '<h2>Review</h2>',
+    '<div class="mirrorbrain-actions"><button type="button" data-action="create-candidate">Create Candidate</button><button type="button" data-action="keep-candidate">Keep Candidate</button></div>',
     '<div class="mirrorbrain-detail-grid">',
     '<article class="mirrorbrain-detail-card">',
     '<h3>Candidate Memory</h3>',
@@ -181,6 +183,7 @@ function renderArtifactsPanel(state: MirrorBrainWebAppState): string {
   return [
     '<section class="mirrorbrain-panel">',
     '<h2>Artifacts</h2>',
+    '<div class="mirrorbrain-actions"><button type="button" data-action="generate-knowledge">Generate Knowledge</button><button type="button" data-action="generate-skill">Generate Skill</button></div>',
     '<div class="mirrorbrain-detail-grid">',
     '<article class="mirrorbrain-detail-card">',
     '<h3>Knowledge Artifact</h3>',
@@ -254,13 +257,6 @@ export function renderMirrorBrainWebApp(
     `<p>Service Status: ${state.serviceStatus}</p>`,
     syncSummary,
     renderFeedback(state.feedback),
-    '<div class="mirrorbrain-actions">',
-    '<button type="button" data-action="sync-browser">Sync Browser Memory</button>',
-    '<button type="button" data-action="create-candidate">Create Candidate</button>',
-    '<button type="button" data-action="keep-candidate">Keep Candidate</button>',
-    '<button type="button" data-action="generate-knowledge">Generate Knowledge</button>',
-    '<button type="button" data-action="generate-skill">Generate Skill</button>',
-    '</div>',
     '<nav class="mirrorbrain-tabs" aria-label="MirrorBrain sections">',
     renderTabButton('memory', state.activeTab, 'Memory'),
     renderTabButton('review', state.activeTab, 'Review'),
