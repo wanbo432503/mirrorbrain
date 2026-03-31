@@ -1,0 +1,18 @@
+[
+  {
+    "id": "aw-event-1",
+    "timestamp": "2026-03-20T08:00:00.000Z",
+    "data": {
+      "url": "https://example.com/tasks",
+      "title": "Example Tasks"
+    }
+  },
+  {
+    "id": "aw-event-2",
+    "timestamp": "2026-03-20T08:05:00.000Z",
+    "data": {
+      "url": "https://example.com/tasks/2",
+      "title": "Example Tasks 2"
+    }
+  }
+]

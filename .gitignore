@@ -1,0 +1,11 @@
+node_modules
+test-results
+.playwright
+playwright-report
+.env
+.mirrorbrain-web
+mirrorbrain
+findings.md
+progress.md
+task_plan.md
+AGENTS.md
