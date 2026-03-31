@@ -206,18 +206,42 @@ export async function startMirrorBrainHttpServer(
   });
 
   if (input.staticDir !== undefined) {
-    app.get('/', async (_request, reply) => {
-      reply.type('text/html; charset=utf-8');
-      return readFile(join(input.staticDir!, 'index.html'), 'utf8');
-    });
-    app.get('/styles.css', async (_request, reply) => {
-      reply.type('text/css; charset=utf-8');
-      return readFile(join(input.staticDir!, 'styles.css'), 'utf8');
-    });
-    app.get('/main.js', async (_request, reply) => {
-      reply.type('application/javascript; charset=utf-8');
-      return readFile(join(input.staticDir!, 'main.js'), 'utf8');
-    });
+    app.get(
+      '/',
+      {
+        schema: {
+          hide: true,
+        },
+      },
+      async (_request, reply) => {
+        reply.type('text/html; charset=utf-8');
+        return readFile(join(input.staticDir!, 'index.html'), 'utf8');
+      },
+    );
+    app.get(
+      '/styles.css',
+      {
+        schema: {
+          hide: true,
+        },
+      },
+      async (_request, reply) => {
+        reply.type('text/css; charset=utf-8');
+        return readFile(join(input.staticDir!, 'styles.css'), 'utf8');
+      },
+    );
+    app.get(
+      '/main.js',
+      {
+        schema: {
+          hide: true,
+        },
+      },
+      async (_request, reply) => {
+        reply.type('application/javascript; charset=utf-8');
+        return readFile(join(input.staticDir!, 'main.js'), 'utf8');
+      },
+    );
   }
 
   app.get(

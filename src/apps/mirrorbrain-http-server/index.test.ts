@@ -424,4 +424,54 @@ describe('mirrorbrain http server', () => {
     expect(schemaBody.paths['/sync/browser']).toBeDefined();
     expect(schemaBody.paths['/candidate-memories']).toBeDefined();
   });
+
+  it('hides static asset routes from the OpenAPI schema', async () => {
+    const staticDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-http-static-'));
+
+    writeFileSync(
+      join(staticDir, 'index.html'),
+      '<!doctype html><html><body><h1>MirrorBrain UI</h1></body></html>',
+    );
+    writeFileSync(join(staticDir, 'styles.css'), 'body { color: black; }');
+    writeFileSync(join(staticDir, 'main.js'), 'console.log("mirrorbrain");');
+
+    const service = {
+      service: {
+        status: 'running' as const,
+        config: getMirrorBrainConfig(),
+        stop: vi.fn(),
+      },
+      queryMemory: vi.fn(async () => []),
+      listKnowledge: vi.fn(async () => []),
+      listSkillDrafts: vi.fn(async () => []),
+      syncBrowserMemory: vi.fn(async () => ({
+        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:00:00.000Z',
+      })),
+      createCandidateMemory: vi.fn(),
+      reviewCandidateMemory: vi.fn(),
+      generateKnowledgeFromReviewedMemories: vi.fn(),
+      generateSkillDraftFromReviewedMemories: vi.fn(),
+      publishKnowledge: vi.fn(),
+      publishSkillDraft: vi.fn(),
+    };
+
+    const server = await startMirrorBrainHttpServer({
+      service,
+      port: 0,
+      staticDir,
+    });
+    servers.push(server);
+
+    const schemaResponse = await fetch(`${server.origin}/openapi.json`);
+    const schemaBody = await schemaResponse.json();
+
+    expect(schemaResponse.status).toBe(200);
+    expect(schemaBody.paths['/']).toBeUndefined();
+    expect(schemaBody.paths['/styles.css']).toBeUndefined();
+    expect(schemaBody.paths['/main.js']).toBeUndefined();
+    expect(schemaBody.paths['/health']).toBeDefined();
+  });
 });
