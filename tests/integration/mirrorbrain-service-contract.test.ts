@@ -8,6 +8,8 @@ import type {
 } from '../../src/shared/types/index.js';
 
 describe('mirrorbrain service contract integration', () => {
+  const expectedOpenVikingBaseUrl = getMirrorBrainConfig().openViking.baseUrl;
+
   it('publishes knowledge and skill artifacts through the service contract', async () => {
     const published: Array<{
       kind: 'knowledge' | 'skill';
@@ -76,7 +78,7 @@ describe('mirrorbrain service contract integration', () => {
       {
         kind: 'knowledge',
         payload: {
-          baseUrl: 'http://127.0.0.1:8080',
+          baseUrl: expectedOpenVikingBaseUrl,
           workspaceDir: '/tmp/mirrorbrain-workspace',
           artifact: {
             id: 'knowledge-draft:reviewed:candidate:browser:aw-event-1',
@@ -88,7 +90,7 @@ describe('mirrorbrain service contract integration', () => {
       {
         kind: 'skill',
         payload: {
-          baseUrl: 'http://127.0.0.1:8080',
+          baseUrl: expectedOpenVikingBaseUrl,
           workspaceDir: '/tmp/mirrorbrain-workspace',
           artifact: {
             id: 'skill-draft:reviewed:candidate:browser:aw-event-1',
@@ -180,7 +182,7 @@ describe('mirrorbrain service contract integration', () => {
       {
         kind: 'knowledge',
         payload: {
-          baseUrl: 'http://127.0.0.1:8080',
+          baseUrl: expectedOpenVikingBaseUrl,
           workspaceDir: '/tmp/mirrorbrain-workspace',
           artifact: {
             id: 'knowledge-draft:reviewed:candidate:browser:aw-event-1',
@@ -192,7 +194,7 @@ describe('mirrorbrain service contract integration', () => {
       {
         kind: 'skill',
         payload: {
-          baseUrl: 'http://127.0.0.1:8080',
+          baseUrl: expectedOpenVikingBaseUrl,
           workspaceDir: '/tmp/mirrorbrain-workspace',
           artifact: {
             id: 'skill-draft:reviewed:candidate:browser:aw-event-1',

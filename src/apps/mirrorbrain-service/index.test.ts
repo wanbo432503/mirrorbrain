@@ -4,6 +4,8 @@ import { getMirrorBrainConfig } from '../../shared/config/index.js';
 import { createMirrorBrainService, startMirrorBrainService } from './index.js';
 
 describe('mirrorbrain service', () => {
+  const expectedOpenVikingBaseUrl = getMirrorBrainConfig().openViking.baseUrl;
+
   it('starts browser sync polling and stops it through the service lifecycle', () => {
     const stopPolling = vi.fn();
     const startBrowserSyncPolling = vi.fn(() => ({
@@ -122,13 +124,13 @@ describe('mirrorbrain service', () => {
     await api.listSkillDrafts();
 
     expect(queryMemory).toHaveBeenCalledWith({
-      baseUrl: 'http://127.0.0.1:8080',
+      baseUrl: expectedOpenVikingBaseUrl,
     });
     expect(listKnowledge).toHaveBeenCalledWith({
-      baseUrl: 'http://127.0.0.1:8080',
+      baseUrl: expectedOpenVikingBaseUrl,
     });
     expect(listSkillDrafts).toHaveBeenCalledWith({
-      baseUrl: 'http://127.0.0.1:8080',
+      baseUrl: expectedOpenVikingBaseUrl,
     });
     expect(api.service).toBe(service);
   });
@@ -180,7 +182,7 @@ describe('mirrorbrain service', () => {
     });
 
     expect(publishKnowledge).toHaveBeenCalledWith({
-      baseUrl: 'http://127.0.0.1:8080',
+      baseUrl: expectedOpenVikingBaseUrl,
       workspaceDir: '/tmp/mirrorbrain-workspace',
       artifact: {
         id: 'knowledge-draft:reviewed:candidate:browser:aw-event-1',
@@ -189,7 +191,7 @@ describe('mirrorbrain service', () => {
       },
     });
     expect(publishSkill).toHaveBeenCalledWith({
-      baseUrl: 'http://127.0.0.1:8080',
+      baseUrl: expectedOpenVikingBaseUrl,
       workspaceDir: '/tmp/mirrorbrain-workspace',
       artifact: {
         id: 'skill-draft:reviewed:candidate:browser:aw-event-1',
@@ -264,7 +266,7 @@ describe('mirrorbrain service', () => {
     });
     expect(generateSkillDraft).toHaveBeenCalledWith(reviewedMemories);
     expect(publishKnowledge).toHaveBeenCalledWith({
-      baseUrl: 'http://127.0.0.1:8080',
+      baseUrl: expectedOpenVikingBaseUrl,
       workspaceDir: '/tmp/mirrorbrain-workspace',
       artifact: {
         id: 'knowledge-draft:reviewed:candidate:browser:aw-event-1',
@@ -273,7 +275,7 @@ describe('mirrorbrain service', () => {
       },
     });
     expect(publishSkill).toHaveBeenCalledWith({
-      baseUrl: 'http://127.0.0.1:8080',
+      baseUrl: expectedOpenVikingBaseUrl,
       workspaceDir: '/tmp/mirrorbrain-workspace',
       artifact: {
         id: 'skill-draft:reviewed:candidate:browser:aw-event-1',
@@ -347,7 +349,7 @@ describe('mirrorbrain service', () => {
       },
     );
     expect(publishReviewedMemory).toHaveBeenCalledWith({
-      baseUrl: 'http://127.0.0.1:8080',
+      baseUrl: expectedOpenVikingBaseUrl,
       workspaceDir: process.cwd(),
       artifact: {
         id: 'reviewed:candidate:browser:aw-event-1',
@@ -432,7 +434,7 @@ describe('mirrorbrain service', () => {
       },
     ]);
     expect(publishCandidateMemory).toHaveBeenCalledWith({
-      baseUrl: 'http://127.0.0.1:8080',
+      baseUrl: expectedOpenVikingBaseUrl,
       workspaceDir: process.cwd(),
       artifact: {
         id: 'candidate:browser:aw-event-1',
