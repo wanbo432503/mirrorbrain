@@ -220,6 +220,38 @@ describe('mirrorbrain web app', () => {
     );
   });
 
+  it('renders memory events with source, linked name, and timestamp', () => {
+    const html = renderMirrorBrainWebApp({
+      serviceStatus: 'running',
+      memoryEvents: [
+        createMemoryEvent(
+          'browser:aw-event-1',
+          'MirrorBrain Phase 1 MVP',
+          '2026-04-01T01:13:07.592000+00:00',
+        ),
+      ],
+      candidateMemories: [],
+      selectedCandidateId: null,
+      candidateReviewSuggestions: [],
+      reviewedMemory: null,
+      knowledgeArtifact: null,
+      skillArtifact: null,
+      lastSyncSummary: null,
+      feedback: null,
+      activeTab: 'memory',
+      memoryPage: 1,
+      reviewWindowDate: null,
+      reviewWindowEventCount: 0,
+    });
+
+    expect(html).toContain('activitywatch-browser');
+    expect(html).toContain(
+      '<a href="https://example.com/browser:aw-event-1" target="_blank" rel="noreferrer">MirrorBrain Phase 1 MVP</a>',
+    );
+    expect(html).toContain('(https://example.com/browser:aw-event-1)');
+    expect(html).toContain('2026-04-01T01:13:07.592000+00:00');
+  });
+
   it('shows only the actions that belong to the active tab', () => {
     const baseState = {
       serviceStatus: 'running' as const,

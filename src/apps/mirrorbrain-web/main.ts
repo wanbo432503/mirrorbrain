@@ -115,15 +115,25 @@ function renderMemoryList(memoryEvents: MemoryEvent[], page: number): string {
 
   return pageEvents
     .map(
-      (event) =>
+      (event) => {
+        const title = String(event.content.title ?? event.content.url ?? 'Untitled');
+        const url =
+          typeof event.content.url === 'string' ? event.content.url : null;
+        const linkedTitle =
+          url === null
+            ? title
+            : `<a href="${url}" target="_blank" rel="noreferrer">${title}</a>`;
+
+        return (
         [
           '<li class="mirrorbrain-record">',
-          `<strong>${event.id}</strong>`,
           `<span>${event.sourceType}</span>`,
-          `<span>${String(event.content.title ?? event.content.url ?? 'Untitled')}</span>`,
+          `<span>${linkedTitle}${url === null ? '' : ` (${url})`}</span>`,
           `<span>${event.timestamp}</span>`,
           '</li>',
-        ].join(''),
+        ].join('')
+        );
+      },
     )
     .join('');
 }
