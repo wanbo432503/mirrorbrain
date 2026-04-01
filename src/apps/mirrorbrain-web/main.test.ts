@@ -34,6 +34,7 @@ function createCandidateMemory(input: {
   title: string;
   summary: string;
   theme: string;
+  reviewDate?: string;
 }): CandidateMemory {
   return {
     id: input.id,
@@ -41,10 +42,10 @@ function createCandidateMemory(input: {
     title: input.title,
     summary: input.summary,
     theme: input.theme,
-    reviewDate: '2026-03-20',
+    reviewDate: input.reviewDate ?? '2026-03-20',
     timeRange: {
-      startAt: '2026-03-20T08:00:00.000Z',
-      endAt: '2026-03-20T08:15:00.000Z',
+      startAt: `${input.reviewDate ?? '2026-03-20'}T08:00:00.000Z`,
+      endAt: `${input.reviewDate ?? '2026-03-20'}T08:15:00.000Z`,
     },
     reviewState: 'pending',
   };
@@ -62,6 +63,12 @@ function createReviewedMemory(candidate: CandidateMemory): ReviewedMemory {
     decision: 'keep',
     reviewedAt: '2026-03-20T10:00:00.000Z',
   };
+}
+
+function getPreviousCalendarDate(referenceIso: string): string {
+  const referenceDate = new Date(referenceIso);
+  referenceDate.setUTCDate(referenceDate.getUTCDate() - 1);
+  return referenceDate.toISOString().slice(0, 10);
 }
 
 describe('mirrorbrain web app', () => {
@@ -204,25 +211,37 @@ describe('mirrorbrain web app', () => {
     expect(artifactsHtml).toContain('data-action="generate-skill"');
   });
 
-  it('loads, creates daily candidates, reviews the selected candidate, and generates artifacts', async () => {
+  it('loads, creates yesterday candidates, reviews the selected candidate, and generates artifacts', async () => {
+    const referenceNow = '2026-03-20T10:00:00.000Z';
+    const expectedReviewDate = getPreviousCalendarDate(referenceNow);
     const memoryEvents: MemoryEvent[] = [
-      createMemoryEvent('browser:aw-event-1', 'Example Tasks', '2026-03-20T08:00:00.000Z'),
-      createMemoryEvent('browser:aw-event-2', 'Example API', '2026-03-20T08:15:00.000Z'),
+      createMemoryEvent(
+        'browser:aw-event-1',
+        'Example Tasks',
+        `${expectedReviewDate}T08:00:00.000Z`,
+      ),
+      createMemoryEvent(
+        'browser:aw-event-2',
+        'Example API',
+        `${expectedReviewDate}T08:15:00.000Z`,
+      ),
     ];
     const candidates = [
       createCandidateMemory({
-        id: 'candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
+        id: `candidate:${expectedReviewDate}:activitywatch-browser:docs-example-com:guides`,
         memoryEventIds: ['browser:aw-event-1', 'browser:aw-event-2'],
         title: 'Docs Example Com / guides',
-        summary: '2 browser events about Docs Example Com / guides on 2026-03-20.',
+        summary: `2 browser events about Docs Example Com / guides on ${expectedReviewDate}.`,
         theme: 'docs.example.com / guides',
+        reviewDate: expectedReviewDate,
       }),
       createCandidateMemory({
-        id: 'candidate:2026-03-20:activitywatch-browser:github-com:example',
+        id: `candidate:${expectedReviewDate}:activitywatch-browser:github-com:example`,
         memoryEventIds: ['browser:aw-event-3'],
         title: 'Github Com / example',
-        summary: '1 browser event about Github Com / example on 2026-03-20.',
+        summary: `1 browser event about Github Com / example on ${expectedReviewDate}.`,
         theme: 'github.com / example',
+        reviewDate: expectedReviewDate,
       }),
     ];
     const reviewedMemory = createReviewedMemory(candidates[1]);
@@ -270,7 +289,7 @@ describe('mirrorbrain web app', () => {
 
     const app = createMirrorBrainWebApp({
       api,
-      now: () => '2026-03-20T10:00:00.000Z',
+      now: () => referenceNow,
     });
 
     await app.load();
@@ -303,7 +322,10 @@ describe('mirrorbrain web app', () => {
       kind: 'success',
       message: `Skill generated: ${skillArtifact.id}`,
     });
-    expect(api.createDailyCandidates).toHaveBeenCalledWith('2026-03-20');
+    expect(api.createDailyCandidates).toHaveBeenCalledWith(
+      expectedReviewDate,
+      'Asia/Shanghai',
+    );
     expect(api.suggestCandidateReviews).toHaveBeenCalledWith(candidates);
     expect(api.reviewCandidateMemory).toHaveBeenCalledWith(candidates[1], {
       decision: 'keep',
@@ -369,7 +391,7 @@ describe('mirrorbrain web app', () => {
     await app.createDailyCandidates();
     expect(app.state.feedback).toEqual({
       kind: 'error',
-      message: 'No memory events are available for today\'s candidate review.',
+      message: 'No memory events are available for yesterday\'s candidate review.',
     });
 
     await app.reviewSelectedCandidate('keep');
@@ -389,5 +411,64 @@ describe('mirrorbrain web app', () => {
       kind: 'error',
       message: 'Keep a reviewed memory before generating a skill draft.',
     });
+  });
+
+  it('uses the local yesterday review day instead of the UTC date when generating daily candidates', async () => {
+    const referenceNow = '2026-03-31T16:30:00.000Z';
+    const expectedReviewDate = '2026-03-31';
+    const memoryEvents: MemoryEvent[] = [
+      createMemoryEvent(
+        'browser:morning-1',
+        'Morning Work',
+        '2026-03-30T16:35:00.000Z',
+      ),
+    ];
+    const candidates = [
+      createCandidateMemory({
+        id: `candidate:${expectedReviewDate}:activitywatch-browser:example-com:browser-morning-1`,
+        memoryEventIds: ['browser:morning-1'],
+        title: 'Example Com / browser-morning-1',
+        summary: `1 browser event about Example Com / browser-morning-1 on ${expectedReviewDate}.`,
+        theme: 'example.com / browser-morning-1',
+        reviewDate: expectedReviewDate,
+      }),
+    ];
+    const createDailyCandidates = vi.fn(async () => candidates);
+
+    const app = createMirrorBrainWebApp({
+      api: {
+        getHealth: vi.fn(async () => ({
+          status: 'running' as const,
+        })),
+        listMemory: vi.fn(async () => memoryEvents),
+        listKnowledge: vi.fn(async () => [] as KnowledgeArtifact[]),
+        listSkills: vi.fn(async () => [] as SkillArtifact[]),
+        syncBrowser: vi.fn(),
+        createDailyCandidates,
+        suggestCandidateReviews: vi.fn(async () => []),
+        reviewCandidateMemory: vi.fn(),
+        generateKnowledge: vi.fn(),
+        generateSkill: vi.fn(),
+      },
+      now: () => referenceNow,
+      timeZone: 'Asia/Shanghai',
+    });
+
+    await app.load();
+    await app.createDailyCandidates();
+
+    expect(app.state.feedback).toEqual({
+      kind: 'success',
+      message: `Generated 1 daily candidates for ${expectedReviewDate}.`,
+    });
+    expect(app.state.selectedCandidateId).toBe(candidates[0].id);
+    expect(app.state.candidateMemories).toEqual(candidates);
+    expect(app.state.activeTab).toBe('review');
+    expect(app.state.memoryEvents).toEqual(memoryEvents);
+    expect(app.state.candidateReviewSuggestions).toEqual([]);
+    expect(createDailyCandidates).toHaveBeenCalledWith(
+      expectedReviewDate,
+      'Asia/Shanghai',
+    );
   });
 });

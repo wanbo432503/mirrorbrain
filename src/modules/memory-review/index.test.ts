@@ -65,6 +65,19 @@ describe('memory review', () => {
     expect(candidates).toHaveLength(2);
     expect(candidates).toEqual([
       {
+        id: 'candidate:2026-03-20:activitywatch-browser:github-com:example',
+        memoryEventIds: ['browser:old-1', 'browser:issues-1'],
+        title: 'Github Com / example',
+        summary: '2 browser events about Github Com / example on 2026-03-20.',
+        theme: 'github.com / example',
+        reviewState: 'pending',
+        reviewDate: '2026-03-20',
+        timeRange: {
+          startAt: '2026-03-19T22:00:00.000Z',
+          endAt: '2026-03-20T09:00:00.000Z',
+        },
+      },
+      {
         id: 'candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
         memoryEventIds: ['browser:docs-1', 'browser:docs-2'],
         title: 'Docs Example Com / guides',
@@ -75,19 +88,6 @@ describe('memory review', () => {
         timeRange: {
           startAt: '2026-03-20T08:00:00.000Z',
           endAt: '2026-03-20T08:15:00.000Z',
-        },
-      },
-      {
-        id: 'candidate:2026-03-20:activitywatch-browser:github-com:example',
-        memoryEventIds: ['browser:issues-1'],
-        title: 'Github Com / example',
-        summary: '1 browser event about Github Com / example on 2026-03-20.',
-        theme: 'github.com / example',
-        reviewState: 'pending',
-        reviewDate: '2026-03-20',
-        timeRange: {
-          startAt: '2026-03-20T09:00:00.000Z',
-          endAt: '2026-03-20T09:00:00.000Z',
         },
       },
     ]);
@@ -186,5 +186,26 @@ describe('memory review', () => {
     expect(candidates.every((candidate) => candidate.reviewState === 'pending')).toBe(
       true,
     );
+  });
+
+  it('treats UTC timestamps as part of the local review day when a review timezone is provided', () => {
+    const candidates = createCandidateMemories({
+      reviewDate: '2026-04-01',
+      reviewTimeZone: 'Asia/Shanghai',
+      memoryEvents: [
+        createBrowserMemoryEvent({
+          id: 'browser:morning-1',
+          timestamp: '2026-03-31T16:30:00.000Z',
+          url: 'https://docs.example.com/guides/morning-review',
+          title: 'Morning Review',
+        }),
+      ],
+    });
+
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]).toMatchObject({
+      reviewDate: '2026-04-01',
+      memoryEventIds: ['browser:morning-1'],
+    });
   });
 });

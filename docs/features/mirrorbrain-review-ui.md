@@ -35,7 +35,7 @@ This UI is not responsible for:
 1. The UI loads health, memory, knowledge, and skill data from the local service API.
 2. The user browses memory through the paged memory tab.
 3. The user triggers browser sync when needed.
-4. The user generates daily candidates for the current day from the review tab.
+4. The user generates daily candidates for the previous local day from the review tab.
 5. The UI lists multiple candidate streams and lets the user pick one.
 6. The UI shows AI review suggestions for the selected candidate without auto-reviewing it.
 7. The user explicitly keeps or discards the selected candidate.
@@ -54,3 +54,4 @@ This UI is not responsible for:
 - memory paging is purely client-side in the current MVP and does not yet reduce backend payload size
 - candidate grouping still depends on backend deterministic stream rules rather than richer semantic clustering
 - AI suggestions are advisory placeholders in Phase 1
+- the default daily review window is currently the previous local day to make testing and morning review easier

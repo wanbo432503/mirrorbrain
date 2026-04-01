@@ -289,6 +289,7 @@ describe('mirrorbrain http server', () => {
       },
       body: JSON.stringify({
         reviewDate: '2026-03-20',
+        reviewTimeZone: 'Asia/Shanghai',
       }),
     });
     const candidateBody = await candidateResponse.json();
@@ -355,6 +356,10 @@ describe('mirrorbrain http server', () => {
         }),
       ],
     });
+    expect(createDailyCandidateMemories).toHaveBeenCalledWith(
+      '2026-03-20',
+      'Asia/Shanghai',
+    );
     expect(suggestionResponse.status).toBe(200);
     expect(suggestionBody).toEqual({
       suggestions: [

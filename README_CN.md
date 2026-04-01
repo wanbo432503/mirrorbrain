@@ -152,7 +152,7 @@ http://127.0.0.1:3007/docs
 
 1. `Sync Browser Memory`
 2. 打开 `Review` tab，点击 `Create Candidate`
-3. 选择一个当天的 candidate stream
+3. UI 会默认用昨天本地时间窗口生成 candidate stream，然后选择一个 candidate stream
 4. 查看 AI 给出的 review suggestion
 5. 点击 `Keep Candidate`
 6. 打开 `Artifacts` tab

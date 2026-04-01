@@ -152,7 +152,7 @@ In the web UI:
 
 1. Click `Sync Browser Memory`
 2. Open the `Review` tab and click `Create Candidate`
-3. Select one daily candidate stream
+3. The UI will generate candidate streams from yesterday's local memory window, then select one daily candidate stream
 4. Optionally inspect the AI review suggestion
 5. Click `Keep Candidate`
 6. Open the `Artifacts` tab

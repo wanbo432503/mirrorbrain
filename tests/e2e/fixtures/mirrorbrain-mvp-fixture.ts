@@ -13,20 +13,20 @@ import { prepareMirrorBrainWebAssets } from '../../../scripts/start-mirrorbrain-
 export async function startMirrorBrainMvpFixture() {
   const workspaceDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-e2e-workspace-'));
   const staticDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-e2e-web-'));
-  const reviewDate = new Date().toISOString().slice(0, 10);
+  const reviewWindowDate = getPreviousCalendarDate(new Date());
   const memoryEvents = [
     {
       id: 'browser:aw-event-1',
       sourceType: 'activitywatch-browser',
       sourceRef: 'aw-event-1',
-      timestamp: `${reviewDate}T08:00:00.000Z`,
+      timestamp: `${reviewWindowDate}T08:00:00.000Z`,
       authorizationScopeId: 'scope-browser',
       content: {
         title: 'Example Tasks',
       },
       captureMetadata: {
         upstreamSource: 'activitywatch',
-        checkpoint: `${reviewDate}T08:00:00.000Z`,
+        checkpoint: `${reviewWindowDate}T08:00:00.000Z`,
       },
     },
   ];
@@ -75,12 +75,13 @@ export async function startMirrorBrainMvpFixture() {
           title: 'Fixture Candidate',
           summary: `Fixture candidate for ${memoryEvents.length} events.`,
           theme: 'fixture / browser',
-          reviewDate,
+          reviewDate: reviewWindowDate,
           timeRange: {
-            startAt: memoryEvents[0]?.timestamp ?? `${reviewDate}T08:00:00.000Z`,
+            startAt:
+              memoryEvents[0]?.timestamp ?? `${reviewWindowDate}T08:00:00.000Z`,
             endAt:
               memoryEvents[memoryEvents.length - 1]?.timestamp ??
-              `${reviewDate}T08:00:00.000Z`,
+              `${reviewWindowDate}T08:00:00.000Z`,
           },
           reviewState: 'pending',
         };
@@ -140,4 +141,14 @@ export async function startMirrorBrainMvpFixture() {
     stop: server.stop,
     workspaceDir,
   };
+}
+
+function getPreviousCalendarDate(reference: Date): string {
+  const previousDay = new Date(reference);
+  previousDay.setDate(previousDay.getDate() - 1);
+  return [
+    previousDay.getFullYear(),
+    String(previousDay.getMonth() + 1).padStart(2, '0'),
+    String(previousDay.getDate()).padStart(2, '0'),
+  ].join('-');
 }

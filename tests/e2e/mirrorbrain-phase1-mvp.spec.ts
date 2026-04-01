@@ -6,7 +6,7 @@ test('runs the phase 1 MVP review flow through the standalone UI', async ({
   page,
 }) => {
   const fixture = await startMirrorBrainMvpFixture();
-  const reviewDate = new Date().toISOString().slice(0, 10);
+  const expectedReviewWindowDate = getPreviousCalendarDate(new Date());
 
   try {
     await page.goto(fixture.origin);
@@ -26,7 +26,9 @@ test('runs the phase 1 MVP review flow through the standalone UI', async ({
       page.getByRole('button', { name: /Fixture Candidate/ }),
     ).toBeVisible();
     await expect(
-      page.getByText(`Status: Generated 1 daily candidates for ${reviewDate}.`),
+      page.getByText(
+        `Status: Generated 1 daily candidates for ${expectedReviewWindowDate}.`,
+      ),
     ).toBeVisible();
     await expect(
       page.getByText('This daily stream has limited evidence and should stay in human review.'),
@@ -73,3 +75,13 @@ test('runs the phase 1 MVP review flow through the standalone UI', async ({
     await fixture.stop();
   }
 });
+
+function getPreviousCalendarDate(reference: Date): string {
+  const previousDay = new Date(reference);
+  previousDay.setDate(previousDay.getDate() - 1);
+  return [
+    previousDay.getFullYear(),
+    String(previousDay.getMonth() + 1).padStart(2, '0'),
+    String(previousDay.getDate()).padStart(2, '0'),
+  ].join('-');
+}

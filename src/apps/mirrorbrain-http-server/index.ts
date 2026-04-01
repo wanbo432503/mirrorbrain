@@ -24,7 +24,10 @@ interface MirrorBrainHttpService {
   queryMemory(): Promise<MemoryEvent[]>;
   listKnowledge(): Promise<KnowledgeArtifact[]>;
   listSkillDrafts(): Promise<SkillArtifact[]>;
-  createDailyCandidateMemories(reviewDate: string): Promise<CandidateMemory[]>;
+  createDailyCandidateMemories(
+    reviewDate: string,
+    reviewTimeZone?: string,
+  ): Promise<CandidateMemory[]>;
   suggestCandidateReviews(
     candidates: CandidateMemory[],
   ): Promise<CandidateReviewSuggestion[]>;
@@ -411,7 +414,7 @@ export async function startMirrorBrainHttpServer(
     },
   );
 
-  app.post<{ Body: { reviewDate: string } }>(
+  app.post<{ Body: { reviewDate: string; reviewTimeZone?: string } }>(
     '/candidate-memories/daily',
     {
       schema: {
@@ -420,6 +423,7 @@ export async function startMirrorBrainHttpServer(
           type: 'object',
           properties: {
             reviewDate: { type: 'string' },
+            reviewTimeZone: { type: 'string' },
           },
           required: ['reviewDate'],
         },
@@ -442,6 +446,7 @@ export async function startMirrorBrainHttpServer(
       return {
         candidates: await input.service.createDailyCandidateMemories(
           request.body.reviewDate,
+          request.body.reviewTimeZone,
         ),
       };
     },

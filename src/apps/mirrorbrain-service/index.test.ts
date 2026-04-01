@@ -481,7 +481,7 @@ describe('mirrorbrain service', () => {
     );
 
     await expect(
-      api.createDailyCandidateMemories('2026-03-20'),
+      api.createDailyCandidateMemories('2026-03-20', 'Asia/Shanghai'),
     ).resolves.toEqual([
       createCandidateMemoryFixture({
         id: 'candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
@@ -498,6 +498,7 @@ describe('mirrorbrain service', () => {
     });
     expect(createCandidateMemories).toHaveBeenCalledWith({
       reviewDate: '2026-03-20',
+      reviewTimeZone: 'Asia/Shanghai',
       memoryEvents,
     });
     expect(publishCandidateMemory).toHaveBeenCalledTimes(2);

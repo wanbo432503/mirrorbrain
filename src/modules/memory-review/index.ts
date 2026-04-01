@@ -7,6 +7,7 @@ import type {
 
 interface CreateCandidateMemoriesInput {
   reviewDate: string;
+  reviewTimeZone?: string;
   memoryEvents: MemoryEvent[];
 }
 
@@ -25,8 +26,12 @@ interface CandidateStreamGroup {
 export function createCandidateMemories(
   input: CreateCandidateMemoriesInput,
 ): CandidateMemory[] {
+  const reviewTimeZone = input.reviewTimeZone;
   const dailyEvents = input.memoryEvents
-    .filter((event) => event.timestamp.startsWith(input.reviewDate))
+    .filter((event) =>
+      getCalendarDateForComparison(event.timestamp, reviewTimeZone) ===
+      input.reviewDate,
+    )
     .sort((left, right) => left.timestamp.localeCompare(right.timestamp));
 
   if (dailyEvents.length === 0) {
@@ -163,6 +168,36 @@ function createCandidateSummary(input: {
 }): string {
   const eventLabel = input.eventCount === 1 ? 'browser event' : 'browser events';
   return `${input.eventCount} ${eventLabel} about ${input.themeLabel} on ${input.reviewDate}.`;
+}
+
+function getCalendarDateForComparison(
+  value: string,
+  timeZone?: string,
+): string {
+  if (timeZone === undefined) {
+    return [
+      new Date(value).getFullYear(),
+      String(new Date(value).getMonth() + 1).padStart(2, '0'),
+      String(new Date(value).getDate()).padStart(2, '0'),
+    ].join('-');
+  }
+
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const parts = formatter.formatToParts(new Date(value));
+  const year = parts.find((part) => part.type === 'year')?.value;
+  const month = parts.find((part) => part.type === 'month')?.value;
+  const day = parts.find((part) => part.type === 'day')?.value;
+
+  if (year === undefined || month === undefined || day === undefined) {
+    throw new Error(`Failed to derive review date for timestamp ${value}.`);
+  }
+
+  return `${year}-${month}-${day}`;
 }
 
 function sanitizeForId(value: string): string {

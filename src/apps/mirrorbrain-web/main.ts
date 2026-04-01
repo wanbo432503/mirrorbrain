@@ -42,7 +42,10 @@ interface MirrorBrainWebAppApi {
   listKnowledge(): Promise<KnowledgeArtifact[]>;
   listSkills(): Promise<SkillArtifact[]>;
   syncBrowser(): Promise<BrowserSyncSummary>;
-  createDailyCandidates(reviewDate: string): Promise<CandidateMemory[]>;
+  createDailyCandidates(
+    reviewDate: string,
+    reviewTimeZone?: string,
+  ): Promise<CandidateMemory[]>;
   suggestCandidateReviews(
     candidates: CandidateMemory[],
   ): Promise<CandidateReviewSuggestion[]>;
@@ -62,6 +65,7 @@ interface MirrorBrainWebAppApi {
 interface CreateMirrorBrainWebAppInput {
   api: MirrorBrainWebAppApi;
   now?: () => string;
+  timeZone?: string;
 }
 
 interface MountMirrorBrainWebAppInput {
@@ -349,6 +353,10 @@ export function renderMirrorBrainWebApp(
 
 export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
   const now = input.now ?? (() => new Date().toISOString());
+  const timeZone =
+    input.timeZone ??
+    Intl.DateTimeFormat().resolvedOptions().timeZone ??
+    'UTC';
   const state: MirrorBrainWebAppState = {
     serviceStatus: 'unknown',
     memoryEvents: [],
@@ -412,20 +420,23 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
       });
     },
     async createDailyCandidates() {
-      const reviewDate = now().slice(0, 10);
-      const todaysEvents = state.memoryEvents.filter((event) =>
-        event.timestamp.startsWith(reviewDate),
+      const reviewDate = getPreviousCalendarDate(now(), timeZone);
+      const reviewWindowEvents = state.memoryEvents.filter((event) =>
+        formatCalendarDate(event.timestamp, timeZone) === reviewDate,
       );
 
-      if (todaysEvents.length === 0) {
+      if (reviewWindowEvents.length === 0) {
         setFeedback({
           kind: 'error',
-          message: "No memory events are available for today's candidate review.",
+          message: "No memory events are available for yesterday's candidate review.",
         });
         return;
       }
 
-      state.candidateMemories = await input.api.createDailyCandidates(reviewDate);
+      state.candidateMemories = await input.api.createDailyCandidates(
+        reviewDate,
+        timeZone,
+      );
       state.candidateReviewSuggestions = await input.api.suggestCandidateReviews(
         state.candidateMemories,
       );
@@ -542,7 +553,7 @@ export function createMirrorBrainBrowserApi(
 
       return body.sync;
     },
-    async createDailyCandidates(reviewDate) {
+    async createDailyCandidates(reviewDate, reviewTimeZone) {
       const response = await fetch(`${baseUrl}/candidate-memories/daily`, {
         method: 'POST',
         headers: {
@@ -550,6 +561,7 @@ export function createMirrorBrainBrowserApi(
         },
         body: JSON.stringify({
           reviewDate,
+          reviewTimeZone,
         }),
       });
       const body = (await response.json()) as {
@@ -624,6 +636,33 @@ export function createMirrorBrainBrowserApi(
       return body.artifact;
     },
   };
+}
+
+function formatCalendarDate(value: string, timeZone: string): string {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const parts = formatter.formatToParts(new Date(value));
+  const year = parts.find((part) => part.type === 'year')?.value;
+  const month = parts.find((part) => part.type === 'month')?.value;
+  const day = parts.find((part) => part.type === 'day')?.value;
+
+  if (year === undefined || month === undefined || day === undefined) {
+    throw new Error(`Failed to derive calendar date for timestamp ${value}.`);
+  }
+
+  return `${year}-${month}-${day}`;
+}
+
+function getPreviousCalendarDate(value: string, timeZone: string): string {
+  const currentCalendarDate = formatCalendarDate(value, timeZone);
+  const previousDay = new Date(`${currentCalendarDate}T00:00:00.000Z`);
+  previousDay.setUTCDate(previousDay.getUTCDate() - 1);
+
+  return previousDay.toISOString().slice(0, 10);
 }
 
 export async function mountMirrorBrainWebApp(

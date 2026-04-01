@@ -260,12 +260,14 @@ export function createMirrorBrainService(
     },
     createDailyCandidateMemories: async (
       reviewDate: string,
+      reviewTimeZone?: string,
     ): Promise<CandidateMemory[]> => {
       const memoryEvents = await queryMemory({
         baseUrl,
       });
       const artifacts = await buildCandidateMemories({
         reviewDate,
+        reviewTimeZone,
         memoryEvents,
       });
 
