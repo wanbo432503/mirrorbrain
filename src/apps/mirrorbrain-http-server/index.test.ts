@@ -202,6 +202,118 @@ describe('mirrorbrain http server', () => {
     });
   });
 
+  it('serves theme-level memory retrieval results through a query endpoint', async () => {
+    const service = {
+      service: {
+        status: 'running' as const,
+        config: getMirrorBrainConfig(),
+        stop: vi.fn(),
+      },
+      listMemoryEvents: vi.fn(async () => []),
+      queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({
+        timeRange: {
+          startAt: '2026-03-20T00:00:00.000Z',
+          endAt: '2026-03-20T23:59:59.999Z',
+        },
+        items: [
+          {
+            id: 'memory-result:activitywatch-browser-example-tasks',
+            theme: 'Example Tasks',
+            title: 'Example Tasks',
+            summary:
+              '1 matching memory event about Example Tasks during the requested time range.',
+            timeRange: {
+              startAt: '2026-03-20T08:00:00.000Z',
+              endAt: '2026-03-20T08:00:00.000Z',
+            },
+            sourceRefs: [
+              {
+                id: 'browser:aw-event-1',
+                sourceType: 'activitywatch-browser',
+                sourceRef: 'aw-event-1',
+                timestamp: '2026-03-20T08:00:00.000Z',
+              },
+            ],
+          },
+        ],
+      })),
+      listKnowledge: vi.fn(async () => []),
+      listSkillDrafts: vi.fn(async () => []),
+      syncBrowserMemory: vi.fn(async () => ({
+        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:00:00.000Z',
+      })),
+      createDailyCandidateMemories: vi.fn(),
+      suggestCandidateReviews: vi.fn(),
+      reviewCandidateMemory: vi.fn(),
+      generateKnowledgeFromReviewedMemories: vi.fn(),
+      generateSkillDraftFromReviewedMemories: vi.fn(),
+      publishKnowledge: vi.fn(),
+      publishSkillDraft: vi.fn(),
+    };
+
+    const server = await startMirrorBrainHttpServer({
+      service,
+      port: 0,
+    });
+    servers.push(server);
+
+    const response = await fetch(`${server.origin}/memory/query`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        query: 'What did I work on yesterday?',
+        timeRange: {
+          startAt: '2026-03-20T00:00:00.000Z',
+          endAt: '2026-03-20T23:59:59.999Z',
+        },
+        sourceTypes: ['browser'],
+      }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      timeRange: {
+        startAt: '2026-03-20T00:00:00.000Z',
+        endAt: '2026-03-20T23:59:59.999Z',
+      },
+      items: [
+        {
+          id: 'memory-result:activitywatch-browser-example-tasks',
+          theme: 'Example Tasks',
+          title: 'Example Tasks',
+          summary:
+            '1 matching memory event about Example Tasks during the requested time range.',
+          timeRange: {
+            startAt: '2026-03-20T08:00:00.000Z',
+            endAt: '2026-03-20T08:00:00.000Z',
+          },
+          sourceRefs: [
+            {
+              id: 'browser:aw-event-1',
+              sourceType: 'activitywatch-browser',
+              sourceRef: 'aw-event-1',
+              timestamp: '2026-03-20T08:00:00.000Z',
+            },
+          ],
+        },
+      ],
+    });
+    expect(service.queryMemory).toHaveBeenCalledWith({
+      query: 'What did I work on yesterday?',
+      timeRange: {
+        startAt: '2026-03-20T00:00:00.000Z',
+        endAt: '2026-03-20T23:59:59.999Z',
+      },
+      sourceTypes: ['browser'],
+    });
+  });
+
   it('serves candidate review and artifact generation endpoints through the local HTTP API', async () => {
     const createDailyCandidateMemories = vi.fn(
       async (_reviewDate: string): Promise<CandidateMemory[]> => [

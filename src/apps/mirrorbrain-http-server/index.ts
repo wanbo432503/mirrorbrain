@@ -97,6 +97,71 @@ const memoryEventSchema = {
   ],
 } as const;
 
+const memoryTimeRangeSchema = {
+  type: 'object',
+  properties: {
+    startAt: { type: 'string' },
+    endAt: { type: 'string' },
+  },
+  required: ['startAt', 'endAt'],
+} as const;
+
+const memoryQuerySourceRefSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    sourceType: { type: 'string' },
+    sourceRef: { type: 'string' },
+    timestamp: { type: 'string' },
+  },
+  required: ['id', 'sourceType', 'sourceRef', 'timestamp'],
+} as const;
+
+const memoryQueryItemSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    theme: { type: 'string' },
+    title: { type: 'string' },
+    summary: { type: 'string' },
+    timeRange: memoryTimeRangeSchema,
+    sourceRefs: {
+      type: 'array',
+      items: memoryQuerySourceRefSchema,
+    },
+  },
+  required: ['id', 'theme', 'title', 'summary', 'timeRange', 'sourceRefs'],
+} as const;
+
+const memoryQueryRequestSchema = {
+  type: 'object',
+  properties: {
+    query: { type: 'string' },
+    timeRange: memoryTimeRangeSchema,
+    sourceTypes: {
+      type: 'array',
+      items: {
+        type: 'string',
+        enum: ['browser', 'shell', 'openclaw-conversation'],
+      },
+    },
+  },
+  required: ['query'],
+} as const;
+
+const memoryQueryResponseSchema = {
+  type: 'object',
+  properties: {
+    timeRange: memoryTimeRangeSchema,
+    explanation: { type: 'string' },
+    items: {
+      type: 'array',
+      items: memoryQueryItemSchema,
+    },
+  },
+  required: ['items'],
+} as const;
+
 const candidateMemorySchema = {
   type: 'object',
   properties: {
@@ -367,6 +432,27 @@ export async function startMirrorBrainHttpServer(
     async () => ({
       items: await input.service.listMemoryEvents(),
     }),
+  );
+
+  app.post<{
+    Body: MemoryQueryInput;
+  }>(
+    '/memory/query',
+    {
+      schema: {
+        summary: 'Query theme-level memory retrieval results',
+        body: memoryQueryRequestSchema,
+        response: {
+          200: memoryQueryResponseSchema,
+        },
+      },
+    },
+    async (request) =>
+      input.service.queryMemory
+        ? input.service.queryMemory(request.body)
+        : {
+            items: [],
+          },
   );
 
   app.get(
