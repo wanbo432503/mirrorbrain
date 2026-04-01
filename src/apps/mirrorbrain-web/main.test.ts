@@ -72,7 +72,7 @@ function getPreviousCalendarDate(referenceIso: string): string {
 }
 
 describe('mirrorbrain web app', () => {
-  it('renders review tab with multiple daily candidate streams and AI suggestions', () => {
+  it('renders review tab with multiple daily candidate streams, review window details, and AI suggestions', () => {
     const primaryCandidate = createCandidateMemory({
       id: 'candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
       memoryEventIds: ['browser:aw-event-1', 'browser:aw-event-2'],
@@ -133,9 +133,15 @@ describe('mirrorbrain web app', () => {
       },
       activeTab: 'review',
       memoryPage: 1,
+      reviewWindowDate: '2026-03-20',
+      reviewWindowEventCount: 3,
     });
 
     expect(html).toContain('Daily Candidate Streams');
+    expect(html).toContain('Review Window');
+    expect(html).toContain('2026-03-20 00:00:00 to 2026-03-20 23:59:59');
+    expect(html).toContain('Matched Memory Events');
+    expect(html).toContain('3');
     expect(html).toContain(primaryCandidate.title);
     expect(html).toContain(secondaryCandidate.title);
     expect(html).toContain(primaryCandidate.summary);
@@ -145,8 +151,8 @@ describe('mirrorbrain web app', () => {
     expect(html).not.toContain('knowledge-draft:reviewed:candidate:2026-03-20:activitywatch-browser:docs-example-com:guides');
   });
 
-  it('renders memory pagination with 20 events per page', () => {
-    const memoryEvents = Array.from({ length: 25 }, (_, index) =>
+  it('renders memory pagination with 5 events per page', () => {
+    const memoryEvents = Array.from({ length: 12 }, (_, index) =>
       createMemoryEvent(
         `browser:aw-event-${index + 1}`,
         `Example ${index + 1}`,
@@ -167,12 +173,16 @@ describe('mirrorbrain web app', () => {
       feedback: null,
       activeTab: 'memory',
       memoryPage: 2,
+      reviewWindowDate: null,
+      reviewWindowEventCount: 0,
     });
 
-    expect(html).toContain('Page 2 of 2');
-    expect(html).toContain('browser:aw-event-21');
-    expect(html).toContain('browser:aw-event-25');
-    expect(html).not.toContain('browser:aw-event-20');
+    expect(html).toContain('Page 2 of 3');
+    expect(html).toContain('data-action="memory-first-page"');
+    expect(html).toContain('data-action="memory-last-page"');
+    expect(html).toContain('browser:aw-event-6');
+    expect(html).toContain('browser:aw-event-10');
+    expect(html).not.toContain('browser:aw-event-5');
   });
 
   it('shows only the actions that belong to the active tab', () => {
@@ -188,6 +198,8 @@ describe('mirrorbrain web app', () => {
       lastSyncSummary: null,
       feedback: null,
       memoryPage: 1,
+      reviewWindowDate: null,
+      reviewWindowEventCount: 0,
     };
 
     const memoryHtml = renderMirrorBrainWebApp({
@@ -305,6 +317,8 @@ describe('mirrorbrain web app', () => {
     expect(app.state.activeTab).toBe('artifacts');
     expect(app.state.candidateMemories).toEqual(candidates);
     expect(app.state.selectedCandidateId).toBe(candidates[1].id);
+    expect(app.state.reviewWindowDate).toBe(expectedReviewDate);
+    expect(app.state.reviewWindowEventCount).toBe(2);
     expect(app.state.candidateReviewSuggestions).toEqual([
       {
         candidateMemoryId: candidates[1].id,
@@ -363,9 +377,14 @@ describe('mirrorbrain web app', () => {
     await app.load();
     app.setActiveTab('review');
     app.goToNextMemoryPage();
+    app.goToLastMemoryPage();
 
     expect(app.state.activeTab).toBe('review');
-    expect(app.state.memoryPage).toBe(2);
+    expect(app.state.memoryPage).toBe(5);
+
+    app.goToFirstMemoryPage();
+
+    expect(app.state.memoryPage).toBe(1);
   });
 
   it('reports a visible error state instead of silently ignoring invalid actions', async () => {
@@ -466,6 +485,8 @@ describe('mirrorbrain web app', () => {
     expect(app.state.activeTab).toBe('review');
     expect(app.state.memoryEvents).toEqual(memoryEvents);
     expect(app.state.candidateReviewSuggestions).toEqual([]);
+    expect(app.state.reviewWindowDate).toBe(expectedReviewDate);
+    expect(app.state.reviewWindowEventCount).toBe(1);
     expect(createDailyCandidates).toHaveBeenCalledWith(
       expectedReviewDate,
       'Asia/Shanghai',

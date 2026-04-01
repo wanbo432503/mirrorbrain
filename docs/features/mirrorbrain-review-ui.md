@@ -10,6 +10,7 @@ This UI is responsible for:
 
 - showing local service status
 - showing imported memory through a dedicated tab with paging
+- showing five memory records per page with first, previous, next, and last navigation controls
 - exposing daily candidate generation and explicit review actions
 - showing multiple candidate streams instead of a single current candidate
 - showing AI review suggestions as advisory detail, not final state
@@ -34,13 +35,15 @@ This UI is not responsible for:
 
 1. The UI loads health, memory, knowledge, and skill data from the local service API.
 2. The user browses memory through the paged memory tab.
-3. The user triggers browser sync when needed.
-4. The user generates daily candidates for the previous local day from the review tab.
-5. The UI lists multiple candidate streams and lets the user pick one.
-6. The UI shows AI review suggestions for the selected candidate without auto-reviewing it.
-7. The user explicitly keeps or discards the selected candidate.
-8. The user generates knowledge and skill drafts and inspects them through the artifacts tab.
-9. The UI renders a visible status message after each action so the workflow is not silent.
+3. The user can jump directly to the first or last memory page when the imported list is long.
+4. The user triggers browser sync when needed.
+5. The user generates daily candidates for the previous local day from the review tab.
+6. The UI shows the active review window and the number of matched memory events before or after candidate generation.
+7. The UI lists multiple candidate streams and lets the user pick one.
+8. The UI shows AI review suggestions for the selected candidate without auto-reviewing it.
+9. The user explicitly keeps or discards the selected candidate.
+10. The user generates knowledge and skill drafts and inspects them through the artifacts tab.
+11. The UI renders a visible status message after each action so the workflow is not silent.
 
 ## Test Strategy
 
@@ -52,6 +55,7 @@ This UI is not responsible for:
 - the current implementation is intentionally minimal and favors operational clarity over visual completeness
 - the UI depends on the local HTTP service and asset preparation performed by `pnpm dev`
 - memory paging is purely client-side in the current MVP and does not yet reduce backend payload size
+- review window filtering is still fixed to the previous local day and does not yet provide a manual date picker
 - candidate grouping still depends on backend deterministic stream rules rather than richer semantic clustering
 - AI suggestions are advisory placeholders in Phase 1
 - the default daily review window is currently the previous local day to make testing and morning review easier

@@ -19,6 +19,8 @@ type MirrorBrainWebTab = 'memory' | 'review' | 'artifacts';
 interface MirrorBrainWebAppState {
   serviceStatus: 'running' | 'stopped' | 'unknown';
   memoryEvents: MemoryEvent[];
+  reviewWindowDate: string | null;
+  reviewWindowEventCount: number;
   candidateMemories: CandidateMemory[];
   selectedCandidateId: string | null;
   candidateReviewSuggestions: CandidateReviewSuggestion[];
@@ -74,7 +76,7 @@ interface MountMirrorBrainWebAppInput {
   doc?: Document;
 }
 
-const MEMORY_PAGE_SIZE = 20;
+const MEMORY_PAGE_SIZE = 5;
 
 function getMemoryPageCount(memoryEvents: MemoryEvent[]): number {
   return Math.max(1, Math.ceil(memoryEvents.length / MEMORY_PAGE_SIZE));
@@ -129,11 +131,15 @@ function renderMemoryPanel(state: MirrorBrainWebAppState): string {
     '<h2>Memory</h2>',
     '<p>Imported browser events with page-level browsing to keep the list readable.</p>',
     '<div class="mirrorbrain-actions"><button type="button" data-action="sync-browser">Sync Browser Memory</button></div>',
-    `<div class="mirrorbrain-pagination"><button type="button" data-action="memory-prev-page"${
+    `<div class="mirrorbrain-pagination"><button type="button" data-action="memory-first-page"${
+      currentPage === 1 ? ' disabled' : ''
+    }>First</button><button type="button" data-action="memory-prev-page"${
       currentPage === 1 ? ' disabled' : ''
     }>Previous</button><span>Page ${currentPage} of ${pageCount}</span><button type="button" data-action="memory-next-page"${
       currentPage === pageCount ? ' disabled' : ''
-    }>Next</button></div>`,
+    }>Next</button><button type="button" data-action="memory-last-page"${
+      currentPage === pageCount ? ' disabled' : ''
+    }>Last</button></div>`,
     `<ul class="mirrorbrain-record-list">${renderMemoryList(
       state.memoryEvents,
       currentPage,
@@ -205,6 +211,10 @@ function renderCandidateList(state: MirrorBrainWebAppState): string {
 function renderReviewPanel(state: MirrorBrainWebAppState): string {
   const candidate = getSelectedCandidate(state);
   const suggestion = getSelectedCandidateSuggestion(state);
+  const reviewWindowDescription =
+    state.reviewWindowDate === null
+      ? 'No review window calculated yet.'
+      : `${state.reviewWindowDate} 00:00:00 to ${state.reviewWindowDate} 23:59:59`;
 
   return [
     '<section class="mirrorbrain-panel">',
@@ -221,6 +231,11 @@ function renderReviewPanel(state: MirrorBrainWebAppState): string {
     candidate === null
       ? '<p>Select a candidate stream to review it.</p>'
       : renderDetailRows([
+          { label: 'Review Window', value: reviewWindowDescription },
+          {
+            label: 'Matched Memory Events',
+            value: String(state.reviewWindowEventCount),
+          },
           { label: 'Candidate ID', value: candidate.id },
           { label: 'Title', value: candidate.title },
           { label: 'Theme', value: candidate.theme },
@@ -360,6 +375,8 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
   const state: MirrorBrainWebAppState = {
     serviceStatus: 'unknown',
     memoryEvents: [],
+    reviewWindowDate: null,
+    reviewWindowEventCount: 0,
     candidateMemories: [],
     selectedCandidateId: null,
     candidateReviewSuggestions: [],
@@ -386,6 +403,12 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
     },
     goToNextMemoryPage() {
       state.memoryPage = clampMemoryPage(state.memoryEvents, state.memoryPage + 1);
+    },
+    goToFirstMemoryPage() {
+      state.memoryPage = 1;
+    },
+    goToLastMemoryPage() {
+      state.memoryPage = getMemoryPageCount(state.memoryEvents);
     },
     goToPreviousMemoryPage() {
       state.memoryPage = clampMemoryPage(state.memoryEvents, state.memoryPage - 1);
@@ -424,6 +447,8 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
       const reviewWindowEvents = state.memoryEvents.filter((event) =>
         formatCalendarDate(event.timestamp, timeZone) === reviewDate,
       );
+      state.reviewWindowDate = reviewDate;
+      state.reviewWindowEventCount = reviewWindowEvents.length;
 
       if (reviewWindowEvents.length === 0) {
         setFeedback({
@@ -748,6 +773,12 @@ export async function mountMirrorBrainWebApp(
         });
       });
     root
+      .querySelector('[data-action="memory-first-page"]')
+      ?.addEventListener('click', () => {
+        app.goToFirstMemoryPage();
+        render();
+      });
+    root
       .querySelector('[data-action="memory-prev-page"]')
       ?.addEventListener('click', () => {
         app.goToPreviousMemoryPage();
@@ -757,6 +788,12 @@ export async function mountMirrorBrainWebApp(
       .querySelector('[data-action="memory-next-page"]')
       ?.addEventListener('click', () => {
         app.goToNextMemoryPage();
+        render();
+      });
+    root
+      .querySelector('[data-action="memory-last-page"]')
+      ?.addEventListener('click', () => {
+        app.goToLastMemoryPage();
         render();
       });
   };
