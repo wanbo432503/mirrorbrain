@@ -1,0 +1,68 @@
+# OpenClaw Memory Tool Example
+
+## Summary
+
+This feature doc describes the minimum `openclaw`-side example for consuming MirrorBrain memory retrieval in Phase 2A.
+
+The example stays intentionally narrow:
+
+- expose a single `query_memory` tool
+- forward `query`, optional `time_range`, and optional `source_types`
+- call MirrorBrain's theme-level memory retrieval contract
+- compose the final chat answer by summarizing returned results in order
+- append a lightweight source hint to each result paragraph
+
+## Responsibility Boundary
+
+This example is for:
+
+- demonstrating the minimum host-side wiring shape
+- documenting the tool surface MirrorBrain expects
+- showing how to turn ordered retrieval results into a user-facing answer
+
+It is not for:
+
+- defining the full `openclaw` plugin runtime
+- prescribing advanced agent policies
+- replacing the eventual host-native implementation
+
+## Key Interfaces
+
+- `src/integrations/openclaw-plugin-api/query-memory-tool-example.ts`
+- `createQueryMemoryToolExample(...)`
+- `composeQueryMemoryAnswer(...)`
+- MirrorBrain `POST /memory/query`
+
+## Example Flow
+
+1. The user asks a chat question such as `我昨天做了什么？`
+2. The host agent decides this is a memory-retrieval question.
+3. The host calls `query_memory` with:
+   - `query`
+   - optional `time_range`
+   - optional `source_types`
+4. The example tool forwards that request to MirrorBrain.
+5. MirrorBrain returns theme-level memory results.
+6. The example answer composer summarizes those results in order and attaches a short source hint to each paragraph.
+
+## Output Shape
+
+The example expects each returned memory result to include at least:
+
+- `theme` or `title`
+- `summary`
+- `timeRange`
+- a small list of representative `sourceRefs`
+
+The example answer then emits one paragraph per result, preserving order.
+
+## Test Strategy
+
+- unit coverage in `src/integrations/openclaw-plugin-api/query-memory-tool-example.test.ts`
+- broader retrieval contract coverage in `src/integrations/openclaw-plugin-api/index.test.ts`
+
+## Known Limitations
+
+- the example does not cover knowledge or skill usage
+- the answer composer currently assumes result order is already meaningful
+- source hints are intentionally lightweight and do not expand into full evidence blocks

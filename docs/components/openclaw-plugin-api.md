@@ -17,6 +17,8 @@ This component is MirrorBrain's plugin-facing retrieval surface for `openclaw`. 
 - `queryMemory(...)`
 - `listKnowledge(...)`
 - `listSkillDrafts(...)`
+- `createQueryMemoryToolExample(...)`
+- `composeQueryMemoryAnswer(...)`
 
 ## Data Flow
 
@@ -25,11 +27,13 @@ This component is MirrorBrain's plugin-facing retrieval surface for `openclaw`. 
 3. The store adapter lists MirrorBrain artifact URIs and reads their content.
 4. For memory retrieval, the plugin API filters and groups raw `MemoryEvent` records into theme-level results with time ranges and representative source refs.
 5. For knowledge and skill retrieval, the plugin API returns parsed `KnowledgeArtifact` and `SkillArtifact` objects.
+6. The example tool wrapper shows how an `openclaw`-side `query_memory` tool can forward retrieval input and then turn ordered results into a lightweight chat answer.
 
 ## Test Strategy
 
 - unit tests verify each retrieval method delegates to the correct loader
 - unit tests verify memory retrieval shapes raw memory events into theme-level results
+- unit tests verify the example `query_memory` tool forwards input and formats ordered answers with light source hints
 - integration coverage verifies the overall Phase 1 slice can return stored artifacts through this API
 
 ## Known Limitations
@@ -37,3 +41,4 @@ This component is MirrorBrain's plugin-facing retrieval surface for `openclaw`. 
 - retrieval currently reads from fixed Phase 1 URI namespaces
 - memory retrieval currently uses lightweight grouping rules rather than a mature ranking or theme-clustering system
 - there is no pagination yet
+- the example tool is intentionally minimal and does not model the full `openclaw` plugin host
