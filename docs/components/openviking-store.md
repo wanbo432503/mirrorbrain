@@ -28,10 +28,11 @@ This component is the Phase 1 storage adapter that maps MirrorBrain artifacts in
 1. MirrorBrain normalizes upstream source events into `MemoryEvent`.
 2. The adapter writes artifact content to local files when the OpenViking endpoint expects file-path based import.
 3. Memory, candidate, reviewed, knowledge, and skill-draft artifacts are imported through `POST /api/v1/resources`.
-4. Because OpenViking may flatten imported resources at the root, MirrorBrain encodes logical namespaces into resource names such as `mirrorbrain-memory-events-...` and `mirrorbrain-skill-drafts-...` instead of assuming nested directories will exist under `viking://resources/`.
-5. Retrieval uses `GET /api/v1/fs/ls` at `viking://resources/`, filters by the MirrorBrain namespace prefixes, resolves directory-backed resources to their inner files, and then loads content with `GET /api/v1/content/read`.
-6. Memory retrieval also tolerates legacy flat browser resources such as `browser503` and deduplicates by `MemoryEvent.id` when both legacy and prefixed resources contain the same event.
-7. Some OpenViking resources may be exposed as multiple sibling content fragments such as `browser1368_1.md` and `browser1368_2.md`; retrieval concatenates these fragments in file-name order before parsing the artifact.
+4. Memory-event imports wait for OpenViking completion before the sync call returns so the latest browser sync is immediately queryable.
+5. Because OpenViking may flatten imported resources at the root, MirrorBrain encodes logical namespaces into resource names such as `mirrorbrain-memory-events-...` and `mirrorbrain-skill-drafts-...` instead of assuming nested directories will exist under `viking://resources/`.
+6. Retrieval uses `GET /api/v1/fs/ls` at `viking://resources/`, filters by the MirrorBrain namespace prefixes, resolves directory-backed resources to their inner files, and then loads content with `GET /api/v1/content/read`.
+7. Memory retrieval also tolerates legacy flat browser resources such as `browser503`, deduplicates by `MemoryEvent.id` when both legacy and prefixed resources contain the same event, and suppresses near-duplicate browser page records that share the same page signature inside a short time window.
+8. Some OpenViking resources may be exposed as multiple sibling content fragments such as `browser1368_1.md` and `browser1368_2.md`; retrieval concatenates these fragments in file-name order before parsing the artifact.
 
 ## Operational Note
 
@@ -44,7 +45,7 @@ For local setup and startup expectations around OpenViking, see the repository [
 - unit tests verify ingestion metadata remains attached
 - unit tests verify HTTP request payloads for memory, candidate, reviewed, knowledge, and skill imports
 - unit tests verify HTTP-based listing and content reads for memory, candidate, reviewed, knowledge, and skill retrieval
-- unit tests verify legacy resource compatibility and duplicate suppression during memory reads
+- unit tests verify legacy resource compatibility, browser duplicate suppression, and duplicate-id suppression during memory reads
 - unit tests verify multi-part OpenViking resource fragments are recombined before parsing
 
 ## Known Limitations
@@ -52,5 +53,6 @@ For local setup and startup expectations around OpenViking, see the repository [
 - imports rely on the currently documented OpenViking HTTP endpoints
 - MirrorBrain classification is currently encoded into flat resource names rather than guaranteed nested directories inside OpenViking
 - retrieval depends on OpenViking exposing imported resources through `fs/ls` and readable child files through `content/read`
+- historical duplicates are suppressed at retrieval time for browser data, but the underlying OpenViking resources are still append-oriented and remain on disk until a separate cleanup path exists
 - Phase 1 does not publish directly into OpenViking `agent/skills`; it stores skill drafts as MirrorBrain-managed resources for stable classification and retrieval
 - knowledge and skill artifacts are parsed back from stored markdown conventions, so retrieval depends on that content format staying stable

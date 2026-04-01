@@ -19,7 +19,7 @@ This workflow executes the live browser ingestion loop for Phase 1. It now acts 
 
 1. Build an ActivityWatch browser source plugin for the configured browser bucket.
 2. Register that plugin with the generic memory-source sync workflow.
-3. Let the generic workflow read the checkpoint, compute the sync plan, fetch events, normalize them, deduplicate duplicate browser page records, and persist sanitized events.
+3. Let the generic workflow read the checkpoint, compute the sync plan, fetch events, normalize them, suppress near-duplicate browser page records, persist sanitized events, and wait for memory-event import completion before returning.
 4. Repeat on the configured polling interval when polling is enabled.
 
 ## Test Strategy

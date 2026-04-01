@@ -3,6 +3,7 @@ import {
   normalizeActivityWatchBrowserEvent,
   type MemorySourcePlugin,
 } from '../../modules/memory-capture/index.js';
+import type { MemoryEvent } from '../../shared/types/index.js';
 import type { MirrorBrainConfig } from '../../shared/types/index.js';
 
 interface InitialBrowserSyncPlanInput {
@@ -44,6 +45,8 @@ interface CreateActivityWatchBrowserMemorySourcePluginInput {
   bucketId: string;
   fetchBrowserEvents?: typeof fetchActivityWatchBrowserEvents;
 }
+
+const BROWSER_DUPLICATE_WINDOW_MS = 2 * 60 * 1000;
 
 type FetchLike = (
   input: string | URL | globalThis.Request,
@@ -108,6 +111,53 @@ export function getActivityWatchBrowserSourceKey(bucketId: string): string {
   return `activitywatch-browser:${bucketId}`;
 }
 
+function createBrowserEventSignature(event: {
+  sourceType: string;
+  authorizationScopeId: string;
+  content: Record<string, unknown>;
+}): string {
+  return [
+    event.sourceType,
+    event.authorizationScopeId,
+    String(event.content.url ?? ''),
+    String(event.content.title ?? ''),
+  ].join('|');
+}
+
+function sanitizeActivityWatchBrowserEvents(events: MemoryEvent[]): MemoryEvent[] {
+  const sortedEvents = [...events].sort((left, right) =>
+    left.timestamp.localeCompare(right.timestamp),
+  );
+  const keptEvents: typeof sortedEvents = [];
+
+  for (const event of sortedEvents) {
+    const previousEvent = keptEvents.at(-1);
+
+    if (previousEvent === undefined) {
+      keptEvents.push(event);
+      continue;
+    }
+
+    const sameSignature =
+      createBrowserEventSignature(previousEvent) ===
+      createBrowserEventSignature(event);
+    const eventTime = new Date(event.timestamp).getTime();
+    const previousEventTime = new Date(previousEvent.timestamp).getTime();
+    const withinDuplicateWindow =
+      Number.isFinite(eventTime) &&
+      Number.isFinite(previousEventTime) &&
+      eventTime - previousEventTime <= BROWSER_DUPLICATE_WINDOW_MS;
+
+    if (sameSignature && withinDuplicateWindow) {
+      continue;
+    }
+
+    keptEvents.push(event);
+  }
+
+  return deduplicateMemoryEvents(keptEvents);
+}
+
 export function createActivityWatchBrowserMemorySourcePlugin(
   input: CreateActivityWatchBrowserMemorySourcePluginInput,
 ): MemorySourcePlugin<ActivityWatchBrowserEvent> {
@@ -142,15 +192,7 @@ export function createActivityWatchBrowserMemorySourcePlugin(
       });
     },
     sanitizeEvents(events) {
-      return deduplicateMemoryEvents(events, (event) =>
-        [
-          event.sourceType,
-          event.authorizationScopeId,
-          event.timestamp,
-          String(event.content.url ?? ''),
-          String(event.content.title ?? ''),
-        ].join('|'),
-      );
+      return sanitizeActivityWatchBrowserEvents(events);
     },
   };
 }

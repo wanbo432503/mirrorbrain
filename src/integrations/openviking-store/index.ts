@@ -92,6 +92,7 @@ const MIRRORBRAIN_REVIEWED_MEMORIES_PREFIX =
   'mirrorbrain-reviewed-memories-';
 const MIRRORBRAIN_KNOWLEDGE_PREFIX = 'mirrorbrain-knowledge-';
 const MIRRORBRAIN_SKILL_DRAFTS_PREFIX = 'mirrorbrain-skill-drafts-';
+const BROWSER_DUPLICATE_WINDOW_MS = 2 * 60 * 1000;
 
 function encodeMirrorBrainResourceName(value: string): string {
   return value.replace(/[^a-zA-Z0-9.-]+/g, '-');
@@ -129,6 +130,7 @@ async function ingestJsonResourceToOpenViking(
     fileName: string;
     targetUri: string;
     reason: string;
+    waitForCompletion?: boolean;
     payload: unknown;
   },
   fetchImpl: FetchLike,
@@ -148,7 +150,7 @@ async function ingestJsonResourceToOpenViking(
       path: sourcePath,
       target: input.targetUri,
       reason: input.reason,
-      wait: false,
+      wait: input.waitForCompletion ?? false,
     }),
   });
 
@@ -184,6 +186,7 @@ export async function ingestMemoryEventToOpenViking(
         `${input.event.id}.json`,
       ),
       reason: 'MirrorBrain imported browser memory event',
+      waitForCompletion: true,
       payload: record.payload,
     },
     fetchImpl,
@@ -509,6 +512,50 @@ function deduplicateById<T extends { id: string }>(items: T[]): T[] {
   return Array.from(new Map(items.map((item) => [item.id, item])).values());
 }
 
+function createBrowserEventSignature(event: MemoryEvent): string {
+  return [
+    event.sourceType,
+    event.authorizationScopeId,
+    String(event.content.url ?? ''),
+    String(event.content.title ?? ''),
+  ].join('|');
+}
+
+function deduplicateMemoryEventsForDisplay(events: MemoryEvent[]): MemoryEvent[] {
+  const deduplicatedById = deduplicateById(events);
+  const sortedEvents = [...deduplicatedById].sort((left, right) =>
+    left.timestamp.localeCompare(right.timestamp),
+  );
+  const keptEvents: MemoryEvent[] = [];
+
+  for (const event of sortedEvents) {
+    const previousEvent = keptEvents.at(-1);
+
+    if (previousEvent === undefined) {
+      keptEvents.push(event);
+      continue;
+    }
+
+    const sameSignature =
+      createBrowserEventSignature(previousEvent) ===
+      createBrowserEventSignature(event);
+    const eventTime = new Date(event.timestamp).getTime();
+    const previousEventTime = new Date(previousEvent.timestamp).getTime();
+    const withinDuplicateWindow =
+      Number.isFinite(eventTime) &&
+      Number.isFinite(previousEventTime) &&
+      eventTime - previousEventTime <= BROWSER_DUPLICATE_WINDOW_MS;
+
+    if (sameSignature && withinDuplicateWindow) {
+      continue;
+    }
+
+    keptEvents.push(event);
+  }
+
+  return keptEvents;
+}
+
 function isKnowledgeResourceEntry(entry: OpenVikingFsEntry): boolean {
   return (
     entry.name.startsWith(MIRRORBRAIN_KNOWLEDGE_PREFIX) ||
@@ -586,7 +633,7 @@ export async function listMirrorBrainMemoryEventsFromOpenViking(
       return isMirrorBrainMemoryEvent(parsed) ? parsed : null;
     }),
   ).then((items) =>
-    deduplicateById(
+    deduplicateMemoryEventsForDisplay(
       items.filter((item): item is MemoryEvent => item !== null),
     ),
   );

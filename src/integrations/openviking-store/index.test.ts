@@ -143,7 +143,7 @@ describe('openviking store adapter', () => {
           target:
             'viking://resources/mirrorbrain-memory-events-browser-aw-event-1.json',
           reason: 'MirrorBrain imported browser memory event',
-          wait: false,
+          wait: true,
         }),
       },
     ]);
@@ -830,6 +830,136 @@ describe('openviking store adapter', () => {
         captureMetadata: {
           upstreamSource: 'activitywatch',
           checkpoint: '2026-03-20T08:00:00.000Z',
+        },
+      },
+    ]);
+  });
+
+  it('deduplicates browser memory events with duplicate page content even when ids differ', async () => {
+    const result = await listMirrorBrainMemoryEventsFromOpenViking(
+      {
+        baseUrl: 'http://127.0.0.1:1933',
+      },
+      async (input) => {
+        if (
+          String(input) ===
+          'http://127.0.0.1:1933/api/v1/fs/ls?uri=viking%3A%2F%2Fresources%2F&output=original'
+        ) {
+          return new Response(
+            JSON.stringify({
+              status: 'ok',
+              result: [
+                {
+                  name: 'browser6330',
+                  uri: 'viking://resources/browser6330',
+                  isDir: true,
+                },
+                {
+                  name: 'browser6331',
+                  uri: 'viking://resources/browser6331',
+                  isDir: true,
+                },
+              ],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+
+        if (
+          String(input) ===
+          'http://127.0.0.1:1933/api/v1/fs/ls?uri=viking%3A%2F%2Fresources%2Fbrowser6330&output=original'
+        ) {
+          return new Response(
+            JSON.stringify({
+              status: 'ok',
+              result: [
+                {
+                  name: 'browser6330.md',
+                  uri: 'viking://resources/browser6330/browser6330.md',
+                  isDir: false,
+                },
+              ],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+
+        if (
+          String(input) ===
+          'http://127.0.0.1:1933/api/v1/fs/ls?uri=viking%3A%2F%2Fresources%2Fbrowser6331&output=original'
+        ) {
+          return new Response(
+            JSON.stringify({
+              status: 'ok',
+              result: [
+                {
+                  name: 'browser6331.md',
+                  uri: 'viking://resources/browser6331/browser6331.md',
+                  isDir: false,
+                },
+              ],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+
+        const duplicatedPayload =
+          String(input).includes('browser6330')
+            ? {
+                id: 'browser:6330',
+                sourceType: 'activitywatch-browser',
+                sourceRef: '6330',
+                timestamp: '2026-03-31T11:31:35.460000+00:00',
+                authorizationScopeId: 'scope-browser',
+                content: {
+                  url: 'https://github.com/wanbo432503/mirrorbrain',
+                  title: 'wanbo432503/mirrorbrain',
+                },
+                captureMetadata: {
+                  upstreamSource: 'activitywatch',
+                  checkpoint: '2026-03-31T11:31:35.460000+00:00',
+                },
+              }
+            : {
+                id: 'browser:6331',
+                sourceType: 'activitywatch-browser',
+                sourceRef: '6331',
+                timestamp: '2026-03-31T11:31:35.461000+00:00',
+                authorizationScopeId: 'scope-browser',
+                content: {
+                  url: 'https://github.com/wanbo432503/mirrorbrain',
+                  title: 'wanbo432503/mirrorbrain',
+                },
+                captureMetadata: {
+                  upstreamSource: 'activitywatch',
+                  checkpoint: '2026-03-31T11:31:35.461000+00:00',
+                },
+              };
+
+        return new Response(
+          JSON.stringify({
+            status: 'ok',
+            result: JSON.stringify(duplicatedPayload),
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      },
+    );
+
+    expect(result).toEqual([
+      {
+        id: 'browser:6330',
+        sourceType: 'activitywatch-browser',
+        sourceRef: '6330',
+        timestamp: '2026-03-31T11:31:35.460000+00:00',
+        authorizationScopeId: 'scope-browser',
+        content: {
+          url: 'https://github.com/wanbo432503/mirrorbrain',
+          title: 'wanbo432503/mirrorbrain',
+        },
+        captureMetadata: {
+          upstreamSource: 'activitywatch',
+          checkpoint: '2026-03-31T11:31:35.460000+00:00',
         },
       },
     ]);
