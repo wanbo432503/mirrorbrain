@@ -525,6 +525,7 @@ describe('openviking store adapter', () => {
 
     expect(requests).toEqual([
       'http://127.0.0.1:1933/api/v1/fs/ls?uri=viking%3A%2F%2Fresources%2F&output=original',
+      'http://127.0.0.1:1933/api/v1/search/glob',
       'http://127.0.0.1:1933/api/v1/fs/ls?uri=viking%3A%2F%2Fresources%2Fmirrorbrain-memory-events-browser-aw-event-1&output=original',
       'http://127.0.0.1:1933/api/v1/content/read?uri=viking%3A%2F%2Fresources%2Fmirrorbrain-memory-events-browser-aw-event-1%2Fbrowser-aw-event-1.json',
     ]);
@@ -865,10 +866,7 @@ describe('openviking store adapter', () => {
           );
         }
 
-        if (
-          String(input) ===
-          'http://127.0.0.1:1933/api/v1/fs/ls?uri=viking%3A%2F%2Fresources%2Fbrowser6330&output=original'
-        ) {
+        if (String(input).includes('fs/ls?uri=viking%3A%2F%2Fresources%2Fbrowser6330')) {
           return new Response(
             JSON.stringify({
               status: 'ok',
@@ -946,6 +944,131 @@ describe('openviking store adapter', () => {
       },
     );
 
+    expect(result).toEqual([
+      {
+        id: 'browser:6331',
+        sourceType: 'activitywatch-browser',
+        sourceRef: '6331',
+        timestamp: '2026-03-31T11:31:35.461000+00:00',
+        authorizationScopeId: 'scope-browser',
+        content: {
+          url: 'https://github.com/wanbo432503/mirrorbrain',
+          title: 'wanbo432503/mirrorbrain',
+        },
+        captureMetadata: {
+          upstreamSource: 'activitywatch',
+          checkpoint: '2026-03-31T11:31:35.461000+00:00',
+        },
+      },
+    ]);
+  });
+
+  it('uses OpenViking glob search so newer browser resources beyond the first ls page are returned', async () => {
+    const requests: string[] = [];
+
+    const result = await listMirrorBrainMemoryEventsFromOpenViking(
+      {
+        baseUrl: 'http://127.0.0.1:1933',
+      },
+      async (input, init) => {
+        requests.push(`${init?.method ?? 'GET'} ${String(input)}`);
+
+        if (
+          String(input) ===
+            'http://127.0.0.1:1933/api/v1/fs/ls?uri=viking%3A%2F%2Fresources%2F&output=original' &&
+          (init?.method === undefined || init?.method === 'GET')
+        ) {
+          return new Response(
+            JSON.stringify({
+              status: 'ok',
+              result: [
+                {
+                  name: 'browser4559',
+                  uri: 'viking://resources/browser4559',
+                  isDir: true,
+                },
+              ],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+
+        if (
+          String(input).includes('/api/v1/fs/ls?') &&
+          String(input).includes('browser4559')
+        ) {
+          return new Response(
+            JSON.stringify({
+              status: 'ok',
+              result: [],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+
+        if (
+          String(input) === 'http://127.0.0.1:1933/api/v1/search/glob' &&
+          init?.method === 'POST'
+        ) {
+          return new Response(
+            JSON.stringify({
+              status: 'ok',
+              result: {
+                matches: [
+                  'viking://resources/browser6330',
+                  'viking://resources/browser6330/browser6330.md',
+                ],
+                count: 2,
+              },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+
+        if (
+          String(input).includes('/api/v1/fs/ls?') &&
+          String(input).includes('browser6330')
+        ) {
+          return new Response(
+            JSON.stringify({
+              status: 'ok',
+              result: [
+                {
+                  name: 'browser6330.md',
+                  uri: 'viking://resources/browser6330/browser6330.md',
+                  isDir: false,
+                },
+              ],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+
+        return new Response(
+          JSON.stringify({
+            status: 'ok',
+            result: JSON.stringify({
+              id: 'browser:6330',
+              sourceType: 'activitywatch-browser',
+              sourceRef: '6330',
+              timestamp: '2026-03-31T11:31:35.460000+00:00',
+              authorizationScopeId: 'scope-browser',
+              content: {
+                url: 'https://github.com/wanbo432503/mirrorbrain',
+                title: 'wanbo432503/mirrorbrain',
+              },
+              captureMetadata: {
+                upstreamSource: 'activitywatch',
+                checkpoint: '2026-03-31T11:31:35.460000+00:00',
+              },
+            }),
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      },
+    );
+
+    expect(requests).toContain('POST http://127.0.0.1:1933/api/v1/search/glob');
     expect(result).toEqual([
       {
         id: 'browser:6330',

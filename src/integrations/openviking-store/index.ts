@@ -79,6 +79,11 @@ interface OpenVikingFsEntry {
   isDir: boolean;
 }
 
+interface OpenVikingGlobResult {
+  matches: string[];
+  count: number;
+}
+
 type FetchLike = (
   input: string | URL | globalThis.Request,
   init?: RequestInit,
@@ -365,6 +370,57 @@ async function listOpenVikingEntries(
   return payload.result ?? [];
 }
 
+async function globOpenVikingEntries(
+  input: OpenVikingReadInput & {
+    uri: string;
+    pattern: string;
+    nodeLimit?: number;
+  },
+  fetchImpl: FetchLike,
+): Promise<OpenVikingGlobResult> {
+  const response = await fetchImpl(`${input.baseUrl}/api/v1/search/glob`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      uri: input.uri,
+      pattern: input.pattern,
+      node_limit: input.nodeLimit,
+    }),
+  });
+
+  if (response.status === 404) {
+    return {
+      matches: [],
+      count: 0,
+    };
+  }
+
+  if (!response.ok) {
+    throw new Error(`OpenViking request failed with status ${response.status}`);
+  }
+
+  const payload = (await response.json()) as {
+    result?: OpenVikingGlobResult;
+  };
+
+  return payload.result?.matches !== undefined ? payload.result : {
+    matches: [],
+    count: 0,
+  };
+}
+
+function isTopLevelOpenVikingResourceUri(uri: string): boolean {
+  const prefix = 'viking://resources/';
+
+  if (!uri.startsWith(prefix)) {
+    return false;
+  }
+
+  return !uri.slice(prefix.length).includes('/');
+}
+
 async function readOpenVikingContent(
   input: OpenVikingReadInput & {
     uri: string;
@@ -523,37 +579,32 @@ function createBrowserEventSignature(event: MemoryEvent): string {
 
 function deduplicateMemoryEventsForDisplay(events: MemoryEvent[]): MemoryEvent[] {
   const deduplicatedById = deduplicateById(events);
-  const sortedEvents = [...deduplicatedById].sort((left, right) =>
-    left.timestamp.localeCompare(right.timestamp),
-  );
-  const keptEvents: MemoryEvent[] = [];
+  const latestBySignature = new Map<string, MemoryEvent>();
 
-  for (const event of sortedEvents) {
-    const previousEvent = keptEvents.at(-1);
+  for (const event of deduplicatedById) {
+    const signature = createBrowserEventSignature(event);
+    const previousEvent = latestBySignature.get(signature);
 
     if (previousEvent === undefined) {
-      keptEvents.push(event);
+      latestBySignature.set(signature, event);
       continue;
     }
 
-    const sameSignature =
-      createBrowserEventSignature(previousEvent) ===
-      createBrowserEventSignature(event);
     const eventTime = new Date(event.timestamp).getTime();
     const previousEventTime = new Date(previousEvent.timestamp).getTime();
-    const withinDuplicateWindow =
+    const shouldReplace =
       Number.isFinite(eventTime) &&
       Number.isFinite(previousEventTime) &&
-      eventTime - previousEventTime <= BROWSER_DUPLICATE_WINDOW_MS;
+      eventTime >= previousEventTime;
 
-    if (sameSignature && withinDuplicateWindow) {
-      continue;
+    if (shouldReplace) {
+      latestBySignature.set(signature, event);
     }
-
-    keptEvents.push(event);
   }
 
-  return keptEvents;
+  return [...latestBySignature.values()].sort((left, right) =>
+    left.timestamp.localeCompare(right.timestamp),
+  );
 }
 
 function isKnowledgeResourceEntry(entry: OpenVikingFsEntry): boolean {
@@ -595,10 +646,32 @@ export async function listMirrorBrainMemoryEventsFromOpenViking(
     },
     fetchImpl,
   );
+  const browserGlob = await globOpenVikingEntries(
+    {
+      ...input,
+      uri: OPEN_VIKING_RESOURCES_URI,
+      pattern: 'browser*',
+      nodeLimit: 10000,
+    },
+    fetchImpl,
+  );
+  const globEntries = browserGlob.matches
+    .filter((uri) => isTopLevelOpenVikingResourceUri(uri))
+    .map((uri) => ({
+      name: uri.split('/').at(-1) ?? '',
+      uri,
+      isDir: true,
+    }));
+  const resourceEntries = deduplicateById(
+    [...entries, ...globEntries].map((entry) => ({
+      id: entry.uri,
+      ...entry,
+    })),
+  ).map(({ id: _id, ...entry }) => entry);
 
   return Promise.all(
     filterMirrorBrainResourceEntries(
-      entries,
+      resourceEntries,
       (entry) =>
         entry.name.startsWith(MIRRORBRAIN_MEMORY_EVENTS_PREFIX) ||
         entry.name.startsWith('browser'),
