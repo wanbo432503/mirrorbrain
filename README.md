@@ -40,6 +40,11 @@ The next obvious Phase 1 tasks are:
 
 Planning docs live under [`docs/plans/`](./docs/plans/).
 
+Phase 2A docs:
+
+- minimum `openclaw` tool example: [`docs/features/openclaw-memory-tool-example.md`](./docs/features/openclaw-memory-tool-example.md)
+- minimum manual demo guide: [`docs/features/openclaw-memory-demo-guide.md`](./docs/features/openclaw-memory-demo-guide.md)
+
 ## Quick Start
 
 ### 1. Prerequisites
