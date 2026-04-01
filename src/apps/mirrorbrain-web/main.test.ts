@@ -180,9 +180,44 @@ describe('mirrorbrain web app', () => {
     expect(html).toContain('Page 2 of 3');
     expect(html).toContain('data-action="memory-first-page"');
     expect(html).toContain('data-action="memory-last-page"');
+    expect(html).toContain('browser:aw-event-7');
     expect(html).toContain('browser:aw-event-6');
-    expect(html).toContain('browser:aw-event-10');
-    expect(html).not.toContain('browser:aw-event-5');
+    expect(html).toContain('browser:aw-event-3');
+    expect(html).not.toContain('browser:aw-event-8');
+  });
+
+  it('renders memory events from newest to oldest in the memory tab', () => {
+    const html = renderMirrorBrainWebApp({
+      serviceStatus: 'running',
+      memoryEvents: [
+        createMemoryEvent(
+          'browser:aw-event-older',
+          'Older Event',
+          '2026-03-20T08:00:00.000Z',
+        ),
+        createMemoryEvent(
+          'browser:aw-event-newer',
+          'Newer Event',
+          '2026-03-20T08:05:00.000Z',
+        ),
+      ],
+      candidateMemories: [],
+      selectedCandidateId: null,
+      candidateReviewSuggestions: [],
+      reviewedMemory: null,
+      knowledgeArtifact: null,
+      skillArtifact: null,
+      lastSyncSummary: null,
+      feedback: null,
+      activeTab: 'memory',
+      memoryPage: 1,
+      reviewWindowDate: null,
+      reviewWindowEventCount: 0,
+    });
+
+    expect(html.indexOf('browser:aw-event-newer')).toBeLessThan(
+      html.indexOf('browser:aw-event-older'),
+    );
   });
 
   it('shows only the actions that belong to the active tab', () => {

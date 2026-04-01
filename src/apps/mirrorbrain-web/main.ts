@@ -103,9 +103,15 @@ function renderMemoryList(memoryEvents: MemoryEvent[], page: number): string {
     return '<li>No memory events imported yet.</li>';
   }
 
-  const currentPage = clampMemoryPage(memoryEvents, page);
+  const sortedMemoryEvents = [...memoryEvents].sort((left, right) =>
+    right.timestamp.localeCompare(left.timestamp),
+  );
+  const currentPage = clampMemoryPage(sortedMemoryEvents, page);
   const startIndex = (currentPage - 1) * MEMORY_PAGE_SIZE;
-  const pageEvents = memoryEvents.slice(startIndex, startIndex + MEMORY_PAGE_SIZE);
+  const pageEvents = sortedMemoryEvents.slice(
+    startIndex,
+    startIndex + MEMORY_PAGE_SIZE,
+  );
 
   return pageEvents
     .map(

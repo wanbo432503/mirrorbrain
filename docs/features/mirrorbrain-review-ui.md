@@ -9,7 +9,7 @@ The Phase 1 review UI is the smallest standalone surface that lets a user inspec
 This UI is responsible for:
 
 - showing local service status
-- showing imported memory through a dedicated tab with paging
+- showing imported memory through a dedicated tab with paging and newest-first ordering
 - showing five memory records per page with first, previous, next, and last navigation controls
 - exposing daily candidate generation and explicit review actions
 - showing multiple candidate streams instead of a single current candidate
