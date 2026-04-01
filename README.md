@@ -134,6 +134,13 @@ MIRRORBRAIN_WORKSPACE_DIR=/path_to_workspace/mirrorbrain-workspace
 pnpm dev
 ```
 
+The startup command now performs local bring-up checks before launching MirrorBrain:
+
+- reports missing required `.env` values in one pass
+- checks `OpenViking` reachability
+- checks that `ActivityWatch` has browser events in the last hour
+- starts MirrorBrain as a background process and prints the service address and log path
+
 Then open:
 
 ```text

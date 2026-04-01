@@ -1,6 +1,8 @@
+import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { cp, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { open } from 'node:fs/promises';
 import { join } from 'node:path';
+import { cp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import ts from 'typescript';
 
 import {
@@ -33,6 +35,54 @@ interface StartMirrorBrainDevRuntimeInput {
   projectDir?: string;
 }
 
+type MirrorBrainStartupComponent =
+  | 'MirrorBrain config'
+  | 'OpenViking'
+  | 'ActivityWatch'
+  | 'MirrorBrain startup';
+
+interface MirrorBrainStartupIssue {
+  component: MirrorBrainStartupComponent;
+  message: string;
+}
+
+interface RunMirrorBrainStartupCliInput {
+  env?: NodeJS.ProcessEnv;
+  projectDir?: string;
+}
+
+interface StartDetachedMirrorBrainProcessInput {
+  env: NodeJS.ProcessEnv;
+  origin: string;
+  projectDir: string;
+}
+
+interface DetachedMirrorBrainProcess {
+  processId: number;
+  logPath: string;
+}
+
+interface RunMirrorBrainStartupCliDependencies {
+  inspectDependencies?: typeof inspectMirrorBrainStartupDependencies;
+  startDetachedProcess?: typeof startMirrorBrainDetachedProcess;
+}
+
+type MirrorBrainStartupCliResult =
+  | {
+      status: 'failed';
+      issuesByComponent: Partial<Record<MirrorBrainStartupComponent, string[]>>;
+    }
+  | {
+      status: 'started';
+      summary: {
+        serviceAddress: string;
+        processId: number;
+        logPath: string;
+        dependencyStatus: Record<'OpenViking' | 'ActivityWatch', 'ready'>;
+        nextSteps: string[];
+      };
+    };
+
 interface StartMirrorBrainDevRuntimeDependencies {
   assertDependenciesReachable?: typeof assertMirrorBrainDependenciesReachable;
   prepareWebAssets?: typeof prepareMirrorBrainWebAssets;
@@ -57,6 +107,12 @@ function parseInteger(value: string | undefined, fallback: number): number {
 
   return Number.isNaN(parsed) ? fallback : parsed;
 }
+
+const REQUIRED_ENV_EXAMPLES: Record<string, string> = {
+  MIRRORBRAIN_WORKSPACE_DIR: '/path_to_workspace/mirrorbrain-workspace',
+  MIRRORBRAIN_ACTIVITYWATCH_BASE_URL: 'http://127.0.0.1:5600',
+  MIRRORBRAIN_OPENVIKING_BASE_URL: 'http://127.0.0.1:1933',
+};
 
 function parseDotEnvFile(content: string): NodeJS.ProcessEnv {
   const parsedEnv: NodeJS.ProcessEnv = {};
@@ -183,6 +239,222 @@ export async function assertMirrorBrainDependenciesReachable(
   }
 }
 
+function collectMissingRequiredEnvIssues(
+  env: NodeJS.ProcessEnv,
+): MirrorBrainStartupIssue[] {
+  const issues: MirrorBrainStartupIssue[] = [];
+
+  for (const [key, example] of Object.entries(REQUIRED_ENV_EXAMPLES)) {
+    const value = env[key];
+
+    if (value === undefined || value.trim().length === 0) {
+      issues.push({
+        component: 'MirrorBrain config',
+        message: `Missing required env var ${key}. Example: ${example}`,
+      });
+    }
+  }
+
+  return issues;
+}
+
+export async function inspectMirrorBrainStartupDependencies(
+  config: MirrorBrainConfig,
+  fetchImpl: typeof fetch = fetch,
+): Promise<MirrorBrainStartupIssue[]> {
+  const issues: MirrorBrainStartupIssue[] = [];
+
+  try {
+    const openVikingResponse = await fetchImpl(
+      `${config.openViking.baseUrl}/api/v1/fs/ls?uri=${encodeURIComponent(
+        'viking://resources/',
+      )}&output=original`,
+    );
+
+    if (!openVikingResponse.ok) {
+      issues.push({
+        component: 'OpenViking',
+        message: `OpenViking is unreachable at ${config.openViking.baseUrl}.`,
+      });
+    }
+  } catch {
+    issues.push({
+      component: 'OpenViking',
+      message: `OpenViking is unreachable at ${config.openViking.baseUrl}.`,
+    });
+  }
+
+  try {
+    const bucketsResponse = await fetchImpl(
+      `${config.activityWatch.baseUrl}/api/0/buckets`,
+    );
+
+    if (!bucketsResponse.ok) {
+      issues.push({
+        component: 'ActivityWatch',
+        message: `ActivityWatch is unreachable at ${config.activityWatch.baseUrl}.`,
+      });
+
+      return issues;
+    }
+
+    const buckets = (await bucketsResponse.json()) as Record<string, unknown>;
+    const browserBucketKeys = Object.keys(buckets).filter((bucketKey) =>
+      bucketKey.includes('aw-watcher-web'),
+    );
+
+    if (browserBucketKeys.length === 0) {
+      issues.push({
+        component: 'ActivityWatch',
+        message:
+          'No browser watcher source was found in ActivityWatch. Install and enable aw-watcher-web first.',
+      });
+
+      return issues;
+    }
+
+    const now = new Date();
+    const start = new Date(now.getTime() - 60 * 60 * 1000);
+    let hasRecentBrowserEvents = false;
+
+    for (const bucketKey of browserBucketKeys) {
+      const eventsResponse = await fetchImpl(
+        `${config.activityWatch.baseUrl}/api/0/buckets/${encodeURIComponent(
+          bucketKey,
+        )}/events?start=${encodeURIComponent(
+          start.toISOString(),
+        )}&end=${encodeURIComponent(now.toISOString())}`,
+      );
+
+      if (!eventsResponse.ok) {
+        continue;
+      }
+
+      const events = (await eventsResponse.json()) as unknown[];
+
+      if (events.length > 0) {
+        hasRecentBrowserEvents = true;
+        break;
+      }
+    }
+
+    if (!hasRecentBrowserEvents) {
+      issues.push({
+        component: 'ActivityWatch',
+        message:
+          'No browser events were found in the last hour for ActivityWatch.',
+      });
+    }
+  } catch {
+    issues.push({
+      component: 'ActivityWatch',
+      message: `ActivityWatch is unreachable at ${config.activityWatch.baseUrl}.`,
+    });
+  }
+
+  return issues;
+}
+
+function groupStartupIssuesByComponent(
+  issues: MirrorBrainStartupIssue[],
+): Partial<Record<MirrorBrainStartupComponent, string[]>> {
+  const grouped: Partial<Record<MirrorBrainStartupComponent, string[]>> = {};
+
+  for (const issue of issues) {
+    const current = grouped[issue.component] ?? [];
+    current.push(issue.message);
+    grouped[issue.component] = current;
+  }
+
+  return grouped;
+}
+
+export async function startMirrorBrainDetachedProcess(
+  input: StartDetachedMirrorBrainProcessInput,
+): Promise<DetachedMirrorBrainProcess> {
+  const logDir = join(input.projectDir, '.mirrorbrain');
+  const logPath = join(logDir, 'mirrorbrain-dev.log');
+  const scriptPath = join(input.projectDir, 'scripts', 'start-mirrorbrain-dev.ts');
+  const tsxCliPath = join(input.projectDir, 'node_modules', 'tsx', 'dist', 'cli.mjs');
+
+  await mkdir(logDir, { recursive: true });
+
+  const stdoutHandle = await open(logPath, 'a');
+  const child = spawn(process.execPath, [tsxCliPath, scriptPath], {
+    cwd: input.projectDir,
+    detached: true,
+    env: {
+      ...input.env,
+      MIRRORBRAIN_DEV_CHILD_PROCESS: '1',
+    },
+    stdio: ['ignore', stdoutHandle.fd, stdoutHandle.fd],
+  });
+
+  child.unref();
+  await stdoutHandle.close();
+
+  if (child.pid === undefined) {
+    throw new Error('MirrorBrain startup process did not return a pid.');
+  }
+
+  return {
+    processId: child.pid,
+    logPath,
+  };
+}
+
+export async function runMirrorBrainStartupCli(
+  input: RunMirrorBrainStartupCliInput = {},
+  dependencies: RunMirrorBrainStartupCliDependencies = {},
+): Promise<MirrorBrainStartupCliResult> {
+  const projectDir = input.projectDir ?? process.cwd();
+  const projectEnv = await loadMirrorBrainProjectEnv(projectDir);
+  const mergedEnv = {
+    ...projectEnv,
+    ...input.env,
+  };
+  const { config } = getMirrorBrainDevConfig(mergedEnv);
+  const inspectDependencies =
+    dependencies.inspectDependencies ?? inspectMirrorBrainStartupDependencies;
+  const startDetachedProcess =
+    dependencies.startDetachedProcess ?? startMirrorBrainDetachedProcess;
+  const issues = [
+    ...collectMissingRequiredEnvIssues(mergedEnv),
+    ...(await inspectDependencies(config)),
+  ];
+
+  if (issues.length > 0) {
+    return {
+      status: 'failed',
+      issuesByComponent: groupStartupIssuesByComponent(issues),
+    };
+  }
+
+  const origin = `http://${config.service.host}:${config.service.port}`;
+  const detachedProcess = await startDetachedProcess({
+    env: mergedEnv,
+    origin,
+    projectDir,
+  });
+
+  return {
+    status: 'started',
+    summary: {
+      serviceAddress: origin,
+      processId: detachedProcess.processId,
+      logPath: detachedProcess.logPath,
+      dependencyStatus: {
+        OpenViking: 'ready',
+        ActivityWatch: 'ready',
+      },
+      nextSteps: [
+        'Connect MirrorBrain to openclaw using the minimum memory retrieval plugin example.',
+        'Run the minimum demo question: 我昨天做了什么？',
+      ],
+    },
+  };
+}
+
 export async function prepareMirrorBrainWebAssets(
   input: PrepareMirrorBrainWebAssetsInput = {},
 ): Promise<PreparedMirrorBrainWebAssets> {
@@ -268,15 +540,53 @@ export async function startMirrorBrainDevRuntime(
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  startMirrorBrainDevRuntime()
-    .then((runtime) => {
-      console.log(`MirrorBrain MVP running at ${runtime.origin}`);
-    })
-    .catch((error: unknown) => {
-      const message =
-        error instanceof Error ? error.message : 'Unknown startup error.';
+  if (process.env.MIRRORBRAIN_DEV_CHILD_PROCESS === '1') {
+    startMirrorBrainDevRuntime()
+      .then((runtime) => {
+        console.log(`MirrorBrain MVP running at ${runtime.origin}`);
+      })
+      .catch((error: unknown) => {
+        const message =
+          error instanceof Error ? error.message : 'Unknown startup error.';
 
-      console.error(message);
-      process.exitCode = 1;
-    });
+        console.error(message);
+        process.exitCode = 1;
+      });
+  } else {
+    runMirrorBrainStartupCli()
+      .then((result) => {
+        if (result.status === 'failed') {
+          for (const [component, issues] of Object.entries(
+            result.issuesByComponent,
+          )) {
+            console.error(`${component}:`);
+
+            for (const issue of issues ?? []) {
+              console.error(`- ${issue}`);
+            }
+          }
+
+          process.exitCode = 1;
+
+          return;
+        }
+
+        console.log(`MirrorBrain service: ${result.summary.serviceAddress}`);
+        console.log(`MirrorBrain pid: ${result.summary.processId}`);
+        console.log(`MirrorBrain logs: ${result.summary.logPath}`);
+        console.log('OpenViking: ready');
+        console.log('ActivityWatch: ready');
+
+        for (const nextStep of result.summary.nextSteps) {
+          console.log(`Next: ${nextStep}`);
+        }
+      })
+      .catch((error: unknown) => {
+        const message =
+          error instanceof Error ? error.message : 'Unknown startup error.';
+
+        console.error(message);
+        process.exitCode = 1;
+      });
+  }
 }

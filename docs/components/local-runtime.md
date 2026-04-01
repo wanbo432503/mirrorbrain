@@ -4,8 +4,9 @@
 
 The local runtime packages MirrorBrain into a single MVP entrypoint that:
 
-- validates local dependency reachability
+- validates required local configuration and dependency readiness
 - prepares standalone web assets from TypeScript source
+- can launch MirrorBrain through a startup-oriented CLI flow
 - starts the MirrorBrain service runtime
 - starts the local HTTP server that serves both APIs and the standalone UI
 
@@ -23,25 +24,30 @@ It is not responsible for:
 
 - `getMirrorBrainDevConfig(...)`
 - `assertMirrorBrainDependenciesReachable(...)`
+- `inspectMirrorBrainStartupDependencies(...)`
+- `runMirrorBrainStartupCli(...)`
+- `startMirrorBrainDetachedProcess(...)`
 - `prepareMirrorBrainWebAssets(...)`
 - `startMirrorBrainDevRuntime(...)`
 - `pnpm dev`
 
 ## Data Flow
 
-1. The local runtime loads the project-root `.env` file when present and then overlays explicit shell environment variables on top of it.
-2. The script checks ActivityWatch and OpenViking reachability.
-3. The web app TypeScript entrypoint is transpiled into a local served asset directory.
-4. The MirrorBrain service runtime starts.
-5. The HTTP server starts and serves both JSON APIs and static MVP UI assets.
+1. The startup flow loads the project-root `.env` file when present and then overlays explicit shell environment variables on top of it.
+2. The CLI checks required local configuration, ActivityWatch browser-data availability, and OpenViking reachability.
+3. If checks pass, the CLI launches MirrorBrain as a detached child process and prints a startup summary with service address, pid, and log path.
+4. Inside the child process, the web app TypeScript entrypoint is transpiled into a local served asset directory.
+5. The MirrorBrain service runtime starts.
+6. The HTTP server starts and serves both JSON APIs and static MVP UI assets.
 
 ## Failure Modes And Operational Constraints
 
-- startup fails fast if ActivityWatch or OpenViking is unreachable
+- startup reports grouped issues for config, ActivityWatch, OpenViking, and runtime startup before exiting
+- startup expects the local environment variables in `.env` to be present even when some runtime defaults exist in code
 - the runtime assumes a local, single-user environment
 - this startup flow is intended for the MVP and is not yet hardened for production
 
 ## Test Strategy
 
-- configuration, reachability, asset preparation, and runtime assembly coverage in `scripts/start-mirrorbrain-dev.test.ts`
+- configuration, dependency inspection, startup-cli behavior, asset preparation, and runtime assembly coverage in `scripts/start-mirrorbrain-dev.test.ts`
 - static asset serving coverage in `src/apps/mirrorbrain-http-server/index.test.ts`

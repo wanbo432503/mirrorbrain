@@ -8,6 +8,7 @@ import {
   assertMirrorBrainDependenciesReachable,
   getMirrorBrainDevConfig,
   prepareMirrorBrainWebAssets,
+  runMirrorBrainStartupCli,
   startMirrorBrainDevRuntime,
 } from './start-mirrorbrain-dev.js';
 
@@ -327,6 +328,97 @@ describe('start mirrorbrain dev runtime', () => {
         },
       }),
       workspaceDir: process.cwd(),
+    });
+  });
+
+  it('reports grouped config and dependency issues before attempting startup', async () => {
+    const projectDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-cli-fail-'));
+    const startDetachedProcess = vi.fn();
+
+    const result = await runMirrorBrainStartupCli(
+      {
+        env: {},
+        projectDir,
+      },
+      {
+        inspectDependencies: vi.fn(async () => [
+          {
+            component: 'OpenViking' as const,
+            message: 'OpenViking is unreachable at http://127.0.0.1:1933.',
+          },
+          {
+            component: 'ActivityWatch' as const,
+            message:
+              'No browser events were found in the last hour for ActivityWatch.',
+          },
+        ]),
+        startDetachedProcess,
+      },
+    );
+
+    expect(result).toEqual({
+      status: 'failed',
+      issuesByComponent: {
+        'MirrorBrain config': [
+          'Missing required env var MIRRORBRAIN_WORKSPACE_DIR. Example: /path_to_workspace/mirrorbrain-workspace',
+          'Missing required env var MIRRORBRAIN_ACTIVITYWATCH_BASE_URL. Example: http://127.0.0.1:5600',
+          'Missing required env var MIRRORBRAIN_OPENVIKING_BASE_URL. Example: http://127.0.0.1:1933',
+        ],
+        OpenViking: [
+          'OpenViking is unreachable at http://127.0.0.1:1933.',
+        ],
+        ActivityWatch: [
+          'No browser events were found in the last hour for ActivityWatch.',
+        ],
+      },
+    });
+    expect(startDetachedProcess).not.toHaveBeenCalled();
+  });
+
+  it('returns a complete startup summary after launching a detached process', async () => {
+    const projectDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-cli-ok-'));
+    const startDetachedProcess = vi.fn(async () => ({
+      processId: 4242,
+      logPath: '/tmp/mirrorbrain-dev.log',
+    }));
+
+    const result = await runMirrorBrainStartupCli(
+      {
+        env: {
+          MIRRORBRAIN_WORKSPACE_DIR: '/tmp/mirrorbrain-workspace',
+          MIRRORBRAIN_ACTIVITYWATCH_BASE_URL: 'http://127.0.0.1:5600',
+          MIRRORBRAIN_OPENVIKING_BASE_URL: 'http://127.0.0.1:1933',
+        },
+        projectDir,
+      },
+      {
+        inspectDependencies: vi.fn(async () => []),
+        startDetachedProcess,
+      },
+    );
+
+    expect(result).toEqual({
+      status: 'started',
+      summary: {
+        serviceAddress: 'http://127.0.0.1:3007',
+        processId: 4242,
+        logPath: '/tmp/mirrorbrain-dev.log',
+        dependencyStatus: {
+          OpenViking: 'ready',
+          ActivityWatch: 'ready',
+        },
+        nextSteps: [
+          'Connect MirrorBrain to openclaw using the minimum memory retrieval plugin example.',
+          'Run the minimum demo question: 我昨天做了什么？',
+        ],
+      },
+    });
+    expect(startDetachedProcess).toHaveBeenCalledWith({
+      env: expect.objectContaining({
+        MIRRORBRAIN_WORKSPACE_DIR: '/tmp/mirrorbrain-workspace',
+      }),
+      origin: 'http://127.0.0.1:3007',
+      projectDir,
     });
   });
 });
