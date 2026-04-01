@@ -7,11 +7,17 @@ import {
 } from './index.js';
 
 describe('openclaw plugin api', () => {
-  it('returns memory artifacts from OpenViking', async () => {
+  it('returns theme-level memory retrieval results from OpenViking memory events', async () => {
     await expect(
       queryMemory(
         {
           baseUrl: 'http://127.0.0.1:1933',
+          query: 'What did I work on yesterday?',
+          timeRange: {
+            startAt: '2026-03-20T00:00:00.000Z',
+            endAt: '2026-03-20T23:59:59.999Z',
+          },
+          sourceTypes: ['browser'],
         },
         {
           listMemoryEvents: async () => [
@@ -33,23 +39,33 @@ describe('openclaw plugin api', () => {
           ],
         },
       ),
-    ).resolves.toEqual([
-      {
-        id: 'browser:aw-event-1',
-        sourceType: 'activitywatch-browser',
-        sourceRef: 'aw-event-1',
-        timestamp: '2026-03-20T08:00:00.000Z',
-        authorizationScopeId: 'scope-browser',
-        content: {
-          url: 'https://example.com/tasks',
-          title: 'Example Tasks',
-        },
-        captureMetadata: {
-          upstreamSource: 'activitywatch',
-          checkpoint: '2026-03-20T08:00:00.000Z',
-        },
+    ).resolves.toEqual({
+      timeRange: {
+        startAt: '2026-03-20T00:00:00.000Z',
+        endAt: '2026-03-20T23:59:59.999Z',
       },
-    ]);
+      items: [
+        {
+          id: 'memory-result:activitywatch-browser-example-tasks',
+          theme: 'Example Tasks',
+          title: 'Example Tasks',
+          summary:
+            '1 matching memory event about Example Tasks during the requested time range.',
+          timeRange: {
+            startAt: '2026-03-20T08:00:00.000Z',
+            endAt: '2026-03-20T08:00:00.000Z',
+          },
+          sourceRefs: [
+            {
+              id: 'browser:aw-event-1',
+              sourceType: 'activitywatch-browser',
+              sourceRef: 'aw-event-1',
+              timestamp: '2026-03-20T08:00:00.000Z',
+            },
+          ],
+        },
+      ],
+    });
   });
 
   it('returns knowledge drafts from OpenViking', async () => {

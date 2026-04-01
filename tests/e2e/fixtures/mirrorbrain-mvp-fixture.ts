@@ -65,7 +65,8 @@ export async function startMirrorBrainMvpFixture() {
         importedCount: 1,
         lastSyncedAt: '2026-03-20T09:00:00.000Z',
       }),
-      queryMemory: async () => memoryEvents,
+      listMemoryEvents: async () => memoryEvents,
+      queryMemory: async () => ({ items: [] }),
       listKnowledge: async () => (knowledgeArtifact === null ? [] : [knowledgeArtifact]),
       listSkillDrafts: async () => (skillArtifact === null ? [] : [skillArtifact]),
       createDailyCandidateMemories: async (_reviewDate: string) => {

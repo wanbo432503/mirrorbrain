@@ -2,13 +2,14 @@
 
 ## Summary
 
-This component is MirrorBrain's plugin-facing retrieval surface for `openclaw`. In Phase 1 it exposes async read operations for browser memory events, knowledge drafts, and skill drafts by loading them from OpenViking-backed storage.
+This component is MirrorBrain's plugin-facing retrieval surface for `openclaw`. It exposes async read operations for memory, knowledge, and skill artifacts by loading them from OpenViking-backed storage, and now shapes memory reads into theme- or task-level retrieval results rather than returning only raw memory events.
 
 ## Responsibility Boundary
 
 - exposes the retrieval contract consumed by `openclaw`
 - delegates storage access to the OpenViking adapter
 - returns domain-shaped artifacts rather than raw filesystem responses
+- keeps the retrieval contract thin while shaping memory events into higher-level results that are easier for `openclaw` to use in chat
 - does not own sync, review, knowledge generation, or skill generation
 
 ## Key Interfaces
@@ -19,17 +20,20 @@ This component is MirrorBrain's plugin-facing retrieval surface for `openclaw`. 
 
 ## Data Flow
 
-1. `openclaw` calls a MirrorBrain retrieval method with the OpenViking base URL.
-2. The plugin API delegates to the OpenViking store adapter.
+1. `openclaw` calls a MirrorBrain retrieval method with the OpenViking base URL and, for memory, a natural-language query plus optional filters.
+2. The plugin API delegates raw storage reads to the OpenViking store adapter.
 3. The store adapter lists MirrorBrain artifact URIs and reads their content.
-4. The plugin API returns parsed `MemoryEvent`, `KnowledgeArtifact`, or `SkillArtifact` objects.
+4. For memory retrieval, the plugin API filters and groups raw `MemoryEvent` records into theme-level results with time ranges and representative source refs.
+5. For knowledge and skill retrieval, the plugin API returns parsed `KnowledgeArtifact` and `SkillArtifact` objects.
 
 ## Test Strategy
 
 - unit tests verify each retrieval method delegates to the correct loader
+- unit tests verify memory retrieval shapes raw memory events into theme-level results
 - integration coverage verifies the overall Phase 1 slice can return stored artifacts through this API
 
 ## Known Limitations
 
 - retrieval currently reads from fixed Phase 1 URI namespaces
-- there is no filtering, pagination, or query shaping yet
+- memory retrieval currently uses lightweight grouping rules rather than a mature ranking or theme-clustering system
+- there is no pagination yet

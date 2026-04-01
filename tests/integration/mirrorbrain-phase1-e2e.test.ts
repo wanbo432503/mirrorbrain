@@ -72,12 +72,38 @@ describe('mirrorbrain phase 1 e2e', () => {
       queryMemory(
         {
           baseUrl: 'http://127.0.0.1:1933',
+          query: 'What did I work on?',
         },
         {
           listMemoryEvents: async () => memoryEvents,
         },
       ),
-    ).resolves.toEqual(memoryEvents);
+    ).resolves.toMatchObject({
+      items: [
+        {
+          theme: 'Example Tasks',
+          title: 'Example Tasks',
+          sourceRefs: [
+            {
+              id: 'browser:aw-event-1',
+              sourceType: 'activitywatch-browser',
+              sourceRef: 'aw-event-1',
+            },
+          ],
+        },
+        {
+          theme: 'Example Tasks 2',
+          title: 'Example Tasks 2',
+          sourceRefs: [
+            {
+              id: 'browser:aw-event-2',
+              sourceType: 'activitywatch-browser',
+              sourceRef: 'aw-event-2',
+            },
+          ],
+        },
+      ],
+    });
     await expect(
       listKnowledge(
         {

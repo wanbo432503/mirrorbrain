@@ -9,6 +9,7 @@ import type {
   CandidateMemory,
   CandidateReviewSuggestion,
   KnowledgeArtifact,
+  MemoryQueryResult,
   MemoryEvent,
   ReviewedMemory,
   SkillArtifact,
@@ -63,7 +64,7 @@ describe('mirrorbrain http server', () => {
   });
 
   it('serves health and read endpoints through the local HTTP API', async () => {
-    const queryMemory = vi.fn(async (): Promise<MemoryEvent[]> => [
+    const listMemoryEvents = vi.fn(async (): Promise<MemoryEvent[]> => [
       {
         id: 'browser:aw-event-1',
         sourceType: 'activitywatch-browser',
@@ -109,7 +110,8 @@ describe('mirrorbrain http server', () => {
         config: getMirrorBrainConfig(),
         stop: vi.fn(),
       },
-      queryMemory,
+      listMemoryEvents,
+      queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
       listKnowledge,
       listSkillDrafts,
       syncBrowserMemory,
@@ -258,7 +260,8 @@ describe('mirrorbrain http server', () => {
         config: getMirrorBrainConfig(),
         stop: vi.fn(),
       },
-      queryMemory: vi.fn(async () => []),
+      listMemoryEvents: vi.fn(async () => []),
+      queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
       listKnowledge: vi.fn(async () => []),
       listSkillDrafts: vi.fn(async () => []),
       syncBrowserMemory: vi.fn(async () => ({
@@ -419,7 +422,8 @@ describe('mirrorbrain http server', () => {
         config: getMirrorBrainConfig(),
         stop: vi.fn(),
       },
-      queryMemory: vi.fn(async () => []),
+      listMemoryEvents: vi.fn(async () => []),
+      queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
       listKnowledge: vi.fn(async () => []),
       listSkillDrafts: vi.fn(async () => []),
       syncBrowserMemory: vi.fn(async () => ({
@@ -463,7 +467,8 @@ describe('mirrorbrain http server', () => {
         config: getMirrorBrainConfig(),
         stop: vi.fn(),
       },
-      queryMemory: vi.fn(async () => []),
+      listMemoryEvents: vi.fn(async () => []),
+      queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
       listKnowledge: vi.fn(async () => []),
       listSkillDrafts: vi.fn(async () => []),
       syncBrowserMemory: vi.fn(async () => ({
@@ -517,7 +522,8 @@ describe('mirrorbrain http server', () => {
         config: getMirrorBrainConfig(),
         stop: vi.fn(),
       },
-      queryMemory: vi.fn(async () => []),
+      listMemoryEvents: vi.fn(async () => []),
+      queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
       listKnowledge: vi.fn(async () => []),
       listSkillDrafts: vi.fn(async () => []),
       syncBrowserMemory: vi.fn(async () => ({

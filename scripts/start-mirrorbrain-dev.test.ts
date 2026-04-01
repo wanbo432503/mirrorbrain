@@ -171,7 +171,8 @@ describe('start mirrorbrain dev runtime', () => {
     const createMirrorBrainService = vi.fn(() => ({
       service: runtimeService,
       syncBrowserMemory: runtimeService.syncBrowserMemory,
-      queryMemory: vi.fn(async () => []),
+      listMemoryEvents: vi.fn(async () => []),
+      queryMemory: vi.fn(async () => ({ items: [] })),
       listKnowledge: vi.fn(async () => []),
       listSkillDrafts: vi.fn(async () => []),
       createDailyCandidateMemories: vi.fn(async () => []),
@@ -297,7 +298,8 @@ describe('start mirrorbrain dev runtime', () => {
         createMirrorBrainService: vi.fn(() => ({
           service: runtimeService,
           syncBrowserMemory: runtimeService.syncBrowserMemory,
-          queryMemory: vi.fn(async () => []),
+          listMemoryEvents: vi.fn(async () => []),
+          queryMemory: vi.fn(async () => ({ items: [] })),
           listKnowledge: vi.fn(async () => []),
           listSkillDrafts: vi.fn(async () => []),
           createDailyCandidateMemories: vi.fn(async () => []),

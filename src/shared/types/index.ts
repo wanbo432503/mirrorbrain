@@ -45,6 +45,39 @@ export interface MemoryEvent {
   captureMetadata: MemoryEventCaptureMetadata;
 }
 
+export interface MemoryTimeRange {
+  startAt: string;
+  endAt: string;
+}
+
+export interface MemoryQueryInput {
+  query: string;
+  timeRange?: MemoryTimeRange;
+  sourceTypes?: MirrorBrainSourceCategory[];
+}
+
+export interface MemoryResultSourceRef {
+  id: string;
+  sourceType: string;
+  sourceRef: string;
+  timestamp: string;
+}
+
+export interface MemoryQueryItem {
+  id: string;
+  theme: string;
+  title: string;
+  summary: string;
+  timeRange: MemoryTimeRange;
+  sourceRefs: MemoryResultSourceRef[];
+}
+
+export interface MemoryQueryResult {
+  timeRange?: MemoryTimeRange;
+  explanation?: string;
+  items: MemoryQueryItem[];
+}
+
 export interface CandidateMemory {
   id: string;
   memoryEventIds: string[];

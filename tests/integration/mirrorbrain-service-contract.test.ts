@@ -62,7 +62,8 @@ describe('mirrorbrain service contract integration', () => {
         workspaceDir: '/tmp/mirrorbrain-workspace',
       },
       {
-        queryMemory: async () => [],
+        queryMemory: async () => ({ items: [] }),
+        listMemoryEvents: async () => [],
         listKnowledge: async () => [],
         listSkillDrafts: async () => [],
         publishKnowledge: async (input) => {
@@ -158,7 +159,8 @@ describe('mirrorbrain service contract integration', () => {
         workspaceDir: '/tmp/mirrorbrain-workspace',
       },
       {
-        queryMemory: async () => [],
+        queryMemory: async () => ({ items: [] }),
+        listMemoryEvents: async () => [],
         listKnowledge: async () => [],
         listSkillDrafts: async () => [],
         generateKnowledge: () => ({
@@ -251,7 +253,8 @@ describe('mirrorbrain service contract integration', () => {
         },
       },
       {
-        queryMemory: async () => [],
+        queryMemory: async () => ({ items: [] }),
+        listMemoryEvents: async () => [],
         listKnowledge: async () => [],
         listSkillDrafts: async () => [],
         publishReviewedMemory: async (input) => {
@@ -325,7 +328,8 @@ describe('mirrorbrain service contract integration', () => {
         },
       },
       {
-        queryMemory: async () => memoryEvents,
+        queryMemory: async () => ({ items: [] }),
+        listMemoryEvents: async () => memoryEvents,
         listKnowledge: async () => [],
         listSkillDrafts: async () => [],
         publishCandidateMemory: async (input) => {
@@ -363,7 +367,8 @@ describe('mirrorbrain service contract integration', () => {
         },
       },
       {
-        queryMemory: async () => [],
+        queryMemory: async () => ({ items: [] }),
+        listMemoryEvents: async () => [],
         listKnowledge: async () => [],
         listSkillDrafts: async () => [],
       },

@@ -9,6 +9,7 @@ import {
   ingestKnowledgeArtifactToOpenViking,
   ingestReviewedMemoryToOpenViking,
   ingestSkillArtifactToOpenViking,
+  listMirrorBrainMemoryEventsFromOpenViking,
   type OpenVikingMemoryEventWriter,
 } from '../../integrations/openviking-store/index.js';
 import {
@@ -33,6 +34,7 @@ import type {
   CandidateReviewSuggestion,
   KnowledgeArtifact,
   MemoryEvent,
+  MemoryQueryInput,
   ReviewedMemory,
   SkillArtifact,
 } from '../../shared/types/index.js';
@@ -71,6 +73,7 @@ interface CreateMirrorBrainServiceInput {
 
 interface CreateMirrorBrainServiceDependencies {
   queryMemory?: typeof queryMemoryFromPluginApi;
+  listMemoryEvents?: typeof listMirrorBrainMemoryEventsFromOpenViking;
   listKnowledge?: typeof listKnowledgeFromPluginApi;
   listSkillDrafts?: typeof listSkillDraftsFromPluginApi;
   publishKnowledge?: typeof ingestKnowledgeArtifactToOpenViking;
@@ -169,6 +172,8 @@ export function createMirrorBrainService(
     input.service.config?.openViking.baseUrl ?? getMirrorBrainConfig().openViking.baseUrl;
   const workspaceDir = input.workspaceDir ?? process.cwd();
   const queryMemory = dependencies.queryMemory ?? queryMemoryFromPluginApi;
+  const listMemoryEvents =
+    dependencies.listMemoryEvents ?? listMirrorBrainMemoryEventsFromOpenViking;
   const listKnowledge = dependencies.listKnowledge ?? listKnowledgeFromPluginApi;
   const listSkillDrafts =
     dependencies.listSkillDrafts ?? listSkillDraftsFromPluginApi;
@@ -192,9 +197,16 @@ export function createMirrorBrainService(
   return {
     service: input.service,
     syncBrowserMemory: () => input.service.syncBrowserMemory(),
-    queryMemory: () =>
+    listMemoryEvents: () =>
+      listMemoryEvents({
+        baseUrl,
+      }),
+    queryMemory: (input: MemoryQueryInput) =>
       queryMemory({
         baseUrl,
+        query: input.query,
+        timeRange: input.timeRange,
+        sourceTypes: input.sourceTypes,
       }),
     listKnowledge: () =>
       listKnowledge({
@@ -262,9 +274,7 @@ export function createMirrorBrainService(
       reviewDate: string,
       reviewTimeZone?: string,
     ): Promise<CandidateMemory[]> => {
-      const memoryEvents = await queryMemory({
-        baseUrl,
-      });
+      const memoryEvents = await listMemoryEvents({ baseUrl });
       const artifacts = await buildCandidateMemories({
         reviewDate,
         reviewTimeZone,

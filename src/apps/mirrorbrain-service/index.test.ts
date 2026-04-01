@@ -4,6 +4,7 @@ import { getMirrorBrainConfig } from '../../shared/config/index.js';
 import type {
   CandidateMemory,
   CandidateReviewSuggestion,
+  MemoryQueryResult,
   ReviewedMemory,
 } from '../../shared/types/index.js';
 import { createMirrorBrainService, startMirrorBrainService } from './index.js';
@@ -139,7 +140,7 @@ describe('mirrorbrain service', () => {
     );
   });
 
-  it('creates an openclaw-facing service contract that queries OpenViking through the configured base URL', async () => {
+  it('creates an openclaw-facing service contract that queries OpenViking through the configured base URL and forwards retrieval input', async () => {
     const service = {
       status: 'running' as const,
       config: getMirrorBrainConfig(),
@@ -151,7 +152,15 @@ describe('mirrorbrain service', () => {
       })),
       stop: vi.fn(),
     };
-    const queryMemory = vi.fn(async () => []);
+    const queryMemory = vi.fn(
+      async (): Promise<MemoryQueryResult> => ({
+        timeRange: {
+          startAt: '2026-03-20T00:00:00.000Z',
+          endAt: '2026-03-20T23:59:59.999Z',
+        },
+        items: [],
+      }),
+    );
     const listKnowledge = vi.fn(async () => []);
     const listSkillDrafts = vi.fn(async () => []);
 
@@ -166,12 +175,25 @@ describe('mirrorbrain service', () => {
       },
     );
 
-    await api.queryMemory();
+    await api.queryMemory({
+      query: 'What did I work on yesterday?',
+      timeRange: {
+        startAt: '2026-03-20T00:00:00.000Z',
+        endAt: '2026-03-20T23:59:59.999Z',
+      },
+      sourceTypes: ['browser'],
+    });
     await api.listKnowledge();
     await api.listSkillDrafts();
 
     expect(queryMemory).toHaveBeenCalledWith({
       baseUrl: expectedOpenVikingBaseUrl,
+      query: 'What did I work on yesterday?',
+      timeRange: {
+        startAt: '2026-03-20T00:00:00.000Z',
+        endAt: '2026-03-20T23:59:59.999Z',
+      },
+      sourceTypes: ['browser'],
     });
     expect(listKnowledge).toHaveBeenCalledWith({
       baseUrl: expectedOpenVikingBaseUrl,
@@ -452,7 +474,7 @@ describe('mirrorbrain service', () => {
         },
       },
     ];
-    const queryMemory = vi.fn(async () => memoryEvents);
+    const listMemoryEvents = vi.fn(async () => memoryEvents);
     const createCandidateMemories = vi.fn(() => [
       createCandidateMemoryFixture({
         id: 'candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
@@ -474,7 +496,7 @@ describe('mirrorbrain service', () => {
         service,
       },
       {
-        queryMemory,
+        listMemoryEvents,
         createCandidateMemories,
         publishCandidateMemory,
       },
@@ -493,7 +515,7 @@ describe('mirrorbrain service', () => {
       }),
     ]);
 
-    expect(queryMemory).toHaveBeenCalledWith({
+    expect(listMemoryEvents).toHaveBeenCalledWith({
       baseUrl: expectedOpenVikingBaseUrl,
     });
     expect(createCandidateMemories).toHaveBeenCalledWith({

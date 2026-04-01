@@ -10,6 +10,8 @@ import type {
   CandidateMemory,
   CandidateReviewSuggestion,
   KnowledgeArtifact,
+  MemoryQueryInput,
+  MemoryQueryResult,
   MemoryEvent,
   ReviewedMemory,
   SkillArtifact,
@@ -21,7 +23,8 @@ interface MirrorBrainHttpService {
     config?: ReturnType<typeof getMirrorBrainConfig>;
   };
   syncBrowserMemory(): Promise<unknown>;
-  queryMemory(): Promise<MemoryEvent[]>;
+  listMemoryEvents(): Promise<MemoryEvent[]>;
+  queryMemory?(input: MemoryQueryInput): Promise<MemoryQueryResult>;
   listKnowledge(): Promise<KnowledgeArtifact[]>;
   listSkillDrafts(): Promise<SkillArtifact[]>;
   createDailyCandidateMemories(
@@ -362,7 +365,7 @@ export async function startMirrorBrainHttpServer(
       },
     },
     async () => ({
-      items: await input.service.queryMemory(),
+      items: await input.service.listMemoryEvents(),
     }),
   );
 
