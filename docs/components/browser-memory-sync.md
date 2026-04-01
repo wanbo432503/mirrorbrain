@@ -2,12 +2,12 @@
 
 ## Summary
 
-This workflow executes the live browser ingestion loop for Phase 1. It decides whether to run an initial backfill or incremental sync, fetches ActivityWatch browser events, normalizes them into `MemoryEvent` records, persists them, and commits the resulting checkpoint.
+This workflow executes the live browser ingestion loop for Phase 1. It now acts as the browser-specific wrapper around the generic memory-source sync pipeline, wiring the ActivityWatch browser plugin into polling and on-demand sync entrypoints.
 
 ## Responsibility Boundary
 
-- owns one-shot browser sync execution and timer-driven polling
-- coordinates between ActivityWatch, memory capture, OpenViking persistence, and checkpoint persistence
+- owns timer-driven polling for the browser source and the browser-facing sync entrypoint
+- wires the ActivityWatch browser source plugin into the generic memory-source sync workflow
 - does not own candidate memory review, knowledge generation, or skill generation
 
 ## Key Interfaces
@@ -17,20 +17,18 @@ This workflow executes the live browser ingestion loop for Phase 1. It decides w
 
 ## Data Flow
 
-1. Read the last checkpoint for the browser source key.
-2. Build an initial backfill or incremental sync window.
-3. Fetch ActivityWatch browser events for that window.
-4. Normalize each event into a `MemoryEvent`.
-5. Persist each normalized event through the configured writer.
-6. Advance the checkpoint to the latest observed sync boundary.
-7. Repeat on the configured polling interval when polling is enabled.
+1. Build an ActivityWatch browser source plugin for the configured browser bucket.
+2. Register that plugin with the generic memory-source sync workflow.
+3. Let the generic workflow read the checkpoint, compute the sync plan, fetch events, normalize them, deduplicate duplicate browser page records, and persist sanitized events.
+4. Repeat on the configured polling interval when polling is enabled.
 
 ## Test Strategy
 
-- unit tests cover initial sync behavior, incremental sync behavior, and timer-driven polling
+- unit tests cover initial sync behavior, incremental sync behavior, duplicate suppression, and timer-driven polling
 - integration tests cover checkpoint persistence across repeated sync runs
 
 ## Known Limitations
 
 - polling uses an in-process timer and does not yet have crash recovery beyond persisted checkpoints
 - overlapping timer ticks are skipped instead of queued
+- the service layer still exposes a browser-specific trigger even though the underlying sync path is now source-plugin-based

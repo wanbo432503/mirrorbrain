@@ -1,3 +1,8 @@
+import {
+  deduplicateMemoryEvents,
+  normalizeActivityWatchBrowserEvent,
+  type MemorySourcePlugin,
+} from '../../modules/memory-capture/index.js';
 import type { MirrorBrainConfig } from '../../shared/types/index.js';
 
 interface InitialBrowserSyncPlanInput {
@@ -33,6 +38,11 @@ export interface ActivityWatchBrowserEvent {
     url: string;
     title: string;
   };
+}
+
+interface CreateActivityWatchBrowserMemorySourcePluginInput {
+  bucketId: string;
+  fetchBrowserEvents?: typeof fetchActivityWatchBrowserEvents;
 }
 
 type FetchLike = (
@@ -92,4 +102,55 @@ export async function fetchActivityWatchBrowserEvents(
   }
 
   return (await response.json()) as ActivityWatchBrowserEvent[];
+}
+
+export function getActivityWatchBrowserSourceKey(bucketId: string): string {
+  return `activitywatch-browser:${bucketId}`;
+}
+
+export function createActivityWatchBrowserMemorySourcePlugin(
+  input: CreateActivityWatchBrowserMemorySourcePluginInput,
+): MemorySourcePlugin<ActivityWatchBrowserEvent> {
+  const fetchBrowserEvents =
+    input.fetchBrowserEvents ?? fetchActivityWatchBrowserEvents;
+
+  return {
+    sourceKey: getActivityWatchBrowserSourceKey(input.bucketId),
+    sourceCategory: 'browser',
+    createSyncPlan({ config, checkpoint, now }) {
+      return checkpoint
+        ? createIncrementalBrowserSyncPlan(config, {
+            lastSyncedAt: checkpoint.lastSyncedAt,
+            now,
+          })
+        : createInitialBrowserSyncPlan(config, {
+            now,
+          });
+    },
+    fetchEvents({ config, plan }) {
+      return fetchBrowserEvents({
+        baseUrl: config.activityWatch.baseUrl,
+        bucketId: input.bucketId,
+        start: plan.start,
+        end: plan.end,
+      });
+    },
+    normalizeEvent({ scopeId, event }) {
+      return normalizeActivityWatchBrowserEvent({
+        scopeId,
+        event,
+      });
+    },
+    sanitizeEvents(events) {
+      return deduplicateMemoryEvents(events, (event) =>
+        [
+          event.sourceType,
+          event.authorizationScopeId,
+          event.timestamp,
+          String(event.content.url ?? ''),
+          String(event.content.title ?? ''),
+        ].join('|'),
+      );
+    },
+  };
 }

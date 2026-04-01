@@ -25,6 +25,7 @@ Phase 1 should implement the narrowest viable slice that proves authorized inges
 - modules own business logic and lifecycle rules
 - workflows coordinate multi-step operations but should not hide core policy
 - apps expose explicit APIs or user-facing surfaces and delegate to modules
+- source ingestion should prefer plugin-style adapters with explicit planning, fetch, normalization, and sanitization hooks so new memory sources can be added without rewriting the sync pipeline
 
 ### Phase 1 MVP Runtime Requirement
 
@@ -204,6 +205,7 @@ Implementations should preserve:
 Guidance:
 
 - import upstream source data into MirrorBrain-owned normalized records before downstream processing
+- apply source-specific sanitization such as duplicate suppression before persisting normalized `MemoryEvent` records
 - store normalized raw `MemoryEvent` records in `OpenViking` rather than depending on upstream systems for later queries
 - treat upstream source identifiers and sync checkpoints as part of ingestion metadata
 - when uncertain, prefer append-friendly event capture plus explicit derived artifact records over mutating away provenance

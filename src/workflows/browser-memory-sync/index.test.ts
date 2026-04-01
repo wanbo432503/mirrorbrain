@@ -168,6 +168,55 @@ describe('browser memory sync workflow', () => {
     });
   });
 
+  it('deduplicates duplicate browser page events before persisting them', async () => {
+    const config = getMirrorBrainConfig();
+    const persistedRecordIds: string[] = [];
+
+    const result = await runBrowserMemorySyncOnce(
+      {
+        config,
+        now: '2026-03-20T08:00:00.000Z',
+        bucketId: 'aw-watcher-web-chrome',
+        scopeId: 'scope-browser',
+      },
+      {
+        checkpointStore: {
+          readCheckpoint: async () => null,
+          writeCheckpoint: async () => undefined,
+        },
+        fetchBrowserEvents: async () => [
+          {
+            id: 'aw-event-1',
+            timestamp: '2026-03-20T07:45:00.000Z',
+            data: {
+              url: 'https://example.com/tasks',
+              title: 'Example Tasks',
+            },
+          },
+          {
+            id: 'aw-event-2',
+            timestamp: '2026-03-20T07:45:00.000Z',
+            data: {
+              url: 'https://example.com/tasks',
+              title: 'Example Tasks',
+            },
+          },
+        ],
+        writeMemoryEvent: async (record) => {
+          persistedRecordIds.push(record.recordId);
+        },
+      },
+    );
+
+    expect(persistedRecordIds).toEqual(['browser:aw-event-1']);
+    expect(result).toEqual({
+      sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+      strategy: 'initial-backfill',
+      importedCount: 1,
+      lastSyncedAt: '2026-03-20T08:00:00.000Z',
+    });
+  });
+
   it('polls on the configured interval and stops cleanly', async () => {
     vi.useFakeTimers();
     const config = getMirrorBrainConfig();
