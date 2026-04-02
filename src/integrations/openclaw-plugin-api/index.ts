@@ -399,6 +399,8 @@ export async function queryMemory(
     isShellProblemSolvingQuery(input)
   ) {
     return {
+      explanation:
+        'MirrorBrain grouped adjacent shell commands into a problem-solving sequence for this solve-oriented shell query.',
       timeRange: input.timeRange,
       items: clusterShellProblemSolvingEvents(filteredEvents)
         .map((cluster, index) => ({

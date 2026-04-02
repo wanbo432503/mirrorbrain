@@ -385,6 +385,8 @@ describe('openclaw plugin api', () => {
         },
       ),
     ).resolves.toEqual({
+      explanation:
+        'MirrorBrain grouped adjacent shell commands into a problem-solving sequence for this solve-oriented shell query.',
       timeRange: {
         startAt: '2026-03-20T00:00:00.000Z',
         endAt: '2026-03-20T23:59:59.999Z',
