@@ -45,6 +45,14 @@ function normalizeBrowserThemeTitle(title: string): string {
   return normalized && normalized.length > 0 ? normalized : title;
 }
 
+function formatThemeTitleForDisplay(title: string): string {
+  if (title === title.toLowerCase()) {
+    return title.charAt(0).toUpperCase() + title.slice(1);
+  }
+
+  return title;
+}
+
 function getMemoryEventThemeTitle(event: MemoryEvent): string {
   const rawTitle =
     typeof event.content.title === 'string' ? event.content.title : event.id;
@@ -120,7 +128,7 @@ export async function queryMemory(
 
   for (const event of filteredEvents) {
     const title = getMemoryEventThemeTitle(event);
-    const key = `${event.sourceType}:${title}`;
+    const key = `${event.sourceType}:${title.toLowerCase()}`;
     const current = groupedEvents.get(key) ?? [];
     current.push(event);
     groupedEvents.set(key, current);
@@ -134,7 +142,7 @@ export async function queryMemory(
           left.timestamp.localeCompare(right.timestamp),
         );
         const [firstEvent] = sortedEvents;
-        const title = getMemoryEventThemeTitle(firstEvent);
+        const title = formatThemeTitleForDisplay(getMemoryEventThemeTitle(firstEvent));
 
         const representativeEvents = sortedEvents.filter((event, index, events) => {
           if (!event.sourceType.includes('browser')) {
