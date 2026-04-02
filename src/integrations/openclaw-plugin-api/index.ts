@@ -72,12 +72,36 @@ function summarizeGroupedMemoryEvents(
   const browserEvents = events.every((event) => event.sourceType.includes('browser'));
 
   if (browserEvents) {
+    const includesSearchPage = events.some((event) => {
+      if (typeof event.content.url !== 'string') {
+        return false;
+      }
+
+      try {
+        const url = new URL(event.content.url);
+        const host = url.hostname.toLowerCase();
+        const path = url.pathname.toLowerCase();
+
+        return (
+          url.searchParams.has('q') ||
+          host.includes('search') ||
+          path.includes('/search')
+        );
+      } catch {
+        return false;
+      }
+    });
+
     if (representativeEventCount <= 1) {
       if (events.length === 1) {
         return `You viewed 1 page about ${title} during the requested time range.`;
       }
 
       return `You revisited 1 page about ${title} across ${events.length} browser visits during the requested time range.`;
+    }
+
+    if (includesSearchPage) {
+      return `You researched ${title} across ${representativeEventCount} pages and ${events.length} browser visits during the requested time range.`;
     }
 
     return `You reviewed ${representativeEventCount} pages about ${title} across ${events.length} browser visits during the requested time range.`;

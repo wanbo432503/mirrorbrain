@@ -180,7 +180,65 @@ describe('openclaw plugin api', () => {
           theme: 'Review workflow',
           title: 'Review workflow',
           summary:
-            'You reviewed 2 pages about Review workflow across 2 browser visits during the requested time range.',
+            'You researched Review workflow across 2 pages and 2 browser visits during the requested time range.',
+        },
+      ],
+    });
+  });
+
+  it('uses a research-oriented browser summary when the grouped theme includes search pages', async () => {
+    await expect(
+      queryMemory(
+        {
+          baseUrl: 'http://127.0.0.1:1933',
+          query: 'What did I work on yesterday?',
+          timeRange: {
+            startAt: '2026-03-20T00:00:00.000Z',
+            endAt: '2026-03-20T23:59:59.999Z',
+          },
+          sourceTypes: ['browser'],
+        },
+        {
+          listMemoryEvents: async () => [
+            {
+              id: 'browser:aw-event-1',
+              sourceType: 'activitywatch-browser',
+              sourceRef: 'aw-event-1',
+              timestamp: '2026-03-20T08:00:00.000Z',
+              authorizationScopeId: 'scope-browser',
+              content: {
+                url: 'https://google.com/search?q=review+workflow',
+                title: 'Review workflow - Google Search',
+              },
+              captureMetadata: {
+                upstreamSource: 'activitywatch',
+                checkpoint: '2026-03-20T08:00:00.000Z',
+              },
+            },
+            {
+              id: 'browser:aw-event-2',
+              sourceType: 'activitywatch-browser',
+              sourceRef: 'aw-event-2',
+              timestamp: '2026-03-20T08:15:00.000Z',
+              authorizationScopeId: 'scope-browser',
+              content: {
+                url: 'https://docs.example.com/review-workflow',
+                title: 'Review workflow - Example Docs',
+              },
+              captureMetadata: {
+                upstreamSource: 'activitywatch',
+                checkpoint: '2026-03-20T08:15:00.000Z',
+              },
+            },
+          ],
+        },
+      ),
+    ).resolves.toMatchObject({
+      items: [
+        {
+          theme: 'Review workflow',
+          summary:
+            'You researched Review workflow across 2 pages and 2 browser visits during the requested time range.',
         },
       ],
     });
