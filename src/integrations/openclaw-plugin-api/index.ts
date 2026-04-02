@@ -192,6 +192,28 @@ function createShellProblemNarrativeSummary(events: MemoryEvent[]): string {
   return `You worked through ${events.length} shell commands while solving the problem during the requested time range.`;
 }
 
+function getShellProblemPhaseCount(events: MemoryEvent[]): number {
+  const phases = new Set<string>();
+
+  for (const event of events) {
+    const command = getShellCommandText(event);
+
+    if (isInspectionShellCommand(command)) {
+      phases.add('inspected state');
+    }
+
+    if (isApplyShellCommand(command)) {
+      phases.add('applied changes');
+    }
+
+    if (isVerificationShellCommand(command)) {
+      phases.add('verified the result');
+    }
+  }
+
+  return phases.size;
+}
+
 function clusterShellProblemSolvingEvents(events: MemoryEvent[]): ShellProblemCluster[] {
   const sortedEvents = [...events].sort((left, right) =>
     left.timestamp.localeCompare(right.timestamp),
@@ -507,6 +529,7 @@ export async function queryMemory(
           id: `memory-result:shell-history-problem-solving-sequence-${index + 1}`,
           theme: 'Shell problem-solving sequence',
           title: 'Shell problem-solving sequence',
+          phaseCount: getShellProblemPhaseCount(cluster.events),
           summary: createShellProblemNarrativeSummary(cluster.events),
           timeRange: {
             startAt: cluster.startAt,
@@ -519,7 +542,16 @@ export async function queryMemory(
             timestamp: event.timestamp,
           })),
         }))
-        .sort((left, right) => right.timeRange.endAt.localeCompare(left.timeRange.endAt)),
+        .sort((left, right) => {
+          const byPhaseCount = right.phaseCount - left.phaseCount;
+
+          if (byPhaseCount !== 0) {
+            return byPhaseCount;
+          }
+
+          return right.timeRange.endAt.localeCompare(left.timeRange.endAt);
+        })
+        .map(({ phaseCount: _phaseCount, ...item }) => item),
     };
   }
 

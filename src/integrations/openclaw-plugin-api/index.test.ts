@@ -518,6 +518,120 @@ describe('openclaw plugin api', () => {
     });
   });
 
+  it('prioritizes more complete shell problem-solving sequences ahead of newer partial ones', async () => {
+    await expect(
+      queryMemory(
+        {
+          baseUrl: 'http://127.0.0.1:1933',
+          query: 'How did I solve this in the shell before?',
+          timeRange: {
+            startAt: '2026-03-20T00:00:00.000Z',
+            endAt: '2026-03-20T23:59:59.999Z',
+          },
+          sourceTypes: ['shell'],
+        },
+        {
+          listMemoryEvents: async () => [
+            {
+              id: 'shell:shell-history:1',
+              sourceType: 'shell-history',
+              sourceRef: 'shell-history:1',
+              timestamp: '2026-03-20T09:00:00.000Z',
+              authorizationScopeId: 'scope-shell',
+              content: {
+                command: 'git status',
+                commandName: 'git',
+              },
+              captureMetadata: {
+                upstreamSource: 'shell-history',
+                checkpoint: '2026-03-20T09:00:00.000Z',
+              },
+            },
+            {
+              id: 'shell:shell-history:2',
+              sourceType: 'shell-history',
+              sourceRef: 'shell-history:2',
+              timestamp: '2026-03-20T09:04:00.000Z',
+              authorizationScopeId: 'scope-shell',
+              content: {
+                command: 'git apply fix.patch',
+                commandName: 'git',
+              },
+              captureMetadata: {
+                upstreamSource: 'shell-history',
+                checkpoint: '2026-03-20T09:04:00.000Z',
+              },
+            },
+            {
+              id: 'shell:shell-history:3',
+              sourceType: 'shell-history',
+              sourceRef: 'shell-history:3',
+              timestamp: '2026-03-20T09:08:00.000Z',
+              authorizationScopeId: 'scope-shell',
+              content: {
+                command: 'pnpm vitest run',
+                commandName: 'pnpm',
+              },
+              captureMetadata: {
+                upstreamSource: 'shell-history',
+                checkpoint: '2026-03-20T09:08:00.000Z',
+              },
+            },
+            {
+              id: 'shell:shell-history:4',
+              sourceType: 'shell-history',
+              sourceRef: 'shell-history:4',
+              timestamp: '2026-03-20T09:40:00.000Z',
+              authorizationScopeId: 'scope-shell',
+              content: {
+                command: 'git status',
+                commandName: 'git',
+              },
+              captureMetadata: {
+                upstreamSource: 'shell-history',
+                checkpoint: '2026-03-20T09:40:00.000Z',
+              },
+            },
+            {
+              id: 'shell:shell-history:5',
+              sourceType: 'shell-history',
+              sourceRef: 'shell-history:5',
+              timestamp: '2026-03-20T09:45:00.000Z',
+              authorizationScopeId: 'scope-shell',
+              content: {
+                command: 'git apply quick-fix.patch',
+                commandName: 'git',
+              },
+              captureMetadata: {
+                upstreamSource: 'shell-history',
+                checkpoint: '2026-03-20T09:45:00.000Z',
+              },
+            },
+          ],
+        },
+      ),
+    ).resolves.toMatchObject({
+      items: [
+        {
+          timeRange: {
+            startAt: '2026-03-20T09:00:00.000Z',
+            endAt: '2026-03-20T09:08:00.000Z',
+          },
+          summary:
+            'You inspected state, applied changes, and verified the result across 3 shell commands during the requested time range.',
+        },
+        {
+          timeRange: {
+            startAt: '2026-03-20T09:40:00.000Z',
+            endAt: '2026-03-20T09:45:00.000Z',
+          },
+          summary:
+            'You inspected state and applied changes across 2 shell commands during the requested time range.',
+        },
+      ],
+    });
+  });
+
   it('groups browser pages that differ only by common site-title suffixes into the same theme', async () => {
     await expect(
       queryMemory(
