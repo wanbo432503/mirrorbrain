@@ -520,9 +520,14 @@ export async function queryMemory(
   });
   const groupedEvents = new Map<string, MemoryEvent[]>();
   const browserWorkRecallQuery = isBrowserWorkRecallQuery(input);
+  const retrievalEvents =
+    browserWorkRecallQuery &&
+    (!input.sourceTypes || input.sourceTypes.length === 0)
+      ? filteredEvents.filter((event) => event.sourceType.includes('browser'))
+      : filteredEvents;
 
   if (isShellProblemSolvingQuery(input)) {
-    const shellEvents = filteredEvents.filter((event) =>
+    const shellEvents = retrievalEvents.filter((event) =>
       event.sourceType.includes('shell'),
     );
 
@@ -568,7 +573,7 @@ export async function queryMemory(
     };
   }
 
-  for (const event of filteredEvents) {
+  for (const event of retrievalEvents) {
     const title = getMemoryEventThemeTitle(event);
     const key = `${event.sourceType}:${title.toLowerCase()}`;
     const current = groupedEvents.get(key) ?? [];

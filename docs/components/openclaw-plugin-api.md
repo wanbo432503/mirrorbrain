@@ -41,20 +41,21 @@ This component is MirrorBrain's plugin-facing retrieval surface for `openclaw`. 
 17. When browser themes have equal event counts, retrieval now prefers more action-oriented themes such as debugging, comparison, or research ahead of passive page-view themes.
 18. Single-page browser themes can still receive action-oriented summaries when their title or URL clearly signals debugging, comparison, research, or documentation work.
 19. For browser work-recall queries, browser themes are also prioritized ahead of generic shell command groups so the answer stays centered on the main work themes before lower-level shell activity.
-20. Shell-history events are grouped by `commandName` so retrieval can return command-oriented shell themes instead of one result per raw command.
-21. For shell-history themes, the summary currently reports command-count activity such as `ran 2 shell commands with git`.
-22. If a shell-history theme is made of obvious inspection commands such as `status`, `diff`, or `log`, the summary shifts toward an `inspected state ...` phrasing.
-23. If a shell-history theme is made of obvious test or typecheck commands, the summary shifts toward a `verified changes with ...` phrasing.
-24. If a shell-history theme is made of obvious patch-application or inline-edit commands, the summary shifts toward an `applied changes with ...` phrasing.
-25. For solve-oriented shell queries, the plugin API can collapse adjacent shell commands into a single `Shell problem-solving sequence` result instead of returning command-name groups.
-26. That shell problem-solving result currently uses a narrow time-gap heuristic and summarizes obvious inspect/apply/verify phases when they appear in one sequence.
-27. Solve-oriented shell retrieval also returns a top-level explanation string so the caller can tell that shell commands were regrouped into a problem-solving sequence.
-28. If the query clearly asks about shell problem solving, this regrouping can still happen even when the caller did not explicitly narrow `sourceTypes` to `shell`.
-29. When multiple shell problem-solving sequences are present, retrieval now prefers more complete sequences with more distinct inspect/apply/verify phases before falling back to recency.
-30. Even single-phase shell problem-solving sequences now keep a phase-specific narrative such as `applied changes ...` instead of falling back immediately to a generic `worked through ...` summary.
-31. If the caller already narrowed `sourceTypes` to `shell`, solve-oriented queries do not need to repeat shell-specific wording to trigger shell problem-solving narratives.
-32. For knowledge and skill retrieval, the plugin API returns parsed `KnowledgeArtifact` and `SkillArtifact` objects.
-33. The example tool wrapper shows how an `openclaw`-side `query_memory` tool can forward retrieval input and then turn ordered results into a lightweight chat answer.
+20. If a browser work-recall query does not explicitly specify source types, retrieval now defaults to browser themes only instead of mixing in generic shell command groups.
+21. Shell-history events are grouped by `commandName` so retrieval can return command-oriented shell themes instead of one result per raw command.
+22. For shell-history themes, the summary currently reports command-count activity such as `ran 2 shell commands with git`.
+23. If a shell-history theme is made of obvious inspection commands such as `status`, `diff`, or `log`, the summary shifts toward an `inspected state ...` phrasing.
+24. If a shell-history theme is made of obvious test or typecheck commands, the summary shifts toward a `verified changes with ...` phrasing.
+25. If a shell-history theme is made of obvious patch-application or inline-edit commands, the summary shifts toward an `applied changes with ...` phrasing.
+26. For solve-oriented shell queries, the plugin API can collapse adjacent shell commands into a single `Shell problem-solving sequence` result instead of returning command-name groups.
+27. That shell problem-solving result currently uses a narrow time-gap heuristic and summarizes obvious inspect/apply/verify phases when they appear in one sequence.
+28. Solve-oriented shell retrieval also returns a top-level explanation string so the caller can tell that shell commands were regrouped into a problem-solving sequence.
+29. If the query clearly asks about shell problem solving, this regrouping can still happen even when the caller did not explicitly narrow `sourceTypes` to `shell`.
+30. When multiple shell problem-solving sequences are present, retrieval now prefers more complete sequences with more distinct inspect/apply/verify phases before falling back to recency.
+31. Even single-phase shell problem-solving sequences now keep a phase-specific narrative such as `applied changes ...` instead of falling back immediately to a generic `worked through ...` summary.
+32. If the caller already narrowed `sourceTypes` to `shell`, solve-oriented queries do not need to repeat shell-specific wording to trigger shell problem-solving narratives.
+33. For knowledge and skill retrieval, the plugin API returns parsed `KnowledgeArtifact` and `SkillArtifact` objects.
+34. The example tool wrapper shows how an `openclaw`-side `query_memory` tool can forward retrieval input and then turn ordered results into a lightweight chat answer.
 
 ## Test Strategy
 
@@ -80,6 +81,7 @@ This component is MirrorBrain's plugin-facing retrieval surface for `openclaw`. 
 - browser work-recall explanation detection is heuristic and currently only recognizes a small set of obvious `what did I work on yesterday/today` phrasings
 - browser action-priority ranking is heuristic and currently depends on a small fixed set of narrative categories
 - browser-over-shell prioritization currently only applies to browser work-recall queries and does not yet model richer mixed-source recall policies
+- browser-only fallback for work-recall currently only applies when source types are omitted and does not yet distinguish between generic shell noise and high-value shell narratives
 - browser summaries are still heuristic and do not yet model richer task-level narratives
 - shell retrieval currently groups by command name only and does not yet infer higher-level issue or workflow narratives
 - shell phase hints are still heuristic and currently only recognize a small set of obvious inspection commands
