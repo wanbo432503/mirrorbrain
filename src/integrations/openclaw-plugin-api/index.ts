@@ -72,6 +72,23 @@ function summarizeGroupedMemoryEvents(
   const browserEvents = events.every((event) => event.sourceType.includes('browser'));
 
   if (browserEvents) {
+    const includesComparisonPage = events.some((event) => {
+      const titleText =
+        typeof event.content.title === 'string' ? event.content.title.toLowerCase() : '';
+      const urlText =
+        typeof event.content.url === 'string' ? event.content.url.toLowerCase() : '';
+
+      return (
+        titleText.includes('compare') ||
+        titleText.includes('comparison') ||
+        titleText.includes(' vs ') ||
+        urlText.includes('compare') ||
+        urlText.includes('comparison') ||
+        urlText.includes('-vs-') ||
+        urlText.includes('/vs/')
+      );
+    });
+
     const isDocumentationPage = (event: MemoryEvent): boolean => {
       if (typeof event.content.url !== 'string') {
         return false;
@@ -125,6 +142,10 @@ function summarizeGroupedMemoryEvents(
 
     if (includesSearchPage) {
       return `You researched ${title} across ${representativeEventCount} pages and ${events.length} browser visits during the requested time range.`;
+    }
+
+    if (includesComparisonPage) {
+      return `You compared information about ${title} across ${representativeEventCount} pages and ${events.length} browser visits during the requested time range.`;
     }
 
     if (onlyDocumentationPages) {
