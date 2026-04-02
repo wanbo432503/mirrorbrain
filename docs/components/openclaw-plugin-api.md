@@ -39,8 +39,10 @@ This component is MirrorBrain's plugin-facing retrieval surface for `openclaw`. 
 15. If a shell-history theme is made of obvious inspection commands such as `status`, `diff`, or `log`, the summary shifts toward an `inspected state ...` phrasing.
 16. If a shell-history theme is made of obvious test or typecheck commands, the summary shifts toward a `verified changes with ...` phrasing.
 17. If a shell-history theme is made of obvious patch-application or inline-edit commands, the summary shifts toward an `applied changes with ...` phrasing.
-18. For knowledge and skill retrieval, the plugin API returns parsed `KnowledgeArtifact` and `SkillArtifact` objects.
-19. The example tool wrapper shows how an `openclaw`-side `query_memory` tool can forward retrieval input and then turn ordered results into a lightweight chat answer.
+18. For solve-oriented shell queries, the plugin API can collapse adjacent shell commands into a single `Shell problem-solving sequence` result instead of returning command-name groups.
+19. That shell problem-solving result currently uses a narrow time-gap heuristic and summarizes obvious inspect/apply/verify phases when they appear in one sequence.
+20. For knowledge and skill retrieval, the plugin API returns parsed `KnowledgeArtifact` and `SkillArtifact` objects.
+21. The example tool wrapper shows how an `openclaw`-side `query_memory` tool can forward retrieval input and then turn ordered results into a lightweight chat answer.
 
 ## Test Strategy
 
@@ -65,5 +67,6 @@ This component is MirrorBrain's plugin-facing retrieval surface for `openclaw`. 
 - shell phase hints are still heuristic and currently only recognize a small set of obvious inspection commands
 - shell verification hints are still heuristic and currently only recognize obvious test and typecheck commands
 - shell apply-phase hints are still heuristic and currently only recognize a small set of obvious patch or inline-edit commands
+- solve-oriented shell narratives currently cluster only by time adjacency and do not yet use cwd, session, or richer issue context
 - there is no pagination yet
 - the example tool is intentionally minimal and does not model the full `openclaw` plugin host

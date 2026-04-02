@@ -39,6 +39,12 @@ interface OpenClawPluginApiDependencies {
   listSkillArtifacts?: (input: ListSkillDraftsInput) => Promise<SkillArtifact[]>;
 }
 
+interface ShellProblemCluster {
+  events: MemoryEvent[];
+  startAt: string;
+  endAt: string;
+}
+
 function normalizeBrowserThemeTitle(title: string): string {
   const normalized = title.split(/ \| | - | — /u)[0]?.trim();
 
@@ -73,6 +79,134 @@ function getMemoryEventThemeTitle(event: MemoryEvent): string {
   }
 
   return rawTitle;
+}
+
+function getShellCommandText(event: MemoryEvent): string {
+  return typeof event.content.command === 'string'
+    ? event.content.command.toLowerCase()
+    : '';
+}
+
+function isVerificationShellCommand(command: string): boolean {
+  return (
+    command.includes('test') ||
+    command.includes('vitest') ||
+    command.includes('pytest') ||
+    command.includes('typecheck') ||
+    command.includes('tsc --noemit')
+  );
+}
+
+function isInspectionShellCommand(command: string): boolean {
+  return (
+    command.includes(' status') ||
+    command.endsWith(' status') ||
+    command.includes(' diff') ||
+    command.endsWith(' diff') ||
+    command.includes(' log') ||
+    command.endsWith(' log')
+  );
+}
+
+function isApplyShellCommand(command: string): boolean {
+  return (
+    command.includes(' apply') ||
+    command.endsWith(' apply') ||
+    command.startsWith('patch ') ||
+    command.startsWith('sed -i') ||
+    command.startsWith("perl -pi")
+  );
+}
+
+function isShellProblemSolvingQuery(input: QueryMemoryInput): boolean {
+  const query = input.query.toLowerCase();
+  const isShellOnlyQuery =
+    Array.isArray(input.sourceTypes) &&
+    input.sourceTypes.length === 1 &&
+    input.sourceTypes[0] === 'shell';
+
+  return isShellOnlyQuery && (query.includes('solve') || query.includes('解决'));
+}
+
+function createShellProblemNarrativeSummary(events: MemoryEvent[]): string {
+  const phases = new Set<string>();
+
+  for (const event of events) {
+    const command = getShellCommandText(event);
+
+    if (isInspectionShellCommand(command)) {
+      phases.add('inspected state');
+      continue;
+    }
+
+    if (isApplyShellCommand(command)) {
+      phases.add('applied changes');
+      continue;
+    }
+
+    if (isVerificationShellCommand(command)) {
+      phases.add('verified the result');
+    }
+  }
+
+  const orderedPhases = [
+    'inspected state',
+    'applied changes',
+    'verified the result',
+  ].filter((phase) => phases.has(phase));
+
+  if (orderedPhases.length === 3) {
+    return `You ${orderedPhases[0]}, ${orderedPhases[1]}, and ${orderedPhases[2]} across ${events.length} shell commands during the requested time range.`;
+  }
+
+  if (orderedPhases.length === 2) {
+    return `You ${orderedPhases[0]} and ${orderedPhases[1]} across ${events.length} shell commands during the requested time range.`;
+  }
+
+  return `You worked through ${events.length} shell commands while solving the problem during the requested time range.`;
+}
+
+function clusterShellProblemSolvingEvents(events: MemoryEvent[]): ShellProblemCluster[] {
+  const sortedEvents = [...events].sort((left, right) =>
+    left.timestamp.localeCompare(right.timestamp),
+  );
+  const clusters: ShellProblemCluster[] = [];
+  const maxClusterGapMs = 15 * 60 * 1000;
+  let currentCluster: MemoryEvent[] = [];
+
+  for (const event of sortedEvents) {
+    const previousEvent = currentCluster[currentCluster.length - 1];
+
+    if (!previousEvent) {
+      currentCluster.push(event);
+      continue;
+    }
+
+    const gapMs =
+      Date.parse(event.timestamp) - Date.parse(previousEvent.timestamp);
+
+    if (gapMs <= maxClusterGapMs) {
+      currentCluster.push(event);
+      continue;
+    }
+
+    clusters.push({
+      events: currentCluster,
+      startAt: currentCluster[0].timestamp,
+      endAt: currentCluster[currentCluster.length - 1].timestamp,
+    });
+    currentCluster = [event];
+  }
+
+  if (currentCluster.length > 0) {
+    clusters.push({
+      events: currentCluster,
+      startAt: currentCluster[0].timestamp,
+      endAt: currentCluster[currentCluster.length - 1].timestamp,
+    });
+  }
+
+  return clusters;
 }
 
 function summarizeGroupedMemoryEvents(
@@ -168,44 +302,13 @@ function summarizeGroupedMemoryEvents(
   }
 
   if (shellEvents) {
-    const shellCommands = events
-      .map((event) =>
-        typeof event.content.command === 'string'
-          ? event.content.command.toLowerCase()
-          : '',
-      )
-      .filter((command) => command.length > 0);
+    const shellCommands = events.map(getShellCommandText).filter((command) => command.length > 0);
     const onlyVerificationCommands =
-      shellCommands.length === events.length &&
-      shellCommands.every(
-        (command) =>
-          command.includes('test') ||
-          command.includes('vitest') ||
-          command.includes('pytest') ||
-          command.includes('typecheck') ||
-          command.includes('tsc --noemit'),
-      );
+      shellCommands.length === events.length && shellCommands.every(isVerificationShellCommand);
     const onlyInspectionCommands =
-      shellCommands.length === events.length &&
-      shellCommands.every(
-        (command) =>
-          command.includes(' status') ||
-          command.endsWith(' status') ||
-          command.includes(' diff') ||
-          command.endsWith(' diff') ||
-          command.includes(' log') ||
-          command.endsWith(' log'),
-      );
+      shellCommands.length === events.length && shellCommands.every(isInspectionShellCommand);
     const onlyApplyCommands =
-      shellCommands.length === events.length &&
-      shellCommands.every(
-        (command) =>
-          command.includes(' apply') ||
-          command.endsWith(' apply') ||
-          command.startsWith('patch ') ||
-          command.startsWith('sed -i') ||
-          command.startsWith("perl -pi"),
-      );
+      shellCommands.length === events.length && shellCommands.every(isApplyShellCommand);
 
     if (onlyVerificationCommands) {
       return `You verified changes with ${title} across ${events.length} shell commands during the requested time range.`;
@@ -266,6 +369,34 @@ export async function queryMemory(
     });
   });
   const groupedEvents = new Map<string, MemoryEvent[]>();
+
+  if (
+    filteredEvents.length > 0 &&
+    filteredEvents.every((event) => event.sourceType.includes('shell')) &&
+    isShellProblemSolvingQuery(input)
+  ) {
+    return {
+      timeRange: input.timeRange,
+      items: clusterShellProblemSolvingEvents(filteredEvents)
+        .map((cluster, index) => ({
+          id: `memory-result:shell-history-problem-solving-sequence-${index + 1}`,
+          theme: 'Shell problem-solving sequence',
+          title: 'Shell problem-solving sequence',
+          summary: createShellProblemNarrativeSummary(cluster.events),
+          timeRange: {
+            startAt: cluster.startAt,
+            endAt: cluster.endAt,
+          },
+          sourceRefs: cluster.events.slice(0, 3).map((event) => ({
+            id: event.id,
+            sourceType: event.sourceType,
+            sourceRef: event.sourceRef,
+            timestamp: event.timestamp,
+          })),
+        }))
+        .sort((left, right) => right.timeRange.endAt.localeCompare(left.timeRange.endAt)),
+    };
+  }
 
   for (const event of filteredEvents) {
     const title = getMemoryEventThemeTitle(event);

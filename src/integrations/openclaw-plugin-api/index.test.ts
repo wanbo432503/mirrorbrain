@@ -68,12 +68,12 @@ describe('openclaw plugin api', () => {
     });
   });
 
-  it('groups shell history events by command name and returns a shell-oriented summary', async () => {
+  it('groups shell history events by command name for generic shell recall queries', async () => {
     await expect(
       queryMemory(
         {
           baseUrl: 'http://127.0.0.1:1933',
-          query: 'How did I solve this in the shell before?',
+          query: 'What shell commands did I run yesterday?',
           timeRange: {
             startAt: '2026-03-20T00:00:00.000Z',
             endAt: '2026-03-20T23:59:59.999Z',
@@ -317,6 +317,109 @@ describe('openclaw plugin api', () => {
           theme: 'git',
           summary:
             'You applied changes with git across 2 shell commands during the requested time range.',
+        },
+      ],
+    });
+  });
+
+  it('returns a shell problem-solving narrative for solve-oriented queries', async () => {
+    await expect(
+      queryMemory(
+        {
+          baseUrl: 'http://127.0.0.1:1933',
+          query: 'How did I solve this in the shell before?',
+          timeRange: {
+            startAt: '2026-03-20T00:00:00.000Z',
+            endAt: '2026-03-20T23:59:59.999Z',
+          },
+          sourceTypes: ['shell'],
+        },
+        {
+          listMemoryEvents: async () => [
+            {
+              id: 'shell:shell-history:1',
+              sourceType: 'shell-history',
+              sourceRef: 'shell-history:1',
+              timestamp: '2026-03-20T09:00:00.000Z',
+              authorizationScopeId: 'scope-shell',
+              content: {
+                command: 'git status',
+                commandName: 'git',
+              },
+              captureMetadata: {
+                upstreamSource: 'shell-history',
+                checkpoint: '2026-03-20T09:00:00.000Z',
+              },
+            },
+            {
+              id: 'shell:shell-history:2',
+              sourceType: 'shell-history',
+              sourceRef: 'shell-history:2',
+              timestamp: '2026-03-20T09:03:00.000Z',
+              authorizationScopeId: 'scope-shell',
+              content: {
+                command: 'git apply fix.patch',
+                commandName: 'git',
+              },
+              captureMetadata: {
+                upstreamSource: 'shell-history',
+                checkpoint: '2026-03-20T09:03:00.000Z',
+              },
+            },
+            {
+              id: 'shell:shell-history:3',
+              sourceType: 'shell-history',
+              sourceRef: 'shell-history:3',
+              timestamp: '2026-03-20T09:07:00.000Z',
+              authorizationScopeId: 'scope-shell',
+              content: {
+                command: 'pnpm vitest run',
+                commandName: 'pnpm',
+              },
+              captureMetadata: {
+                upstreamSource: 'shell-history',
+                checkpoint: '2026-03-20T09:07:00.000Z',
+              },
+            },
+          ],
+        },
+      ),
+    ).resolves.toEqual({
+      timeRange: {
+        startAt: '2026-03-20T00:00:00.000Z',
+        endAt: '2026-03-20T23:59:59.999Z',
+      },
+      items: [
+        {
+          id: 'memory-result:shell-history-problem-solving-sequence-1',
+          theme: 'Shell problem-solving sequence',
+          title: 'Shell problem-solving sequence',
+          summary:
+            'You inspected state, applied changes, and verified the result across 3 shell commands during the requested time range.',
+          timeRange: {
+            startAt: '2026-03-20T09:00:00.000Z',
+            endAt: '2026-03-20T09:07:00.000Z',
+          },
+          sourceRefs: [
+            {
+              id: 'shell:shell-history:1',
+              sourceType: 'shell-history',
+              sourceRef: 'shell-history:1',
+              timestamp: '2026-03-20T09:00:00.000Z',
+            },
+            {
+              id: 'shell:shell-history:2',
+              sourceType: 'shell-history',
+              sourceRef: 'shell-history:2',
+              timestamp: '2026-03-20T09:03:00.000Z',
+            },
+            {
+              id: 'shell:shell-history:3',
+              sourceType: 'shell-history',
+              sourceRef: 'shell-history:3',
+              timestamp: '2026-03-20T09:07:00.000Z',
+            },
+          ],
         },
       ],
     });
