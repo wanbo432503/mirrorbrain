@@ -10,6 +10,7 @@ This component is responsible for:
 
 - reporting service health and effective runtime config
 - exposing a browser sync trigger endpoint
+- exposing a shell sync trigger endpoint
 - exposing raw read endpoints for memory, knowledge, and skill drafts
 - exposing a theme-level memory retrieval endpoint for `openclaw`-style queries
 - exposing write endpoints for daily candidate creation, candidate review suggestions, explicit review decisions, and artifact generation
@@ -31,6 +32,7 @@ Those concerns remain in the service, workflow, module, and integration layers.
 - `GET /openapi.json`
 - `GET /health`
 - `POST /sync/browser`
+- `POST /sync/shell`
 - `GET /memory`
 - `POST /memory/query`
 - `GET /knowledge`
@@ -47,10 +49,11 @@ Those concerns remain in the service, workflow, module, and integration layers.
 2. The server resolves host and port from explicit input or the runtime config.
 3. `Fastify` routes each request to the corresponding service method.
 4. OpenAPI metadata is registered alongside the routes and published through Swagger UI.
-5. `GET /memory` returns raw memory events for the standalone MVP and review-oriented flows.
-6. `POST /memory/query` forwards a query-shaped retrieval request and returns theme-level memory results.
-7. The server serializes the domain result as JSON and returns an HTTP status that matches the action.
-8. Daily candidate creation and AI suggestions stay separate so suggestion reads cannot silently write reviewed memory.
+5. `POST /sync/browser` and `POST /sync/shell` trigger explicit source sync operations through the service layer.
+6. `GET /memory` returns raw memory events for the standalone MVP and review-oriented flows.
+7. `POST /memory/query` forwards a query-shaped retrieval request and returns theme-level memory results.
+8. The server serializes the domain result as JSON and returns an HTTP status that matches the action.
+9. Daily candidate creation and AI suggestions stay separate so suggestion reads cannot silently write reviewed memory.
 
 ## Dependencies
 
@@ -70,6 +73,7 @@ Those concerns remain in the service, workflow, module, and integration layers.
 - daily candidate creation expects an explicit `reviewDate`
 - reviewed-memory writes require an explicit `reviewedAt` timestamp for auditability
 - `POST /memory/query` is still a thin Phase 2A contract and does not yet expose pagination or mature ranking controls
+- `POST /sync/shell` depends on an explicitly configured shell history path in the runtime service
 
 ## Test Strategy
 

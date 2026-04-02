@@ -65,6 +65,12 @@ export async function startMirrorBrainMvpFixture() {
         importedCount: 1,
         lastSyncedAt: '2026-03-20T09:00:00.000Z',
       }),
+      syncShellMemory: async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T09:05:00.000Z',
+      }),
       listMemoryEvents: async () => memoryEvents,
       queryMemory: async () => ({ items: [] }),
       listKnowledge: async () => (knowledgeArtifact === null ? [] : [knowledgeArtifact]),

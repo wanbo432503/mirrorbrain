@@ -104,6 +104,12 @@ describe('mirrorbrain http server', () => {
       importedCount: 1,
       lastSyncedAt: '2026-03-20T09:00:00.000Z',
     }));
+    const syncShellMemory = vi.fn(async () => ({
+      sourceKey: 'shell-history:/tmp/.zsh_history',
+      strategy: 'incremental' as const,
+      importedCount: 2,
+      lastSyncedAt: '2026-03-20T09:05:00.000Z',
+    }));
     const service = {
       service: {
         status: 'running' as const,
@@ -115,6 +121,7 @@ describe('mirrorbrain http server', () => {
       listKnowledge,
       listSkillDrafts,
       syncBrowserMemory,
+      syncShellMemory,
       createDailyCandidateMemories: vi.fn(),
       suggestCandidateReviews: vi.fn(),
       reviewCandidateMemory: vi.fn(),
@@ -142,6 +149,10 @@ describe('mirrorbrain http server', () => {
       method: 'POST',
     });
     const syncBody = await syncResponse.json();
+    const shellSyncResponse = await fetch(`${server.origin}/sync/shell`, {
+      method: 'POST',
+    });
+    const shellSyncBody = await shellSyncResponse.json();
 
     expect(healthResponse.status).toBe(200);
     expect(healthBody).toEqual({
@@ -200,6 +211,15 @@ describe('mirrorbrain http server', () => {
         lastSyncedAt: '2026-03-20T09:00:00.000Z',
       },
     });
+    expect(shellSyncResponse.status).toBe(202);
+    expect(shellSyncBody).toEqual({
+      sync: {
+        sourceKey: 'shell-history:/tmp/.zsh_history',
+        strategy: 'incremental',
+        importedCount: 2,
+        lastSyncedAt: '2026-03-20T09:05:00.000Z',
+      },
+    });
   });
 
   it('serves theme-level memory retrieval results through a query endpoint', async () => {
@@ -244,6 +264,12 @@ describe('mirrorbrain http server', () => {
         strategy: 'incremental' as const,
         importedCount: 0,
         lastSyncedAt: '2026-03-20T10:00:00.000Z',
+      })),
+      syncShellMemory: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:05:00.000Z',
       })),
       createDailyCandidateMemories: vi.fn(),
       suggestCandidateReviews: vi.fn(),
@@ -381,6 +407,12 @@ describe('mirrorbrain http server', () => {
         strategy: 'incremental' as const,
         importedCount: 0,
         lastSyncedAt: '2026-03-20T10:00:00.000Z',
+      })),
+      syncShellMemory: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:05:00.000Z',
       })),
       createDailyCandidateMemories,
       suggestCandidateReviews,
@@ -544,6 +576,12 @@ describe('mirrorbrain http server', () => {
         importedCount: 0,
         lastSyncedAt: '2026-03-20T10:00:00.000Z',
       })),
+      syncShellMemory: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:05:00.000Z',
+      })),
       createDailyCandidateMemories: vi.fn(),
       suggestCandidateReviews: vi.fn(),
       reviewCandidateMemory: vi.fn(),
@@ -588,6 +626,12 @@ describe('mirrorbrain http server', () => {
         strategy: 'incremental' as const,
         importedCount: 0,
         lastSyncedAt: '2026-03-20T10:00:00.000Z',
+      })),
+      syncShellMemory: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:05:00.000Z',
       })),
       createDailyCandidateMemories: vi.fn(),
       suggestCandidateReviews: vi.fn(),
@@ -643,6 +687,12 @@ describe('mirrorbrain http server', () => {
         strategy: 'incremental' as const,
         importedCount: 0,
         lastSyncedAt: '2026-03-20T10:00:00.000Z',
+      })),
+      syncShellMemory: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:05:00.000Z',
       })),
       createDailyCandidateMemories: vi.fn(),
       suggestCandidateReviews: vi.fn(),

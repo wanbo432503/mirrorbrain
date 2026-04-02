@@ -44,6 +44,7 @@ interface MirrorBrainWebAppApi {
   listKnowledge(): Promise<KnowledgeArtifact[]>;
   listSkills(): Promise<SkillArtifact[]>;
   syncBrowser(): Promise<BrowserSyncSummary>;
+  syncShell(): Promise<BrowserSyncSummary>;
   createDailyCandidates(
     reviewDate: string,
     reviewTimeZone?: string,
@@ -146,7 +147,7 @@ function renderMemoryPanel(state: MirrorBrainWebAppState): string {
     '<section class="mirrorbrain-panel">',
     '<h2>Memory</h2>',
     '<p>Imported browser events with page-level browsing to keep the list readable.</p>',
-    '<div class="mirrorbrain-actions"><button type="button" data-action="sync-browser">Sync Browser Memory</button></div>',
+    '<div class="mirrorbrain-actions"><button type="button" data-action="sync-browser">Sync Browser Memory</button><button type="button" data-action="sync-shell">Sync Shell Memory</button></div>',
     `<div class="mirrorbrain-pagination"><button type="button" data-action="memory-first-page"${
       currentPage === 1 ? ' disabled' : ''
     }>First</button><button type="button" data-action="memory-prev-page"${
@@ -458,6 +459,16 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
         message: `Browser sync completed: ${state.lastSyncSummary.importedCount} events imported.`,
       });
     },
+    async syncShellMemory() {
+      state.lastSyncSummary = await input.api.syncShell();
+      state.memoryEvents = await input.api.listMemory();
+      state.memoryPage = 1;
+      state.activeTab = 'memory';
+      setFeedback({
+        kind: 'success',
+        message: `Shell sync completed: ${state.lastSyncSummary.importedCount} events imported.`,
+      });
+    },
     async createDailyCandidates() {
       const reviewDate = getPreviousCalendarDate(now(), timeZone);
       const reviewWindowEvents = state.memoryEvents.filter((event) =>
@@ -586,6 +597,16 @@ export function createMirrorBrainBrowserApi(
     },
     async syncBrowser() {
       const response = await fetch(`${baseUrl}/sync/browser`, {
+        method: 'POST',
+      });
+      const body = (await response.json()) as {
+        sync: BrowserSyncSummary;
+      };
+
+      return body.sync;
+    },
+    async syncShell() {
+      const response = await fetch(`${baseUrl}/sync/shell`, {
         method: 'POST',
       });
       const body = (await response.json()) as {
@@ -732,6 +753,12 @@ export async function mountMirrorBrainWebApp(
       .querySelector('[data-action="sync-browser"]')
       ?.addEventListener('click', async () => {
         await app.syncBrowserMemory();
+        render();
+      });
+    root
+      .querySelector('[data-action="sync-shell"]')
+      ?.addEventListener('click', async () => {
+        await app.syncShellMemory();
         render();
       });
     root

@@ -23,6 +23,7 @@ interface MirrorBrainHttpService {
     config?: ReturnType<typeof getMirrorBrainConfig>;
   };
   syncBrowserMemory(): Promise<unknown>;
+  syncShellMemory(): Promise<unknown>;
   listMemoryEvents(): Promise<MemoryEvent[]>;
   queryMemory?(input: MemoryQueryInput): Promise<MemoryQueryResult>;
   listKnowledge(): Promise<KnowledgeArtifact[]>;
@@ -499,6 +500,24 @@ export async function startMirrorBrainHttpServer(
       reply.code(202);
       return {
         sync: await input.service.syncBrowserMemory(),
+      };
+    },
+  );
+
+  app.post(
+    '/sync/shell',
+    {
+      schema: {
+        summary: 'Trigger shell memory sync',
+        response: {
+          202: createArtifactResponseSchema('sync', browserSyncSummarySchema),
+        },
+      },
+    },
+    async (_request, reply) => {
+      reply.code(202);
+      return {
+        sync: await input.service.syncShellMemory(),
       };
     },
   );

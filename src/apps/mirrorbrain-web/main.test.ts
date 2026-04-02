@@ -283,6 +283,7 @@ describe('mirrorbrain web app', () => {
     });
 
     expect(memoryHtml).toContain('data-action="sync-browser"');
+    expect(memoryHtml).toContain('data-action="sync-shell"');
     expect(reviewHtml).toContain('data-action="create-candidate"');
     expect(reviewHtml).toContain('data-action="keep-candidate"');
     expect(reviewHtml).toContain('data-action="discard-candidate"');
@@ -350,6 +351,12 @@ describe('mirrorbrain web app', () => {
         importedCount: 2,
         lastSyncedAt: '2026-03-20T09:00:00.000Z',
       })),
+      syncShell: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
+        strategy: 'incremental' as const,
+        importedCount: 1,
+        lastSyncedAt: '2026-03-20T09:05:00.000Z',
+      })),
       createDailyCandidates: vi.fn(async () => candidates),
       suggestCandidateReviews: vi.fn(async () => [
         {
@@ -414,6 +421,61 @@ describe('mirrorbrain web app', () => {
     });
   });
 
+  it('syncs shell memory and refreshes the memory list', async () => {
+    const referenceNow = '2026-03-20T10:00:00.000Z';
+    const refreshedEvents: MemoryEvent[] = [
+      createMemoryEvent(
+        'shell:shell-history:1',
+        'git status',
+        '2026-03-20T09:05:00.000Z',
+      ),
+    ];
+    const api = {
+      getHealth: vi.fn(async () => ({
+        status: 'running' as const,
+      })),
+      listMemory: vi
+        .fn<() => Promise<MemoryEvent[]>>()
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce(refreshedEvents),
+      listKnowledge: vi.fn(async () => [] as KnowledgeArtifact[]),
+      listSkills: vi.fn(async () => [] as SkillArtifact[]),
+      syncBrowser: vi.fn(async () => ({
+        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T09:00:00.000Z',
+      })),
+      syncShell: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
+        strategy: 'incremental' as const,
+        importedCount: 1,
+        lastSyncedAt: '2026-03-20T09:05:00.000Z',
+      })),
+      createDailyCandidates: vi.fn(async () => [] as CandidateMemory[]),
+      suggestCandidateReviews: vi.fn(async () => [] as CandidateReviewSuggestion[]),
+      reviewCandidateMemory: vi.fn(),
+      generateKnowledge: vi.fn(),
+      generateSkill: vi.fn(),
+    };
+
+    const app = createMirrorBrainWebApp({
+      api,
+      now: () => referenceNow,
+    });
+
+    await app.load();
+    await app.syncShellMemory();
+
+    expect(api.syncShell).toHaveBeenCalledTimes(1);
+    expect(app.state.memoryEvents).toEqual(refreshedEvents);
+    expect(app.state.activeTab).toBe('memory');
+    expect(app.state.feedback).toEqual({
+      kind: 'success',
+      message: 'Shell sync completed: 1 events imported.',
+    });
+  });
+
   it('tracks active tab selection and memory pagination in the controller state', async () => {
     const memoryEvents: MemoryEvent[] = Array.from({ length: 25 }, (_, index) =>
       createMemoryEvent(
@@ -432,6 +494,7 @@ describe('mirrorbrain web app', () => {
         listKnowledge: vi.fn(async () => [] as KnowledgeArtifact[]),
         listSkills: vi.fn(async () => [] as SkillArtifact[]),
         syncBrowser: vi.fn(),
+        syncShell: vi.fn(),
         createDailyCandidates: vi.fn(),
         suggestCandidateReviews: vi.fn(),
         reviewCandidateMemory: vi.fn(),
@@ -464,6 +527,7 @@ describe('mirrorbrain web app', () => {
         listKnowledge: vi.fn(async () => [] as KnowledgeArtifact[]),
         listSkills: vi.fn(async () => [] as SkillArtifact[]),
         syncBrowser: vi.fn(),
+        syncShell: vi.fn(),
         createDailyCandidates: vi.fn(),
         suggestCandidateReviews: vi.fn(),
         reviewCandidateMemory: vi.fn(),
@@ -530,6 +594,7 @@ describe('mirrorbrain web app', () => {
         listKnowledge: vi.fn(async () => [] as KnowledgeArtifact[]),
         listSkills: vi.fn(async () => [] as SkillArtifact[]),
         syncBrowser: vi.fn(),
+        syncShell: vi.fn(),
         createDailyCandidates,
         suggestCandidateReviews: vi.fn(async () => []),
         reviewCandidateMemory: vi.fn(),

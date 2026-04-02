@@ -5,7 +5,7 @@ Minimal standalone UI shell for the Phase 1 MVP.
 Current responsibility:
 
 - render the Phase 1 review workflow state through tabbed sections
-- orchestrate sync, daily candidate generation, AI review suggestions, explicit review, and artifact generation through an injected API
+- orchestrate browser sync, shell sync, daily candidate generation, AI review suggestions, explicit review, and artifact generation through an injected API
 - keep imported memory readable through client-side paging in the standalone MVP UI
 
 Current limitation:
