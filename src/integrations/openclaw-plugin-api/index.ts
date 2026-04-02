@@ -39,6 +39,30 @@ interface OpenClawPluginApiDependencies {
   listSkillArtifacts?: (input: ListSkillDraftsInput) => Promise<SkillArtifact[]>;
 }
 
+function summarizeGroupedMemoryEvents(
+  events: MemoryEvent[],
+  title: string,
+  representativeEventCount: number,
+): string {
+  const browserEvents = events.every((event) => event.sourceType.includes('browser'));
+
+  if (browserEvents) {
+    if (representativeEventCount <= 1) {
+      if (events.length === 1) {
+        return `You viewed 1 page about ${title} during the requested time range.`;
+      }
+
+      return `You revisited 1 page about ${title} across ${events.length} browser visits during the requested time range.`;
+    }
+
+    return `You reviewed ${representativeEventCount} pages about ${title} across ${events.length} browser visits during the requested time range.`;
+  }
+
+  return `${events.length} matching memory event${
+    events.length === 1 ? '' : 's'
+  } about ${title} during the requested time range.`;
+}
+
 export async function queryMemory(
   input: QueryMemoryInput,
   dependencies: OpenClawPluginApiDependencies = {},
@@ -127,9 +151,11 @@ export async function queryMemory(
           theme: title,
           title,
           eventCount: grouped.length,
-          summary: `${grouped.length} matching memory event${
-            grouped.length === 1 ? '' : 's'
-          } about ${title} during the requested time range.`,
+          summary: summarizeGroupedMemoryEvents(
+            grouped,
+            title,
+            representativeEvents.length,
+          ),
           timeRange: {
             startAt: sortedEvents[0].timestamp,
             endAt: sortedEvents[sortedEvents.length - 1].timestamp,

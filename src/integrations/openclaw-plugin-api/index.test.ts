@@ -50,7 +50,7 @@ describe('openclaw plugin api', () => {
           theme: 'Example Tasks',
           title: 'Example Tasks',
           summary:
-            '1 matching memory event about Example Tasks during the requested time range.',
+            'You viewed 1 page about Example Tasks during the requested time range.',
           timeRange: {
             startAt: '2026-03-20T08:00:00.000Z',
             endAt: '2026-03-20T08:00:00.000Z',
@@ -136,13 +136,13 @@ describe('openclaw plugin api', () => {
           theme: 'Review workflow',
           title: 'Review workflow',
           summary:
-            '2 matching memory events about Review workflow during the requested time range.',
+            'You reviewed 2 pages about Review workflow across 2 browser visits during the requested time range.',
         },
         {
           theme: 'One-off page',
           title: 'One-off page',
           summary:
-            '1 matching memory event about One-off page during the requested time range.',
+            'You viewed 1 page about One-off page during the requested time range.',
         },
       ],
     });
@@ -215,7 +215,7 @@ describe('openclaw plugin api', () => {
         {
           theme: 'Review workflow',
           summary:
-            '3 matching memory events about Review workflow during the requested time range.',
+            'You reviewed 2 pages about Review workflow across 3 browser visits during the requested time range.',
           sourceRefs: [
             {
               id: 'browser:aw-event-1',
@@ -226,6 +226,79 @@ describe('openclaw plugin api', () => {
               sourceRef: 'aw-event-3',
             },
           ],
+        },
+      ],
+    });
+  });
+
+  it('uses a browser-oriented summary that reflects repeated visits and unique pages', async () => {
+    await expect(
+      queryMemory(
+        {
+          baseUrl: 'http://127.0.0.1:1933',
+          query: 'What did I work on yesterday?',
+          timeRange: {
+            startAt: '2026-03-20T00:00:00.000Z',
+            endAt: '2026-03-20T23:59:59.999Z',
+          },
+          sourceTypes: ['browser'],
+        },
+        {
+          listMemoryEvents: async () => [
+            {
+              id: 'browser:aw-event-1',
+              sourceType: 'activitywatch-browser',
+              sourceRef: 'aw-event-1',
+              timestamp: '2026-03-20T08:00:00.000Z',
+              authorizationScopeId: 'scope-browser',
+              content: {
+                url: 'https://example.com/review-workflow',
+                title: 'Review workflow',
+              },
+              captureMetadata: {
+                upstreamSource: 'activitywatch',
+                checkpoint: '2026-03-20T08:00:00.000Z',
+              },
+            },
+            {
+              id: 'browser:aw-event-2',
+              sourceType: 'activitywatch-browser',
+              sourceRef: 'aw-event-2',
+              timestamp: '2026-03-20T08:01:00.000Z',
+              authorizationScopeId: 'scope-browser',
+              content: {
+                url: 'https://example.com/review-workflow',
+                title: 'Review workflow',
+              },
+              captureMetadata: {
+                upstreamSource: 'activitywatch',
+                checkpoint: '2026-03-20T08:01:00.000Z',
+              },
+            },
+            {
+              id: 'browser:aw-event-3',
+              sourceType: 'activitywatch-browser',
+              sourceRef: 'aw-event-3',
+              timestamp: '2026-03-20T08:05:00.000Z',
+              authorizationScopeId: 'scope-browser',
+              content: {
+                url: 'https://example.com/review-workflow-notes',
+                title: 'Review workflow',
+              },
+              captureMetadata: {
+                upstreamSource: 'activitywatch',
+                checkpoint: '2026-03-20T08:05:00.000Z',
+              },
+            },
+          ],
+        },
+      ),
+    ).resolves.toMatchObject({
+      items: [
+        {
+          theme: 'Review workflow',
+          summary:
+            'You reviewed 2 pages about Review workflow across 3 browser visits during the requested time range.',
         },
       ],
     });
@@ -298,12 +371,12 @@ describe('openclaw plugin api', () => {
         {
           theme: 'Review workflow',
           summary:
-            '2 matching memory events about Review workflow during the requested time range.',
+            'You revisited 1 page about Review workflow across 2 browser visits during the requested time range.',
         },
         {
           theme: 'One-off page',
           summary:
-            '1 matching memory event about One-off page during the requested time range.',
+            'You viewed 1 page about One-off page during the requested time range.',
         },
       ],
     });
@@ -421,12 +494,12 @@ describe('openclaw plugin api', () => {
         {
           theme: 'Repeated theme',
           summary:
-            '4 matching memory events about Repeated theme during the requested time range.',
+            'You revisited 1 page about Repeated theme across 4 browser visits during the requested time range.',
         },
         {
           theme: 'Split theme',
           summary:
-            '2 matching memory events about Split theme during the requested time range.',
+            'You reviewed 2 pages about Split theme across 2 browser visits during the requested time range.',
         },
       ],
     });
