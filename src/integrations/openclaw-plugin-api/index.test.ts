@@ -717,6 +717,64 @@ describe('openclaw plugin api', () => {
     });
   });
 
+  it('uses a debugging-oriented browser summary for error and troubleshooting themes', async () => {
+    await expect(
+      queryMemory(
+        {
+          baseUrl: 'http://127.0.0.1:1933',
+          query: 'What did I work on yesterday?',
+          timeRange: {
+            startAt: '2026-03-20T00:00:00.000Z',
+            endAt: '2026-03-20T23:59:59.999Z',
+          },
+          sourceTypes: ['browser'],
+        },
+        {
+          listMemoryEvents: async () => [
+            {
+              id: 'browser:aw-event-1',
+              sourceType: 'activitywatch-browser',
+              sourceRef: 'aw-event-1',
+              timestamp: '2026-03-20T12:00:00.000Z',
+              authorizationScopeId: 'scope-browser',
+              content: {
+                url: 'https://google.com/search?q=vitest+mock+error',
+                title: 'Vitest mock error - Google Search',
+              },
+              captureMetadata: {
+                upstreamSource: 'activitywatch',
+                checkpoint: '2026-03-20T12:00:00.000Z',
+              },
+            },
+            {
+              id: 'browser:aw-event-2',
+              sourceType: 'activitywatch-browser',
+              sourceRef: 'aw-event-2',
+              timestamp: '2026-03-20T12:10:00.000Z',
+              authorizationScopeId: 'scope-browser',
+              content: {
+                url: 'https://docs.example.com/vitest/mock-error-troubleshooting',
+                title: 'Vitest mock error - Troubleshooting - Example Docs',
+              },
+              captureMetadata: {
+                upstreamSource: 'activitywatch',
+                checkpoint: '2026-03-20T12:10:00.000Z',
+              },
+            },
+          ],
+        },
+      ),
+    ).resolves.toMatchObject({
+      items: [
+        {
+          theme: 'Vitest mock error',
+          summary:
+            'You debugged Vitest mock error across 2 pages and 2 browser visits during the requested time range.',
+        },
+      ],
+    });
+  });
+
   it('prioritizes repeated browser themes ahead of one-off pages when shaping retrieval results', async () => {
     await expect(
       queryMemory(

@@ -34,15 +34,16 @@ This component is MirrorBrain's plugin-facing retrieval surface for `openclaw`. 
 10. When a grouped browser theme includes obvious search-result pages, the summary shifts toward a `researched ...` phrasing instead of a generic page-review phrasing.
 11. When a grouped browser theme is clearly made of documentation pages, the summary shifts toward a `read documentation about ...` phrasing.
 12. When a grouped browser theme includes obvious comparison pages, the summary shifts toward a `compared information about ...` phrasing.
-13. Shell-history events are grouped by `commandName` so retrieval can return command-oriented shell themes instead of one result per raw command.
-14. For shell-history themes, the summary currently reports command-count activity such as `ran 2 shell commands with git`.
-15. If a shell-history theme is made of obvious inspection commands such as `status`, `diff`, or `log`, the summary shifts toward an `inspected state ...` phrasing.
-16. If a shell-history theme is made of obvious test or typecheck commands, the summary shifts toward a `verified changes with ...` phrasing.
-17. If a shell-history theme is made of obvious patch-application or inline-edit commands, the summary shifts toward an `applied changes with ...` phrasing.
-18. For solve-oriented shell queries, the plugin API can collapse adjacent shell commands into a single `Shell problem-solving sequence` result instead of returning command-name groups.
-19. That shell problem-solving result currently uses a narrow time-gap heuristic and summarizes obvious inspect/apply/verify phases when they appear in one sequence.
-20. For knowledge and skill retrieval, the plugin API returns parsed `KnowledgeArtifact` and `SkillArtifact` objects.
-21. The example tool wrapper shows how an `openclaw`-side `query_memory` tool can forward retrieval input and then turn ordered results into a lightweight chat answer.
+13. When a grouped browser theme includes obvious error, fix, bug, issue, or troubleshooting markers, the summary shifts toward a `debugged ...` phrasing.
+14. Shell-history events are grouped by `commandName` so retrieval can return command-oriented shell themes instead of one result per raw command.
+15. For shell-history themes, the summary currently reports command-count activity such as `ran 2 shell commands with git`.
+16. If a shell-history theme is made of obvious inspection commands such as `status`, `diff`, or `log`, the summary shifts toward an `inspected state ...` phrasing.
+17. If a shell-history theme is made of obvious test or typecheck commands, the summary shifts toward a `verified changes with ...` phrasing.
+18. If a shell-history theme is made of obvious patch-application or inline-edit commands, the summary shifts toward an `applied changes with ...` phrasing.
+19. For solve-oriented shell queries, the plugin API can collapse adjacent shell commands into a single `Shell problem-solving sequence` result instead of returning command-name groups.
+20. That shell problem-solving result currently uses a narrow time-gap heuristic and summarizes obvious inspect/apply/verify phases when they appear in one sequence.
+21. For knowledge and skill retrieval, the plugin API returns parsed `KnowledgeArtifact` and `SkillArtifact` objects.
+22. The example tool wrapper shows how an `openclaw`-side `query_memory` tool can forward retrieval input and then turn ordered results into a lightweight chat answer.
 
 ## Test Strategy
 
@@ -62,6 +63,7 @@ This component is MirrorBrain's plugin-facing retrieval surface for `openclaw`. 
 - search-page detection is heuristic and currently only looks for obvious search-style URLs or query parameters
 - documentation-page detection is heuristic and currently only looks for obvious docs-style hosts or paths
 - comparison-page detection is heuristic and currently only looks for obvious compare/comparison/vs markers
+- debugging-page detection is heuristic and currently only looks for obvious error, bug, fix, issue, or troubleshooting markers
 - browser summaries are still heuristic and do not yet model richer task-level narratives
 - shell retrieval currently groups by command name only and does not yet infer higher-level issue or workflow narratives
 - shell phase hints are still heuristic and currently only recognize a small set of obvious inspection commands

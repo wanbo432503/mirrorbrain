@@ -218,6 +218,25 @@ function summarizeGroupedMemoryEvents(
   const shellEvents = events.every((event) => event.sourceType.includes('shell'));
 
   if (browserEvents) {
+    const includesDebuggingPage = events.some((event) => {
+      const titleText =
+        typeof event.content.title === 'string' ? event.content.title.toLowerCase() : '';
+      const urlText =
+        typeof event.content.url === 'string' ? event.content.url.toLowerCase() : '';
+
+      return (
+        titleText.includes('error') ||
+        titleText.includes('bug') ||
+        titleText.includes('fix') ||
+        titleText.includes('troubleshoot') ||
+        titleText.includes('issue') ||
+        urlText.includes('error') ||
+        urlText.includes('bug') ||
+        urlText.includes('fix') ||
+        urlText.includes('troubleshoot') ||
+        urlText.includes('issue')
+      );
+    });
     const includesComparisonPage = events.some((event) => {
       const titleText =
         typeof event.content.title === 'string' ? event.content.title.toLowerCase() : '';
@@ -284,6 +303,10 @@ function summarizeGroupedMemoryEvents(
       }
 
       return `You revisited 1 page about ${title} across ${events.length} browser visits during the requested time range.`;
+    }
+
+    if (includesDebuggingPage) {
+      return `You debugged ${title} across ${representativeEventCount} pages and ${events.length} browser visits during the requested time range.`;
     }
 
     if (includesSearchPage) {
