@@ -427,6 +427,95 @@ describe('openclaw plugin api', () => {
     });
   });
 
+  it('prefers shell problem-solving narratives for solve-oriented shell queries even without explicit source types', async () => {
+    await expect(
+      queryMemory(
+        {
+          baseUrl: 'http://127.0.0.1:1933',
+          query: 'How did I solve this in the shell before?',
+          timeRange: {
+            startAt: '2026-03-20T00:00:00.000Z',
+            endAt: '2026-03-20T23:59:59.999Z',
+          },
+        },
+        {
+          listMemoryEvents: async () => [
+            {
+              id: 'browser:aw-event-1',
+              sourceType: 'activitywatch-browser',
+              sourceRef: 'aw-event-1',
+              timestamp: '2026-03-20T08:00:00.000Z',
+              authorizationScopeId: 'scope-browser',
+              content: {
+                url: 'https://docs.example.com/review-workflow',
+                title: 'Review workflow - Example Docs',
+              },
+              captureMetadata: {
+                upstreamSource: 'activitywatch',
+                checkpoint: '2026-03-20T08:00:00.000Z',
+              },
+            },
+            {
+              id: 'shell:shell-history:1',
+              sourceType: 'shell-history',
+              sourceRef: 'shell-history:1',
+              timestamp: '2026-03-20T09:00:00.000Z',
+              authorizationScopeId: 'scope-shell',
+              content: {
+                command: 'git status',
+                commandName: 'git',
+              },
+              captureMetadata: {
+                upstreamSource: 'shell-history',
+                checkpoint: '2026-03-20T09:00:00.000Z',
+              },
+            },
+            {
+              id: 'shell:shell-history:2',
+              sourceType: 'shell-history',
+              sourceRef: 'shell-history:2',
+              timestamp: '2026-03-20T09:03:00.000Z',
+              authorizationScopeId: 'scope-shell',
+              content: {
+                command: 'git apply fix.patch',
+                commandName: 'git',
+              },
+              captureMetadata: {
+                upstreamSource: 'shell-history',
+                checkpoint: '2026-03-20T09:03:00.000Z',
+              },
+            },
+            {
+              id: 'shell:shell-history:3',
+              sourceType: 'shell-history',
+              sourceRef: 'shell-history:3',
+              timestamp: '2026-03-20T09:07:00.000Z',
+              authorizationScopeId: 'scope-shell',
+              content: {
+                command: 'pnpm vitest run',
+                commandName: 'pnpm',
+              },
+              captureMetadata: {
+                upstreamSource: 'shell-history',
+                checkpoint: '2026-03-20T09:07:00.000Z',
+              },
+            },
+          ],
+        },
+      ),
+    ).resolves.toMatchObject({
+      explanation:
+        'MirrorBrain grouped adjacent shell commands into a problem-solving sequence for this solve-oriented shell query.',
+      items: [
+        {
+          theme: 'Shell problem-solving sequence',
+          summary:
+            'You inspected state, applied changes, and verified the result across 3 shell commands during the requested time range.',
+        },
+      ],
+    });
+  });
+
   it('groups browser pages that differ only by common site-title suffixes into the same theme', async () => {
     await expect(
       queryMemory(

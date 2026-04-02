@@ -120,12 +120,16 @@ function isApplyShellCommand(command: string): boolean {
 
 function isShellProblemSolvingQuery(input: QueryMemoryInput): boolean {
   const query = input.query.toLowerCase();
-  const isShellOnlyQuery =
-    Array.isArray(input.sourceTypes) &&
-    input.sourceTypes.length === 1 &&
-    input.sourceTypes[0] === 'shell';
+  const allowsShellSource =
+    !input.sourceTypes ||
+    input.sourceTypes.length === 0 ||
+    input.sourceTypes.includes('shell');
+  const isShellSpecificQuery =
+    query.includes('shell') ||
+    query.includes('command line') ||
+    query.includes('命令行');
 
-  return isShellOnlyQuery && (query.includes('solve') || query.includes('解决'));
+  return allowsShellSource && isShellSpecificQuery && (query.includes('solve') || query.includes('解决'));
 }
 
 function createShellProblemNarrativeSummary(events: MemoryEvent[]): string {
@@ -393,16 +397,23 @@ export async function queryMemory(
   });
   const groupedEvents = new Map<string, MemoryEvent[]>();
 
-  if (
-    filteredEvents.length > 0 &&
-    filteredEvents.every((event) => event.sourceType.includes('shell')) &&
-    isShellProblemSolvingQuery(input)
-  ) {
+  if (isShellProblemSolvingQuery(input)) {
+    const shellEvents = filteredEvents.filter((event) =>
+      event.sourceType.includes('shell'),
+    );
+
+    if (shellEvents.length === 0) {
+      return {
+        timeRange: input.timeRange,
+        items: [],
+      };
+    }
+
     return {
       explanation:
         'MirrorBrain grouped adjacent shell commands into a problem-solving sequence for this solve-oriented shell query.',
       timeRange: input.timeRange,
-      items: clusterShellProblemSolvingEvents(filteredEvents)
+      items: clusterShellProblemSolvingEvents(shellEvents)
         .map((cluster, index) => ({
           id: `memory-result:shell-history-problem-solving-sequence-${index + 1}`,
           theme: 'Shell problem-solving sequence',

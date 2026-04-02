@@ -43,8 +43,9 @@ This component is MirrorBrain's plugin-facing retrieval surface for `openclaw`. 
 19. For solve-oriented shell queries, the plugin API can collapse adjacent shell commands into a single `Shell problem-solving sequence` result instead of returning command-name groups.
 20. That shell problem-solving result currently uses a narrow time-gap heuristic and summarizes obvious inspect/apply/verify phases when they appear in one sequence.
 21. Solve-oriented shell retrieval also returns a top-level explanation string so the caller can tell that shell commands were regrouped into a problem-solving sequence.
-22. For knowledge and skill retrieval, the plugin API returns parsed `KnowledgeArtifact` and `SkillArtifact` objects.
-23. The example tool wrapper shows how an `openclaw`-side `query_memory` tool can forward retrieval input and then turn ordered results into a lightweight chat answer.
+22. If the query clearly asks about shell problem solving, this regrouping can still happen even when the caller did not explicitly narrow `sourceTypes` to `shell`.
+23. For knowledge and skill retrieval, the plugin API returns parsed `KnowledgeArtifact` and `SkillArtifact` objects.
+24. The example tool wrapper shows how an `openclaw`-side `query_memory` tool can forward retrieval input and then turn ordered results into a lightweight chat answer.
 
 ## Test Strategy
 
@@ -71,5 +72,6 @@ This component is MirrorBrain's plugin-facing retrieval surface for `openclaw`. 
 - shell verification hints are still heuristic and currently only recognize obvious test and typecheck commands
 - shell apply-phase hints are still heuristic and currently only recognize a small set of obvious patch or inline-edit commands
 - solve-oriented shell narratives currently cluster only by time adjacency and do not yet use cwd, session, or richer issue context
+- solve-oriented shell detection is currently heuristic and only looks for obvious shell-specific wording in the query
 - there is no pagination yet
 - the example tool is intentionally minimal and does not model the full `openclaw` plugin host
