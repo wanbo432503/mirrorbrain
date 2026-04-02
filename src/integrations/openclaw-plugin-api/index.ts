@@ -99,6 +99,26 @@ export async function queryMemory(
             ? firstEvent.content.title
             : firstEvent.id;
 
+        const representativeEvents = sortedEvents.filter((event, index, events) => {
+          if (!event.sourceType.includes('browser')) {
+            return true;
+          }
+
+          const currentUrl =
+            typeof event.content.url === 'string' ? event.content.url : event.sourceRef;
+
+          return (
+            events.findIndex((candidate) => {
+              const candidateUrl =
+                typeof candidate.content.url === 'string'
+                  ? candidate.content.url
+                  : candidate.sourceRef;
+
+              return candidateUrl === currentUrl;
+            }) === index
+          );
+        });
+
         return {
           id: `memory-result:${key
             .toLowerCase()
@@ -113,7 +133,7 @@ export async function queryMemory(
             startAt: sortedEvents[0].timestamp,
             endAt: sortedEvents[sortedEvents.length - 1].timestamp,
           },
-          sourceRefs: sortedEvents.slice(0, 3).map((event) => ({
+          sourceRefs: representativeEvents.slice(0, 3).map((event) => ({
             id: event.id,
             sourceType: event.sourceType,
             sourceRef: event.sourceRef,

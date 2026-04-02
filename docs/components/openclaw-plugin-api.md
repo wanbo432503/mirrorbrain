@@ -27,8 +27,9 @@ This component is MirrorBrain's plugin-facing retrieval surface for `openclaw`. 
 3. The store adapter lists MirrorBrain artifact URIs and reads their content.
 4. For memory retrieval, the plugin API filters and groups raw `MemoryEvent` records into theme-level results with time ranges and representative source refs.
 5. When multiple grouped themes match, the plugin API currently prefers repeated themes ahead of one-off pages as a simple relevance heuristic.
-6. For knowledge and skill retrieval, the plugin API returns parsed `KnowledgeArtifact` and `SkillArtifact` objects.
-6. The example tool wrapper shows how an `openclaw`-side `query_memory` tool can forward retrieval input and then turn ordered results into a lightweight chat answer.
+6. For browser sources, repeated visits to the same URL are compressed into a single representative source ref inside each grouped theme.
+7. For knowledge and skill retrieval, the plugin API returns parsed `KnowledgeArtifact` and `SkillArtifact` objects.
+8. The example tool wrapper shows how an `openclaw`-side `query_memory` tool can forward retrieval input and then turn ordered results into a lightweight chat answer.
 
 ## Test Strategy
 
@@ -42,5 +43,6 @@ This component is MirrorBrain's plugin-facing retrieval surface for `openclaw`. 
 - retrieval currently reads from fixed Phase 1 URI namespaces
 - memory retrieval currently uses lightweight grouping rules rather than a mature ranking or theme-clustering system
 - repeated-theme prioritization is still a simple heuristic based on grouped event count and recency
+- browser source-ref compression currently deduplicates by exact URL only
 - there is no pagination yet
 - the example tool is intentionally minimal and does not model the full `openclaw` plugin host
