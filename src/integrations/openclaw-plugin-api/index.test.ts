@@ -271,7 +271,7 @@ describe('openclaw plugin api', () => {
       queryMemory(
         {
           baseUrl: 'http://127.0.0.1:1933',
-          query: 'How did I apply a fix in the shell before?',
+          query: 'What patch commands did I run in the shell before?',
           timeRange: {
             startAt: '2026-03-20T00:00:00.000Z',
             endAt: '2026-03-20T23:59:59.999Z',
@@ -435,6 +435,66 @@ describe('openclaw plugin api', () => {
         {
           baseUrl: 'http://127.0.0.1:1933',
           query: 'How did I solve this before?',
+          timeRange: {
+            startAt: '2026-03-20T00:00:00.000Z',
+            endAt: '2026-03-20T23:59:59.999Z',
+          },
+          sourceTypes: ['shell'],
+        },
+        {
+          listMemoryEvents: async () => [
+            {
+              id: 'shell:shell-history:1',
+              sourceType: 'shell-history',
+              sourceRef: 'shell-history:1',
+              timestamp: '2026-03-20T09:00:00.000Z',
+              authorizationScopeId: 'scope-shell',
+              content: {
+                command: 'git status',
+                commandName: 'git',
+              },
+              captureMetadata: {
+                upstreamSource: 'shell-history',
+                checkpoint: '2026-03-20T09:00:00.000Z',
+              },
+            },
+            {
+              id: 'shell:shell-history:2',
+              sourceType: 'shell-history',
+              sourceRef: 'shell-history:2',
+              timestamp: '2026-03-20T09:03:00.000Z',
+              authorizationScopeId: 'scope-shell',
+              content: {
+                command: 'git apply fix.patch',
+                commandName: 'git',
+              },
+              captureMetadata: {
+                upstreamSource: 'shell-history',
+                checkpoint: '2026-03-20T09:03:00.000Z',
+              },
+            },
+          ],
+        },
+      ),
+    ).resolves.toMatchObject({
+      explanation:
+        'MirrorBrain grouped adjacent shell commands into a problem-solving sequence for this solve-oriented shell query.',
+      items: [
+        {
+          theme: 'Shell problem-solving sequence',
+          summary:
+            'You inspected state and applied changes across 2 shell commands during the requested time range.',
+        },
+      ],
+    });
+  });
+
+  it('treats fix-oriented queries as shell narratives when the caller narrowed source types to shell', async () => {
+    await expect(
+      queryMemory(
+        {
+          baseUrl: 'http://127.0.0.1:1933',
+          query: 'How did I fix this before?',
           timeRange: {
             startAt: '2026-03-20T00:00:00.000Z',
             endAt: '2026-03-20T23:59:59.999Z',

@@ -152,10 +152,19 @@ function isShellProblemSolvingQuery(input: QueryMemoryInput): boolean {
     query.includes('shell') ||
     query.includes('command line') ||
     query.includes('命令行');
+  const isProblemSolvingIntent =
+    query.includes('solve') ||
+    query.includes('fix') ||
+    query.includes('debug') ||
+    query.includes('troubleshoot') ||
+    query.includes('解决') ||
+    query.includes('修') ||
+    query.includes('排查') ||
+    query.includes('调试');
 
   return (
     allowsShellSource &&
-    (query.includes('solve') || query.includes('解决')) &&
+    isProblemSolvingIntent &&
     (isShellSpecificQuery || isShellOnlyQuery)
   );
 }
