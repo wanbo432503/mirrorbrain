@@ -196,9 +196,23 @@ function summarizeGroupedMemoryEvents(
           command.includes(' log') ||
           command.endsWith(' log'),
       );
+    const onlyApplyCommands =
+      shellCommands.length === events.length &&
+      shellCommands.every(
+        (command) =>
+          command.includes(' apply') ||
+          command.endsWith(' apply') ||
+          command.startsWith('patch ') ||
+          command.startsWith('sed -i') ||
+          command.startsWith("perl -pi"),
+      );
 
     if (onlyVerificationCommands) {
       return `You verified changes with ${title} across ${events.length} shell commands during the requested time range.`;
+    }
+
+    if (onlyApplyCommands) {
+      return `You applied changes with ${title} across ${events.length} shell commands during the requested time range.`;
     }
 
     if (onlyInspectionCommands) {

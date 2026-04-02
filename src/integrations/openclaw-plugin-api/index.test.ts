@@ -264,6 +264,64 @@ describe('openclaw plugin api', () => {
     });
   });
 
+  it('uses an apply-oriented shell summary for patch application commands', async () => {
+    await expect(
+      queryMemory(
+        {
+          baseUrl: 'http://127.0.0.1:1933',
+          query: 'How did I apply a fix in the shell before?',
+          timeRange: {
+            startAt: '2026-03-20T00:00:00.000Z',
+            endAt: '2026-03-20T23:59:59.999Z',
+          },
+          sourceTypes: ['shell'],
+        },
+        {
+          listMemoryEvents: async () => [
+            {
+              id: 'shell:shell-history:1',
+              sourceType: 'shell-history',
+              sourceRef: 'shell-history:1',
+              timestamp: '2026-03-20T09:00:00.000Z',
+              authorizationScopeId: 'scope-shell',
+              content: {
+                command: 'git apply fix.patch',
+                commandName: 'git',
+              },
+              captureMetadata: {
+                upstreamSource: 'shell-history',
+                checkpoint: '2026-03-20T09:00:00.000Z',
+              },
+            },
+            {
+              id: 'shell:shell-history:2',
+              sourceType: 'shell-history',
+              sourceRef: 'shell-history:2',
+              timestamp: '2026-03-20T09:05:00.000Z',
+              authorizationScopeId: 'scope-shell',
+              content: {
+                command: 'git apply tests.patch',
+                commandName: 'git',
+              },
+              captureMetadata: {
+                upstreamSource: 'shell-history',
+                checkpoint: '2026-03-20T09:05:00.000Z',
+              },
+            },
+          ],
+        },
+      ),
+    ).resolves.toMatchObject({
+      items: [
+        {
+          theme: 'git',
+          summary:
+            'You applied changes with git across 2 shell commands during the requested time range.',
+        },
+      ],
+    });
+  });
+
   it('groups browser pages that differ only by common site-title suffixes into the same theme', async () => {
     await expect(
       queryMemory(
