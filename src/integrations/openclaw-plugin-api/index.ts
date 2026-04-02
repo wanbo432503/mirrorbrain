@@ -125,6 +125,19 @@ function isApplyShellCommand(command: string): boolean {
   );
 }
 
+function isSetupShellCommand(command: string): boolean {
+  return (
+    command.includes(' install') ||
+    command.endsWith(' install') ||
+    command.startsWith('npm install') ||
+    command.startsWith('pnpm install') ||
+    command.startsWith('yarn install') ||
+    command.startsWith('pip install') ||
+    command.startsWith('uv sync') ||
+    command.startsWith('bundle install')
+  );
+}
+
 function isShellProblemSolvingQuery(input: QueryMemoryInput): boolean {
   const query = input.query.toLowerCase();
   const allowsShellSource =
@@ -173,6 +186,11 @@ function createShellProblemNarrativeSummary(events: MemoryEvent[]): string {
       continue;
     }
 
+    if (isSetupShellCommand(command)) {
+      phases.add('prepared dependencies');
+      continue;
+    }
+
     if (isApplyShellCommand(command)) {
       phases.add('applied changes');
       continue;
@@ -185,6 +203,7 @@ function createShellProblemNarrativeSummary(events: MemoryEvent[]): string {
 
   const orderedPhases = [
     'inspected state',
+    'prepared dependencies',
     'applied changes',
     'verified the result',
   ].filter((phase) => phases.has(phase));
@@ -212,6 +231,10 @@ function getShellProblemPhaseCount(events: MemoryEvent[]): number {
 
     if (isInspectionShellCommand(command)) {
       phases.add('inspected state');
+    }
+
+    if (isSetupShellCommand(command)) {
+      phases.add('prepared dependencies');
     }
 
     if (isApplyShellCommand(command)) {

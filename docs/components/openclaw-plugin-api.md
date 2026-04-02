@@ -54,8 +54,9 @@ This component is MirrorBrain's plugin-facing retrieval surface for `openclaw`. 
 30. When multiple shell problem-solving sequences are present, retrieval now prefers more complete sequences with more distinct inspect/apply/verify phases before falling back to recency.
 31. Even single-phase shell problem-solving sequences now keep a phase-specific narrative such as `applied changes ...` instead of falling back immediately to a generic `worked through ...` summary.
 32. If the caller already narrowed `sourceTypes` to `shell`, solve-oriented queries do not need to repeat shell-specific wording to trigger shell problem-solving narratives.
-33. For knowledge and skill retrieval, the plugin API returns parsed `KnowledgeArtifact` and `SkillArtifact` objects.
-34. The example tool wrapper shows how an `openclaw`-side `query_memory` tool can forward retrieval input and then turn ordered results into a lightweight chat answer.
+33. Shell solve narratives can also recognize obvious install or environment-setup commands and describe them as a `prepared dependencies ...` phase.
+34. For knowledge and skill retrieval, the plugin API returns parsed `KnowledgeArtifact` and `SkillArtifact` objects.
+35. The example tool wrapper shows how an `openclaw`-side `query_memory` tool can forward retrieval input and then turn ordered results into a lightweight chat answer.
 
 ## Test Strategy
 
@@ -87,6 +88,7 @@ This component is MirrorBrain's plugin-facing retrieval surface for `openclaw`. 
 - shell phase hints are still heuristic and currently only recognize a small set of obvious inspection commands
 - shell verification hints are still heuristic and currently only recognize obvious test and typecheck commands
 - shell apply-phase hints are still heuristic and currently only recognize a small set of obvious patch or inline-edit commands
+- shell setup-phase hints are still heuristic and currently only recognize a small set of install or environment-setup commands
 - solve-oriented shell narratives currently cluster only by time adjacency and do not yet use cwd, session, or richer issue context
 - solve-oriented shell detection is currently heuristic and only looks for obvious shell-specific wording in the query
 - shell sequence completeness scoring is currently heuristic and only counts a small fixed set of inspect/apply/verify phases
