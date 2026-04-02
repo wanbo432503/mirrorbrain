@@ -26,7 +26,7 @@ This component is MirrorBrain's plugin-facing retrieval surface for `openclaw`. 
 2. The plugin API delegates raw storage reads to the OpenViking store adapter.
 3. The store adapter lists MirrorBrain artifact URIs and reads their content.
 4. For memory retrieval, the plugin API filters and groups raw `MemoryEvent` records into theme-level results with time ranges and representative source refs.
-5. When multiple grouped themes match, the plugin API currently prefers repeated themes ahead of one-off pages as a simple relevance heuristic.
+5. When multiple grouped themes match, the plugin API currently prefers repeated themes ahead of one-off pages based on grouped event count, with recency as a tie-breaker.
 6. For browser sources, repeated visits to the same URL are compressed into a single representative source ref inside each grouped theme.
 7. For knowledge and skill retrieval, the plugin API returns parsed `KnowledgeArtifact` and `SkillArtifact` objects.
 8. The example tool wrapper shows how an `openclaw`-side `query_memory` tool can forward retrieval input and then turn ordered results into a lightweight chat answer.

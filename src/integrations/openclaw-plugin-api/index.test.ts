@@ -231,6 +231,207 @@ describe('openclaw plugin api', () => {
     });
   });
 
+  it('keeps repeated browser themes ahead of one-off pages after url compression', async () => {
+    await expect(
+      queryMemory(
+        {
+          baseUrl: 'http://127.0.0.1:1933',
+          query: 'What did I work on yesterday?',
+          timeRange: {
+            startAt: '2026-03-20T00:00:00.000Z',
+            endAt: '2026-03-20T23:59:59.999Z',
+          },
+          sourceTypes: ['browser'],
+        },
+        {
+          listMemoryEvents: async () => [
+            {
+              id: 'browser:aw-event-1',
+              sourceType: 'activitywatch-browser',
+              sourceRef: 'aw-event-1',
+              timestamp: '2026-03-20T08:00:00.000Z',
+              authorizationScopeId: 'scope-browser',
+              content: {
+                url: 'https://example.com/one-off',
+                title: 'One-off page',
+              },
+              captureMetadata: {
+                upstreamSource: 'activitywatch',
+                checkpoint: '2026-03-20T08:00:00.000Z',
+              },
+            },
+            {
+              id: 'browser:aw-event-2',
+              sourceType: 'activitywatch-browser',
+              sourceRef: 'aw-event-2',
+              timestamp: '2026-03-20T09:00:00.000Z',
+              authorizationScopeId: 'scope-browser',
+              content: {
+                url: 'https://example.com/review-workflow',
+                title: 'Review workflow',
+              },
+              captureMetadata: {
+                upstreamSource: 'activitywatch',
+                checkpoint: '2026-03-20T09:00:00.000Z',
+              },
+            },
+            {
+              id: 'browser:aw-event-3',
+              sourceType: 'activitywatch-browser',
+              sourceRef: 'aw-event-3',
+              timestamp: '2026-03-20T09:01:00.000Z',
+              authorizationScopeId: 'scope-browser',
+              content: {
+                url: 'https://example.com/review-workflow',
+                title: 'Review workflow',
+              },
+              captureMetadata: {
+                upstreamSource: 'activitywatch',
+                checkpoint: '2026-03-20T09:01:00.000Z',
+              },
+            },
+          ],
+        },
+      ),
+    ).resolves.toMatchObject({
+      items: [
+        {
+          theme: 'Review workflow',
+          summary:
+            '2 matching memory events about Review workflow during the requested time range.',
+        },
+        {
+          theme: 'One-off page',
+          summary:
+            '1 matching memory event about One-off page during the requested time range.',
+        },
+      ],
+    });
+  });
+
+  it('prioritizes themes by grouped event count even when url compression leaves fewer source refs', async () => {
+    await expect(
+      queryMemory(
+        {
+          baseUrl: 'http://127.0.0.1:1933',
+          query: 'What did I work on yesterday?',
+          timeRange: {
+            startAt: '2026-03-20T00:00:00.000Z',
+            endAt: '2026-03-20T23:59:59.999Z',
+          },
+          sourceTypes: ['browser'],
+        },
+        {
+          listMemoryEvents: async () => [
+            {
+              id: 'browser:aw-event-1',
+              sourceType: 'activitywatch-browser',
+              sourceRef: 'aw-event-1',
+              timestamp: '2026-03-20T08:00:00.000Z',
+              authorizationScopeId: 'scope-browser',
+              content: {
+                url: 'https://example.com/repeated-theme',
+                title: 'Repeated theme',
+              },
+              captureMetadata: {
+                upstreamSource: 'activitywatch',
+                checkpoint: '2026-03-20T08:00:00.000Z',
+              },
+            },
+            {
+              id: 'browser:aw-event-2',
+              sourceType: 'activitywatch-browser',
+              sourceRef: 'aw-event-2',
+              timestamp: '2026-03-20T08:05:00.000Z',
+              authorizationScopeId: 'scope-browser',
+              content: {
+                url: 'https://example.com/repeated-theme',
+                title: 'Repeated theme',
+              },
+              captureMetadata: {
+                upstreamSource: 'activitywatch',
+                checkpoint: '2026-03-20T08:05:00.000Z',
+              },
+            },
+            {
+              id: 'browser:aw-event-3',
+              sourceType: 'activitywatch-browser',
+              sourceRef: 'aw-event-3',
+              timestamp: '2026-03-20T08:10:00.000Z',
+              authorizationScopeId: 'scope-browser',
+              content: {
+                url: 'https://example.com/repeated-theme',
+                title: 'Repeated theme',
+              },
+              captureMetadata: {
+                upstreamSource: 'activitywatch',
+                checkpoint: '2026-03-20T08:10:00.000Z',
+              },
+            },
+            {
+              id: 'browser:aw-event-4',
+              sourceType: 'activitywatch-browser',
+              sourceRef: 'aw-event-4',
+              timestamp: '2026-03-20T08:15:00.000Z',
+              authorizationScopeId: 'scope-browser',
+              content: {
+                url: 'https://example.com/repeated-theme',
+                title: 'Repeated theme',
+              },
+              captureMetadata: {
+                upstreamSource: 'activitywatch',
+                checkpoint: '2026-03-20T08:15:00.000Z',
+              },
+            },
+            {
+              id: 'browser:aw-event-5',
+              sourceType: 'activitywatch-browser',
+              sourceRef: 'aw-event-5',
+              timestamp: '2026-03-20T09:00:00.000Z',
+              authorizationScopeId: 'scope-browser',
+              content: {
+                url: 'https://example.com/split-theme-1',
+                title: 'Split theme',
+              },
+              captureMetadata: {
+                upstreamSource: 'activitywatch',
+                checkpoint: '2026-03-20T09:00:00.000Z',
+              },
+            },
+            {
+              id: 'browser:aw-event-6',
+              sourceType: 'activitywatch-browser',
+              sourceRef: 'aw-event-6',
+              timestamp: '2026-03-20T09:05:00.000Z',
+              authorizationScopeId: 'scope-browser',
+              content: {
+                url: 'https://example.com/split-theme-2',
+                title: 'Split theme',
+              },
+              captureMetadata: {
+                upstreamSource: 'activitywatch',
+                checkpoint: '2026-03-20T09:05:00.000Z',
+              },
+            },
+          ],
+        },
+      ),
+    ).resolves.toMatchObject({
+      items: [
+        {
+          theme: 'Repeated theme',
+          summary:
+            '4 matching memory events about Repeated theme during the requested time range.',
+        },
+        {
+          theme: 'Split theme',
+          summary:
+            '2 matching memory events about Split theme during the requested time range.',
+        },
+      ],
+    });
+  });
+
   it('returns knowledge drafts from OpenViking', async () => {
     await expect(
       listKnowledge(

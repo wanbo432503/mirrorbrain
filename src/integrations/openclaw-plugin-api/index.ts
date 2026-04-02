@@ -126,6 +126,7 @@ export async function queryMemory(
             .replace(/^-|-$/gu, '')}`,
           theme: title,
           title,
+          eventCount: grouped.length,
           summary: `${grouped.length} matching memory event${
             grouped.length === 1 ? '' : 's'
           } about ${title} during the requested time range.`,
@@ -142,14 +143,15 @@ export async function queryMemory(
         };
       })
       .sort((left, right) => {
-        const bySourceCount = right.sourceRefs.length - left.sourceRefs.length;
+        const byEventCount = right.eventCount - left.eventCount;
 
-        if (bySourceCount !== 0) {
-          return bySourceCount;
+        if (byEventCount !== 0) {
+          return byEventCount;
         }
 
         return right.timeRange.endAt.localeCompare(left.timeRange.endAt);
-      }),
+      })
+      .map(({ eventCount: _eventCount, ...item }) => item),
   };
 }
 
