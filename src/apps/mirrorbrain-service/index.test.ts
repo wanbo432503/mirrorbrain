@@ -140,12 +140,94 @@ describe('mirrorbrain service', () => {
     );
   });
 
+  it('wires shell history sync execution into the runtime service when a history path is configured', async () => {
+    const config = getMirrorBrainConfig();
+    const checkpointStore = {
+      readCheckpoint: vi.fn(async () => null),
+      writeCheckpoint: vi.fn(async () => undefined),
+    };
+    const createCheckpointStore = vi.fn(() => checkpointStore);
+    const writeMemoryEvent = vi.fn(async () => undefined);
+    const createMemoryEventWriter = vi.fn(() => ({
+      writeMemoryEvent,
+    }));
+    const runShellMemorySyncOnce = vi.fn(async () => ({
+      sourceKey: 'shell-history:/tmp/.zsh_history',
+      strategy: 'initial-backfill' as const,
+      importedCount: 0,
+      lastSyncedAt: '2026-03-20T10:00:00.000Z',
+    }));
+
+    const service = startMirrorBrainService(
+      {
+        config,
+        workspaceDir: '/tmp/mirrorbrain-workspace',
+        shellHistoryPath: '/tmp/.zsh_history',
+        shellScopeId: 'scope-shell',
+      },
+      {
+        createCheckpointStore,
+        createMemoryEventWriter,
+        runShellMemorySyncOnce,
+        startBrowserSyncPolling: vi.fn(() => ({
+          stop: vi.fn(),
+        })),
+        now: () => '2026-03-20T10:00:00.000Z',
+      },
+    );
+
+    await service.syncShellMemory();
+
+    expect(createCheckpointStore).toHaveBeenCalledWith({
+      workspaceDir: '/tmp/mirrorbrain-workspace',
+    });
+    expect(createMemoryEventWriter).toHaveBeenCalledWith({
+      config,
+      workspaceDir: '/tmp/mirrorbrain-workspace',
+    });
+    expect(runShellMemorySyncOnce).toHaveBeenCalledWith(
+      {
+        config,
+        now: '2026-03-20T10:00:00.000Z',
+        historyPath: '/tmp/.zsh_history',
+        scopeId: 'scope-shell',
+      },
+      {
+        checkpointStore,
+        writeMemoryEvent,
+      },
+    );
+  });
+
+  it('rejects shell sync when no shell history path is configured', async () => {
+    const service = startMirrorBrainService(
+      {
+        config: getMirrorBrainConfig(),
+      },
+      {
+        startBrowserSyncPolling: vi.fn(() => ({
+          stop: vi.fn(),
+        })),
+      },
+    );
+
+    await expect(service.syncShellMemory()).rejects.toThrowError(
+      'Shell history sync is not configured for this MirrorBrain runtime.',
+    );
+  });
+
   it('creates an openclaw-facing service contract that queries OpenViking through the configured base URL and forwards retrieval input', async () => {
     const service = {
       status: 'running' as const,
       config: getMirrorBrainConfig(),
       syncBrowserMemory: vi.fn(async () => ({
         sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:00:00.000Z',
+      })),
+      syncShellMemory: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
         strategy: 'incremental' as const,
         importedCount: 0,
         lastSyncedAt: '2026-03-20T10:00:00.000Z',
@@ -210,6 +292,12 @@ describe('mirrorbrain service', () => {
       config: getMirrorBrainConfig(),
       syncBrowserMemory: vi.fn(async () => ({
         sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:00:00.000Z',
+      })),
+      syncShellMemory: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
         strategy: 'incremental' as const,
         importedCount: 0,
         lastSyncedAt: '2026-03-20T10:00:00.000Z',
@@ -279,6 +367,12 @@ describe('mirrorbrain service', () => {
       config: getMirrorBrainConfig(),
       syncBrowserMemory: vi.fn(async () => ({
         sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:00:00.000Z',
+      })),
+      syncShellMemory: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
         strategy: 'incremental' as const,
         importedCount: 0,
         lastSyncedAt: '2026-03-20T10:00:00.000Z',
@@ -361,6 +455,12 @@ describe('mirrorbrain service', () => {
         importedCount: 0,
         lastSyncedAt: '2026-03-20T10:00:00.000Z',
       })),
+      syncShellMemory: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:00:00.000Z',
+      })),
       stop: vi.fn(),
     };
     const reviewMemory = vi.fn((_candidate, _input) =>
@@ -436,6 +536,12 @@ describe('mirrorbrain service', () => {
       config: getMirrorBrainConfig(),
       syncBrowserMemory: vi.fn(async () => ({
         sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:00:00.000Z',
+      })),
+      syncShellMemory: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
         strategy: 'incremental' as const,
         importedCount: 0,
         lastSyncedAt: '2026-03-20T10:00:00.000Z',
@@ -532,6 +638,12 @@ describe('mirrorbrain service', () => {
       config: getMirrorBrainConfig(),
       syncBrowserMemory: vi.fn(async () => ({
         sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:00:00.000Z',
+      })),
+      syncShellMemory: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
         strategy: 'incremental' as const,
         importedCount: 0,
         lastSyncedAt: '2026-03-20T10:00:00.000Z',

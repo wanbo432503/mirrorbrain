@@ -159,6 +159,12 @@ describe('start mirrorbrain dev runtime', () => {
         importedCount: 0,
         lastSyncedAt: '2026-03-20T10:00:00.000Z',
       })),
+      syncShellMemory: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:00:00.000Z',
+      })),
       stop: vi.fn(),
     };
     const httpServer = {
@@ -171,6 +177,7 @@ describe('start mirrorbrain dev runtime', () => {
     const createMirrorBrainService = vi.fn(() => ({
       service: runtimeService,
       syncBrowserMemory: runtimeService.syncBrowserMemory,
+      syncShellMemory: runtimeService.syncShellMemory,
       listMemoryEvents: vi.fn(async () => []),
       queryMemory: vi.fn(async () => ({ items: [] })),
       listKnowledge: vi.fn(async () => []),
@@ -268,6 +275,12 @@ describe('start mirrorbrain dev runtime', () => {
         importedCount: 0,
         lastSyncedAt: '2026-03-20T10:00:00.000Z',
       })),
+      syncShellMemory: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:00:00.000Z',
+      })),
       stop: vi.fn(),
     };
 
@@ -298,6 +311,7 @@ describe('start mirrorbrain dev runtime', () => {
         createMirrorBrainService: vi.fn(() => ({
           service: runtimeService,
           syncBrowserMemory: runtimeService.syncBrowserMemory,
+          syncShellMemory: runtimeService.syncShellMemory,
           listMemoryEvents: vi.fn(async () => []),
           queryMemory: vi.fn(async () => ({ items: [] })),
           listKnowledge: vi.fn(async () => []),

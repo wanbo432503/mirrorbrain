@@ -22,6 +22,10 @@ import {
   startBrowserMemorySyncPolling,
   type BrowserMemorySyncResult,
 } from '../../workflows/browser-memory-sync/index.js';
+import {
+  runShellMemorySyncOnce,
+  type ShellMemorySyncResult,
+} from '../../workflows/shell-memory-sync/index.js';
 import { runDailyReview } from '../../workflows/daily-review/index.js';
 import { buildSkillDraftFromReviewedMemories } from '../../workflows/skill-draft-builder/index.js';
 import {
@@ -44,6 +48,8 @@ interface StartMirrorBrainServiceInput {
   workspaceDir?: string;
   browserBucketId?: string;
   browserScopeId?: string;
+  shellHistoryPath?: string;
+  shellScopeId?: string;
 }
 
 interface StartMirrorBrainServiceDependencies {
@@ -56,6 +62,7 @@ interface StartMirrorBrainServiceDependencies {
     workspaceDir: string;
   }) => OpenVikingMemoryEventWriter;
   runBrowserMemorySyncOnce?: typeof runBrowserMemorySyncOnce;
+  runShellMemorySyncOnce?: typeof runShellMemorySyncOnce;
   now?: () => string;
 }
 
@@ -63,6 +70,7 @@ interface MirrorBrainRuntimeService {
   readonly status: 'running' | 'stopped';
   readonly config?: ReturnType<typeof getMirrorBrainConfig>;
   syncBrowserMemory(): Promise<BrowserMemorySyncResult>;
+  syncShellMemory(): Promise<ShellMemorySyncResult>;
   stop(): void;
 }
 
@@ -112,6 +120,8 @@ export function startMirrorBrainService(
   const workspaceDir = input.workspaceDir ?? process.cwd();
   const browserBucketId = input.browserBucketId ?? 'aw-watcher-web-chrome';
   const browserScopeId = input.browserScopeId ?? 'scope-browser';
+  const shellHistoryPath = input.shellHistoryPath;
+  const shellScopeId = input.shellScopeId ?? 'scope-shell';
   const startPolling =
     dependencies.startBrowserSyncPolling ?? startBrowserMemorySyncPolling;
   const checkpointStore = (
@@ -127,6 +137,8 @@ export function startMirrorBrainService(
   });
   const executeBrowserMemorySyncOnce =
     dependencies.runBrowserMemorySyncOnce ?? runBrowserMemorySyncOnce;
+  const executeShellMemorySyncOnce =
+    dependencies.runShellMemorySyncOnce ?? runShellMemorySyncOnce;
   const now = dependencies.now ?? (() => new Date().toISOString());
   const syncBrowserMemory = () =>
     executeBrowserMemorySyncOnce(
@@ -141,6 +153,26 @@ export function startMirrorBrainService(
         writeMemoryEvent: memoryEventWriter.writeMemoryEvent,
       },
     );
+  const syncShellMemory = () => {
+    if (shellHistoryPath === undefined) {
+      return Promise.reject(
+        new Error('Shell history sync is not configured for this MirrorBrain runtime.'),
+      );
+    }
+
+    return executeShellMemorySyncOnce(
+      {
+        config,
+        now: now(),
+        historyPath: shellHistoryPath,
+        scopeId: shellScopeId,
+      },
+      {
+        checkpointStore,
+        writeMemoryEvent: memoryEventWriter.writeMemoryEvent,
+      },
+    );
+  };
   const polling = startPolling(
     {
       config,
@@ -157,6 +189,7 @@ export function startMirrorBrainService(
     },
     config,
     syncBrowserMemory,
+    syncShellMemory,
     stop() {
       polling.stop();
       status = 'stopped';
@@ -197,6 +230,7 @@ export function createMirrorBrainService(
   return {
     service: input.service,
     syncBrowserMemory: () => input.service.syncBrowserMemory(),
+    syncShellMemory: () => input.service.syncShellMemory(),
     listMemoryEvents: () =>
       listMemoryEvents({
         baseUrl,
