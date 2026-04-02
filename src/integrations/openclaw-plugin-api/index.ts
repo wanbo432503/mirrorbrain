@@ -39,6 +39,23 @@ interface OpenClawPluginApiDependencies {
   listSkillArtifacts?: (input: ListSkillDraftsInput) => Promise<SkillArtifact[]>;
 }
 
+function normalizeBrowserThemeTitle(title: string): string {
+  const normalized = title.split(/ \| | - | — /u)[0]?.trim();
+
+  return normalized && normalized.length > 0 ? normalized : title;
+}
+
+function getMemoryEventThemeTitle(event: MemoryEvent): string {
+  const rawTitle =
+    typeof event.content.title === 'string' ? event.content.title : event.id;
+
+  if (event.sourceType.includes('browser')) {
+    return normalizeBrowserThemeTitle(rawTitle);
+  }
+
+  return rawTitle;
+}
+
 function summarizeGroupedMemoryEvents(
   events: MemoryEvent[],
   title: string,
@@ -102,8 +119,7 @@ export async function queryMemory(
   const groupedEvents = new Map<string, MemoryEvent[]>();
 
   for (const event of filteredEvents) {
-    const title =
-      typeof event.content.title === 'string' ? event.content.title : event.id;
+    const title = getMemoryEventThemeTitle(event);
     const key = `${event.sourceType}:${title}`;
     const current = groupedEvents.get(key) ?? [];
     current.push(event);
@@ -118,10 +134,7 @@ export async function queryMemory(
           left.timestamp.localeCompare(right.timestamp),
         );
         const [firstEvent] = sortedEvents;
-        const title =
-          typeof firstEvent.content.title === 'string'
-            ? firstEvent.content.title
-            : firstEvent.id;
+        const title = getMemoryEventThemeTitle(firstEvent);
 
         const representativeEvents = sortedEvents.filter((event, index, events) => {
           if (!event.sourceType.includes('browser')) {
