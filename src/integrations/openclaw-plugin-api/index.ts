@@ -54,6 +54,17 @@ function formatThemeTitleForDisplay(title: string): string {
 }
 
 function getMemoryEventThemeTitle(event: MemoryEvent): string {
+  if (event.sourceType.includes('shell')) {
+    const commandName =
+      typeof event.content.commandName === 'string'
+        ? event.content.commandName.trim()
+        : '';
+
+    if (commandName.length > 0) {
+      return commandName;
+    }
+  }
+
   const rawTitle =
     typeof event.content.title === 'string' ? event.content.title : event.id;
 
@@ -70,6 +81,7 @@ function summarizeGroupedMemoryEvents(
   representativeEventCount: number,
 ): string {
   const browserEvents = events.every((event) => event.sourceType.includes('browser'));
+  const shellEvents = events.every((event) => event.sourceType.includes('shell'));
 
   if (browserEvents) {
     const includesComparisonPage = events.some((event) => {
@@ -155,6 +167,12 @@ function summarizeGroupedMemoryEvents(
     return `You reviewed ${representativeEventCount} pages about ${title} across ${events.length} browser visits during the requested time range.`;
   }
 
+  if (shellEvents) {
+    return `You ran ${events.length} shell command${
+      events.length === 1 ? '' : 's'
+    } with ${title} during the requested time range.`;
+  }
+
   return `${events.length} matching memory event${
     events.length === 1 ? '' : 's'
   } about ${title} during the requested time range.`;
@@ -214,7 +232,10 @@ export async function queryMemory(
           left.timestamp.localeCompare(right.timestamp),
         );
         const [firstEvent] = sortedEvents;
-        const title = formatThemeTitleForDisplay(getMemoryEventThemeTitle(firstEvent));
+        const normalizedTitle = getMemoryEventThemeTitle(firstEvent);
+        const title = firstEvent.sourceType.includes('browser')
+          ? formatThemeTitleForDisplay(normalizedTitle)
+          : normalizedTitle;
 
         const representativeEvents = sortedEvents.filter((event, index, events) => {
           if (!event.sourceType.includes('browser')) {

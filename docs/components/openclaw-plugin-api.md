@@ -34,8 +34,10 @@ This component is MirrorBrain's plugin-facing retrieval surface for `openclaw`. 
 10. When a grouped browser theme includes obvious search-result pages, the summary shifts toward a `researched ...` phrasing instead of a generic page-review phrasing.
 11. When a grouped browser theme is clearly made of documentation pages, the summary shifts toward a `read documentation about ...` phrasing.
 12. When a grouped browser theme includes obvious comparison pages, the summary shifts toward a `compared information about ...` phrasing.
-13. For knowledge and skill retrieval, the plugin API returns parsed `KnowledgeArtifact` and `SkillArtifact` objects.
-14. The example tool wrapper shows how an `openclaw`-side `query_memory` tool can forward retrieval input and then turn ordered results into a lightweight chat answer.
+13. Shell-history events are grouped by `commandName` so retrieval can return command-oriented shell themes instead of one result per raw command.
+14. For shell-history themes, the summary currently reports command-count activity such as `ran 2 shell commands with git`.
+15. For knowledge and skill retrieval, the plugin API returns parsed `KnowledgeArtifact` and `SkillArtifact` objects.
+16. The example tool wrapper shows how an `openclaw`-side `query_memory` tool can forward retrieval input and then turn ordered results into a lightweight chat answer.
 
 ## Test Strategy
 
@@ -56,5 +58,6 @@ This component is MirrorBrain's plugin-facing retrieval surface for `openclaw`. 
 - documentation-page detection is heuristic and currently only looks for obvious docs-style hosts or paths
 - comparison-page detection is heuristic and currently only looks for obvious compare/comparison/vs markers
 - browser summaries are still heuristic and do not yet model richer task-level narratives
+- shell retrieval currently groups by command name only and does not yet infer higher-level issue or workflow narratives
 - there is no pagination yet
 - the example tool is intentionally minimal and does not model the full `openclaw` plugin host
