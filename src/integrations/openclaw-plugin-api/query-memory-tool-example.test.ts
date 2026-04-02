@@ -46,6 +46,8 @@ describe('query memory tool example', () => {
 
   it('composes a natural-language answer by summarizing results in order with lightweight source hints', () => {
     const result: MemoryQueryResult = {
+      explanation:
+        'MirrorBrain grouped adjacent shell commands into a problem-solving sequence for this solve-oriented shell query.',
       items: [
         {
           id: 'memory-result:activitywatch-browser-example-tasks',
@@ -88,6 +90,7 @@ describe('query memory tool example', () => {
 
     expect(composeQueryMemoryAnswer(result)).toBe(
       [
+        'MirrorBrain grouped adjacent shell commands into a problem-solving sequence for this solve-oriented shell query.',
         '1. Example Tasks: You mostly reviewed task documentation and follow-up notes. Source: activitywatch-browser at 2026-03-20T08:00:00.000Z.',
         '2. Fix review workflow: You also compared implementation details for the review flow. Source: activitywatch-browser at 2026-03-20T09:00:00.000Z.',
       ].join('\n\n'),

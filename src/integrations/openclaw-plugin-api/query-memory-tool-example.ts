@@ -25,13 +25,18 @@ export function createQueryMemoryToolExample(
 }
 
 export function composeQueryMemoryAnswer(result: MemoryQueryResult): string {
-  return result.items
+  const sections = result.items
     .map((item, index) => {
       const sourceHint = item.sourceRefs[0]
         ? ` Source: ${item.sourceRefs[0].sourceType} at ${item.sourceRefs[0].timestamp}.`
         : '';
 
       return `${index + 1}. ${item.title}: ${item.summary}${sourceHint}`;
-    })
-    .join('\n\n');
+    });
+
+  if (result.explanation) {
+    sections.unshift(result.explanation);
+  }
+
+  return sections.join('\n\n');
 }

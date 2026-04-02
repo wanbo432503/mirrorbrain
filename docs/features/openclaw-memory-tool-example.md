@@ -43,7 +43,8 @@ It is not for:
    - optional `source_types`
 4. The example tool forwards that request to MirrorBrain.
 5. MirrorBrain returns theme-level memory results.
-6. The example answer composer summarizes those results in order and attaches a short source hint to each paragraph.
+6. If MirrorBrain returns a top-level explanation, the example answer composer keeps it as a short preface.
+7. The example answer composer then summarizes those results in order and attaches a short source hint to each paragraph.
 
 ## Output Shape
 
@@ -53,6 +54,7 @@ The example expects each returned memory result to include at least:
 - `summary`
 - `timeRange`
 - a small list of representative `sourceRefs`
+- optionally a top-level `explanation`
 
 The example answer then emits one paragraph per result, preserving order.
 
@@ -65,4 +67,5 @@ The example answer then emits one paragraph per result, preserving order.
 
 - the example does not cover knowledge or skill usage
 - the answer composer currently assumes result order is already meaningful
+- the answer composer only prepends explanation text and does not yet rewrite it into host-native phrasing
 - source hints are intentionally lightweight and do not expand into full evidence blocks
