@@ -45,6 +45,13 @@ interface ShellProblemCluster {
   endAt: string;
 }
 
+type BrowserNarrativeKind =
+  | 'passive'
+  | 'documentation'
+  | 'research'
+  | 'comparison'
+  | 'debugging';
+
 function normalizeBrowserThemeTitle(title: string): string {
   const normalized = title.split(/ \| | - | — /u)[0]?.trim();
 
@@ -228,6 +235,122 @@ function clusterShellProblemSolvingEvents(events: MemoryEvent[]): ShellProblemCl
   return clusters;
 }
 
+function getBrowserNarrativeKind(events: MemoryEvent[]): BrowserNarrativeKind {
+  const includesDebuggingPage = events.some((event) => {
+    const titleText =
+      typeof event.content.title === 'string' ? event.content.title.toLowerCase() : '';
+    const urlText =
+      typeof event.content.url === 'string' ? event.content.url.toLowerCase() : '';
+
+    return (
+      titleText.includes('error') ||
+      titleText.includes('bug') ||
+      titleText.includes('fix') ||
+      titleText.includes('troubleshoot') ||
+      titleText.includes('issue') ||
+      urlText.includes('error') ||
+      urlText.includes('bug') ||
+      urlText.includes('fix') ||
+      urlText.includes('troubleshoot') ||
+      urlText.includes('issue')
+    );
+  });
+  const includesComparisonPage = events.some((event) => {
+    const titleText =
+      typeof event.content.title === 'string' ? event.content.title.toLowerCase() : '';
+    const urlText =
+      typeof event.content.url === 'string' ? event.content.url.toLowerCase() : '';
+
+    return (
+      titleText.includes('compare') ||
+      titleText.includes('comparison') ||
+      titleText.includes(' vs ') ||
+      urlText.includes('compare') ||
+      urlText.includes('comparison') ||
+      urlText.includes('-vs-') ||
+      urlText.includes('/vs/')
+    );
+  });
+  const isDocumentationPage = (event: MemoryEvent): boolean => {
+    if (typeof event.content.url !== 'string') {
+      return false;
+    }
+
+    try {
+      const url = new URL(event.content.url);
+      const host = url.hostname.toLowerCase();
+      const path = url.pathname.toLowerCase();
+
+      return (
+        host.startsWith('docs.') ||
+        host.includes('.docs.') ||
+        path.startsWith('/docs') ||
+        path.includes('/docs/')
+      );
+    } catch {
+      return false;
+    }
+  };
+  const onlyDocumentationPages = events.every(isDocumentationPage);
+  const includesDocumentationPage = events.some(isDocumentationPage);
+  const includesSearchPage = events.some((event) => {
+    if (typeof event.content.url !== 'string') {
+      return false;
+    }
+
+    try {
+      const url = new URL(event.content.url);
+      const host = url.hostname.toLowerCase();
+      const path = url.pathname.toLowerCase();
+
+      return (
+        url.searchParams.has('q') ||
+        host.includes('search') ||
+        path.includes('/search')
+      );
+    } catch {
+      return false;
+    }
+  });
+
+  if (includesDebuggingPage) {
+    return 'debugging';
+  }
+
+  if (includesSearchPage && includesDocumentationPage) {
+    return 'research';
+  }
+
+  if (includesSearchPage) {
+    return 'research';
+  }
+
+  if (includesComparisonPage) {
+    return 'comparison';
+  }
+
+  if (onlyDocumentationPages) {
+    return 'documentation';
+  }
+
+  return 'passive';
+}
+
+function getBrowserNarrativePriority(kind: BrowserNarrativeKind): number {
+  switch (kind) {
+    case 'debugging':
+      return 4;
+    case 'comparison':
+      return 3;
+    case 'research':
+      return 2;
+    case 'documentation':
+      return 1;
+    default:
+      return 0;
+  }
+}
+
 function summarizeGroupedMemoryEvents(
   events: MemoryEvent[],
   title: string,
@@ -237,43 +360,8 @@ function summarizeGroupedMemoryEvents(
   const shellEvents = events.every((event) => event.sourceType.includes('shell'));
 
   if (browserEvents) {
-    const includesDebuggingPage = events.some((event) => {
-      const titleText =
-        typeof event.content.title === 'string' ? event.content.title.toLowerCase() : '';
-      const urlText =
-        typeof event.content.url === 'string' ? event.content.url.toLowerCase() : '';
-
-      return (
-        titleText.includes('error') ||
-        titleText.includes('bug') ||
-        titleText.includes('fix') ||
-        titleText.includes('troubleshoot') ||
-        titleText.includes('issue') ||
-        urlText.includes('error') ||
-        urlText.includes('bug') ||
-        urlText.includes('fix') ||
-        urlText.includes('troubleshoot') ||
-        urlText.includes('issue')
-      );
-    });
-    const includesComparisonPage = events.some((event) => {
-      const titleText =
-        typeof event.content.title === 'string' ? event.content.title.toLowerCase() : '';
-      const urlText =
-        typeof event.content.url === 'string' ? event.content.url.toLowerCase() : '';
-
-      return (
-        titleText.includes('compare') ||
-        titleText.includes('comparison') ||
-        titleText.includes(' vs ') ||
-        urlText.includes('compare') ||
-        urlText.includes('comparison') ||
-        urlText.includes('-vs-') ||
-        urlText.includes('/vs/')
-      );
-    });
-
-    const isDocumentationPage = (event: MemoryEvent): boolean => {
+    const narrativeKind = getBrowserNarrativeKind(events);
+    const includesDocumentationPage = events.some((event) => {
       if (typeof event.content.url !== 'string') {
         return false;
       }
@@ -292,30 +380,31 @@ function summarizeGroupedMemoryEvents(
       } catch {
         return false;
       }
-    };
-
-    const onlyDocumentationPages = events.every(isDocumentationPage);
-    const includesDocumentationPage = events.some(isDocumentationPage);
-
-    const includesSearchPage = events.some((event) => {
-      if (typeof event.content.url !== 'string') {
-        return false;
-      }
-
-      try {
-        const url = new URL(event.content.url);
-        const host = url.hostname.toLowerCase();
-        const path = url.pathname.toLowerCase();
-
-        return (
-          url.searchParams.has('q') ||
-          host.includes('search') ||
-          path.includes('/search')
-        );
-      } catch {
-        return false;
-      }
     });
+
+    if (narrativeKind === 'debugging' && includesDocumentationPage) {
+      return `You debugged ${title} by reading documentation across ${representativeEventCount} pages and ${events.length} browser visits during the requested time range.`;
+    }
+
+    if (narrativeKind === 'debugging') {
+      return `You debugged ${title} across ${representativeEventCount} pages and ${events.length} browser visits during the requested time range.`;
+    }
+
+    if (narrativeKind === 'research' && includesDocumentationPage) {
+      return `You researched ${title} by reading documentation across ${representativeEventCount} pages and ${events.length} browser visits during the requested time range.`;
+    }
+
+    if (narrativeKind === 'research') {
+      return `You researched ${title} across ${representativeEventCount} pages and ${events.length} browser visits during the requested time range.`;
+    }
+
+    if (narrativeKind === 'comparison') {
+      return `You compared information about ${title} across ${representativeEventCount} pages and ${events.length} browser visits during the requested time range.`;
+    }
+
+    if (narrativeKind === 'documentation') {
+      return `You read documentation about ${title} across ${representativeEventCount} pages and ${events.length} browser visits during the requested time range.`;
+    }
 
     if (representativeEventCount <= 1) {
       if (events.length === 1) {
@@ -323,30 +412,6 @@ function summarizeGroupedMemoryEvents(
       }
 
       return `You revisited 1 page about ${title} across ${events.length} browser visits during the requested time range.`;
-    }
-
-    if (includesDebuggingPage && includesDocumentationPage) {
-      return `You debugged ${title} by reading documentation across ${representativeEventCount} pages and ${events.length} browser visits during the requested time range.`;
-    }
-
-    if (includesDebuggingPage) {
-      return `You debugged ${title} across ${representativeEventCount} pages and ${events.length} browser visits during the requested time range.`;
-    }
-
-    if (includesSearchPage && includesDocumentationPage) {
-      return `You researched ${title} by reading documentation across ${representativeEventCount} pages and ${events.length} browser visits during the requested time range.`;
-    }
-
-    if (includesSearchPage) {
-      return `You researched ${title} across ${representativeEventCount} pages and ${events.length} browser visits during the requested time range.`;
-    }
-
-    if (includesComparisonPage) {
-      return `You compared information about ${title} across ${representativeEventCount} pages and ${events.length} browser visits during the requested time range.`;
-    }
-
-    if (onlyDocumentationPages) {
-      return `You read documentation about ${title} across ${representativeEventCount} pages and ${events.length} browser visits during the requested time range.`;
     }
 
     return `You reviewed ${representativeEventCount} pages about ${title} across ${events.length} browser visits during the requested time range.`;
@@ -510,6 +575,9 @@ export async function queryMemory(
           theme: title,
           title,
           eventCount: grouped.length,
+          narrativePriority: firstEvent.sourceType.includes('browser')
+            ? getBrowserNarrativePriority(getBrowserNarrativeKind(grouped))
+            : 0,
           summary: summarizeGroupedMemoryEvents(
             grouped,
             title,
@@ -534,9 +602,15 @@ export async function queryMemory(
           return byEventCount;
         }
 
+        const byNarrativePriority = right.narrativePriority - left.narrativePriority;
+
+        if (byNarrativePriority !== 0) {
+          return byNarrativePriority;
+        }
+
         return right.timeRange.endAt.localeCompare(left.timeRange.endAt);
       })
-      .map(({ eventCount: _eventCount, ...item }) => item),
+      .map(({ eventCount: _eventCount, narrativePriority: _narrativePriority, ...item }) => item),
   };
 }
 

@@ -1064,6 +1064,69 @@ describe('openclaw plugin api', () => {
     });
   });
 
+  it('prioritizes action-oriented browser themes ahead of passive page views when counts are equal', async () => {
+    await expect(
+      queryMemory(
+        {
+          baseUrl: 'http://127.0.0.1:1933',
+          query: 'What did I work on yesterday?',
+          timeRange: {
+            startAt: '2026-03-20T00:00:00.000Z',
+            endAt: '2026-03-20T23:59:59.999Z',
+          },
+          sourceTypes: ['browser'],
+        },
+        {
+          listMemoryEvents: async () => [
+            {
+              id: 'browser:aw-event-1',
+              sourceType: 'activitywatch-browser',
+              sourceRef: 'aw-event-1',
+              timestamp: '2026-03-20T09:00:00.000Z',
+              authorizationScopeId: 'scope-browser',
+              content: {
+                url: 'https://example.com/passive-reading',
+                title: 'Passive reading',
+              },
+              captureMetadata: {
+                upstreamSource: 'activitywatch',
+                checkpoint: '2026-03-20T08:00:00.000Z',
+              },
+            },
+            {
+              id: 'browser:aw-event-2',
+              sourceType: 'activitywatch-browser',
+              sourceRef: 'aw-event-2',
+              timestamp: '2026-03-20T08:00:00.000Z',
+              authorizationScopeId: 'scope-browser',
+              content: {
+                url: 'https://example.com/vitest/mock-error',
+                title: 'Vitest mock error',
+              },
+              captureMetadata: {
+                upstreamSource: 'activitywatch',
+                checkpoint: '2026-03-20T09:00:00.000Z',
+              },
+            },
+          ],
+        },
+      ),
+    ).resolves.toMatchObject({
+      items: [
+        {
+          theme: 'Vitest mock error',
+          summary:
+            'You debugged Vitest mock error across 1 pages and 1 browser visits during the requested time range.',
+        },
+        {
+          theme: 'Passive reading',
+          summary:
+            'You viewed 1 page about Passive reading during the requested time range.',
+        },
+      ],
+    });
+  });
+
   it('compresses repeated visits to the same browser url into a single representative source ref', async () => {
     await expect(
       queryMemory(
