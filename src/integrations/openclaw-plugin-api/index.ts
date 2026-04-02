@@ -72,6 +72,29 @@ function summarizeGroupedMemoryEvents(
   const browserEvents = events.every((event) => event.sourceType.includes('browser'));
 
   if (browserEvents) {
+    const isDocumentationPage = (event: MemoryEvent): boolean => {
+      if (typeof event.content.url !== 'string') {
+        return false;
+      }
+
+      try {
+        const url = new URL(event.content.url);
+        const host = url.hostname.toLowerCase();
+        const path = url.pathname.toLowerCase();
+
+        return (
+          host.startsWith('docs.') ||
+          host.includes('.docs.') ||
+          path.startsWith('/docs') ||
+          path.includes('/docs/')
+        );
+      } catch {
+        return false;
+      }
+    };
+
+    const onlyDocumentationPages = events.every(isDocumentationPage);
+
     const includesSearchPage = events.some((event) => {
       if (typeof event.content.url !== 'string') {
         return false;
@@ -102,6 +125,10 @@ function summarizeGroupedMemoryEvents(
 
     if (includesSearchPage) {
       return `You researched ${title} across ${representativeEventCount} pages and ${events.length} browser visits during the requested time range.`;
+    }
+
+    if (onlyDocumentationPages) {
+      return `You read documentation about ${title} across ${representativeEventCount} pages and ${events.length} browser visits during the requested time range.`;
     }
 
     return `You reviewed ${representativeEventCount} pages about ${title} across ${events.length} browser visits during the requested time range.`;

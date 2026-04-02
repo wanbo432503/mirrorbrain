@@ -32,8 +32,9 @@ This component is MirrorBrain's plugin-facing retrieval surface for `openclaw`. 
 8. Browser theme grouping also strips common site-title suffixes such as ` - Site` or ` | Site` before grouping.
 9. Browser grouping keys are matched case-insensitively after title normalization so search-result titles and content-page titles can collapse into the same theme more often.
 10. When a grouped browser theme includes obvious search-result pages, the summary shifts toward a `researched ...` phrasing instead of a generic page-review phrasing.
-11. For knowledge and skill retrieval, the plugin API returns parsed `KnowledgeArtifact` and `SkillArtifact` objects.
-12. The example tool wrapper shows how an `openclaw`-side `query_memory` tool can forward retrieval input and then turn ordered results into a lightweight chat answer.
+11. When a grouped browser theme is clearly made of documentation pages, the summary shifts toward a `read documentation about ...` phrasing.
+12. For knowledge and skill retrieval, the plugin API returns parsed `KnowledgeArtifact` and `SkillArtifact` objects.
+13. The example tool wrapper shows how an `openclaw`-side `query_memory` tool can forward retrieval input and then turn ordered results into a lightweight chat answer.
 
 ## Test Strategy
 
@@ -51,6 +52,7 @@ This component is MirrorBrain's plugin-facing retrieval surface for `openclaw`. 
 - browser title normalization only strips a small set of common suffix separators
 - browser display-title cleanup is still minimal and only fixes obvious lowercase-only cases
 - search-page detection is heuristic and currently only looks for obvious search-style URLs or query parameters
+- documentation-page detection is heuristic and currently only looks for obvious docs-style hosts or paths
 - browser summaries are still heuristic and do not yet model richer task-level narratives
 - there is no pagination yet
 - the example tool is intentionally minimal and does not model the full `openclaw` plugin host

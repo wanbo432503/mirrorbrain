@@ -244,6 +244,64 @@ describe('openclaw plugin api', () => {
     });
   });
 
+  it('uses a documentation-oriented browser summary when the grouped theme is made of docs pages', async () => {
+    await expect(
+      queryMemory(
+        {
+          baseUrl: 'http://127.0.0.1:1933',
+          query: 'What did I work on yesterday?',
+          timeRange: {
+            startAt: '2026-03-20T00:00:00.000Z',
+            endAt: '2026-03-20T23:59:59.999Z',
+          },
+          sourceTypes: ['browser'],
+        },
+        {
+          listMemoryEvents: async () => [
+            {
+              id: 'browser:aw-event-1',
+              sourceType: 'activitywatch-browser',
+              sourceRef: 'aw-event-1',
+              timestamp: '2026-03-20T10:00:00.000Z',
+              authorizationScopeId: 'scope-browser',
+              content: {
+                url: 'https://docs.example.com/review-workflow/intro',
+                title: 'Review workflow - Example Docs',
+              },
+              captureMetadata: {
+                upstreamSource: 'activitywatch',
+                checkpoint: '2026-03-20T10:00:00.000Z',
+              },
+            },
+            {
+              id: 'browser:aw-event-2',
+              sourceType: 'activitywatch-browser',
+              sourceRef: 'aw-event-2',
+              timestamp: '2026-03-20T10:10:00.000Z',
+              authorizationScopeId: 'scope-browser',
+              content: {
+                url: 'https://docs.example.com/review-workflow/api',
+                title: 'Review workflow - API Reference - Example Docs',
+              },
+              captureMetadata: {
+                upstreamSource: 'activitywatch',
+                checkpoint: '2026-03-20T10:10:00.000Z',
+              },
+            },
+          ],
+        },
+      ),
+    ).resolves.toMatchObject({
+      items: [
+        {
+          theme: 'Review workflow',
+          summary:
+            'You read documentation about Review workflow across 2 pages and 2 browser visits during the requested time range.',
+        },
+      ],
+    });
+  });
+
   it('prioritizes repeated browser themes ahead of one-off pages when shaping retrieval results', async () => {
     await expect(
       queryMemory(
