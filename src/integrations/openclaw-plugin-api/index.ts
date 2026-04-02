@@ -280,6 +280,7 @@ function summarizeGroupedMemoryEvents(
     };
 
     const onlyDocumentationPages = events.every(isDocumentationPage);
+    const includesDocumentationPage = events.some(isDocumentationPage);
 
     const includesSearchPage = events.some((event) => {
       if (typeof event.content.url !== 'string') {
@@ -311,6 +312,10 @@ function summarizeGroupedMemoryEvents(
 
     if (includesDebuggingPage) {
       return `You debugged ${title} across ${representativeEventCount} pages and ${events.length} browser visits during the requested time range.`;
+    }
+
+    if (includesSearchPage && includesDocumentationPage) {
+      return `You researched ${title} by reading documentation across ${representativeEventCount} pages and ${events.length} browser visits during the requested time range.`;
     }
 
     if (includesSearchPage) {
