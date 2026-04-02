@@ -511,6 +511,7 @@ export async function queryMemory(
     });
   });
   const groupedEvents = new Map<string, MemoryEvent[]>();
+  const browserWorkRecallQuery = isBrowserWorkRecallQuery(input);
 
   if (isShellProblemSolvingQuery(input)) {
     const shellEvents = filteredEvents.filter((event) =>
@@ -611,6 +612,8 @@ export async function queryMemory(
           theme: title,
           title,
           eventCount: grouped.length,
+          sourcePriority:
+            browserWorkRecallQuery && firstEvent.sourceType.includes('browser') ? 1 : 0,
           narrativePriority: firstEvent.sourceType.includes('browser')
             ? getBrowserNarrativePriority(getBrowserNarrativeKind(grouped))
             : 0,
@@ -632,6 +635,12 @@ export async function queryMemory(
         };
       })
       .sort((left, right) => {
+        const bySourcePriority = right.sourcePriority - left.sourcePriority;
+
+        if (bySourcePriority !== 0) {
+          return bySourcePriority;
+        }
+
         const byEventCount = right.eventCount - left.eventCount;
 
         if (byEventCount !== 0) {
@@ -646,7 +655,14 @@ export async function queryMemory(
 
         return right.timeRange.endAt.localeCompare(left.timeRange.endAt);
       })
-      .map(({ eventCount: _eventCount, narrativePriority: _narrativePriority, ...item }) => item),
+      .map(
+        ({
+          eventCount: _eventCount,
+          narrativePriority: _narrativePriority,
+          sourcePriority: _sourcePriority,
+          ...item
+        }) => item,
+      ),
   };
 }
 

@@ -1283,6 +1283,81 @@ describe('openclaw plugin api', () => {
     });
   });
 
+  it('prioritizes browser work themes ahead of generic shell command groups for work-recall queries even when shell groups are larger', async () => {
+    await expect(
+      queryMemory(
+        {
+          baseUrl: 'http://127.0.0.1:1933',
+          query: 'What did I work on yesterday?',
+          timeRange: {
+            startAt: '2026-03-20T00:00:00.000Z',
+            endAt: '2026-03-20T23:59:59.999Z',
+          },
+        },
+        {
+          listMemoryEvents: async () => [
+            {
+              id: 'shell:shell-history:1',
+              sourceType: 'shell-history',
+              sourceRef: 'shell-history:1',
+              timestamp: '2026-03-20T09:00:00.000Z',
+              authorizationScopeId: 'scope-shell',
+              content: {
+                command: 'git status',
+                commandName: 'git',
+              },
+              captureMetadata: {
+                upstreamSource: 'shell-history',
+                checkpoint: '2026-03-20T09:00:00.000Z',
+              },
+            },
+            {
+              id: 'shell:shell-history:2',
+              sourceType: 'shell-history',
+              sourceRef: 'shell-history:2',
+              timestamp: '2026-03-20T09:05:00.000Z',
+              authorizationScopeId: 'scope-shell',
+              content: {
+                command: 'git diff',
+                commandName: 'git',
+              },
+              captureMetadata: {
+                upstreamSource: 'shell-history',
+                checkpoint: '2026-03-20T09:05:00.000Z',
+              },
+            },
+            {
+              id: 'browser:aw-event-1',
+              sourceType: 'activitywatch-browser',
+              sourceRef: 'aw-event-1',
+              timestamp: '2026-03-20T08:00:00.000Z',
+              authorizationScopeId: 'scope-browser',
+              content: {
+                url: 'https://docs.example.com/review-workflow',
+                title: 'Review workflow - Example Docs',
+              },
+              captureMetadata: {
+                upstreamSource: 'activitywatch',
+                checkpoint: '2026-03-20T08:00:00.000Z',
+              },
+            },
+          ],
+        },
+      ),
+    ).resolves.toMatchObject({
+      explanation:
+        'MirrorBrain grouped browser activity into theme-level work summaries for this work-recall query.',
+      items: [
+        {
+          theme: 'Review workflow',
+        },
+        {
+          theme: 'git',
+        },
+      ],
+    });
+  });
+
   it('compresses repeated visits to the same browser url into a single representative source ref', async () => {
     await expect(
       queryMemory(
