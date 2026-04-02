@@ -52,8 +52,9 @@ This component is MirrorBrain's plugin-facing retrieval surface for `openclaw`. 
 28. If the query clearly asks about shell problem solving, this regrouping can still happen even when the caller did not explicitly narrow `sourceTypes` to `shell`.
 29. When multiple shell problem-solving sequences are present, retrieval now prefers more complete sequences with more distinct inspect/apply/verify phases before falling back to recency.
 30. Even single-phase shell problem-solving sequences now keep a phase-specific narrative such as `applied changes ...` instead of falling back immediately to a generic `worked through ...` summary.
-31. For knowledge and skill retrieval, the plugin API returns parsed `KnowledgeArtifact` and `SkillArtifact` objects.
-32. The example tool wrapper shows how an `openclaw`-side `query_memory` tool can forward retrieval input and then turn ordered results into a lightweight chat answer.
+31. If the caller already narrowed `sourceTypes` to `shell`, solve-oriented queries do not need to repeat shell-specific wording to trigger shell problem-solving narratives.
+32. For knowledge and skill retrieval, the plugin API returns parsed `KnowledgeArtifact` and `SkillArtifact` objects.
+33. The example tool wrapper shows how an `openclaw`-side `query_memory` tool can forward retrieval input and then turn ordered results into a lightweight chat answer.
 
 ## Test Strategy
 

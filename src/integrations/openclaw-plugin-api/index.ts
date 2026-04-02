@@ -131,12 +131,20 @@ function isShellProblemSolvingQuery(input: QueryMemoryInput): boolean {
     !input.sourceTypes ||
     input.sourceTypes.length === 0 ||
     input.sourceTypes.includes('shell');
+  const isShellOnlyQuery =
+    Array.isArray(input.sourceTypes) &&
+    input.sourceTypes.length === 1 &&
+    input.sourceTypes[0] === 'shell';
   const isShellSpecificQuery =
     query.includes('shell') ||
     query.includes('command line') ||
     query.includes('命令行');
 
-  return allowsShellSource && isShellSpecificQuery && (query.includes('solve') || query.includes('解决'));
+  return (
+    allowsShellSource &&
+    (query.includes('solve') || query.includes('解决')) &&
+    (isShellSpecificQuery || isShellOnlyQuery)
+  );
 }
 
 function isBrowserWorkRecallQuery(input: QueryMemoryInput): boolean {
