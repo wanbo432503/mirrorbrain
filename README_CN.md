@@ -12,30 +12,34 @@ MirrorBrain / 镜像大脑 是 `openclaw` 的 memory 和 capability layer。
 
 ## 当前进展
 
-这个仓库目前还是一个非常窄的 Phase 1 MVP。
+这个仓库现在已经具备可运行的 Phase 2 实现基线。
 
 当前已经完成：
 
-- 只支持浏览器来源，通过 `ActivityWatch` + `aw-watcher-web`
+- 通过 `ActivityWatch` + `aw-watcher-web` 做浏览器来源同步
+- shell history 来源同步
 - 使用 `OpenViking` 做本地存储和检索
+- 面向 `openclaw` 的 `query_memory` 检索契约与演示文档
+- 面向 `昨天/今天我做了什么？` 这类问题的离线浏览器主题叙事
+- 面向 `我之前是怎么通过命令行解决这个问题的？` 这类问题的离线 shell 问题叙事
 - 提供本地 HTTP 服务和独立 Web UI
 - 支持浏览器同步、按天生成 candidate stream、AI review suggestion、reviewed memory、knowledge draft、skill draft 这条最小闭环
 
 当前还没做：
 
-- shell history 采集
 - 文档导入
 - `openclaw` 对话采集
 - 更完整的授权与来源管理界面
+- Phase 3 的 topic-oriented knowledge 质量提升
 - 面向生产环境的部署和运维能力
 
 ## Todo
 
-下一阶段最明确的事情是：
+Phase 2 之后最明确的事情是：
 
 - 增加更多经过授权的数据源，而不只限于浏览器
-- 提升 review 工作流和生成结果质量
-- 把 `openclaw` 的插件边界做得更稳定清晰
+- 提升 topic-oriented knowledge 的质量与合并工作流
+- 在不弱化确认边界的前提下增强 skill 执行能力
 - 把本地安装启动流程简化，不再强依赖现在这套较重的 ActivityWatch + OpenViking 组合
 
 更详细的规划文档在 [`docs/plans/`](./docs/plans/)。
@@ -126,6 +130,7 @@ cp .env.example .env
 MIRRORBRAIN_ACTIVITYWATCH_BASE_URL=http://127.0.0.1:5600
 MIRRORBRAIN_OPENVIKING_BASE_URL=http://127.0.0.1:1933
 MIRRORBRAIN_WORKSPACE_DIR=/path_to_workspace/mirrorbrain-workspace
+MIRRORBRAIN_SHELL_HISTORY_PATH=/path_to_workspace/.zsh_history
 ```
 
 ### 5. 启动 MirrorBrain

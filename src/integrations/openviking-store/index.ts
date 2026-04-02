@@ -5,6 +5,7 @@ import type {
   CandidateMemory,
   KnowledgeArtifact,
   MemoryEvent,
+  MemoryNarrative,
   ReviewedMemory,
   SkillArtifact,
 } from '../../shared/types/index.js';
@@ -45,6 +46,12 @@ interface IngestReviewedMemoryToOpenVikingInput {
 interface OpenVikingResourceIngestResult {
   sourcePath: string;
   rootUri: string;
+}
+
+interface IngestMemoryNarrativeToOpenVikingInput {
+  baseUrl: string;
+  workspaceDir: string;
+  artifact: MemoryNarrative;
 }
 
 interface IngestKnowledgeArtifactToOpenVikingInput {
@@ -96,6 +103,7 @@ const MIRRORBRAIN_CANDIDATE_MEMORIES_PREFIX =
 const MIRRORBRAIN_REVIEWED_MEMORIES_PREFIX =
   'mirrorbrain-reviewed-memories-';
 const MIRRORBRAIN_KNOWLEDGE_PREFIX = 'mirrorbrain-knowledge-';
+const MIRRORBRAIN_MEMORY_NARRATIVES_PREFIX = 'mirrorbrain-memory-narratives-';
 const MIRRORBRAIN_SKILL_DRAFTS_PREFIX = 'mirrorbrain-skill-drafts-';
 const BROWSER_DUPLICATE_WINDOW_MS = 2 * 60 * 1000;
 
@@ -106,6 +114,7 @@ function encodeMirrorBrainResourceName(value: string): string {
 export function createMirrorBrainResourceTarget(
   namespace:
     | 'memory-events'
+    | 'memory-narratives'
     | 'candidate-memories'
     | 'reviewed-memories'
     | 'knowledge'
@@ -213,6 +222,27 @@ export async function ingestCandidateMemoryToOpenViking(
         `${input.artifact.id}.json`,
       ),
       reason: 'MirrorBrain imported candidate memory',
+      payload: input.artifact,
+    },
+    fetchImpl,
+  );
+}
+
+export async function ingestMemoryNarrativeToOpenViking(
+  input: IngestMemoryNarrativeToOpenVikingInput,
+  fetchImpl: FetchLike = fetch,
+): Promise<OpenVikingResourceIngestResult> {
+  return ingestJsonResourceToOpenViking(
+    {
+      baseUrl: input.baseUrl,
+      workspaceDir: input.workspaceDir,
+      directoryName: 'memory-narratives',
+      fileName: `${input.artifact.id}.json`,
+      targetUri: createMirrorBrainResourceTarget(
+        'memory-narratives',
+        `${input.artifact.id}.json`,
+      ),
+      reason: 'MirrorBrain imported memory narrative',
       payload: input.artifact,
     },
     fetchImpl,
@@ -547,6 +577,18 @@ function isCandidateMemory(value: unknown): value is CandidateMemory {
   );
 }
 
+function isMemoryNarrative(value: unknown): value is MemoryNarrative {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'id' in value &&
+    'narrativeType' in value &&
+    'sourceCategory' in value &&
+    'sourceEventIds' in value &&
+    'queryHints' in value
+  );
+}
+
 function isReviewedMemory(value: unknown): value is ReviewedMemory {
   return (
     typeof value === 'object' &&
@@ -611,6 +653,13 @@ function isKnowledgeResourceEntry(entry: OpenVikingFsEntry): boolean {
   return (
     entry.name.startsWith(MIRRORBRAIN_KNOWLEDGE_PREFIX) ||
     entry.name.startsWith('knowledge-draft')
+  );
+}
+
+function isMemoryNarrativeResourceEntry(entry: OpenVikingFsEntry): boolean {
+  return (
+    entry.name.startsWith(MIRRORBRAIN_MEMORY_NARRATIVES_PREFIX) ||
+    entry.name.startsWith('memory-narrative')
   );
 }
 
@@ -761,6 +810,59 @@ export async function listMirrorBrainKnowledgeArtifactsFromOpenViking(
   ).then((items) =>
     deduplicateById(
       items.filter((item): item is KnowledgeArtifact => item !== null),
+    ),
+  );
+}
+
+export async function listMirrorBrainMemoryNarrativesFromOpenViking(
+  input: OpenVikingReadInput,
+  fetchImpl: FetchLike = fetch,
+): Promise<MemoryNarrative[]> {
+  const entries = await listOpenVikingEntries(
+    {
+      ...input,
+      uri: OPEN_VIKING_RESOURCES_URI,
+    },
+    fetchImpl,
+  );
+
+  return Promise.all(
+    filterMirrorBrainResourceEntries(
+      entries,
+      isMemoryNarrativeResourceEntry,
+    ).map(async (entry) => {
+      const contentUris = await resolveReadableContentUris(
+        {
+          ...input,
+          entry,
+        },
+        fetchImpl,
+      );
+
+      if (contentUris.length === 0) {
+        return null;
+      }
+
+      const content = (
+        await Promise.all(
+          contentUris.map((uri) =>
+            readOpenVikingContent(
+              {
+                ...input,
+                uri,
+              },
+              fetchImpl,
+            ),
+          ),
+        )
+      ).join('');
+      const parsed = JSON.parse(content) as unknown;
+
+      return isMemoryNarrative(parsed) ? parsed : null;
+    }),
+  ).then((items) =>
+    deduplicateById(
+      items.filter((item): item is MemoryNarrative => item !== null),
     ),
   );
 }

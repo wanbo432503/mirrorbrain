@@ -100,7 +100,7 @@ Long-term emphasis:
 
 ## Current Phase 2 Status Snapshot
 
-The repository has now implemented a meaningful subset of Phase 2 beyond the original planning baseline.
+The repository now implements the planned Phase 2 baseline in-repo, with explicit Phase 2A integration/demo support and Phase 2B retrieval-quality work for both browser and shell memory.
 
 Implemented so far:
 
@@ -126,12 +126,17 @@ Implemented so far:
   - solve-oriented shell problem-solving sequences
   - shell solve-query explanations
   - solve-oriented shell regrouping even when source types are not explicitly narrowed to shell
+- offline narrative generation and storage with:
+  - browser theme narrative artifacts for work-recall queries
+  - shell problem narrative artifacts with inferred workspace context from command sequences
+  - service-level narrative rebuild/publish after explicit browser or shell sync
+  - plugin-side preference for stored narratives before raw-event fallback
 
-Still not complete for Phase 2:
+Remaining non-goal / follow-up territory after Phase 2:
 
-- browser retrieval still relies on heuristic summaries rather than independent offline theme-narrative units
-- shell problem-solving narratives still depend mostly on time adjacency and command text rather than cwd, session, or richer issue context
-- Phase 2 docs should continue to be reconciled with the code as retrieval behavior evolves
+- browser narrative generation is still deterministic and heuristic rather than embedding- or LLM-first
+- shell workspace context is inferred from command sequences when explicit cwd/session metadata is unavailable
+- Phase 3 knowledge quality work remains the next major product focus
 
 ## Phase 2A: Plugin Integration And Minimum Demo
 

@@ -1,6 +1,7 @@
 import type {
   KnowledgeArtifact,
   MemoryEvent,
+  MemoryNarrative,
   MemoryQueryInput as MemoryRetrievalQueryInput,
   MemoryQueryResult,
   MemoryTimeRange,
@@ -9,6 +10,7 @@ import type {
 import {
   listMirrorBrainKnowledgeArtifactsFromOpenViking,
   listMirrorBrainMemoryEventsFromOpenViking,
+  listMirrorBrainMemoryNarrativesFromOpenViking,
   listMirrorBrainSkillArtifactsFromOpenViking,
 } from '../openviking-store/index.js';
 
@@ -33,6 +35,7 @@ interface ListSkillDraftsInput {
 
 interface OpenClawPluginApiDependencies {
   listMemoryEvents?: (input: ListMemoryEventsInput) => Promise<MemoryEvent[]>;
+  listMemoryNarratives?: (input: ListMemoryEventsInput) => Promise<MemoryNarrative[]>;
   listKnowledgeArtifacts?: (
     input: ListKnowledgeInput,
   ) => Promise<KnowledgeArtifact[]>;
@@ -519,15 +522,81 @@ function summarizeGroupedMemoryEvents(
   } about ${title} during the requested time range.`;
 }
 
+function toMemoryQueryItems(narratives: MemoryNarrative[]) {
+  return narratives.map((narrative) => ({
+    id: narrative.id,
+    theme: narrative.theme,
+    title: narrative.title,
+    summary: narrative.summary,
+    timeRange: narrative.timeRange,
+    sourceRefs: narrative.sourceRefs,
+  }));
+}
+
+function filterNarrativesByQuery(
+  narratives: MemoryNarrative[],
+  input: QueryMemoryInput,
+): MemoryNarrative[] {
+  const filteredNarratives = narratives.filter((narrative) => {
+    if (input.timeRange) {
+      const overlaps =
+        narrative.timeRange.endAt >= input.timeRange.startAt &&
+        narrative.timeRange.startAt <= input.timeRange.endAt;
+
+      if (!overlaps) {
+        return false;
+      }
+    }
+
+    if (!input.sourceTypes || input.sourceTypes.length === 0) {
+      return true;
+    }
+
+    return input.sourceTypes.includes(narrative.sourceCategory);
+  });
+
+  if (filteredNarratives.length === 0) {
+    return filteredNarratives;
+  }
+
+  const shellNarratives = filteredNarratives.filter(
+    (narrative) => narrative.narrativeType === 'shell-problem',
+  );
+
+  if (shellNarratives.length === 0) {
+    return filteredNarratives;
+  }
+
+  const query = input.query.toLowerCase();
+  const narrativesWithHintMatch = shellNarratives.filter((narrative) =>
+    narrative.queryHints.some((hint) => query.includes(hint.toLowerCase())),
+  );
+
+  return narrativesWithHintMatch.length > 0
+    ? narrativesWithHintMatch
+    : filteredNarratives;
+}
+
 export async function queryMemory(
   input: QueryMemoryInput,
   dependencies: OpenClawPluginApiDependencies = {},
 ): Promise<MemoryQueryResult> {
   const listMemoryEvents =
     dependencies.listMemoryEvents ?? listMirrorBrainMemoryEventsFromOpenViking;
-  const events = await listMemoryEvents({
-    baseUrl: input.baseUrl,
-  });
+  const listMemoryNarratives =
+    dependencies.listMemoryNarratives ?? listMirrorBrainMemoryNarrativesFromOpenViking;
+  const shouldLoadNarratives =
+    isBrowserWorkRecallQuery(input) || isShellProblemSolvingQuery(input);
+  const [events, storedNarratives] = await Promise.all([
+    listMemoryEvents({
+      baseUrl: input.baseUrl,
+    }),
+    shouldLoadNarratives
+      ? listMemoryNarratives({
+          baseUrl: input.baseUrl,
+        })
+      : Promise.resolve([]),
+  ]);
   const filteredEvents = events.filter((event) => {
     if (input.timeRange) {
       const inTimeRange =
@@ -563,7 +632,41 @@ export async function queryMemory(
       ? filteredEvents.filter((event) => event.sourceType.includes('browser'))
       : filteredEvents;
 
+  if (browserWorkRecallQuery) {
+    const browserNarratives = filterNarrativesByQuery(
+      storedNarratives.filter(
+        (narrative) => narrative.narrativeType === 'browser-theme',
+      ),
+      input,
+    );
+
+    if (browserNarratives.length > 0) {
+      return {
+        explanation:
+          'MirrorBrain returned offline browser theme narratives for this work-recall query.',
+        timeRange: input.timeRange,
+        items: toMemoryQueryItems(browserNarratives),
+      };
+    }
+  }
+
   if (isShellProblemSolvingQuery(input)) {
+    const shellNarratives = filterNarrativesByQuery(
+      storedNarratives.filter(
+        (narrative) => narrative.narrativeType === 'shell-problem',
+      ),
+      input,
+    );
+
+    if (shellNarratives.length > 0) {
+      return {
+        explanation:
+          'MirrorBrain returned offline shell problem narratives for this solve-oriented shell query.',
+        timeRange: input.timeRange,
+        items: toMemoryQueryItems(shellNarratives),
+      };
+    }
+
     const shellEvents = retrievalEvents.filter((event) =>
       event.sourceType.includes('shell'),
     );

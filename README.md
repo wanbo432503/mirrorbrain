@@ -12,31 +12,34 @@ It is meant to do three things:
 
 ## Current Status
 
-This repository is still a narrow Phase 1 MVP.
+This repository now carries a working Phase 2 implementation baseline.
 
 What works now:
 
-- browser source only, via `ActivityWatch` + `aw-watcher-web`
-- shell history source sync and minimal shell retrieval path
+- browser source sync via `ActivityWatch` + `aw-watcher-web`
+- shell history source sync
 - local storage and retrieval via `OpenViking`
+- `openclaw`-facing `query_memory` retrieval contract and demo docs
+- offline browser theme narratives for `昨天/今天我做了什么？` style recall
+- offline shell problem narratives for `我之前是怎么通过命令行解决这个问题的？` style recall
 - local HTTP service and standalone web UI
 - browser sync, daily candidate stream generation, AI review suggestions, reviewed memory, knowledge draft, and skill draft flow
 
 What is not implemented yet:
 
-- shell problem-narrative retrieval
 - document ingestion
 - `openclaw` conversation capture
 - broader source authorization UX
+- Phase 3 topic-knowledge quality work
 - production-grade deployment and operations
 
 ## Todo
 
-The next obvious Phase 1 tasks are:
+The next obvious tasks after Phase 2 are:
 
 - add more authorized source types beyond browser activity
-- improve review workflows and artifact quality
-- harden the host/plugin boundary for `openclaw`
+- improve topic-oriented knowledge quality and merge workflows
+- strengthen skill execution quality without weakening confirmation boundaries
 - make local setup simpler than the current ActivityWatch + OpenViking stack
 
 Planning docs live under [`docs/plans/`](./docs/plans/).
@@ -45,6 +48,8 @@ Phase 2A docs:
 
 - minimum `openclaw` tool example: [`docs/features/openclaw-memory-tool-example.md`](./docs/features/openclaw-memory-tool-example.md)
 - minimum manual demo guide: [`docs/features/openclaw-memory-demo-guide.md`](./docs/features/openclaw-memory-demo-guide.md)
+- browser theme narratives: [`docs/components/browser-theme-narratives.md`](./docs/components/browser-theme-narratives.md)
+- shell problem narratives: [`docs/components/shell-problem-narratives.md`](./docs/components/shell-problem-narratives.md)
 
 ## Quick Start
 

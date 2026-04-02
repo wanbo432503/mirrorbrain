@@ -63,6 +63,27 @@ export interface MemoryResultSourceRef {
   timestamp: string;
 }
 
+export interface MemoryNarrativeContext {
+  inferredCwd?: string;
+  workspaceLabel?: string;
+  sessionId?: string;
+}
+
+export interface MemoryNarrative {
+  id: string;
+  narrativeType: 'browser-theme' | 'shell-problem';
+  sourceCategory: 'browser' | 'shell';
+  theme: string;
+  title: string;
+  summary: string;
+  timeRange: MemoryTimeRange;
+  sourceEventIds: string[];
+  sourceRefs: MemoryResultSourceRef[];
+  queryHints: string[];
+  operationPhases?: string[];
+  context?: MemoryNarrativeContext;
+}
+
 export interface MemoryQueryItem {
   id: string;
   theme: string;

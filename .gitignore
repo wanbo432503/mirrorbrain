@@ -5,7 +5,9 @@ playwright-report
 .env
 .mirrorbrain-web
 mirrorbrain
+.mirrorbrain
 findings.md
 progress.md
 task_plan.md
 AGENTS.md
+.omx

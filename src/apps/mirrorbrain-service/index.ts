@@ -7,9 +7,11 @@ import {
   ingestCandidateMemoryToOpenViking,
   ingestMemoryEventToOpenViking,
   ingestKnowledgeArtifactToOpenViking,
+  ingestMemoryNarrativeToOpenViking,
   ingestReviewedMemoryToOpenViking,
   ingestSkillArtifactToOpenViking,
   listMirrorBrainMemoryEventsFromOpenViking,
+  listMirrorBrainMemoryNarrativesFromOpenViking,
   type OpenVikingMemoryEventWriter,
 } from '../../integrations/openviking-store/index.js';
 import {
@@ -26,6 +28,8 @@ import {
   runShellMemorySyncOnce,
   type ShellMemorySyncResult,
 } from '../../workflows/shell-memory-sync/index.js';
+import { generateBrowserThemeNarratives } from '../../workflows/browser-theme-narratives/index.js';
+import { generateShellProblemNarratives } from '../../workflows/shell-problem-narratives/index.js';
 import { runDailyReview } from '../../workflows/daily-review/index.js';
 import { buildSkillDraftFromReviewedMemories } from '../../workflows/skill-draft-builder/index.js';
 import {
@@ -38,6 +42,7 @@ import type {
   CandidateReviewSuggestion,
   KnowledgeArtifact,
   MemoryEvent,
+  MemoryNarrative,
   MemoryQueryInput,
   ReviewedMemory,
   SkillArtifact,
@@ -82,12 +87,16 @@ interface CreateMirrorBrainServiceInput {
 interface CreateMirrorBrainServiceDependencies {
   queryMemory?: typeof queryMemoryFromPluginApi;
   listMemoryEvents?: typeof listMirrorBrainMemoryEventsFromOpenViking;
+  listMemoryNarratives?: typeof listMirrorBrainMemoryNarrativesFromOpenViking;
   listKnowledge?: typeof listKnowledgeFromPluginApi;
   listSkillDrafts?: typeof listSkillDraftsFromPluginApi;
+  publishMemoryNarrative?: typeof ingestMemoryNarrativeToOpenViking;
   publishKnowledge?: typeof ingestKnowledgeArtifactToOpenViking;
   publishSkill?: typeof ingestSkillArtifactToOpenViking;
   publishCandidateMemory?: typeof ingestCandidateMemoryToOpenViking;
   publishReviewedMemory?: typeof ingestReviewedMemoryToOpenViking;
+  buildBrowserThemeNarratives?: typeof generateBrowserThemeNarratives;
+  buildShellProblemNarratives?: typeof generateShellProblemNarratives;
   generateKnowledge?: typeof runDailyReview;
   generateSkillDraft?: typeof buildSkillDraftFromReviewedMemories;
   reviewMemory?: typeof reviewCandidateMemory;
@@ -207,9 +216,13 @@ export function createMirrorBrainService(
   const queryMemory = dependencies.queryMemory ?? queryMemoryFromPluginApi;
   const listMemoryEvents =
     dependencies.listMemoryEvents ?? listMirrorBrainMemoryEventsFromOpenViking;
+  const listMemoryNarratives =
+    dependencies.listMemoryNarratives ?? listMirrorBrainMemoryNarrativesFromOpenViking;
   const listKnowledge = dependencies.listKnowledge ?? listKnowledgeFromPluginApi;
   const listSkillDrafts =
     dependencies.listSkillDrafts ?? listSkillDraftsFromPluginApi;
+  const publishMemoryNarrative =
+    dependencies.publishMemoryNarrative ?? ingestMemoryNarrativeToOpenViking;
   const publishKnowledge =
     dependencies.publishKnowledge ?? ingestKnowledgeArtifactToOpenViking;
   const publishSkill =
@@ -218,6 +231,10 @@ export function createMirrorBrainService(
     dependencies.publishCandidateMemory ?? ingestCandidateMemoryToOpenViking;
   const publishReviewedMemory =
     dependencies.publishReviewedMemory ?? ingestReviewedMemoryToOpenViking;
+  const buildBrowserThemeNarratives =
+    dependencies.buildBrowserThemeNarratives ?? generateBrowserThemeNarratives;
+  const buildShellProblemNarratives =
+    dependencies.buildShellProblemNarratives ?? generateShellProblemNarratives;
   const generateKnowledge = dependencies.generateKnowledge ?? runDailyReview;
   const generateSkillDraft =
     dependencies.generateSkillDraft ?? buildSkillDraftFromReviewedMemories;
@@ -226,13 +243,49 @@ export function createMirrorBrainService(
     dependencies.createCandidateMemories ?? createCandidateMemories;
   const analyzeCandidateReviews =
     dependencies.suggestCandidateReviews ?? suggestCandidateReviews;
+  const publishMemoryNarratives = async (artifacts: MemoryNarrative[]) => {
+    await Promise.all(
+      artifacts.map((artifact) =>
+        publishMemoryNarrative({
+          baseUrl,
+          workspaceDir,
+          artifact,
+        }),
+      ),
+    );
+  };
+  const refreshMemoryNarratives = async (
+    buildNarratives: (input: { memoryEvents: MemoryEvent[] }) => MemoryNarrative[],
+  ) => {
+    const memoryEvents = await listMemoryEvents({ baseUrl });
+
+    await publishMemoryNarratives(
+      buildNarratives({
+        memoryEvents,
+      }),
+    );
+  };
 
   return {
     service: input.service,
-    syncBrowserMemory: () => input.service.syncBrowserMemory(),
-    syncShellMemory: () => input.service.syncShellMemory(),
+    syncBrowserMemory: async () => {
+      const sync = await input.service.syncBrowserMemory();
+      await refreshMemoryNarratives(buildBrowserThemeNarratives);
+
+      return sync;
+    },
+    syncShellMemory: async () => {
+      const sync = await input.service.syncShellMemory();
+      await refreshMemoryNarratives(buildShellProblemNarratives);
+
+      return sync;
+    },
     listMemoryEvents: () =>
       listMemoryEvents({
+        baseUrl,
+      }),
+    listMemoryNarratives: () =>
+      listMemoryNarratives({
         baseUrl,
       }),
     queryMemory: (input: MemoryQueryInput) =>
