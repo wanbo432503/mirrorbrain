@@ -98,6 +98,41 @@ Long-term emphasis:
 
 ## Phase Structure
 
+## Current Phase 2 Status Snapshot
+
+The repository has now implemented a meaningful subset of Phase 2 beyond the original planning baseline.
+
+Implemented so far:
+
+- Phase 2A startup CLI for local developer bring-up
+- Phase 2A minimum `query_memory` contract and HTTP exposure
+- Phase 2A `openclaw` memory tool example and minimum demo guide
+- browser-memory retrieval shaping with:
+  - repeated-theme prioritization
+  - URL-level representative-source compression
+  - normalized browser theme titles
+  - more human-readable browser summaries
+  - heuristic action summaries for research, documentation, comparison, and debugging
+  - combined narrative summaries such as research-plus-documentation and debugging-plus-documentation
+  - browser work-recall explanations for `What did I work on yesterday?` style queries
+  - browser ranking that prefers action-oriented themes ahead of passive themes when counts are equal
+- shell-memory ingestion and sync with:
+  - shell-history source support
+  - service-level shell sync
+  - HTTP and web-UI shell sync entrypoints
+- shell retrieval shaping with:
+  - command-name grouping for generic shell recall
+  - inspection, verification, and apply-phase summaries
+  - solve-oriented shell problem-solving sequences
+  - shell solve-query explanations
+  - solve-oriented shell regrouping even when source types are not explicitly narrowed to shell
+
+Still not complete for Phase 2:
+
+- browser retrieval still relies on heuristic summaries rather than independent offline theme-narrative units
+- shell problem-solving narratives still depend mostly on time adjacency and command text rather than cwd, session, or richer issue context
+- Phase 2 docs should continue to be reconciled with the code as retrieval behavior evolves
+
 ## Phase 2A: Plugin Integration And Minimum Demo
 
 ### Goal
