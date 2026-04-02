@@ -310,6 +310,10 @@ function summarizeGroupedMemoryEvents(
       return `You revisited 1 page about ${title} across ${events.length} browser visits during the requested time range.`;
     }
 
+    if (includesDebuggingPage && includesDocumentationPage) {
+      return `You debugged ${title} by reading documentation across ${representativeEventCount} pages and ${events.length} browser visits during the requested time range.`;
+    }
+
     if (includesDebuggingPage) {
       return `You debugged ${title} across ${representativeEventCount} pages and ${events.length} browser visits during the requested time range.`;
     }
