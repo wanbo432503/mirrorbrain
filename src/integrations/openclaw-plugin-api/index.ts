@@ -168,6 +168,29 @@ function summarizeGroupedMemoryEvents(
   }
 
   if (shellEvents) {
+    const shellCommands = events
+      .map((event) =>
+        typeof event.content.command === 'string'
+          ? event.content.command.toLowerCase()
+          : '',
+      )
+      .filter((command) => command.length > 0);
+    const onlyInspectionCommands =
+      shellCommands.length === events.length &&
+      shellCommands.every(
+        (command) =>
+          command.includes(' status') ||
+          command.endsWith(' status') ||
+          command.includes(' diff') ||
+          command.endsWith(' diff') ||
+          command.includes(' log') ||
+          command.endsWith(' log'),
+      );
+
+    if (onlyInspectionCommands) {
+      return `You inspected state with ${title} across ${events.length} shell commands during the requested time range.`;
+    }
+
     return `You ran ${events.length} shell command${
       events.length === 1 ? '' : 's'
     } with ${title} during the requested time range.`;

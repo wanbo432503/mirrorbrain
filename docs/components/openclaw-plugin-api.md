@@ -36,8 +36,9 @@ This component is MirrorBrain's plugin-facing retrieval surface for `openclaw`. 
 12. When a grouped browser theme includes obvious comparison pages, the summary shifts toward a `compared information about ...` phrasing.
 13. Shell-history events are grouped by `commandName` so retrieval can return command-oriented shell themes instead of one result per raw command.
 14. For shell-history themes, the summary currently reports command-count activity such as `ran 2 shell commands with git`.
-15. For knowledge and skill retrieval, the plugin API returns parsed `KnowledgeArtifact` and `SkillArtifact` objects.
-16. The example tool wrapper shows how an `openclaw`-side `query_memory` tool can forward retrieval input and then turn ordered results into a lightweight chat answer.
+15. If a shell-history theme is made of obvious inspection commands such as `status`, `diff`, or `log`, the summary shifts toward an `inspected state ...` phrasing.
+16. For knowledge and skill retrieval, the plugin API returns parsed `KnowledgeArtifact` and `SkillArtifact` objects.
+17. The example tool wrapper shows how an `openclaw`-side `query_memory` tool can forward retrieval input and then turn ordered results into a lightweight chat answer.
 
 ## Test Strategy
 
@@ -59,5 +60,6 @@ This component is MirrorBrain's plugin-facing retrieval surface for `openclaw`. 
 - comparison-page detection is heuristic and currently only looks for obvious compare/comparison/vs markers
 - browser summaries are still heuristic and do not yet model richer task-level narratives
 - shell retrieval currently groups by command name only and does not yet infer higher-level issue or workflow narratives
+- shell phase hints are still heuristic and currently only recognize a small set of obvious inspection commands
 - there is no pagination yet
 - the example tool is intentionally minimal and does not model the full `openclaw` plugin host
