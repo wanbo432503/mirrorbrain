@@ -132,6 +132,21 @@ function isShellProblemSolvingQuery(input: QueryMemoryInput): boolean {
   return allowsShellSource && isShellSpecificQuery && (query.includes('solve') || query.includes('解决'));
 }
 
+function isBrowserWorkRecallQuery(input: QueryMemoryInput): boolean {
+  const query = input.query.toLowerCase();
+  const allowsBrowserSource =
+    !input.sourceTypes ||
+    input.sourceTypes.length === 0 ||
+    input.sourceTypes.includes('browser');
+
+  return (
+    allowsBrowserSource &&
+    ((query.includes('work on') && (query.includes('yesterday') || query.includes('today'))) ||
+      (query.includes('昨天') && query.includes('做')) ||
+      (query.includes('今天') && query.includes('做')))
+  );
+}
+
 function createShellProblemNarrativeSummary(events: MemoryEvent[]): string {
   const phases = new Set<string>();
 
@@ -452,6 +467,9 @@ export async function queryMemory(
   }
 
   return {
+    explanation: isBrowserWorkRecallQuery(input)
+      ? 'MirrorBrain grouped browser activity into theme-level work summaries for this work-recall query.'
+      : undefined,
     timeRange: input.timeRange,
     items: Array.from(groupedEvents.entries())
       .map(([key, grouped]) => {
