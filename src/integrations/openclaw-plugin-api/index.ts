@@ -189,6 +189,10 @@ function createShellProblemNarrativeSummary(events: MemoryEvent[]): string {
     return `You ${orderedPhases[0]} and ${orderedPhases[1]} across ${events.length} shell commands during the requested time range.`;
   }
 
+  if (orderedPhases.length === 1) {
+    return `You ${orderedPhases[0]} across ${events.length} shell commands while solving the problem during the requested time range.`;
+  }
+
   return `You worked through ${events.length} shell commands while solving the problem during the requested time range.`;
 }
 

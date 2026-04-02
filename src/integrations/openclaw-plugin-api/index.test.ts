@@ -632,6 +632,48 @@ describe('openclaw plugin api', () => {
     });
   });
 
+  it('keeps a phase-specific shell narrative even when a solve-oriented sequence has only one phase', async () => {
+    await expect(
+      queryMemory(
+        {
+          baseUrl: 'http://127.0.0.1:1933',
+          query: 'How did I solve this in the shell before?',
+          timeRange: {
+            startAt: '2026-03-20T00:00:00.000Z',
+            endAt: '2026-03-20T23:59:59.999Z',
+          },
+          sourceTypes: ['shell'],
+        },
+        {
+          listMemoryEvents: async () => [
+            {
+              id: 'shell:shell-history:1',
+              sourceType: 'shell-history',
+              sourceRef: 'shell-history:1',
+              timestamp: '2026-03-20T10:00:00.000Z',
+              authorizationScopeId: 'scope-shell',
+              content: {
+                command: 'git apply quick-fix.patch',
+                commandName: 'git',
+              },
+              captureMetadata: {
+                upstreamSource: 'shell-history',
+                checkpoint: '2026-03-20T10:00:00.000Z',
+              },
+            },
+          ],
+        },
+      ),
+    ).resolves.toMatchObject({
+      items: [
+        {
+          summary:
+            'You applied changes across 1 shell commands while solving the problem during the requested time range.',
+        },
+      ],
+    });
+  });
+
   it('groups browser pages that differ only by common site-title suffixes into the same theme', async () => {
     await expect(
       queryMemory(
