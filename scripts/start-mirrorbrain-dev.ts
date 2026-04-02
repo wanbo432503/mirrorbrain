@@ -516,6 +516,7 @@ export async function startMirrorBrainDevRuntime(
   const runtimeService = startRuntimeService({
     config,
     workspaceDir,
+    shellHistoryPath: mergedEnv.MIRRORBRAIN_SHELL_HISTORY_PATH,
   });
   const api = createRuntimeApi({
     service: runtimeService,

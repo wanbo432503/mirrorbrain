@@ -264,6 +264,80 @@ describe('start mirrorbrain dev runtime', () => {
     expect(result.origin).toBe('http://127.0.0.1:3007');
   });
 
+  it('passes the configured shell history path into the runtime service startup input', async () => {
+    const config = getMirrorBrainDevConfig({
+      MIRRORBRAIN_WORKSPACE_DIR: '/tmp/mirrorbrain-workspace',
+      MIRRORBRAIN_SHELL_HISTORY_PATH: '/tmp/.zsh_history',
+    });
+    const runtimeService = {
+      status: 'running' as const,
+      config: config.config,
+      syncBrowserMemory: vi.fn(async () => ({
+        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:00:00.000Z',
+      })),
+      syncShellMemory: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:00:00.000Z',
+      })),
+      stop: vi.fn(),
+    };
+
+    const startMirrorBrainService = vi.fn(() => runtimeService);
+
+    await startMirrorBrainDevRuntime(
+      {
+        env: {
+          MIRRORBRAIN_WORKSPACE_DIR: '/tmp/mirrorbrain-workspace',
+          MIRRORBRAIN_SHELL_HISTORY_PATH: '/tmp/.zsh_history',
+        },
+      },
+      {
+        assertDependenciesReachable: vi.fn(async () => undefined),
+        prepareWebAssets: vi.fn(async () => ({
+          outputDir: '/tmp/mirrorbrain-web',
+          indexHtmlPath: '/tmp/mirrorbrain-web/index.html',
+          stylesPath: '/tmp/mirrorbrain-web/styles.css',
+          scriptPath: '/tmp/mirrorbrain-web/main.js',
+        })),
+        startMirrorBrainService,
+        createMirrorBrainService: vi.fn(() => ({
+          service: runtimeService,
+          syncBrowserMemory: runtimeService.syncBrowserMemory,
+          syncShellMemory: runtimeService.syncShellMemory,
+          listMemoryEvents: vi.fn(async () => []),
+          queryMemory: vi.fn(async () => ({ items: [] })),
+          listKnowledge: vi.fn(async () => []),
+          listSkillDrafts: vi.fn(async () => []),
+          createDailyCandidateMemories: vi.fn(async () => []),
+          suggestCandidateReviews: vi.fn(async () => []),
+          createCandidateMemory: vi.fn(),
+          reviewCandidateMemory: vi.fn(),
+          generateKnowledgeFromReviewedMemories: vi.fn(),
+          generateSkillDraftFromReviewedMemories: vi.fn(),
+          publishKnowledge: vi.fn(),
+          publishSkillDraft: vi.fn(),
+        })),
+        startMirrorBrainHttpServer: vi.fn(async () => ({
+          origin: 'http://127.0.0.1:3007',
+          host: '127.0.0.1',
+          port: 3007,
+          stop: vi.fn(async () => undefined),
+        })),
+      },
+    );
+
+    expect(startMirrorBrainService).toHaveBeenCalledWith({
+      config: config.config,
+      workspaceDir: '/tmp/mirrorbrain-workspace',
+      shellHistoryPath: '/tmp/.zsh_history',
+    });
+  });
+
   it('loads local runtime overrides from the project .env file before startup', async () => {
     const projectDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-dev-env-'));
     const runtimeService = {

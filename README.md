@@ -17,13 +17,14 @@ This repository is still a narrow Phase 1 MVP.
 What works now:
 
 - browser source only, via `ActivityWatch` + `aw-watcher-web`
+- shell history source sync and minimal shell retrieval path
 - local storage and retrieval via `OpenViking`
 - local HTTP service and standalone web UI
 - browser sync, daily candidate stream generation, AI review suggestions, reviewed memory, knowledge draft, and skill draft flow
 
 What is not implemented yet:
 
-- shell history capture
+- shell problem-narrative retrieval
 - document ingestion
 - `openclaw` conversation capture
 - broader source authorization UX
@@ -131,6 +132,7 @@ Edit `.env` so these values match your machine:
 MIRRORBRAIN_ACTIVITYWATCH_BASE_URL=http://127.0.0.1:5600
 MIRRORBRAIN_OPENVIKING_BASE_URL=http://127.0.0.1:1933
 MIRRORBRAIN_WORKSPACE_DIR=/path_to_workspace/mirrorbrain-workspace
+MIRRORBRAIN_SHELL_HISTORY_PATH=/path_to_workspace/.zsh_history
 ```
 
 ### 5. Start MirrorBrain
@@ -144,6 +146,7 @@ The startup command now performs local bring-up checks before launching MirrorBr
 - reports missing required `.env` values in one pass
 - checks `OpenViking` reachability
 - checks that `ActivityWatch` has browser events in the last hour
+- wires shell history sync into the runtime when `MIRRORBRAIN_SHELL_HISTORY_PATH` is configured
 - starts MirrorBrain as a background process and prints the service address and log path
 
 Then open:

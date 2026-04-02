@@ -37,13 +37,14 @@ It is not responsible for:
 2. The CLI checks required local configuration, ActivityWatch browser-data availability, and OpenViking reachability.
 3. If checks pass, the CLI launches MirrorBrain as a detached child process and prints a startup summary with service address, pid, and log path.
 4. Inside the child process, the web app TypeScript entrypoint is transpiled into a local served asset directory.
-5. The MirrorBrain service runtime starts.
+5. The MirrorBrain service runtime starts, including optional shell-history sync wiring when `MIRRORBRAIN_SHELL_HISTORY_PATH` is set.
 6. The HTTP server starts and serves both JSON APIs and static MVP UI assets.
 
 ## Failure Modes And Operational Constraints
 
 - startup reports grouped issues for config, ActivityWatch, OpenViking, and runtime startup before exiting
 - startup expects the local environment variables in `.env` to be present even when some runtime defaults exist in code
+- shell history remains opt-in and is only wired when `MIRRORBRAIN_SHELL_HISTORY_PATH` is explicitly configured
 - the runtime assumes a local, single-user environment
 - this startup flow is intended for the MVP and is not yet hardened for production
 
