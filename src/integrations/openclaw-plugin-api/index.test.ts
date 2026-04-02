@@ -68,6 +68,86 @@ describe('openclaw plugin api', () => {
     });
   });
 
+  it('prioritizes repeated browser themes ahead of one-off pages when shaping retrieval results', async () => {
+    await expect(
+      queryMemory(
+        {
+          baseUrl: 'http://127.0.0.1:1933',
+          query: 'What did I work on yesterday?',
+          timeRange: {
+            startAt: '2026-03-20T00:00:00.000Z',
+            endAt: '2026-03-20T23:59:59.999Z',
+          },
+          sourceTypes: ['browser'],
+        },
+        {
+          listMemoryEvents: async () => [
+            {
+              id: 'browser:aw-event-1',
+              sourceType: 'activitywatch-browser',
+              sourceRef: 'aw-event-1',
+              timestamp: '2026-03-20T08:00:00.000Z',
+              authorizationScopeId: 'scope-browser',
+              content: {
+                url: 'https://example.com/one-off',
+                title: 'One-off page',
+              },
+              captureMetadata: {
+                upstreamSource: 'activitywatch',
+                checkpoint: '2026-03-20T08:00:00.000Z',
+              },
+            },
+            {
+              id: 'browser:aw-event-2',
+              sourceType: 'activitywatch-browser',
+              sourceRef: 'aw-event-2',
+              timestamp: '2026-03-20T09:00:00.000Z',
+              authorizationScopeId: 'scope-browser',
+              content: {
+                url: 'https://example.com/review-workflow',
+                title: 'Review workflow',
+              },
+              captureMetadata: {
+                upstreamSource: 'activitywatch',
+                checkpoint: '2026-03-20T09:00:00.000Z',
+              },
+            },
+            {
+              id: 'browser:aw-event-3',
+              sourceType: 'activitywatch-browser',
+              sourceRef: 'aw-event-3',
+              timestamp: '2026-03-20T09:05:00.000Z',
+              authorizationScopeId: 'scope-browser',
+              content: {
+                url: 'https://example.com/review-workflow-2',
+                title: 'Review workflow',
+              },
+              captureMetadata: {
+                upstreamSource: 'activitywatch',
+                checkpoint: '2026-03-20T09:05:00.000Z',
+              },
+            },
+          ],
+        },
+      ),
+    ).resolves.toMatchObject({
+      items: [
+        {
+          theme: 'Review workflow',
+          title: 'Review workflow',
+          summary:
+            '2 matching memory events about Review workflow during the requested time range.',
+        },
+        {
+          theme: 'One-off page',
+          title: 'One-off page',
+          summary:
+            '1 matching memory event about One-off page during the requested time range.',
+        },
+      ],
+    });
+  });
+
   it('returns knowledge drafts from OpenViking', async () => {
     await expect(
       listKnowledge(

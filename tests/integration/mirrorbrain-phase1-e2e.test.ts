@@ -68,41 +68,30 @@ describe('mirrorbrain phase 1 e2e', () => {
     const skillDraft = buildSkillDraftFromReviewedMemories([reviewedMemory]);
 
     expect(persistedRecords).toHaveLength(2);
-    await expect(
-      queryMemory(
-        {
-          baseUrl: 'http://127.0.0.1:1933',
-          query: 'What did I work on?',
-        },
-        {
-          listMemoryEvents: async () => memoryEvents,
-        },
-      ),
-    ).resolves.toMatchObject({
-      items: [
-        {
-          theme: 'Example Tasks',
-          title: 'Example Tasks',
-          sourceRefs: [
-            {
-              id: 'browser:aw-event-1',
-              sourceType: 'activitywatch-browser',
-              sourceRef: 'aw-event-1',
-            },
-          ],
-        },
-        {
-          theme: 'Example Tasks 2',
-          title: 'Example Tasks 2',
-          sourceRefs: [
-            {
-              id: 'browser:aw-event-2',
-              sourceType: 'activitywatch-browser',
-              sourceRef: 'aw-event-2',
-            },
-          ],
-        },
-      ],
+    const memoryResult = await queryMemory(
+      {
+        baseUrl: 'http://127.0.0.1:1933',
+        query: 'What did I work on?',
+      },
+      {
+        listMemoryEvents: async () => memoryEvents,
+      },
+    );
+
+    expect(memoryResult.items).toHaveLength(2);
+    expect(memoryResult.items.map((item) => item.theme)).toEqual([
+      'Example Tasks 2',
+      'Example Tasks',
+    ]);
+    expect(memoryResult.items[0]?.sourceRefs[0]).toMatchObject({
+      id: 'browser:aw-event-2',
+      sourceType: 'activitywatch-browser',
+      sourceRef: 'aw-event-2',
+    });
+    expect(memoryResult.items[1]?.sourceRefs[0]).toMatchObject({
+      id: 'browser:aw-event-1',
+      sourceType: 'activitywatch-browser',
+      sourceRef: 'aw-event-1',
     });
     await expect(
       listKnowledge(

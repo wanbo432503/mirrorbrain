@@ -88,38 +88,48 @@ export async function queryMemory(
 
   return {
     timeRange: input.timeRange,
-    items: Array.from(groupedEvents.entries()).map(([key, grouped]) => {
-      const sortedEvents = [...grouped].sort((left, right) =>
-        left.timestamp.localeCompare(right.timestamp),
-      );
-      const [firstEvent] = sortedEvents;
-      const title =
-        typeof firstEvent.content.title === 'string'
-          ? firstEvent.content.title
-          : firstEvent.id;
+    items: Array.from(groupedEvents.entries())
+      .map(([key, grouped]) => {
+        const sortedEvents = [...grouped].sort((left, right) =>
+          left.timestamp.localeCompare(right.timestamp),
+        );
+        const [firstEvent] = sortedEvents;
+        const title =
+          typeof firstEvent.content.title === 'string'
+            ? firstEvent.content.title
+            : firstEvent.id;
 
-      return {
-        id: `memory-result:${key
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/gu, '-')
-          .replace(/^-|-$/gu, '')}`,
-        theme: title,
-        title,
-        summary: `${grouped.length} matching memory event${
-          grouped.length === 1 ? '' : 's'
-        } about ${title} during the requested time range.`,
-        timeRange: {
-          startAt: sortedEvents[0].timestamp,
-          endAt: sortedEvents[sortedEvents.length - 1].timestamp,
-        },
-        sourceRefs: sortedEvents.slice(0, 3).map((event) => ({
-          id: event.id,
-          sourceType: event.sourceType,
-          sourceRef: event.sourceRef,
-          timestamp: event.timestamp,
-        })),
-      };
-    }),
+        return {
+          id: `memory-result:${key
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/gu, '-')
+            .replace(/^-|-$/gu, '')}`,
+          theme: title,
+          title,
+          summary: `${grouped.length} matching memory event${
+            grouped.length === 1 ? '' : 's'
+          } about ${title} during the requested time range.`,
+          timeRange: {
+            startAt: sortedEvents[0].timestamp,
+            endAt: sortedEvents[sortedEvents.length - 1].timestamp,
+          },
+          sourceRefs: sortedEvents.slice(0, 3).map((event) => ({
+            id: event.id,
+            sourceType: event.sourceType,
+            sourceRef: event.sourceRef,
+            timestamp: event.timestamp,
+          })),
+        };
+      })
+      .sort((left, right) => {
+        const bySourceCount = right.sourceRefs.length - left.sourceRefs.length;
+
+        if (bySourceCount !== 0) {
+          return bySourceCount;
+        }
+
+        return right.timeRange.endAt.localeCompare(left.timeRange.endAt);
+      }),
   };
 }
 
