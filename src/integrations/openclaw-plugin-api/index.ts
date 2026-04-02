@@ -175,12 +175,17 @@ function isBrowserWorkRecallQuery(input: QueryMemoryInput): boolean {
     !input.sourceTypes ||
     input.sourceTypes.length === 0 ||
     input.sourceTypes.includes('browser');
+  const isEnglishWorkRecall =
+    (query.includes('work on') || query.includes('do')) &&
+    (query.includes('yesterday') || query.includes('today'));
+  const isChineseWorkRecall =
+    ((query.includes('昨天') || query.includes('今天')) &&
+      query.includes('做') &&
+      query.includes('什么'));
 
   return (
     allowsBrowserSource &&
-    ((query.includes('work on') && (query.includes('yesterday') || query.includes('today'))) ||
-      (query.includes('昨天') && query.includes('做')) ||
-      (query.includes('今天') && query.includes('做')))
+    (isEnglishWorkRecall || isChineseWorkRecall)
   );
 }
 
