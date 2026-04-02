@@ -175,6 +175,16 @@ function summarizeGroupedMemoryEvents(
           : '',
       )
       .filter((command) => command.length > 0);
+    const onlyVerificationCommands =
+      shellCommands.length === events.length &&
+      shellCommands.every(
+        (command) =>
+          command.includes('test') ||
+          command.includes('vitest') ||
+          command.includes('pytest') ||
+          command.includes('typecheck') ||
+          command.includes('tsc --noemit'),
+      );
     const onlyInspectionCommands =
       shellCommands.length === events.length &&
       shellCommands.every(
@@ -186,6 +196,10 @@ function summarizeGroupedMemoryEvents(
           command.includes(' log') ||
           command.endsWith(' log'),
       );
+
+    if (onlyVerificationCommands) {
+      return `You verified changes with ${title} across ${events.length} shell commands during the requested time range.`;
+    }
 
     if (onlyInspectionCommands) {
       return `You inspected state with ${title} across ${events.length} shell commands during the requested time range.`;

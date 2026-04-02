@@ -142,7 +142,7 @@ describe('openclaw plugin api', () => {
           theme: 'pnpm',
           title: 'pnpm',
           summary:
-            'You ran 1 shell command with pnpm during the requested time range.',
+            'You verified changes with pnpm across 1 shell commands during the requested time range.',
         },
       ],
     });
@@ -201,6 +201,64 @@ describe('openclaw plugin api', () => {
           theme: 'git',
           summary:
             'You inspected state with git across 2 shell commands during the requested time range.',
+        },
+      ],
+    });
+  });
+
+  it('uses a verification-oriented shell summary for test commands', async () => {
+    await expect(
+      queryMemory(
+        {
+          baseUrl: 'http://127.0.0.1:1933',
+          query: 'How did I verify this before?',
+          timeRange: {
+            startAt: '2026-03-20T00:00:00.000Z',
+            endAt: '2026-03-20T23:59:59.999Z',
+          },
+          sourceTypes: ['shell'],
+        },
+        {
+          listMemoryEvents: async () => [
+            {
+              id: 'shell:shell-history:1',
+              sourceType: 'shell-history',
+              sourceRef: 'shell-history:1',
+              timestamp: '2026-03-20T09:00:00.000Z',
+              authorizationScopeId: 'scope-shell',
+              content: {
+                command: 'pnpm vitest run',
+                commandName: 'pnpm',
+              },
+              captureMetadata: {
+                upstreamSource: 'shell-history',
+                checkpoint: '2026-03-20T09:00:00.000Z',
+              },
+            },
+            {
+              id: 'shell:shell-history:2',
+              sourceType: 'shell-history',
+              sourceRef: 'shell-history:2',
+              timestamp: '2026-03-20T09:05:00.000Z',
+              authorizationScopeId: 'scope-shell',
+              content: {
+                command: 'pnpm typecheck',
+                commandName: 'pnpm',
+              },
+              captureMetadata: {
+                upstreamSource: 'shell-history',
+                checkpoint: '2026-03-20T09:05:00.000Z',
+              },
+            },
+          ],
+        },
+      ),
+    ).resolves.toMatchObject({
+      items: [
+        {
+          theme: 'pnpm',
+          summary:
+            'You verified changes with pnpm across 2 shell commands during the requested time range.',
         },
       ],
     });
