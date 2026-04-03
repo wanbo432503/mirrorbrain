@@ -143,7 +143,7 @@ describe('openviking store adapter', () => {
           target:
             'viking://resources/mirrorbrain-memory-events-browser-aw-event-1.json',
           reason: 'MirrorBrain imported browser memory event',
-          wait: true,
+          wait: false,
         }),
       },
     ]);

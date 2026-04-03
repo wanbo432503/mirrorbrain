@@ -200,7 +200,7 @@ export async function ingestMemoryEventToOpenViking(
         `${input.event.id}.json`,
       ),
       reason: 'MirrorBrain imported browser memory event',
-      waitForCompletion: true,
+      waitForCompletion: false,
       payload: record.payload,
     },
     fetchImpl,

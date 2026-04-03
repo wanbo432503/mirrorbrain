@@ -32,7 +32,7 @@ This component is the storage adapter that maps MirrorBrain artifacts into OpenV
 1. MirrorBrain normalizes upstream source events into `MemoryEvent`.
 2. The adapter writes artifact content to local files when the OpenViking endpoint expects file-path based import.
 3. Memory, memory-narrative, candidate, reviewed, knowledge, and skill-draft artifacts are imported through `POST /api/v1/resources`.
-4. Memory-event imports wait for OpenViking completion before the sync call returns so the latest browser sync is immediately queryable.
+4. Memory-event imports are queued with non-blocking OpenViking resource imports so large browser backfills and incremental sync runs do not stall on per-event completion waits.
 5. Because OpenViking may flatten imported resources at the root, MirrorBrain encodes logical namespaces into resource names such as `mirrorbrain-memory-events-...` and `mirrorbrain-skill-drafts-...` instead of assuming nested directories will exist under `viking://resources/`.
 6. Retrieval uses `GET /api/v1/fs/ls` at `viking://resources/`, filters by the MirrorBrain namespace prefixes, resolves directory-backed resources to their inner files, and then loads content with `GET /api/v1/content/read`.
 7. Memory retrieval also tolerates legacy flat browser resources such as `browser503`, deduplicates by `MemoryEvent.id` when both legacy and prefixed resources contain the same event, and suppresses near-duplicate browser page records that share the same page signature inside a short time window.
@@ -47,7 +47,7 @@ For local setup and startup expectations around OpenViking, see the repository [
 - unit tests verify stable record ids
 - unit tests verify payload preservation
 - unit tests verify ingestion metadata remains attached
-- unit tests verify HTTP request payloads for memory, memory-narrative, candidate, reviewed, knowledge, and skill imports
+- unit tests verify HTTP request payloads for memory, memory-narrative, candidate, reviewed, knowledge, and skill imports, including non-blocking memory-event ingestion
 - unit tests verify HTTP-based listing and content reads for memory, memory-narrative, candidate, reviewed, knowledge, and skill retrieval
 - unit tests verify legacy resource compatibility, browser duplicate suppression, and duplicate-id suppression during memory reads
 - unit tests verify multi-part OpenViking resource fragments are recombined before parsing
@@ -57,6 +57,7 @@ For local setup and startup expectations around OpenViking, see the repository [
 - imports rely on the currently documented OpenViking HTTP endpoints
 - MirrorBrain classification is currently encoded into flat resource names rather than guaranteed nested directories inside OpenViking
 - retrieval depends on OpenViking exposing imported resources through `fs/ls` and readable child files through `content/read`
+- memory-event sync completion now means MirrorBrain has handed imported events to OpenViking, not that every event has finished OpenViking-side indexing
 - historical duplicates are suppressed at retrieval time for browser data, but the underlying OpenViking resources are still append-oriented and remain on disk until a separate cleanup path exists
 - Phase 1 does not publish directly into OpenViking `agent/skills`; it stores skill drafts as MirrorBrain-managed resources for stable classification and retrieval
 - knowledge artifacts are parsed back from stored markdown conventions, including Phase 3 topic-aware metadata, so retrieval depends on those content conventions staying stable
