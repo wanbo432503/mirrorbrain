@@ -98,9 +98,9 @@ Long-term emphasis:
 
 ## Phase Structure
 
-## Current Phase 2 Status Snapshot
+## Current Phase 2 / Phase 3 Status Snapshot
 
-The repository now implements the planned Phase 2 baseline in-repo, with explicit Phase 2A integration/demo support and Phase 2B retrieval-quality work for both browser and shell memory.
+The repository now implements the planned Phase 2 baseline **and** the planned Phase 3 knowledge-quality baseline in-repo.
 
 Implemented so far:
 
@@ -132,11 +132,29 @@ Implemented so far:
   - service-level narrative rebuild/publish after explicit browser or shell sync
   - plugin-side preference for stored narratives before raw-event fallback
 
-Remaining non-goal / follow-up territory after Phase 2:
+Implemented in Phase 3:
+
+- Knowledge Artifact 2.0 with topic-aware metadata, provenance refs, versioning, and current-best markers
+- daily-review drafts rich enough to flow into later topic merge
+- topic merge workflow with:
+  - topic merge candidates
+  - create-topic / update-current-best / keep-draft decisions
+  - superseded-history return path
+- service-level topic merge helpers
+- topic knowledge read surfaces with:
+  - current-best topic list
+  - topic detail by key
+  - newest-first topic history
+- standalone web UI topic summary display
+- fixture-backed topic knowledge quality evaluation with deterministic rubric scores and pass/fail output
+
+Remaining non-goal / follow-up territory after Phase 3:
 
 - browser narrative generation is still deterministic and heuristic rather than embedding- or LLM-first
 - shell workspace context is inferred from command sequences when explicit cwd/session metadata is unavailable
-- Phase 3 knowledge quality work remains the next major product focus
+- richer topic detail/history browsing UI remains future work
+- direct `openclaw` topic list/detail/history adapter helpers remain future work
+- stronger storage/retrieval consistency guarantees around `isCurrentBest` remain future work
 
 ## Phase 2A: Plugin Integration And Minimum Demo
 
@@ -569,6 +587,11 @@ Clustering signal order:
 
 ## Phase 3: Knowledge Quality
 
+Status: implemented at the minimum planned baseline. The detailed execution handoff and resulting acceptance shape are captured in:
+
+- `docs/plans/2026-04-03-phase3-knowledge-implementation-plan.md`
+- `docs/plans/2026-04-03-phase3-knowledge-test-spec.md`
+
 ### Goal
 
 Make MirrorBrain's knowledge artifacts genuinely useful to humans, not just passable outputs for agent retrieval.
@@ -611,6 +634,13 @@ Prioritize problem- or theme-oriented knowledge organization before project-only
 - better workflows for merging daily review output into current-best topic knowledge
 - stronger readability for humans
 - better metadata for recency and provenance
+
+Current repository status against those deliverables:
+
+- **done**: topic-aware knowledge model, merge workflow, current-best/history chain
+- **done**: minimum topic read loop across service / HTTP / standalone web UI
+- **done**: fixture-backed quality evaluation baseline
+- **remaining**: richer interactive topic browsing and more advanced quality heuristics
 
 ## Later Skill Roadmap
 

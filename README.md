@@ -12,7 +12,7 @@ It is meant to do three things:
 
 ## Current Status
 
-This repository now carries a working Phase 2 implementation baseline.
+This repository now carries a working Phase 2 **and** Phase 3 implementation baseline.
 
 What works now:
 
@@ -22,6 +22,9 @@ What works now:
 - `openclaw`-facing `query_memory` retrieval contract and demo docs
 - offline browser theme narratives for `昨天/今天我做了什么？` style recall
 - offline shell problem narratives for `我之前是怎么通过命令行解决这个问题的？` style recall
+- Phase 3 topic-knowledge model, merge workflow, and current-best history chain
+- topic knowledge read surfaces across service, HTTP, and the standalone web UI
+- fixture-backed topic-knowledge quality evaluation with a deterministic rubric
 - local HTTP service and standalone web UI
 - browser sync, daily candidate stream generation, AI review suggestions, reviewed memory, knowledge draft, and skill draft flow
 
@@ -30,26 +33,35 @@ What is not implemented yet:
 - document ingestion
 - `openclaw` conversation capture
 - broader source authorization UX
-- Phase 3 topic-knowledge quality work
+- richer topic detail/history browsing in the standalone UI
+- direct `openclaw` topic list/detail/history adapter helpers
 - production-grade deployment and operations
 
 ## Todo
 
-The next obvious tasks after Phase 2 are:
+The next obvious tasks after Phase 3 are:
 
 - add more authorized source types beyond browser activity
-- improve topic-oriented knowledge quality and merge workflows
+- strengthen topic-knowledge consistency and richer topic browsing
+- expose topic knowledge more directly to `openclaw`
 - strengthen skill execution quality without weakening confirmation boundaries
 - make local setup simpler than the current ActivityWatch + OpenViking stack
 
 Planning docs live under [`docs/plans/`](./docs/plans/).
 
-Phase 2A docs:
+Current roadmap/status docs:
 
 - minimum `openclaw` tool example: [`docs/features/openclaw-memory-tool-example.md`](./docs/features/openclaw-memory-tool-example.md)
 - minimum manual demo guide: [`docs/features/openclaw-memory-demo-guide.md`](./docs/features/openclaw-memory-demo-guide.md)
+- current project status: [`docs/features/current-project-status.md`](./docs/features/current-project-status.md)
+- Phase 2 / Phase 3 roadmap: [`docs/plans/2026-04-01-mirrorbrain-phase2-phase3-plan.md`](./docs/plans/2026-04-01-mirrorbrain-phase2-phase3-plan.md)
+- Phase 3 implementation plan: [`docs/plans/2026-04-03-phase3-knowledge-implementation-plan.md`](./docs/plans/2026-04-03-phase3-knowledge-implementation-plan.md)
+- Phase 3 test spec: [`docs/plans/2026-04-03-phase3-knowledge-test-spec.md`](./docs/plans/2026-04-03-phase3-knowledge-test-spec.md)
 - browser theme narratives: [`docs/components/browser-theme-narratives.md`](./docs/components/browser-theme-narratives.md)
 - shell problem narratives: [`docs/components/shell-problem-narratives.md`](./docs/components/shell-problem-narratives.md)
+- topic knowledge merge: [`docs/components/topic-knowledge-merge.md`](./docs/components/topic-knowledge-merge.md)
+- topic knowledge read surfaces: [`docs/components/topic-knowledge-read.md`](./docs/components/topic-knowledge-read.md)
+- topic knowledge quality evaluation: [`docs/components/topic-knowledge-quality.md`](./docs/components/topic-knowledge-quality.md)
 
 ## Quick Start
 

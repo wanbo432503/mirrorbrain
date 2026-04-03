@@ -12,7 +12,7 @@ MirrorBrain / 镜像大脑 是 `openclaw` 的 memory 和 capability layer。
 
 ## 当前进展
 
-这个仓库现在已经具备可运行的 Phase 2 实现基线。
+这个仓库现在已经具备可运行的 Phase 2 **和** Phase 3 实现基线。
 
 当前已经完成：
 
@@ -22,6 +22,9 @@ MirrorBrain / 镜像大脑 是 `openclaw` 的 memory 和 capability layer。
 - 面向 `openclaw` 的 `query_memory` 检索契约与演示文档
 - 面向 `昨天/今天我做了什么？` 这类问题的离线浏览器主题叙事
 - 面向 `我之前是怎么通过命令行解决这个问题的？` 这类问题的离线 shell 问题叙事
+- Phase 3 的 topic knowledge 模型、merge workflow 与 current-best / history 链路
+- topic knowledge 在 service / HTTP / 独立 web UI 中的最小读取闭环
+- 基于 fixture 的 topic knowledge 质量评估与 deterministic rubric
 - 提供本地 HTTP 服务和独立 Web UI
 - 支持浏览器同步、按天生成 candidate stream、AI review suggestion、reviewed memory、knowledge draft、skill draft 这条最小闭环
 
@@ -30,19 +33,28 @@ MirrorBrain / 镜像大脑 是 `openclaw` 的 memory 和 capability layer。
 - 文档导入
 - `openclaw` 对话采集
 - 更完整的授权与来源管理界面
-- Phase 3 的 topic-oriented knowledge 质量提升
+- 独立 UI 中更完整的 topic detail / history 浏览
+- 面向 `openclaw` 的 topic list / detail / history 直接 adapter helper
 - 面向生产环境的部署和运维能力
 
 ## Todo
 
-Phase 2 之后最明确的事情是：
+Phase 3 之后最明确的事情是：
 
 - 增加更多经过授权的数据源，而不只限于浏览器
-- 提升 topic-oriented knowledge 的质量与合并工作流
+- 增强 topic knowledge 的一致性保证与更丰富的浏览体验
+- 让 `openclaw` 更直接消费 topic knowledge
 - 在不弱化确认边界的前提下增强 skill 执行能力
 - 把本地安装启动流程简化，不再强依赖现在这套较重的 ActivityWatch + OpenViking 组合
 
 更详细的规划文档在 [`docs/plans/`](./docs/plans/)。
+
+当前状态相关文档：
+
+- 当前项目状态：[`docs/features/current-project-status.md`](./docs/features/current-project-status.md)
+- Phase 2 / Phase 3 路线图：[`docs/plans/2026-04-01-mirrorbrain-phase2-phase3-plan.md`](./docs/plans/2026-04-01-mirrorbrain-phase2-phase3-plan.md)
+- Phase 3 实施计划：[`docs/plans/2026-04-03-phase3-knowledge-implementation-plan.md`](./docs/plans/2026-04-03-phase3-knowledge-implementation-plan.md)
+- Phase 3 测试规格：[`docs/plans/2026-04-03-phase3-knowledge-test-spec.md`](./docs/plans/2026-04-03-phase3-knowledge-test-spec.md)
 
 ## 快速开始
 
