@@ -9,6 +9,7 @@ This component is the storage adapter that maps MirrorBrain artifacts into OpenV
 - owns the record shape used to persist normalized memory events
 - owns the JSON persistence shape used for stored memory narratives
 - imports memory and knowledge as OpenViking resources
+- persists Phase 3 knowledge lifecycle metadata such as `artifactType`, `topicKey`, versioning, and provenance refs
 - imports skill drafts as MirrorBrain-owned OpenViking resources
 - keeps ingestion metadata attached to persisted records
 - does not own domain lifecycle rules for candidate memory, reviewed memory, knowledge, or skill approval
@@ -58,5 +59,6 @@ For local setup and startup expectations around OpenViking, see the repository [
 - retrieval depends on OpenViking exposing imported resources through `fs/ls` and readable child files through `content/read`
 - historical duplicates are suppressed at retrieval time for browser data, but the underlying OpenViking resources are still append-oriented and remain on disk until a separate cleanup path exists
 - Phase 1 does not publish directly into OpenViking `agent/skills`; it stores skill drafts as MirrorBrain-managed resources for stable classification and retrieval
-- knowledge and skill artifacts are parsed back from stored markdown conventions, so retrieval depends on that content format staying stable
+- knowledge artifacts are parsed back from stored markdown conventions, including Phase 3 topic-aware metadata, so retrieval depends on those content conventions staying stable
+- Phase 3 knowledge markdown now carries richer topic-aware metadata and provenance sections; callers should preserve those conventions when extending storage
 - memory narratives are currently stored as JSON resources that are deduplicated by narrative id at read time rather than updated in place inside OpenViking

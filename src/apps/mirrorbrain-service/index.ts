@@ -30,6 +30,10 @@ import {
 } from '../../workflows/shell-memory-sync/index.js';
 import { generateBrowserThemeNarratives } from '../../workflows/browser-theme-narratives/index.js';
 import { generateShellProblemNarratives } from '../../workflows/shell-problem-narratives/index.js';
+import {
+  buildTopicKnowledgeCandidates,
+  mergeDailyReviewIntoTopicKnowledge,
+} from '../../workflows/topic-knowledge-merge/index.js';
 import { runDailyReview } from '../../workflows/daily-review/index.js';
 import { buildSkillDraftFromReviewedMemories } from '../../workflows/skill-draft-builder/index.js';
 import {
@@ -97,6 +101,8 @@ interface CreateMirrorBrainServiceDependencies {
   publishReviewedMemory?: typeof ingestReviewedMemoryToOpenViking;
   buildBrowserThemeNarratives?: typeof generateBrowserThemeNarratives;
   buildShellProblemNarratives?: typeof generateShellProblemNarratives;
+  buildTopicKnowledgeCandidates?: typeof buildTopicKnowledgeCandidates;
+  mergeTopicKnowledge?: typeof mergeDailyReviewIntoTopicKnowledge;
   generateKnowledge?: typeof runDailyReview;
   generateSkillDraft?: typeof buildSkillDraftFromReviewedMemories;
   reviewMemory?: typeof reviewCandidateMemory;
@@ -235,6 +241,10 @@ export function createMirrorBrainService(
     dependencies.buildBrowserThemeNarratives ?? generateBrowserThemeNarratives;
   const buildShellProblemNarratives =
     dependencies.buildShellProblemNarratives ?? generateShellProblemNarratives;
+  const buildTopicCandidates =
+    dependencies.buildTopicKnowledgeCandidates ?? buildTopicKnowledgeCandidates;
+  const mergeTopicKnowledge =
+    dependencies.mergeTopicKnowledge ?? mergeDailyReviewIntoTopicKnowledge;
   const generateKnowledge = dependencies.generateKnowledge ?? runDailyReview;
   const generateSkillDraft =
     dependencies.generateSkillDraft ?? buildSkillDraftFromReviewedMemories;
@@ -264,6 +274,35 @@ export function createMirrorBrainService(
         memoryEvents,
       }),
     );
+  };
+  const mergeTopicKnowledgeCandidate = async (
+    mergeCandidate: KnowledgeArtifact,
+    mergedAt?: string,
+  ): Promise<ReturnType<typeof mergeDailyReviewIntoTopicKnowledge>> => {
+    const knowledgeArtifacts = await listKnowledge({
+      baseUrl,
+    });
+    const result = mergeTopicKnowledge({
+      candidate: mergeCandidate,
+      existingKnowledgeArtifacts: knowledgeArtifacts,
+      mergedAt: mergedAt ?? mergeCandidate.updatedAt,
+    });
+
+    if (result.supersededArtifact) {
+      await publishKnowledge({
+        baseUrl,
+        workspaceDir,
+        artifact: result.supersededArtifact,
+      });
+    }
+
+    await publishKnowledge({
+      baseUrl,
+      workspaceDir,
+      artifact: result.artifact,
+    });
+
+    return result;
   };
 
   return {
@@ -299,6 +338,29 @@ export function createMirrorBrainService(
       listKnowledge({
         baseUrl,
       }),
+    buildTopicKnowledgeCandidates: async (): Promise<KnowledgeArtifact[]> => {
+      const knowledgeArtifacts = await listKnowledge({
+        baseUrl,
+      });
+
+      return buildTopicCandidates({
+        knowledgeDrafts: knowledgeArtifacts,
+      });
+    },
+    mergeTopicKnowledgeCandidate,
+    mergeDailyReviewIntoTopicKnowledge: async (
+      draftOrCandidate: KnowledgeArtifact,
+      mergedAt?: string,
+    ): Promise<ReturnType<typeof mergeDailyReviewIntoTopicKnowledge>> => {
+      const mergeCandidate =
+        draftOrCandidate.artifactType === 'topic-merge-candidate'
+          ? draftOrCandidate
+          : buildTopicCandidates({
+              knowledgeDrafts: [draftOrCandidate],
+            })[0] ?? draftOrCandidate;
+
+      return mergeTopicKnowledgeCandidate(mergeCandidate, mergedAt);
+    },
     listSkillDrafts: () =>
       listSkillDrafts({
         baseUrl,

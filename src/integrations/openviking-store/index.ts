@@ -283,10 +283,29 @@ export async function ingestKnowledgeArtifactToOpenViking(
   const markdown = [
     `# ${input.artifact.id}`,
     '',
+    `- artifactType: ${input.artifact.artifactType}`,
     `- draftState: ${input.artifact.draftState}`,
+    `- topicKey: ${input.artifact.topicKey ?? ''}`,
+    `- title: ${input.artifact.title}`,
+    `- summary: ${input.artifact.summary}`,
+    `- version: ${String(input.artifact.version)}`,
+    `- isCurrentBest: ${String(input.artifact.isCurrentBest)}`,
+    `- supersedesKnowledgeId: ${input.artifact.supersedesKnowledgeId ?? ''}`,
+    `- updatedAt: ${input.artifact.updatedAt ?? ''}`,
+    `- reviewedAt: ${input.artifact.reviewedAt ?? ''}`,
+    `- recencyLabel: ${input.artifact.recencyLabel}`,
+    '',
+    '## Body',
+    input.artifact.body ?? '',
     '',
     '## Source Reviewed Memories',
     ...input.artifact.sourceReviewedMemoryIds.map((id) => `- ${id}`),
+    '',
+    '## Derived Knowledge Artifacts',
+    ...(input.artifact.derivedFromKnowledgeIds ?? []).map((id) => `- ${id}`),
+    '',
+    '## Provenance Refs',
+    ...(input.artifact.provenanceRefs ?? []).map((ref) => `- ${ref.kind}:${ref.id}`),
   ].join('\n');
 
   mkdirSync(resourceDir, { recursive: true });
@@ -498,26 +517,116 @@ async function resolveReadableContentUris(
 
 function parseKnowledgeArtifact(markdown: string): KnowledgeArtifact {
   const lines = markdown.split('\n');
+  const getSectionLines = (sectionTitle: string): string[] => {
+    const sectionIndex = lines.findIndex((line) => line.trim() === sectionTitle);
+
+    if (sectionIndex === -1) {
+      return [];
+    }
+
+    const nextSectionIndex = lines.findIndex(
+      (line, index) => index > sectionIndex && line.startsWith('## '),
+    );
+
+    return lines.slice(
+      sectionIndex + 1,
+      nextSectionIndex === -1 ? undefined : nextSectionIndex,
+    );
+  };
   const id = lines[0]?.replace(/^#\s+/, '').trim() ?? '';
+  const artifactType = (lines
+    .find((line) => line.startsWith('- artifactType: '))
+    ?.replace('- artifactType: ', '')
+    .trim() ?? 'daily-review-draft') as KnowledgeArtifact['artifactType'];
   const draftState = (lines
     .find((line) => line.startsWith('- draftState: '))
     ?.replace('- draftState: ', '')
     .trim() ?? 'draft') as KnowledgeArtifact['draftState'];
-  const sectionIndex = lines.findIndex(
-    (line) => line.trim() === '## Source Reviewed Memories',
+  const topicKey =
+    lines
+      .find((line) => line.startsWith('- topicKey: '))
+      ?.replace('- topicKey: ', '')
+      .trim() ?? '';
+  const title =
+    lines
+      .find((line) => line.startsWith('- title: '))
+      ?.replace('- title: ', '')
+      .trim() ?? id;
+  const summary =
+    lines
+      .find((line) => line.startsWith('- summary: '))
+      ?.replace('- summary: ', '')
+      .trim() ?? '';
+  const version = Number(
+    lines
+      .find((line) => line.startsWith('- version: '))
+      ?.replace('- version: ', '')
+      .trim() ?? '1',
   );
-  const sourceReviewedMemoryIds =
-    sectionIndex === -1
-      ? []
-      : lines
-          .slice(sectionIndex + 1)
-          .filter((line) => line.startsWith('- '))
-          .map((line) => line.replace(/^- /, '').trim());
+  const isCurrentBest =
+    (lines
+      .find((line) => line.startsWith('- isCurrentBest: '))
+      ?.replace('- isCurrentBest: ', '')
+      .trim() ?? 'false') === 'true';
+  const supersedesKnowledgeId =
+    lines
+      .find((line) => line.startsWith('- supersedesKnowledgeId: '))
+      ?.replace('- supersedesKnowledgeId: ', '')
+      .trim() ?? '';
+  const updatedAt =
+    lines
+      .find((line) => line.startsWith('- updatedAt: '))
+      ?.replace('- updatedAt: ', '')
+      .trim() ?? '';
+  const reviewedAt =
+    lines
+      .find((line) => line.startsWith('- reviewedAt: '))
+      ?.replace('- reviewedAt: ', '')
+      .trim() ?? '';
+  const recencyLabel =
+    lines
+      .find((line) => line.startsWith('- recencyLabel: '))
+      ?.replace('- recencyLabel: ', '')
+      .trim() ?? '';
+  const sourceReviewedMemoryIds = getSectionLines('## Source Reviewed Memories')
+    .filter((line) => line.startsWith('- '))
+    .map((line) => line.replace(/^- /, '').trim());
+  const derivedFromKnowledgeIds = getSectionLines('## Derived Knowledge Artifacts')
+    .filter((line) => line.startsWith('- '))
+    .map((line) => line.replace(/^- /, '').trim())
+    .filter((line) => line.length > 0);
+  const body = getSectionLines('## Body').join('\n').trim();
+  const provenanceRefs = getSectionLines('## Provenance Refs')
+    .filter((line) => line.startsWith('- '))
+    .map((line) => line.replace(/^- /, '').trim())
+    .filter((line) => line.length > 0)
+    .map((line) => {
+      const [kind, ...idParts] = line.split(':');
+
+      return {
+        kind: (kind?.trim() ?? 'reviewed-memory') as 'reviewed-memory' | 'knowledge-artifact',
+        id: idParts.join(':').trim(),
+      };
+    });
 
   return {
+    artifactType,
     id,
     draftState,
+    topicKey: topicKey.length > 0 ? topicKey : null,
+    title,
+    summary,
+    body,
     sourceReviewedMemoryIds,
+    derivedFromKnowledgeIds,
+    version: Number.isFinite(version) ? version : 1,
+    isCurrentBest,
+    supersedesKnowledgeId:
+      supersedesKnowledgeId.length > 0 ? supersedesKnowledgeId : null,
+    updatedAt: updatedAt.length > 0 ? updatedAt : undefined,
+    reviewedAt: reviewedAt.length > 0 ? reviewedAt : null,
+    recencyLabel,
+    provenanceRefs,
   };
 }
 

@@ -166,8 +166,26 @@ describe('openviking store adapter', () => {
         workspaceDir,
         artifact: {
           id: 'knowledge-draft:reviewed:candidate:browser:aw-event-1',
+          artifactType: 'daily-review-draft',
           draftState: 'draft',
+          topicKey: 'example-com-tasks',
+          title: 'Example Com / tasks',
+          summary: '1 reviewed memory about Example Com / tasks from 2026-03-20.',
+          body: '- Example Com / tasks: 1 browser event about Example Com / tasks on 2026-03-20.',
           sourceReviewedMemoryIds: ['reviewed:candidate:browser:aw-event-1'],
+          derivedFromKnowledgeIds: [],
+          version: 1,
+          isCurrentBest: false,
+          supersedesKnowledgeId: null,
+          updatedAt: '2026-03-20T10:00:00.000Z',
+          reviewedAt: '2026-03-20T10:00:00.000Z',
+          recencyLabel: '2026-03-20',
+          provenanceRefs: [
+            {
+              kind: 'reviewed-memory',
+              id: 'reviewed:candidate:browser:aw-event-1',
+            },
+          ],
         },
       },
       async (input, init) => {
@@ -201,6 +219,12 @@ describe('openviking store adapter', () => {
     expect(importedPayload).toContain(
       '# knowledge-draft:reviewed:candidate:browser:aw-event-1',
     );
+    expect(importedPayload).toContain('- artifactType: daily-review-draft');
+    expect(importedPayload).toContain('- title: Example Com / tasks');
+    expect(importedPayload).toContain('- version: 1');
+    expect(importedPayload).toContain('- isCurrentBest: false');
+    expect(importedPayload).toContain('## Derived Knowledge Artifacts');
+    expect(importedPayload).toContain('## Provenance Refs');
     expect(requests).toEqual([
       {
         url: 'http://127.0.0.1:1933/api/v1/resources',
@@ -1139,10 +1163,28 @@ describe('openviking store adapter', () => {
             result: [
               '# knowledge-draft:reviewed:candidate:browser:aw-event-1',
               '',
+              '- artifactType: daily-review-draft',
               '- draftState: draft',
+              '- topicKey: example-com-tasks',
+              '- title: Example Com / tasks',
+              '- summary: 1 reviewed memory about Example Com / tasks from 2026-03-20.',
+              '- version: 1',
+              '- isCurrentBest: false',
+              '- supersedesKnowledgeId: ',
+              '- updatedAt: 2026-03-20T10:00:00.000Z',
+              '- reviewedAt: 2026-03-20T10:00:00.000Z',
+              '- recencyLabel: 2026-03-20',
+              '',
+              '## Body',
+              '- Example Com / tasks: 1 browser event about Example Com / tasks on 2026-03-20.',
               '',
               '## Source Reviewed Memories',
               '- reviewed:candidate:browser:aw-event-1',
+              '',
+              '## Derived Knowledge Artifacts',
+              '',
+              '## Provenance Refs',
+              '- reviewed-memory:reviewed:candidate:browser:aw-event-1',
             ].join('\n'),
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } },
@@ -1153,8 +1195,26 @@ describe('openviking store adapter', () => {
     expect(result).toEqual([
       {
         id: 'knowledge-draft:reviewed:candidate:browser:aw-event-1',
+        artifactType: 'daily-review-draft',
         draftState: 'draft',
+        topicKey: 'example-com-tasks',
+        title: 'Example Com / tasks',
+        summary: '1 reviewed memory about Example Com / tasks from 2026-03-20.',
+        body: '- Example Com / tasks: 1 browser event about Example Com / tasks on 2026-03-20.',
         sourceReviewedMemoryIds: ['reviewed:candidate:browser:aw-event-1'],
+        derivedFromKnowledgeIds: [],
+        version: 1,
+        isCurrentBest: false,
+        supersedesKnowledgeId: null,
+        updatedAt: '2026-03-20T10:00:00.000Z',
+        reviewedAt: '2026-03-20T10:00:00.000Z',
+        recencyLabel: '2026-03-20',
+        provenanceRefs: [
+          {
+            kind: 'reviewed-memory',
+            id: 'reviewed:candidate:browser:aw-event-1',
+          },
+        ],
       },
     ]);
   });
@@ -1223,8 +1283,21 @@ describe('openviking store adapter', () => {
     expect(result).toEqual([
       {
         id: 'knowledge-draft:reviewed:candidate:browser:101',
+        artifactType: 'daily-review-draft',
         draftState: 'draft',
+        topicKey: null,
+        title: 'knowledge-draft:reviewed:candidate:browser:101',
+        summary: '',
+        body: '',
         sourceReviewedMemoryIds: ['reviewed:candidate:browser:101'],
+        derivedFromKnowledgeIds: [],
+        version: 1,
+        isCurrentBest: false,
+        supersedesKnowledgeId: null,
+        updatedAt: undefined,
+        reviewedAt: null,
+        recencyLabel: '',
+        provenanceRefs: [],
       },
     ]);
   });

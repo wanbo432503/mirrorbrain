@@ -18,7 +18,8 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 - exposes daily candidate-memory generation and review suggestion operations
 - exposes explicit candidate review decisions as service-level operations
 - publishes knowledge and skill artifacts through explicit OpenViking-backed service methods
-- generates knowledge and skill drafts from reviewed memories before publishing them
+- generates knowledge drafts from reviewed memories before publishing them
+- exposes topic-merge helper methods that turn daily-review drafts into topic merge candidates and publish topic knowledge artifacts
 - does not own domain logic for memory review, knowledge generation, or skill generation
 
 ## Key Interfaces
@@ -41,7 +42,9 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 11. Return suggestion-only AI review hints without promoting any candidate.
 12. Record explicit keep or discard decisions and publish reviewed memory artifacts.
 13. Forward explicit knowledge and skill publishing calls to the OpenViking ingestion adapter.
-14. For reviewed-memory generation APIs, run the corresponding workflow first and then publish the resulting artifact.
+14. Build topic-knowledge merge candidates from stored draft knowledge artifacts when requested.
+15. Merge a daily-review draft into topic knowledge, publishing the new current-best artifact and any superseded previous version.
+16. For reviewed-memory generation APIs, run the corresponding workflow first and then publish the resulting artifact.
 
 ## Operational Note
 
@@ -60,7 +63,8 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
 - unit and integration tests verify candidate review suggestions stay suggestion-only
 - unit and integration tests verify explicit keep and discard review decisions publish reviewed memory artifacts through the service contract
 - unit and integration tests verify the service forwards explicit knowledge and skill publishing calls to OpenViking ingestion with runtime configuration
-- unit and integration tests verify reviewed memories can be turned into publishable knowledge and skill artifacts through the service contract
+- unit and integration tests verify reviewed memories can be turned into publishable Phase 3-ready knowledge artifacts through the service contract
+- unit and integration tests verify topic merge candidates can be built and merged through the service contract, including superseded-history publication on update
 - type checks ensure the service surface composes with the workflow layer
 
 ## Known Limitations
@@ -73,3 +77,5 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
 - candidate generation is still a deterministic grouping call with minimal ranking logic
 - AI review suggestions are rule-based placeholders in Phase 1
 - retrieval methods still lack pagination and advanced ranking
+- topic-knowledge merge policy is currently a narrow rule-based baseline for Milestone 2, not the final Phase 3 quality engine
+- topic merge remains workflow/service-only in this slice; HTTP/UI exposure belongs to later Phase 3 milestones
