@@ -84,8 +84,21 @@ describe('mirrorbrain http server', () => {
     const listKnowledge = vi.fn(async (): Promise<KnowledgeArtifact[]> => [
       {
         id: 'knowledge-draft:reviewed:candidate:browser:aw-event-1',
+        artifactType: 'daily-review-draft',
         draftState: 'draft',
+        topicKey: null,
+        title: 'Example Tasks',
+        summary: 'Daily review draft for Example Tasks.',
+        body: '- Example Tasks\n\n1 reviewed memory item included.',
         sourceReviewedMemoryIds: ['reviewed:candidate:browser:aw-event-1'],
+        derivedFromKnowledgeIds: [],
+        version: 1,
+        isCurrentBest: false,
+        supersedesKnowledgeId: null,
+        updatedAt: '2026-03-20T10:00:00.000Z',
+        reviewedAt: '2026-03-20T10:00:00.000Z',
+        recencyLabel: 'reviewed on 2026-03-20',
+        provenanceRefs: [{ kind: 'reviewed-memory', id: 'reviewed:candidate:browser:aw-event-1' }],
       },
     ]);
     const listSkillDrafts = vi.fn(async (): Promise<SkillArtifact[]> => [
@@ -184,8 +197,26 @@ describe('mirrorbrain http server', () => {
       items: [
         {
           id: 'knowledge-draft:reviewed:candidate:browser:aw-event-1',
+          artifactType: 'daily-review-draft',
           draftState: 'draft',
+          topicKey: null,
+          title: 'Example Tasks',
+          summary: 'Daily review draft for Example Tasks.',
+          body: '- Example Tasks\n\n1 reviewed memory item included.',
           sourceReviewedMemoryIds: ['reviewed:candidate:browser:aw-event-1'],
+          derivedFromKnowledgeIds: [],
+          version: 1,
+          isCurrentBest: false,
+          supersedesKnowledgeId: null,
+          updatedAt: '2026-03-20T10:00:00.000Z',
+          reviewedAt: '2026-03-20T10:00:00.000Z',
+          recencyLabel: 'reviewed on 2026-03-20',
+          provenanceRefs: [
+            {
+              kind: 'reviewed-memory',
+              id: 'reviewed:candidate:browser:aw-event-1',
+            },
+          ],
         },
       ],
     });
@@ -378,8 +409,21 @@ describe('mirrorbrain http server', () => {
     const generateKnowledgeFromReviewedMemories = vi.fn(
       async (reviewedMemories: ReviewedMemory[]): Promise<KnowledgeArtifact> => ({
         id: `knowledge-draft:${reviewedMemories[0]?.id ?? 'empty'}`,
+        artifactType: 'daily-review-draft',
         draftState: 'draft',
+        topicKey: null,
+        title: reviewedMemories[0]?.candidateTitle ?? 'Daily Review Draft',
+        summary: `Daily review draft for ${reviewedMemories[0]?.candidateTitle ?? 'reviewed memory'}.`,
+        body: `- ${reviewedMemories[0]?.candidateTitle ?? 'Reviewed memory'}\n\n${reviewedMemories.length} reviewed memory item${reviewedMemories.length === 1 ? '' : 's'} included.`,
         sourceReviewedMemoryIds: reviewedMemories.map((memory) => memory.id),
+        derivedFromKnowledgeIds: [],
+        version: 1,
+        isCurrentBest: false,
+        supersedesKnowledgeId: null,
+        updatedAt: reviewedMemories[0]?.reviewedAt,
+        reviewedAt: reviewedMemories[0]?.reviewedAt ?? null,
+        recencyLabel: `reviewed on ${reviewedMemories[0]?.reviewDate ?? ''}`.trim(),
+        provenanceRefs: reviewedMemories.map((memory) => ({ kind: 'reviewed-memory', id: memory.id })),
       }),
     );
     const generateSkillDraftFromReviewedMemories = vi.fn(
@@ -529,9 +573,27 @@ describe('mirrorbrain http server', () => {
     expect(knowledgeBody).toEqual({
       artifact: {
         id: 'knowledge-draft:reviewed:candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
+        artifactType: 'daily-review-draft',
         draftState: 'draft',
+        topicKey: null,
+        title: 'Docs Example Com / guides',
+        summary: 'Daily review draft for Docs Example Com / guides.',
+        body: '- Docs Example Com / guides\n\n1 reviewed memory item included.',
         sourceReviewedMemoryIds: [
           'reviewed:candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
+        ],
+        derivedFromKnowledgeIds: [],
+        version: 1,
+        isCurrentBest: false,
+        supersedesKnowledgeId: null,
+        updatedAt: '2026-03-20T10:00:00.000Z',
+        reviewedAt: '2026-03-20T10:00:00.000Z',
+        recencyLabel: 'reviewed on 2026-03-20',
+        provenanceRefs: [
+          {
+            kind: 'reviewed-memory',
+            id: 'reviewed:candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
+          },
         ],
       },
     });

@@ -26,6 +26,14 @@ interface MirrorBrainWebAppState {
   candidateReviewSuggestions: CandidateReviewSuggestion[];
   reviewedMemory: ReviewedMemory | null;
   knowledgeArtifact: KnowledgeArtifact | null;
+  knowledgeTopics: Array<{
+    topicKey: string;
+    title: string;
+    summary: string;
+    currentBestKnowledgeId: string;
+    updatedAt?: string;
+    recencyLabel: string;
+  }>;
   skillArtifact: SkillArtifact | null;
   lastSyncSummary: BrowserSyncSummary | null;
   feedback: {
@@ -42,6 +50,16 @@ interface MirrorBrainWebAppApi {
   }>;
   listMemory(): Promise<MemoryEvent[]>;
   listKnowledge(): Promise<KnowledgeArtifact[]>;
+  listKnowledgeTopics(): Promise<
+    Array<{
+      topicKey: string;
+      title: string;
+      summary: string;
+      currentBestKnowledgeId: string;
+      updatedAt?: string;
+      recencyLabel: string;
+    }>
+  >;
   listSkills(): Promise<SkillArtifact[]>;
   syncBrowser(): Promise<BrowserSyncSummary>;
   syncShell(): Promise<BrowserSyncSummary>;
@@ -293,6 +311,7 @@ function renderReviewPanel(state: MirrorBrainWebAppState): string {
 
 function renderArtifactsPanel(state: MirrorBrainWebAppState): string {
   const knowledge = state.knowledgeArtifact;
+  const knowledgeTopics = state.knowledgeTopics;
   const skill = state.skillArtifact;
 
   return [
@@ -312,6 +331,17 @@ function renderArtifactsPanel(state: MirrorBrainWebAppState): string {
             value: knowledge.sourceReviewedMemoryIds.join(', '),
           },
         ]),
+    '</article>',
+    '<article class="mirrorbrain-detail-card">',
+    '<h3>Topic Knowledge</h3>',
+    knowledgeTopics.length === 0
+      ? '<p>No topic knowledge available yet.</p>'
+      : knowledgeTopics
+          .map(
+            (topic) =>
+              `<div class="mirrorbrain-topic-summary"><strong>${topic.title}</strong><p>${topic.summary}</p><p>${topic.recencyLabel}</p></div>`,
+          )
+          .join(''),
     '</article>',
     '<article class="mirrorbrain-detail-card">',
     '<h3>Skill Artifact</h3>',
@@ -399,6 +429,7 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
     candidateReviewSuggestions: [],
     reviewedMemory: null,
     knowledgeArtifact: null,
+    knowledgeTopics: [],
     skillArtifact: null,
     lastSyncSummary: null,
     feedback: null,
@@ -431,11 +462,18 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
       state.memoryPage = clampMemoryPage(state.memoryEvents, state.memoryPage - 1);
     },
     async load() {
-      const [health, memoryEvents, knowledgeArtifacts, skillArtifacts] =
+      const [
+        health,
+        memoryEvents,
+        knowledgeArtifacts,
+        knowledgeTopics,
+        skillArtifacts,
+      ] =
         await Promise.all([
           input.api.getHealth(),
           input.api.listMemory(),
           input.api.listKnowledge(),
+          input.api.listKnowledgeTopics(),
           input.api.listSkills(),
         ]);
 
@@ -443,6 +481,7 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
       state.memoryEvents = memoryEvents;
       state.memoryPage = clampMemoryPage(memoryEvents, state.memoryPage);
       state.knowledgeArtifact = knowledgeArtifacts[0] ?? null;
+      state.knowledgeTopics = knowledgeTopics;
       state.skillArtifact = skillArtifacts[0] ?? null;
       setFeedback({
         kind: 'info',
@@ -583,6 +622,21 @@ export function createMirrorBrainBrowserApi(
       const response = await fetch(`${baseUrl}/knowledge`);
       const body = (await response.json()) as {
         items: KnowledgeArtifact[];
+      };
+
+      return body.items;
+    },
+    async listKnowledgeTopics() {
+      const response = await fetch(`${baseUrl}/knowledge/topics`);
+      const body = (await response.json()) as {
+        items: Array<{
+          topicKey: string;
+          title: string;
+          summary: string;
+          currentBestKnowledgeId: string;
+          updatedAt?: string;
+          recencyLabel: string;
+        }>;
       };
 
       return body.items;

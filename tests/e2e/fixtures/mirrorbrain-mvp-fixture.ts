@@ -34,8 +34,24 @@ export async function startMirrorBrainMvpFixture() {
   let reviewedMemory: ReviewedMemory | null = null;
   let knowledgeArtifact: {
     id: string;
+    artifactType: 'daily-review-draft';
     draftState: 'draft';
+    topicKey: null;
+    title: string;
+    summary: string;
+    body: string;
     sourceReviewedMemoryIds: string[];
+    derivedFromKnowledgeIds: string[];
+    version: number;
+    isCurrentBest: false;
+    supersedesKnowledgeId: null;
+    updatedAt: string;
+    reviewedAt: string;
+    recencyLabel: string;
+    provenanceRefs: Array<{
+      kind: 'reviewed-memory';
+      id: string;
+    }>;
   } | null = null;
   let skillArtifact: {
     id: string;
@@ -122,8 +138,26 @@ export async function startMirrorBrainMvpFixture() {
       generateKnowledgeFromReviewedMemories: async (reviewedMemories) => {
         knowledgeArtifact = {
           id: `knowledge-draft:${reviewedMemories[0]?.id ?? 'empty'}`,
+          artifactType: 'daily-review-draft',
           draftState: 'draft',
+          topicKey: null,
+          title: reviewedMemories[0]?.candidateTitle ?? 'Daily Review Draft',
+          summary: `Daily review draft for ${reviewedMemories[0]?.candidateTitle ?? 'reviewed memory'}.`,
+          body: `- ${reviewedMemories[0]?.candidateTitle ?? 'Reviewed memory'}
+
+${reviewedMemories.length} reviewed memory item${reviewedMemories.length === 1 ? '' : 's'} included.`,
           sourceReviewedMemoryIds: reviewedMemories.map((memory) => memory.id),
+          derivedFromKnowledgeIds: [],
+          version: 1,
+          isCurrentBest: false,
+          supersedesKnowledgeId: null,
+          updatedAt: reviewedMemories[0]?.reviewedAt ?? `${reviewWindowDate}T10:00:00.000Z`,
+          reviewedAt: reviewedMemories[0]?.reviewedAt ?? `${reviewWindowDate}T10:00:00.000Z`,
+          recencyLabel: `reviewed on ${reviewedMemories[0]?.reviewDate ?? reviewWindowDate}`,
+          provenanceRefs: reviewedMemories.map((memory) => ({
+            kind: 'reviewed-memory' as const,
+            id: memory.id,
+          })),
         };
 
         return knowledgeArtifact;

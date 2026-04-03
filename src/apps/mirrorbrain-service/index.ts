@@ -304,6 +304,15 @@ export function createMirrorBrainService(
 
     return result;
   };
+  const listTopicKnowledgeArtifacts = async (): Promise<KnowledgeArtifact[]> => {
+    const knowledgeArtifacts = await listKnowledge({
+      baseUrl,
+    });
+
+    return knowledgeArtifacts.filter(
+      (artifact) => artifact.artifactType === 'topic-knowledge',
+    );
+  };
 
   return {
     service: input.service,
@@ -338,6 +347,61 @@ export function createMirrorBrainService(
       listKnowledge({
         baseUrl,
       }),
+    listKnowledgeTopics: async () => {
+      const topicKnowledgeArtifacts = await listTopicKnowledgeArtifacts();
+      const currentBestByTopicKey = new Map<string, KnowledgeArtifact>();
+
+      for (const artifact of topicKnowledgeArtifacts) {
+        if (artifact.topicKey === null) {
+          continue;
+        }
+
+        const current = currentBestByTopicKey.get(artifact.topicKey ?? '');
+
+        if (
+          current === undefined ||
+          artifact.isCurrentBest ||
+          (current.isCurrentBest === false && (artifact.version ?? 0) > (current.version ?? 0))
+        ) {
+          currentBestByTopicKey.set(artifact.topicKey ?? '', artifact);
+        }
+      }
+
+      return Array.from(currentBestByTopicKey.entries())
+        .map(([topicKey, artifact]) => ({
+          topicKey,
+          title: artifact.title ?? artifact.id,
+          summary: artifact.summary ?? '',
+          currentBestKnowledgeId: artifact.id,
+          updatedAt: artifact.updatedAt,
+          recencyLabel: artifact.recencyLabel ?? '',
+        }))
+        .sort((left, right) =>
+          (right.updatedAt ?? '').localeCompare(left.updatedAt ?? ''),
+        );
+    },
+    getKnowledgeTopic: async (topicKey: string) => {
+      const topicKnowledgeArtifacts = await listTopicKnowledgeArtifacts();
+
+      return (
+        topicKnowledgeArtifacts
+          .filter((artifact) => artifact.topicKey === topicKey)
+          .sort((left, right) => {
+            if (left.isCurrentBest !== right.isCurrentBest) {
+              return left.isCurrentBest ? -1 : 1;
+            }
+
+            return (right.version ?? 0) - (left.version ?? 0);
+          })[0] ?? null
+      );
+    },
+    listKnowledgeHistory: async (topicKey: string) => {
+      const topicKnowledgeArtifacts = await listTopicKnowledgeArtifacts();
+
+      return topicKnowledgeArtifacts
+        .filter((artifact) => artifact.topicKey === topicKey)
+        .sort((left, right) => (right.version ?? 0) - (left.version ?? 0));
+    },
     buildTopicKnowledgeCandidates: async (): Promise<KnowledgeArtifact[]> => {
       const knowledgeArtifacts = await listKnowledge({
         baseUrl,

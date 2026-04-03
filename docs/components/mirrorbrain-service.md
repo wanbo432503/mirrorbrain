@@ -20,6 +20,7 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 - publishes knowledge and skill artifacts through explicit OpenViking-backed service methods
 - generates knowledge drafts from reviewed memories before publishing them
 - exposes topic-merge helper methods that turn daily-review drafts into topic merge candidates and publish topic knowledge artifacts
+- exposes read-oriented topic knowledge helpers for listing current-best topics, reading one current-best topic, and reading topic history
 - does not own domain logic for memory review, knowledge generation, or skill generation
 
 ## Key Interfaces
@@ -44,6 +45,7 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 13. Forward explicit knowledge and skill publishing calls to the OpenViking ingestion adapter.
 14. Build topic-knowledge merge candidates from stored draft knowledge artifacts when requested.
 15. Merge a daily-review draft into topic knowledge, publishing the new current-best artifact and any superseded previous version.
+16. List current-best topic knowledge summaries, fetch the current-best artifact for one topic key, and return topic history in newest-first order.
 16. For reviewed-memory generation APIs, run the corresponding workflow first and then publish the resulting artifact.
 
 ## Operational Note

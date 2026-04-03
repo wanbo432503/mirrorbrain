@@ -27,6 +27,18 @@ interface MirrorBrainHttpService {
   listMemoryEvents(): Promise<MemoryEvent[]>;
   queryMemory?(input: MemoryQueryInput): Promise<MemoryQueryResult>;
   listKnowledge(): Promise<KnowledgeArtifact[]>;
+  listKnowledgeTopics?(): Promise<
+    Array<{
+      topicKey: string;
+      title: string;
+      summary: string;
+      currentBestKnowledgeId: string;
+      updatedAt?: string;
+      recencyLabel: string;
+    }>
+  >;
+  getKnowledgeTopic?(topicKey: string): Promise<KnowledgeArtifact | null>;
+  listKnowledgeHistory?(topicKey: string): Promise<KnowledgeArtifact[]>;
   listSkillDrafts(): Promise<SkillArtifact[]>;
   createDailyCandidateMemories(
     reviewDate: string,
@@ -250,14 +262,81 @@ const candidateReviewSuggestionSchema = {
 const knowledgeArtifactSchema = {
   type: 'object',
   properties: {
+    artifactType: {
+      type: 'string',
+      enum: ['daily-review-draft', 'topic-merge-candidate', 'topic-knowledge'],
+    },
     id: { type: 'string' },
     draftState: { type: 'string', enum: ['draft', 'published'] },
+    topicKey: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+    title: { type: 'string' },
+    summary: { type: 'string' },
+    body: { type: 'string' },
     sourceReviewedMemoryIds: {
       type: 'array',
       items: { type: 'string' },
     },
+    derivedFromKnowledgeIds: {
+      type: 'array',
+      items: { type: 'string' },
+    },
+    version: { type: 'number' },
+    isCurrentBest: { type: 'boolean' },
+    supersedesKnowledgeId: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+    updatedAt: { type: 'string' },
+    reviewedAt: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+    recencyLabel: { type: 'string' },
+    provenanceRefs: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          kind: {
+            type: 'string',
+            enum: ['reviewed-memory', 'knowledge-artifact'],
+          },
+          id: { type: 'string' },
+        },
+        required: ['kind', 'id'],
+      },
+    },
   },
-  required: ['id', 'draftState', 'sourceReviewedMemoryIds'],
+  required: [
+    'artifactType',
+    'id',
+    'draftState',
+    'topicKey',
+    'title',
+    'summary',
+    'body',
+    'sourceReviewedMemoryIds',
+    'derivedFromKnowledgeIds',
+    'version',
+    'isCurrentBest',
+    'supersedesKnowledgeId',
+    'reviewedAt',
+    'recencyLabel',
+    'provenanceRefs',
+  ],
+} as const;
+
+const knowledgeTopicSummarySchema = {
+  type: 'object',
+  properties: {
+    topicKey: { type: 'string' },
+    title: { type: 'string' },
+    summary: { type: 'string' },
+    currentBestKnowledgeId: { type: 'string' },
+    updatedAt: { type: 'string' },
+    recencyLabel: { type: 'string' },
+  },
+  required: [
+    'topicKey',
+    'title',
+    'summary',
+    'currentBestKnowledgeId',
+    'recencyLabel',
+  ],
 } as const;
 
 const skillArtifactSchema = {
@@ -468,6 +547,83 @@ export async function startMirrorBrainHttpServer(
     },
     async () => ({
       items: await input.service.listKnowledge(),
+    }),
+  );
+
+  app.get(
+    '/knowledge/topics',
+    {
+      schema: {
+        summary: 'List current-best topic knowledge summaries',
+        response: {
+          200: createItemsResponseSchema(knowledgeTopicSummarySchema),
+        },
+      },
+    },
+    async () => ({
+      items: input.service.listKnowledgeTopics
+        ? await input.service.listKnowledgeTopics()
+        : [],
+    }),
+  );
+
+  app.get<{
+    Params: {
+      topicKey: string;
+    };
+  }>(
+    '/knowledge/topics/:topicKey',
+    {
+      schema: {
+        summary: 'Get current-best topic knowledge by topic key',
+        response: {
+          200: createArtifactResponseSchema('topic', knowledgeArtifactSchema),
+          404: {
+            type: 'object',
+            properties: {
+              message: { type: 'string' },
+            },
+            required: ['message'],
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const topic = input.service.getKnowledgeTopic
+        ? await input.service.getKnowledgeTopic(request.params.topicKey)
+        : null;
+
+      if (topic === null) {
+        reply.code(404);
+        return {
+          message: `Knowledge topic ${request.params.topicKey} was not found.`,
+        };
+      }
+
+      return {
+        topic,
+      };
+    },
+  );
+
+  app.get<{
+    Params: {
+      topicKey: string;
+    };
+  }>(
+    '/knowledge/topics/:topicKey/history',
+    {
+      schema: {
+        summary: 'List topic knowledge history by topic key',
+        response: {
+          200: createItemsResponseSchema(knowledgeArtifactSchema),
+        },
+      },
+    },
+    async (request) => ({
+      items: input.service.listKnowledgeHistory
+        ? await input.service.listKnowledgeHistory(request.params.topicKey)
+        : [],
     }),
   );
 

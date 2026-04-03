@@ -16,6 +16,7 @@ This component is MirrorBrain's plugin-facing retrieval surface for `openclaw`. 
 
 - `queryMemory(...)`
 - `listKnowledge(...)`
+- current topic knowledge read support still lives in the MirrorBrain service/HTTP layer; the `openclaw` plugin adapter has not yet added dedicated topic list/detail/history helpers in this milestone
 - `listSkillDrafts(...)`
 - `createQueryMemoryToolExample(...)`
 - `composeQueryMemoryAnswer(...)`

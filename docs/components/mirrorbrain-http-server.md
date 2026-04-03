@@ -36,6 +36,9 @@ Those concerns remain in the service, workflow, module, and integration layers.
 - `GET /memory`
 - `POST /memory/query`
 - `GET /knowledge`
+- `GET /knowledge/topics`
+- `GET /knowledge/topics/:topicKey`
+- `GET /knowledge/topics/:topicKey/history`
 - `GET /skills`
 - `POST /candidate-memories/daily`
 - `POST /candidate-reviews/suggestions`
