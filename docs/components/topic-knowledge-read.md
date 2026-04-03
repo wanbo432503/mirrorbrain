@@ -54,3 +54,4 @@ This slice is not responsible for:
 - topic summary ordering is currently recency-based only
 - the standalone UI shows a minimal topic summary list, not a full topic detail/history browser yet
 - current-best resolution still depends on stored `isCurrentBest` and version metadata staying coherent
+- topic quality is still evaluated separately through the Phase 3 Milestone 4 quality loop

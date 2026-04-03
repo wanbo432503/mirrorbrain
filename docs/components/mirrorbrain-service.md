@@ -81,3 +81,4 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
 - retrieval methods still lack pagination and advanced ranking
 - topic-knowledge merge policy is currently a narrow rule-based baseline for Milestone 2, not the final Phase 3 quality engine
 - topic merge remains workflow/service-only in this slice; HTTP/UI exposure belongs to later Phase 3 milestones
+- topic quality evaluation remains a workflow/test-driven slice and is not yet exposed as a runtime operator endpoint
