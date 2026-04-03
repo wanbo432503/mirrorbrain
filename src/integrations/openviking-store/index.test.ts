@@ -152,6 +152,74 @@ describe('openviking store adapter', () => {
     );
   });
 
+  it('retries memory event imports when OpenViking reports a transient point-lock failure', async () => {
+    const workspaceDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-openviking-'));
+    const requests: Array<{
+      url: string;
+      method: string;
+      body: string;
+    }> = [];
+    let attempt = 0;
+
+    const result = await ingestMemoryEventToOpenViking(
+      {
+        baseUrl: 'http://127.0.0.1:1933',
+        workspaceDir,
+        event: {
+          id: 'browser:aw-event-lock-retry',
+          sourceType: 'activitywatch-browser',
+          sourceRef: 'aw-event-lock-retry',
+          timestamp: '2026-04-03T08:00:00.000Z',
+          authorizationScopeId: 'scope-browser',
+          content: {
+            url: 'https://example.com/retry',
+            title: 'Retry',
+          },
+          captureMetadata: {
+            upstreamSource: 'activitywatch',
+            checkpoint: '2026-04-03T08:00:00.000Z',
+          },
+        },
+      },
+      async (input, init) => {
+        attempt += 1;
+        requests.push({
+          url: String(input),
+          method: init?.method ?? 'GET',
+          body: String(init?.body ?? ''),
+        });
+
+        if (attempt === 1) {
+          return new Response('Failed to acquire point lock for ["/local/default/resources"]', {
+            status: 500,
+          });
+        }
+
+        return new Response(
+          JSON.stringify({
+            status: 'ok',
+            result: {
+              status: 'success',
+              root_uri:
+                'viking://resources/mirrorbrain/memory-events/browser:aw-event-lock-retry.json',
+            },
+          }),
+          {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          },
+        );
+      },
+    );
+
+    expect(requests).toHaveLength(2);
+    expect(result.rootUri).toBe(
+      'viking://resources/mirrorbrain/memory-events/browser:aw-event-lock-retry.json',
+    );
+  });
+
   it('imports a knowledge draft into OpenViking through the resources API', async () => {
     const workspaceDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-openviking-'));
     const requests: Array<{

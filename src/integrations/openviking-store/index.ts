@@ -106,6 +106,8 @@ const MIRRORBRAIN_KNOWLEDGE_PREFIX = 'mirrorbrain-knowledge-';
 const MIRRORBRAIN_MEMORY_NARRATIVES_PREFIX = 'mirrorbrain-memory-narratives-';
 const MIRRORBRAIN_SKILL_DRAFTS_PREFIX = 'mirrorbrain-skill-drafts-';
 const BROWSER_DUPLICATE_WINDOW_MS = 2 * 60 * 1000;
+const OPEN_VIKING_LOCK_RETRY_ATTEMPTS = 3;
+const OPEN_VIKING_LOCK_RETRY_DELAY_MS = 50;
 
 function encodeMirrorBrainResourceName(value: string): string {
   return value.replace(/[^a-zA-Z0-9.-]+/g, '-');
@@ -136,6 +138,22 @@ export function createOpenVikingMemoryEventRecord(
   };
 }
 
+function isRetriableOpenVikingPointLockFailure(
+  response: Response,
+  body: string,
+): boolean {
+  return (
+    response.status === 500 &&
+    body.includes('Failed to acquire point lock')
+  );
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
 async function ingestJsonResourceToOpenViking(
   input: {
     baseUrl: string;
@@ -155,21 +173,45 @@ async function ingestJsonResourceToOpenViking(
   mkdirSync(resourceDir, { recursive: true });
   writeFileSync(sourcePath, JSON.stringify(input.payload, null, 2));
 
-  const response = await fetchImpl(`${input.baseUrl}/api/v1/resources`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      path: sourcePath,
-      target: input.targetUri,
-      reason: input.reason,
-      wait: input.waitForCompletion ?? false,
-    }),
-  });
+  let response: Response | null = null;
 
-  if (!response.ok) {
+  for (
+    let attempt = 1;
+    attempt <= OPEN_VIKING_LOCK_RETRY_ATTEMPTS;
+    attempt += 1
+  ) {
+    response = await fetchImpl(`${input.baseUrl}/api/v1/resources`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        path: sourcePath,
+        target: input.targetUri,
+        reason: input.reason,
+        wait: input.waitForCompletion ?? false,
+      }),
+    });
+
+    if (response.ok) {
+      break;
+    }
+
+    const errorBody = await response.text();
+
+    if (
+      attempt < OPEN_VIKING_LOCK_RETRY_ATTEMPTS &&
+      isRetriableOpenVikingPointLockFailure(response, errorBody)
+    ) {
+      await delay(OPEN_VIKING_LOCK_RETRY_DELAY_MS * attempt);
+      continue;
+    }
+
     throw new Error(`OpenViking request failed with status ${response.status}`);
+  }
+
+  if (response === null || !response.ok) {
+    throw new Error('OpenViking request failed before a response was received.');
   }
 
   const body = (await response.json()) as {

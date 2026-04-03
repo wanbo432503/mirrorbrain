@@ -33,10 +33,11 @@ This component is the storage adapter that maps MirrorBrain artifacts into OpenV
 2. The adapter writes artifact content to local files when the OpenViking endpoint expects file-path based import.
 3. Memory, memory-narrative, candidate, reviewed, knowledge, and skill-draft artifacts are imported through `POST /api/v1/resources`.
 4. Memory-event imports are queued with non-blocking OpenViking resource imports so large browser backfills and incremental sync runs do not stall on per-event completion waits.
-5. Because OpenViking may flatten imported resources at the root, MirrorBrain encodes logical namespaces into resource names such as `mirrorbrain-memory-events-...` and `mirrorbrain-skill-drafts-...` instead of assuming nested directories will exist under `viking://resources/`.
-6. Retrieval uses `GET /api/v1/fs/ls` at `viking://resources/`, filters by the MirrorBrain namespace prefixes, resolves directory-backed resources to their inner files, and then loads content with `GET /api/v1/content/read`.
-7. Memory retrieval also tolerates legacy flat browser resources such as `browser503`, deduplicates by `MemoryEvent.id` when both legacy and prefixed resources contain the same event, and suppresses near-duplicate browser page records that share the same page signature inside a short time window.
-8. Some OpenViking resources may be exposed as multiple sibling content fragments such as `browser1368_1.md` and `browser1368_2.md`; retrieval concatenates these fragments in file-name order before parsing the artifact.
+5. When OpenViking returns a transient point-lock acquisition failure on `POST /api/v1/resources`, the adapter retries the import a small number of times before surfacing the error.
+6. Because OpenViking may flatten imported resources at the root, MirrorBrain encodes logical namespaces into resource names such as `mirrorbrain-memory-events-...` and `mirrorbrain-skill-drafts-...` instead of assuming nested directories will exist under `viking://resources/`.
+7. Retrieval uses `GET /api/v1/fs/ls` at `viking://resources/`, filters by the MirrorBrain namespace prefixes, resolves directory-backed resources to their inner files, and then loads content with `GET /api/v1/content/read`.
+8. Memory retrieval also tolerates legacy flat browser resources such as `browser503`, deduplicates by `MemoryEvent.id` when both legacy and prefixed resources contain the same event, and suppresses near-duplicate browser page records that share the same page signature inside a short time window.
+9. Some OpenViking resources may be exposed as multiple sibling content fragments such as `browser1368_1.md` and `browser1368_2.md`; retrieval concatenates these fragments in file-name order before parsing the artifact.
 
 ## Operational Note
 
@@ -48,6 +49,7 @@ For local setup and startup expectations around OpenViking, see the repository [
 - unit tests verify payload preservation
 - unit tests verify ingestion metadata remains attached
 - unit tests verify HTTP request payloads for memory, memory-narrative, candidate, reviewed, knowledge, and skill imports, including non-blocking memory-event ingestion
+- unit tests verify transient OpenViking point-lock failures are retried for resource imports
 - unit tests verify HTTP-based listing and content reads for memory, memory-narrative, candidate, reviewed, knowledge, and skill retrieval
 - unit tests verify legacy resource compatibility, browser duplicate suppression, and duplicate-id suppression during memory reads
 - unit tests verify multi-part OpenViking resource fragments are recombined before parsing
@@ -58,6 +60,7 @@ For local setup and startup expectations around OpenViking, see the repository [
 - MirrorBrain classification is currently encoded into flat resource names rather than guaranteed nested directories inside OpenViking
 - retrieval depends on OpenViking exposing imported resources through `fs/ls` and readable child files through `content/read`
 - memory-event sync completion now means MirrorBrain has handed imported events to OpenViking, not that every event has finished OpenViking-side indexing
+- repeated or long-lived OpenViking lock contention still fails after the bounded retry budget is exhausted
 - historical duplicates are suppressed at retrieval time for browser data, but the underlying OpenViking resources are still append-oriented and remain on disk until a separate cleanup path exists
 - Phase 1 does not publish directly into OpenViking `agent/skills`; it stores skill drafts as MirrorBrain-managed resources for stable classification and retrieval
 - knowledge artifacts are parsed back from stored markdown conventions, including Phase 3 topic-aware metadata, so retrieval depends on those content conventions staying stable
