@@ -77,7 +77,7 @@ Those concerns remain in the service, workflow, module, and integration layers.
 - reviewed-memory writes require an explicit `reviewedAt` timestamp for auditability
 - `POST /memory/query` is still a thin Phase 2A contract and does not yet expose pagination or mature ranking controls
 - `POST /sync/shell` depends on an explicitly configured shell history path in the runtime service
-- sync responses can include `importedEvents` so standalone clients can surface newly imported memory immediately even while OpenViking-backed reads are still catching up
+- sync responses can include a recent `importedEvents` preview so standalone clients can surface newly imported memory immediately without returning the full imported event batch
 
 ## Test Strategy
 

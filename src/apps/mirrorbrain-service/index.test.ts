@@ -4,6 +4,7 @@ import { getMirrorBrainConfig } from '../../shared/config/index.js';
 import type {
   CandidateMemory,
   CandidateReviewSuggestion,
+  MemoryEvent,
   MemoryQueryResult,
   ReviewedMemory,
 } from '../../shared/types/index.js';
@@ -284,6 +285,71 @@ describe('mirrorbrain service', () => {
       baseUrl: expectedOpenVikingBaseUrl,
     });
     expect(api.service).toBe(service);
+  });
+
+  it('returns only the most recent imported browser events in explicit sync responses', async () => {
+    const importedEvents: MemoryEvent[] = Array.from({ length: 60 }, (_, index) => {
+      const minute = String(index).padStart(2, '0');
+      const timestamp = `2026-03-20T10:${minute}:00.000Z`;
+
+      return {
+        id: `browser:${index + 1}`,
+        sourceType: 'activitywatch-browser',
+        sourceRef: String(index + 1),
+        timestamp,
+        authorizationScopeId: 'scope-browser',
+        content: {
+          url: `https://example.com/${index + 1}`,
+          title: `Event ${index + 1}`,
+        },
+        captureMetadata: {
+          upstreamSource: 'activitywatch',
+          checkpoint: timestamp,
+        },
+      };
+    });
+    const service = {
+      status: 'running' as const,
+      config: getMirrorBrainConfig(),
+      syncBrowserMemory: vi.fn(async () => ({
+        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+        strategy: 'incremental' as const,
+        importedCount: importedEvents.length,
+        lastSyncedAt: '2026-03-20T10:59:00.000Z',
+        importedEvents,
+      })),
+      syncShellMemory: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:59:00.000Z',
+        importedEvents: [],
+      })),
+      stop: vi.fn(),
+    };
+
+    const api = createMirrorBrainService(
+      {
+        service,
+      },
+      {
+        listMemoryEvents: vi.fn(async () => []),
+        buildBrowserThemeNarratives: vi.fn(() => []),
+        publishMemoryNarrative: vi.fn(async () => ({
+          sourcePath: '/tmp/memory-narrative.json',
+          rootUri: 'viking://resources/memory-narrative',
+        })),
+        listKnowledge: vi.fn(async () => []),
+        listSkillDrafts: vi.fn(async () => []),
+      },
+    );
+
+    const result = await api.syncBrowserMemory();
+
+    expect(result.importedCount).toBe(60);
+    expect(result.importedEvents).toHaveLength(50);
+    expect(result.importedEvents?.[0]?.id).toBe('browser:60');
+    expect(result.importedEvents?.at(-1)?.id).toBe('browser:11');
   });
 
   it('persists knowledge and skill artifacts through the configured OpenViking writers', async () => {

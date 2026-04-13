@@ -110,6 +110,8 @@ interface CreateMirrorBrainServiceDependencies {
   suggestCandidateReviews?: typeof suggestCandidateReviews;
 }
 
+const SYNC_IMPORTED_EVENT_PREVIEW_LIMIT = 50;
+
 function createOpenVikingMemoryEventWriter(input: {
   config: ReturnType<typeof getMirrorBrainConfig>;
   workspaceDir: string;
@@ -122,6 +124,21 @@ function createOpenVikingMemoryEventWriter(input: {
         event: record.payload,
       });
     },
+  };
+}
+
+function summarizeImportedEvents(
+  sync: BrowserMemorySyncResult | ShellMemorySyncResult,
+): BrowserMemorySyncResult | ShellMemorySyncResult {
+  if (sync.importedEvents === undefined) {
+    return sync;
+  }
+
+  return {
+    ...sync,
+    importedEvents: [...sync.importedEvents]
+      .sort((left, right) => right.timestamp.localeCompare(left.timestamp))
+      .slice(0, SYNC_IMPORTED_EVENT_PREVIEW_LIMIT),
   };
 }
 
@@ -330,13 +347,13 @@ export function createMirrorBrainService(
       const sync = await input.service.syncBrowserMemory();
       scheduleMemoryNarrativeRefresh(sync, buildBrowserThemeNarratives);
 
-      return sync;
+      return summarizeImportedEvents(sync) as BrowserMemorySyncResult;
     },
     syncShellMemory: async () => {
       const sync = await input.service.syncShellMemory();
       scheduleMemoryNarrativeRefresh(sync, buildShellProblemNarratives);
 
-      return sync;
+      return summarizeImportedEvents(sync) as ShellMemorySyncResult;
     },
     listMemoryEvents: () =>
       listMemoryEvents({

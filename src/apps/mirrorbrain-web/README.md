@@ -7,7 +7,7 @@ Current responsibility:
 - render the Phase 1 review workflow state through tabbed sections
 - orchestrate browser sync, shell sync, daily candidate generation, AI review suggestions, explicit review, and artifact generation through an injected API
 - keep imported memory readable through client-side paging in the standalone MVP UI
-- merge `importedEvents` from sync responses into local UI state so newly synced memory can appear immediately without waiting for a full backend re-read
+- merge a recent `importedEvents` preview from sync responses into local UI state so newly synced memory can appear immediately without waiting for a full backend re-read
 
 Current limitation:
 
