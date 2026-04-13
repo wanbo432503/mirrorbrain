@@ -275,6 +275,16 @@ export function createMirrorBrainService(
       }),
     );
   };
+  const scheduleMemoryNarrativeRefresh = (
+    sync: { importedCount: number },
+    buildNarratives: (input: { memoryEvents: MemoryEvent[] }) => MemoryNarrative[],
+  ) => {
+    if (sync.importedCount === 0) {
+      return;
+    }
+
+    void refreshMemoryNarratives(buildNarratives).catch(() => undefined);
+  };
   const mergeTopicKnowledgeCandidate = async (
     mergeCandidate: KnowledgeArtifact,
     mergedAt?: string,
@@ -318,13 +328,13 @@ export function createMirrorBrainService(
     service: input.service,
     syncBrowserMemory: async () => {
       const sync = await input.service.syncBrowserMemory();
-      await refreshMemoryNarratives(buildBrowserThemeNarratives);
+      scheduleMemoryNarrativeRefresh(sync, buildBrowserThemeNarratives);
 
       return sync;
     },
     syncShellMemory: async () => {
       const sync = await input.service.syncShellMemory();
-      await refreshMemoryNarratives(buildShellProblemNarratives);
+      scheduleMemoryNarrativeRefresh(sync, buildShellProblemNarratives);
 
       return sync;
     },

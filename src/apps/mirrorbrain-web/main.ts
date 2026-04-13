@@ -12,6 +12,7 @@ interface BrowserSyncSummary {
   strategy: 'initial-backfill' | 'incremental';
   importedCount: number;
   lastSyncedAt: string;
+  importedEvents?: MemoryEvent[];
 }
 
 type MirrorBrainWebTab = 'memory' | 'review' | 'artifacts';
@@ -103,6 +104,28 @@ function getMemoryPageCount(memoryEvents: MemoryEvent[]): number {
 
 function clampMemoryPage(memoryEvents: MemoryEvent[], page: number): number {
   return Math.min(Math.max(1, page), getMemoryPageCount(memoryEvents));
+}
+
+function mergeMemoryEvents(
+  currentEvents: MemoryEvent[],
+  importedEvents: MemoryEvent[],
+): MemoryEvent[] {
+  const mergedById = new Map<string, MemoryEvent>();
+
+  for (const event of [...currentEvents, ...importedEvents]) {
+    const previousEvent = mergedById.get(event.id);
+
+    if (
+      previousEvent === undefined ||
+      event.timestamp.localeCompare(previousEvent.timestamp) >= 0
+    ) {
+      mergedById.set(event.id, event);
+    }
+  }
+
+  return [...mergedById.values()].sort((left, right) =>
+    right.timestamp.localeCompare(left.timestamp),
+  );
 }
 
 function renderTabButton(
@@ -490,7 +513,13 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
     },
     async syncBrowserMemory() {
       state.lastSyncSummary = await input.api.syncBrowser();
-      state.memoryEvents = await input.api.listMemory();
+      state.memoryEvents =
+        state.lastSyncSummary.importedEvents === undefined
+          ? await input.api.listMemory()
+          : mergeMemoryEvents(
+              state.memoryEvents,
+              state.lastSyncSummary.importedEvents,
+            );
       state.memoryPage = 1;
       state.activeTab = 'memory';
       setFeedback({
@@ -500,7 +529,13 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
     },
     async syncShellMemory() {
       state.lastSyncSummary = await input.api.syncShell();
-      state.memoryEvents = await input.api.listMemory();
+      state.memoryEvents =
+        state.lastSyncSummary.importedEvents === undefined
+          ? await input.api.listMemory()
+          : mergeMemoryEvents(
+              state.memoryEvents,
+              state.lastSyncSummary.importedEvents,
+            );
       state.memoryPage = 1;
       state.activeTab = 'memory';
       setFeedback({

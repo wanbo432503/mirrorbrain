@@ -483,6 +483,58 @@ describe('mirrorbrain web app', () => {
     });
   });
 
+  it('merges imported browser events from sync results without waiting for a full memory reload', async () => {
+    const existingEvent = createMemoryEvent(
+      'browser:existing',
+      'Existing Event',
+      '2026-03-20T08:00:00.000Z',
+    );
+    const importedEvent = createMemoryEvent(
+      'browser:imported',
+      'Imported Event',
+      '2026-03-20T09:00:00.000Z',
+    );
+    const api = {
+      getHealth: vi.fn(async () => ({
+        status: 'running' as const,
+      })),
+      listMemory: vi.fn(async () => [existingEvent]),
+      listKnowledge: vi.fn(async () => []),
+      listKnowledgeTopics: vi.fn(async () => []),
+      listSkills: vi.fn(async () => []),
+      syncBrowser: vi.fn(async () => ({
+        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+        strategy: 'incremental' as const,
+        importedCount: 1,
+        lastSyncedAt: '2026-03-20T09:00:00.000Z',
+        importedEvents: [importedEvent],
+      })),
+      syncShell: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T09:05:00.000Z',
+        importedEvents: [],
+      })),
+      createDailyCandidates: vi.fn(async () => []),
+      suggestCandidateReviews: vi.fn(async () => []),
+      reviewCandidateMemory: vi.fn(),
+      generateKnowledge: vi.fn(),
+      generateSkill: vi.fn(),
+    };
+
+    const app = createMirrorBrainWebApp({
+      api,
+      now: () => '2026-03-20T10:00:00.000Z',
+    });
+
+    await app.load();
+    await app.syncBrowserMemory();
+
+    expect(app.state.memoryEvents).toEqual([importedEvent, existingEvent]);
+    expect(api.listMemory).toHaveBeenCalledTimes(1);
+  });
+
   it('tracks active tab selection and memory pagination in the controller state', async () => {
     const memoryEvents: MemoryEvent[] = Array.from({ length: 25 }, (_, index) =>
       createMemoryEvent(

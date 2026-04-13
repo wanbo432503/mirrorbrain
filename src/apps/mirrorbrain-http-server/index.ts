@@ -371,6 +371,10 @@ const browserSyncSummarySchema = {
     strategy: { type: 'string', enum: ['initial-backfill', 'incremental'] },
     importedCount: { type: 'number' },
     lastSyncedAt: { type: 'string' },
+    importedEvents: {
+      type: 'array',
+      items: memoryEventSchema,
+    },
   },
   required: ['sourceKey', 'strategy', 'importedCount', 'lastSyncedAt'],
 } as const;

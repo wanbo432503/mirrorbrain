@@ -112,6 +112,38 @@ describe('browser memory sync workflow', () => {
       strategy: 'initial-backfill',
       importedCount: 2,
       lastSyncedAt: '2026-03-20T08:00:00.000Z',
+      importedEvents: [
+        {
+          id: 'browser:aw-event-1',
+          sourceType: 'activitywatch-browser',
+          sourceRef: 'aw-event-1',
+          timestamp: '2026-03-20T07:45:00.000Z',
+          authorizationScopeId: 'scope-browser',
+          content: {
+            url: 'https://example.com/tasks',
+            title: 'Example Tasks',
+          },
+          captureMetadata: {
+            upstreamSource: 'activitywatch',
+            checkpoint: '2026-03-20T07:45:00.000Z',
+          },
+        },
+        {
+          id: 'browser:aw-event-2',
+          sourceType: 'activitywatch-browser',
+          sourceRef: 'aw-event-2',
+          timestamp: '2026-03-20T08:00:00.000Z',
+          authorizationScopeId: 'scope-browser',
+          content: {
+            url: 'https://example.com/review',
+            title: 'Review',
+          },
+          captureMetadata: {
+            upstreamSource: 'activitywatch',
+            checkpoint: '2026-03-20T08:00:00.000Z',
+          },
+        },
+      ],
     });
   });
 
@@ -165,6 +197,7 @@ describe('browser memory sync workflow', () => {
       strategy: 'incremental',
       importedCount: 0,
       lastSyncedAt: '2026-03-20T09:00:00.000Z',
+      importedEvents: [],
     });
   });
 
@@ -214,6 +247,23 @@ describe('browser memory sync workflow', () => {
       strategy: 'initial-backfill',
       importedCount: 1,
       lastSyncedAt: '2026-03-20T08:00:00.000Z',
+      importedEvents: [
+        {
+          id: 'browser:aw-event-1',
+          sourceType: 'activitywatch-browser',
+          sourceRef: 'aw-event-1',
+          timestamp: '2026-03-20T07:45:00.000Z',
+          authorizationScopeId: 'scope-browser',
+          content: {
+            url: 'https://example.com/tasks',
+            title: 'Example Tasks',
+          },
+          captureMetadata: {
+            upstreamSource: 'activitywatch',
+            checkpoint: '2026-03-20T07:45:00.000Z',
+          },
+        },
+      ],
     });
   });
 

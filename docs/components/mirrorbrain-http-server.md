@@ -52,7 +52,7 @@ Those concerns remain in the service, workflow, module, and integration layers.
 2. The server resolves host and port from explicit input or the runtime config.
 3. `Fastify` routes each request to the corresponding service method.
 4. OpenAPI metadata is registered alongside the routes and published through Swagger UI.
-5. `POST /sync/browser` and `POST /sync/shell` trigger explicit source sync operations through the service layer.
+5. `POST /sync/browser` and `POST /sync/shell` trigger explicit source sync operations through the service layer and return the sync summary without waiting for background narrative rebuild work.
 6. `GET /memory` returns raw memory events for the standalone MVP and review-oriented flows.
 7. `POST /memory/query` forwards a query-shaped retrieval request and returns theme-level memory results.
 8. The server serializes the domain result as JSON and returns an HTTP status that matches the action.
@@ -77,6 +77,7 @@ Those concerns remain in the service, workflow, module, and integration layers.
 - reviewed-memory writes require an explicit `reviewedAt` timestamp for auditability
 - `POST /memory/query` is still a thin Phase 2A contract and does not yet expose pagination or mature ranking controls
 - `POST /sync/shell` depends on an explicitly configured shell history path in the runtime service
+- sync responses can include `importedEvents` so standalone clients can surface newly imported memory immediately even while OpenViking-backed reads are still catching up
 
 ## Test Strategy
 

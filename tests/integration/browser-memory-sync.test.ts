@@ -69,6 +69,7 @@ describe('browser memory sync integration', () => {
       strategy: 'incremental',
       importedCount: 0,
       lastSyncedAt: '2026-03-20T09:00:00.000Z',
+      importedEvents: [],
     });
   });
 });

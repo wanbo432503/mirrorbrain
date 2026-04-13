@@ -3,7 +3,7 @@ import type {
   OpenVikingMemoryEventWriter,
 } from '../../integrations/openviking-store/index.js';
 import { persistMemoryEvent, type MemorySourceRegistry } from '../../modules/memory-capture/index.js';
-import type { MirrorBrainConfig } from '../../shared/types/index.js';
+import type { MemoryEvent, MirrorBrainConfig } from '../../shared/types/index.js';
 import type { SyncCheckpoint, SyncCheckpointStore } from '../../integrations/file-sync-checkpoint-store/index.js';
 
 export interface MemorySourceSyncResult {
@@ -11,6 +11,7 @@ export interface MemorySourceSyncResult {
   strategy: 'initial-backfill' | 'incremental';
   importedCount: number;
   lastSyncedAt: string;
+  importedEvents?: MemoryEvent[];
 }
 
 interface RunMemorySourceSyncOnceInput {
@@ -93,5 +94,6 @@ export async function runMemorySourceSyncOnce(
     strategy: plan.strategy,
     importedCount: sanitizedEvents.length,
     lastSyncedAt,
+    importedEvents: sanitizedEvents,
   };
 }
