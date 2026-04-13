@@ -23,6 +23,7 @@ This component is the storage adapter that maps MirrorBrain artifacts into OpenV
 - `ingestKnowledgeArtifactToOpenViking(...)`
 - `ingestSkillArtifactToOpenViking(...)`
 - `listMirrorBrainMemoryEventsFromOpenViking(...)`
+- `listMirrorBrainMemoryEventsFromWorkspace(...)`
 - `listMirrorBrainMemoryNarrativesFromOpenViking(...)`
 - `listMirrorBrainKnowledgeArtifactsFromOpenViking(...)`
 - `listMirrorBrainSkillArtifactsFromOpenViking(...)`
@@ -38,6 +39,7 @@ This component is the storage adapter that maps MirrorBrain artifacts into OpenV
 7. Retrieval uses `GET /api/v1/fs/ls` at `viking://resources/`, filters by the MirrorBrain namespace prefixes, resolves directory-backed resources to their inner files, and then loads content with `GET /api/v1/content/read`.
 8. Memory retrieval also tolerates legacy flat browser resources such as `browser503`, deduplicates by `MemoryEvent.id` when both legacy and prefixed resources contain the same event, and suppresses near-duplicate browser page records that share the same page signature inside a short time window.
 9. Some OpenViking resources may be exposed as multiple sibling content fragments such as `browser1368_1.md` and `browser1368_2.md`; retrieval concatenates these fragments in file-name order before parsing the artifact.
+10. The same adapter can also read historical `MemoryEvent` JSON files directly from the local workspace cache under `mirrorbrain/memory-events/` when the caller needs a non-OpenViking fallback.
 
 ## Operational Note
 
@@ -51,6 +53,7 @@ For local setup and startup expectations around OpenViking, see the repository [
 - unit tests verify HTTP request payloads for memory, memory-narrative, candidate, reviewed, knowledge, and skill imports, including non-blocking memory-event ingestion
 - unit tests verify transient OpenViking point-lock failures are retried for resource imports
 - unit tests verify HTTP-based listing and content reads for memory, memory-narrative, candidate, reviewed, knowledge, and skill retrieval
+- unit tests verify local workspace-backed memory-event reads
 - unit tests verify legacy resource compatibility, browser duplicate suppression, and duplicate-id suppression during memory reads
 - unit tests verify multi-part OpenViking resource fragments are recombined before parsing
 
@@ -59,6 +62,7 @@ For local setup and startup expectations around OpenViking, see the repository [
 - imports rely on the currently documented OpenViking HTTP endpoints
 - MirrorBrain classification is currently encoded into flat resource names rather than guaranteed nested directories inside OpenViking
 - retrieval depends on OpenViking exposing imported resources through `fs/ls` and readable child files through `content/read`
+- callers that use the workspace fallback read only the locally cached `mirrorbrain/memory-events/*.json` files and do not depend on OpenViking availability for that path
 - memory-event sync completion now means MirrorBrain has handed imported events to OpenViking, not that every event has finished OpenViking-side indexing
 - repeated or long-lived OpenViking lock contention still fails after the bounded retry budget is exhausted
 - historical duplicates are suppressed at retrieval time for browser data, but the underlying OpenViking resources are still append-oriented and remain on disk until a separate cleanup path exists

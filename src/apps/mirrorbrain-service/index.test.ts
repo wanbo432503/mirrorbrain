@@ -427,6 +427,82 @@ describe('mirrorbrain service', () => {
     expect(result.importedEvents?.at(-1)?.id).toBe('browser:11');
   });
 
+  it('falls back to workspace memory events when OpenViking memory reads fail', async () => {
+    const service = {
+      status: 'running' as const,
+      config: getMirrorBrainConfig(),
+      syncBrowserMemory: vi.fn(async () => ({
+        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:00:00.000Z',
+        importedEvents: [],
+      })),
+      syncShellMemory: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:00:00.000Z',
+        importedEvents: [],
+      })),
+      stop: vi.fn(),
+    };
+    const listMemoryEvents = vi.fn(async () => {
+      throw new Error('fetch failed');
+    });
+    const listWorkspaceMemoryEvents = vi.fn(async () => [
+      {
+        id: 'browser:aw-event-1',
+        sourceType: 'activitywatch-browser',
+        sourceRef: 'aw-event-1',
+        timestamp: '2026-03-20T08:00:00.000Z',
+        authorizationScopeId: 'scope-browser',
+        content: {
+          url: 'https://example.com/tasks',
+          title: 'Example Tasks',
+        },
+        captureMetadata: {
+          upstreamSource: 'activitywatch',
+          checkpoint: '2026-03-20T08:00:00.000Z',
+        },
+      },
+    ]);
+
+    const api = createMirrorBrainService(
+      {
+        service,
+        workspaceDir: '/tmp/mirrorbrain-workspace',
+      },
+      {
+        listMemoryEvents,
+        listWorkspaceMemoryEvents,
+        listKnowledge: vi.fn(async () => []),
+        listSkillDrafts: vi.fn(async () => []),
+      },
+    );
+
+    await expect(api.listMemoryEvents()).resolves.toEqual([
+      {
+        id: 'browser:aw-event-1',
+        sourceType: 'activitywatch-browser',
+        sourceRef: 'aw-event-1',
+        timestamp: '2026-03-20T08:00:00.000Z',
+        authorizationScopeId: 'scope-browser',
+        content: {
+          url: 'https://example.com/tasks',
+          title: 'Example Tasks',
+        },
+        captureMetadata: {
+          upstreamSource: 'activitywatch',
+          checkpoint: '2026-03-20T08:00:00.000Z',
+        },
+      },
+    ]);
+    expect(listWorkspaceMemoryEvents).toHaveBeenCalledWith({
+      workspaceDir: '/tmp/mirrorbrain-workspace',
+    });
+  });
+
   it('persists knowledge and skill artifacts through the configured OpenViking writers', async () => {
     const service = {
       status: 'running' as const,

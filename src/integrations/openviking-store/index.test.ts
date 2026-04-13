@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -11,6 +11,7 @@ import {
   ingestKnowledgeArtifactToOpenViking,
   ingestMemoryEventToOpenViking,
   ingestReviewedMemoryToOpenViking,
+  listMirrorBrainMemoryEventsFromWorkspace,
   listMirrorBrainCandidateMemoriesFromOpenViking,
   ingestSkillArtifactToOpenViking,
   listMirrorBrainKnowledgeArtifactsFromOpenViking,
@@ -637,6 +638,57 @@ describe('openviking store adapter', () => {
           checkpoint: '2026-03-20T08:00:00.000Z',
         },
       },
+    ]);
+  });
+
+  it('lists memory events from the local workspace cache', async () => {
+    const workspaceDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-local-memory-'));
+    const resourceDir = join(workspaceDir, 'mirrorbrain', 'memory-events');
+    mkdirSync(resourceDir, { recursive: true });
+    writeFileSync(
+      join(resourceDir, 'browser:aw-event-1.json'),
+      JSON.stringify({
+        id: 'browser:aw-event-1',
+        sourceType: 'activitywatch-browser',
+        sourceRef: 'aw-event-1',
+        timestamp: '2026-03-20T08:00:00.000Z',
+        authorizationScopeId: 'scope-browser',
+        content: {
+          url: 'https://example.com/tasks',
+          title: 'Example Tasks',
+        },
+        captureMetadata: {
+          upstreamSource: 'activitywatch',
+          checkpoint: '2026-03-20T08:00:00.000Z',
+        },
+      }),
+    );
+    writeFileSync(
+      join(resourceDir, 'browser:aw-event-2.json'),
+      JSON.stringify({
+        id: 'browser:aw-event-2',
+        sourceType: 'activitywatch-browser',
+        sourceRef: 'aw-event-2',
+        timestamp: '2026-03-20T08:05:00.000Z',
+        authorizationScopeId: 'scope-browser',
+        content: {
+          url: 'https://example.com/review',
+          title: 'Review',
+        },
+        captureMetadata: {
+          upstreamSource: 'activitywatch',
+          checkpoint: '2026-03-20T08:05:00.000Z',
+        },
+      }),
+    );
+
+    const result = await listMirrorBrainMemoryEventsFromWorkspace({
+      workspaceDir,
+    });
+
+    expect(result.map((event) => event.id)).toEqual([
+      'browser:aw-event-1',
+      'browser:aw-event-2',
     ]);
   });
 

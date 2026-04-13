@@ -11,6 +11,7 @@ import {
   ingestReviewedMemoryToOpenViking,
   ingestSkillArtifactToOpenViking,
   listMirrorBrainMemoryEventsFromOpenViking,
+  listMirrorBrainMemoryEventsFromWorkspace,
   listMirrorBrainMemoryNarrativesFromOpenViking,
   type OpenVikingMemoryEventWriter,
 } from '../../integrations/openviking-store/index.js';
@@ -96,6 +97,7 @@ interface CreateMirrorBrainServiceInput {
 interface CreateMirrorBrainServiceDependencies {
   queryMemory?: typeof queryMemoryFromPluginApi;
   listMemoryEvents?: typeof listMirrorBrainMemoryEventsFromOpenViking;
+  listWorkspaceMemoryEvents?: typeof listMirrorBrainMemoryEventsFromWorkspace;
   listMemoryNarratives?: typeof listMirrorBrainMemoryNarrativesFromOpenViking;
   listKnowledge?: typeof listKnowledgeFromPluginApi;
   listSkillDrafts?: typeof listSkillDraftsFromPluginApi;
@@ -265,6 +267,8 @@ export function createMirrorBrainService(
   const queryMemory = dependencies.queryMemory ?? queryMemoryFromPluginApi;
   const listMemoryEvents =
     dependencies.listMemoryEvents ?? listMirrorBrainMemoryEventsFromOpenViking;
+  const listWorkspaceMemoryEvents =
+    dependencies.listWorkspaceMemoryEvents ?? listMirrorBrainMemoryEventsFromWorkspace;
   const listMemoryNarratives =
     dependencies.listMemoryNarratives ?? listMirrorBrainMemoryNarrativesFromOpenViking;
   const listKnowledge = dependencies.listKnowledge ?? listKnowledgeFromPluginApi;
@@ -307,10 +311,19 @@ export function createMirrorBrainService(
       ),
     );
   };
+  const loadMemoryEvents = async (): Promise<MemoryEvent[]> => {
+    try {
+      return await listMemoryEvents({ baseUrl });
+    } catch {
+      return listWorkspaceMemoryEvents({
+        workspaceDir,
+      });
+    }
+  };
   const refreshMemoryNarratives = async (
     buildNarratives: (input: { memoryEvents: MemoryEvent[] }) => MemoryNarrative[],
   ) => {
-    const memoryEvents = await listMemoryEvents({ baseUrl });
+    const memoryEvents = await loadMemoryEvents();
 
     await publishMemoryNarratives(
       buildNarratives({
@@ -382,9 +395,7 @@ export function createMirrorBrainService(
       return summarizeImportedEvents(sync) as ShellMemorySyncResult;
     },
     listMemoryEvents: () =>
-      listMemoryEvents({
-        baseUrl,
-      }),
+      loadMemoryEvents(),
     listMemoryNarratives: () =>
       listMemoryNarratives({
         baseUrl,
@@ -540,7 +551,7 @@ export function createMirrorBrainService(
       reviewDate: string,
       reviewTimeZone?: string,
     ): Promise<CandidateMemory[]> => {
-      const memoryEvents = await listMemoryEvents({ baseUrl });
+      const memoryEvents = await loadMemoryEvents();
       const artifacts = await buildCandidateMemories({
         reviewDate,
         reviewTimeZone,

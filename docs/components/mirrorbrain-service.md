@@ -12,6 +12,7 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 - exposes an explicit shell-history sync operation when a shell history path is configured
 - exposes the high-level service contract used by `openclaw`
 - keeps raw memory listing and `openclaw` retrieval shaping as separate concerns
+- falls back to workspace-cached raw memory events when OpenViking-backed memory reads fail
 - schedules browser theme narrative rebuilds after explicit browser sync calls through the service contract
 - schedules shell problem narrative rebuilds after explicit shell sync calls through the service contract
 - forwards `openclaw` retrieval calls to the OpenViking-backed plugin API with the configured base URL
@@ -37,7 +38,7 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 5. Return a runtime service handle with `status` and `stop()`.
 6. Expose the `openclaw`-facing service contract around that runtime handle.
 7. After explicit browser or shell sync calls through the service contract, return the sync summary immediately and schedule the corresponding narrative rebuild in the background when new events were imported.
-8. List raw imported memory when review-oriented workflows need event-level records.
+8. List raw imported memory when review-oriented workflows need event-level records, preferring OpenViking-backed reads and falling back to workspace-cached memory-event files when storage reads fail.
 9. Forward `openclaw` memory retrieval calls through the configured OpenViking base URL and return shaped retrieval results.
 10. Generate daily candidate streams for a requested review date.
 11. Return suggestion-only AI review hints without promoting any candidate.
@@ -62,6 +63,7 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
 - unit tests verify explicit browser sync returns before the background narrative rebuild finishes
 - unit tests verify the service forwards retrieval calls to the plugin API with the configured OpenViking base URL and retrieval input
 - unit tests verify review-oriented flows still use raw memory event listing where needed
+- unit tests verify raw memory reads fall back to workspace-cached events when OpenViking reads fail
 - unit and integration tests verify daily candidate memories can be created and published through the service contract
 - unit and integration tests verify candidate review suggestions stay suggestion-only
 - unit and integration tests verify explicit keep and discard review decisions publish reviewed memory artifacts through the service contract
@@ -75,6 +77,7 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
 - the service currently defaults to automatic discovery of the most recently updated ActivityWatch browser watcher bucket and a single browser scope (`scope-browser`) unless a browser bucket is explicitly overridden at startup
 - shell sync is currently explicit only; it does not start a shell polling loop or discover shell history paths automatically
 - the retrieval contract now accepts lightweight query and filter input, but still uses minimal result shaping rather than mature ranking
+- raw memory list endpoints can fall back to workspace-cached memory-event files when OpenViking reads fail, so event history may appear before the corresponding OpenViking-backed retrieval views fully recover
 - stored browser and shell narratives are rebuilt after explicit service sync operations, but the rebuild now happens in the background and may lag slightly behind the returned sync summary
 - background browser polling still relies on the raw-event retrieval fallback until a later narrative-refresh hook is added there
 - generation remains caller-driven; the service exposes explicit methods but does not schedule daily review or skill extraction automatically
