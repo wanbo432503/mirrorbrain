@@ -98,6 +98,38 @@ describe('shell memory sync workflow', () => {
       strategy: 'initial-backfill',
       importedCount: 2,
       lastSyncedAt: '2026-03-20T08:00:00.000Z',
+      importedEvents: [
+        {
+          id: 'shell:shell-history:1773974100:git-status',
+          sourceType: 'shell-history',
+          sourceRef: 'shell-history:1773974100:git-status',
+          timestamp: '2026-03-20T07:45:00.000Z',
+          authorizationScopeId: 'scope-shell',
+          content: {
+            command: 'git status',
+            commandName: 'git',
+          },
+          captureMetadata: {
+            upstreamSource: 'shell-history',
+            checkpoint: '2026-03-20T07:45:00.000Z',
+          },
+        },
+        {
+          id: 'shell:shell-history:1773974160:pnpm-vitest-run',
+          sourceType: 'shell-history',
+          sourceRef: 'shell-history:1773974160:pnpm-vitest-run',
+          timestamp: '2026-03-20T07:50:00.000Z',
+          authorizationScopeId: 'scope-shell',
+          content: {
+            command: 'pnpm vitest run',
+            commandName: 'pnpm',
+          },
+          captureMetadata: {
+            upstreamSource: 'shell-history',
+            checkpoint: '2026-03-20T07:50:00.000Z',
+          },
+        },
+      ],
     });
   });
 
@@ -152,6 +184,7 @@ describe('shell memory sync workflow', () => {
       strategy: 'incremental',
       importedCount: 0,
       lastSyncedAt: '2026-03-20T09:00:00.000Z',
+      importedEvents: [],
     });
   });
 });

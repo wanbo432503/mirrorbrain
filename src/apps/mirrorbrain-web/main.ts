@@ -142,7 +142,7 @@ function renderTabButton(
 
 function renderMemoryList(memoryEvents: MemoryEvent[], page: number): string {
   if (memoryEvents.length === 0) {
-    return '<li>No memory events imported yet.</li>';
+    return '<li style="text-align: center; padding: 32px; color: var(--muted);">No memory events imported yet.</li>';
   }
 
   const sortedMemoryEvents = [...memoryEvents].sort((left, right) =>
@@ -166,12 +166,19 @@ function renderMemoryList(memoryEvents: MemoryEvent[], page: number): string {
             ? title
             : `<a href="${url}" target="_blank" rel="noreferrer">${title}</a>`;
 
+        const formattedTimestamp = new Date(event.timestamp).toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+
         return (
         [
           '<li class="mirrorbrain-record">',
-          `<span>${event.sourceType}</span>`,
-          `<span>${linkedTitle}${url === null ? '' : ` (${url})`}</span>`,
-          `<span>${event.timestamp}</span>`,
+          `<span style="color: var(--muted); font-size: 0.85rem;">${event.sourceType}</span>`,
+          `<span>${linkedTitle}</span>`,
+          `<span style="color: var(--muted); font-size: 0.85rem;">${formattedTimestamp}</span>`,
           '</li>',
         ].join('')
         );
@@ -186,18 +193,14 @@ function renderMemoryPanel(state: MirrorBrainWebAppState): string {
 
   return [
     '<section class="mirrorbrain-panel">',
-    '<h2>Memory</h2>',
-    '<p>Imported browser events with page-level browsing to keep the list readable.</p>',
-    '<div class="mirrorbrain-actions"><button type="button" data-action="sync-browser">Sync Browser Memory</button><button type="button" data-action="sync-shell">Sync Shell Memory</button></div>',
-    `<div class="mirrorbrain-pagination"><button type="button" data-action="memory-first-page"${
+    '<h2>Memory Events</h2>',
+    '<p style="font-size: 0.9rem;">Imported browser and shell events. Use pagination to browse.</p>',
+    '<div class="mirrorbrain-actions"><button type="button" data-action="sync-browser">Sync Browser</button><button type="button" data-action="sync-shell">Sync Shell</button></div>',
+    `<div class="mirrorbrain-pagination" style="font-size: 0.85rem;"><button type="button" data-action="memory-prev-page"${
       currentPage === 1 ? ' disabled' : ''
-    }>First</button><button type="button" data-action="memory-prev-page"${
-      currentPage === 1 ? ' disabled' : ''
-    }>Previous</button><span>Page ${currentPage} of ${pageCount}</span><button type="button" data-action="memory-next-page"${
+    }>←</button><span style="color: var(--muted);">Page ${currentPage} of ${pageCount}</span><button type="button" data-action="memory-next-page"${
       currentPage === pageCount ? ' disabled' : ''
-    }>Next</button><button type="button" data-action="memory-last-page"${
-      currentPage === pageCount ? ' disabled' : ''
-    }>Last</button></div>`,
+    }>→</button></div>`,
     `<ul class="mirrorbrain-record-list">${renderMemoryList(
       state.memoryEvents,
       currentPage,
@@ -272,59 +275,52 @@ function renderReviewPanel(state: MirrorBrainWebAppState): string {
   const reviewWindowDescription =
     state.reviewWindowDate === null
       ? 'No review window calculated yet.'
-      : `${state.reviewWindowDate} 00:00:00 to ${state.reviewWindowDate} 23:59:59`;
+      : `${state.reviewWindowDate}`;
 
   return [
     '<section class="mirrorbrain-panel">',
-    '<h2>Review</h2>',
-    '<p>Generate daily candidates, inspect a work stream, and then keep or discard it.</p>',
-    '<div class="mirrorbrain-actions"><button type="button" data-action="create-candidate">Create Candidate</button><button type="button" data-action="keep-candidate">Keep Candidate</button><button type="button" data-action="discard-candidate">Discard Candidate</button></div>',
+    '<h2>Daily Review</h2>',
+    '<p style="font-size: 0.9rem;">Generate and review candidate memories from your work stream.</p>',
+    '<div class="mirrorbrain-actions"><button type="button" data-action="create-candidate">Create Candidates</button><button type="button" data-action="keep-candidate" style="background: #e3f2e8; border-color: #4caf50;">Keep</button><button type="button" data-action="discard-candidate" style="background: #ffebee; border-color: #f44336;">Discard</button></div>',
     '<div class="mirrorbrain-review-layout">',
     '<article class="mirrorbrain-detail-card">',
-    '<h3>Daily Candidate Streams</h3>',
+    '<h3>Candidate Streams</h3>',
     `<div class="mirrorbrain-candidate-list">${renderCandidateList(state)}</div>`,
     '</article>',
-    '<article class="mirrorbrain-detail-card">',
+    '<article class="mirrorbrain-detail-card" style="grid-column: span 1;">',
     '<h3>Selected Candidate</h3>',
     candidate === null
-      ? '<p>Select a candidate stream to review it.</p>'
+      ? '<p style="color: var(--muted); font-size: 0.9rem;">Select a candidate stream to review it.</p>'
       : renderDetailRows([
           { label: 'Review Window', value: reviewWindowDescription },
           {
-            label: 'Matched Memory Events',
+            label: 'Events',
             value: String(state.reviewWindowEventCount),
           },
-          { label: 'Candidate ID', value: candidate.id },
           { label: 'Title', value: candidate.title },
           { label: 'Theme', value: candidate.theme },
           { label: 'Summary', value: candidate.summary },
-          {
-            label: 'Memory Event IDs',
-            value: candidate.memoryEventIds.join(', '),
-          },
-          { label: 'Review Date', value: candidate.reviewDate },
         ]),
     '</article>',
+    '</div>',
+    '<div class="mirrorbrain-detail-grid" style="margin-top: 24px;">',
     '<article class="mirrorbrain-detail-card">',
-    '<h3>AI Review Suggestion</h3>',
+    '<h3>AI Suggestion</h3>',
     suggestion === null
-      ? '<p>No AI suggestion yet.</p>'
+      ? '<p style="color: var(--muted); font-size: 0.9rem;">No AI suggestion yet.</p>'
       : renderDetailRows([
           { label: 'Recommendation', value: suggestion.recommendation },
-          { label: 'Confidence', value: String(suggestion.confidenceScore) },
-          { label: 'Priority', value: String(suggestion.priorityScore) },
+          { label: 'Confidence', value: `${String(suggestion.confidenceScore)}%` },
           { label: 'Rationale', value: suggestion.rationale },
         ]),
     '</article>',
     '<article class="mirrorbrain-detail-card">',
     '<h3>Reviewed Memory</h3>',
     state.reviewedMemory === null
-      ? '<p>No reviewed memory yet.</p>'
+      ? '<p style="color: var(--muted); font-size: 0.9rem;">No reviewed memory yet.</p>'
       : renderDetailRows([
-          { label: 'Reviewed ID', value: state.reviewedMemory.id },
-          { label: 'Candidate ID', value: state.reviewedMemory.candidateMemoryId },
           { label: 'Decision', value: state.reviewedMemory.decision },
-          { label: 'Reviewed At', value: state.reviewedMemory.reviewedAt },
+          { label: 'Reviewed At', value: new Date(state.reviewedMemory.reviewedAt).toLocaleString() },
         ]),
     '</article>',
     '</div>',
@@ -339,63 +335,52 @@ function renderArtifactsPanel(state: MirrorBrainWebAppState): string {
 
   return [
     '<section class="mirrorbrain-panel">',
-    '<h2>Artifacts</h2>',
+    '<h2>Knowledge & Skills</h2>',
+    '<p style="font-size: 0.9rem;">Generated artifacts from reviewed memories.</p>',
     '<div class="mirrorbrain-actions"><button type="button" data-action="generate-knowledge">Generate Knowledge</button><button type="button" data-action="generate-skill">Generate Skill</button></div>',
-    '<div class="mirrorbrain-detail-grid">',
-    '<article class="mirrorbrain-detail-card">',
-    '<h3>Knowledge Artifact</h3>',
-    knowledge === null
-      ? '<p>No knowledge artifact generated yet.</p>'
-      : renderDetailRows([
-          { label: 'Knowledge ID', value: knowledge.id },
-          { label: 'Draft State', value: knowledge.draftState },
-          {
-            label: 'Reviewed Inputs',
-            value: knowledge.sourceReviewedMemoryIds.join(', '),
-          },
-        ]),
-    '</article>',
+    '<div class="mirrorbrain-detail-grid" style="margin-top: 24px;">',
     '<article class="mirrorbrain-detail-card">',
     '<h3>Topic Knowledge</h3>',
     knowledgeTopics.length === 0
-      ? '<p>No topic knowledge available yet.</p>'
+      ? '<p style="color: var(--muted); font-size: 0.9rem;">No topic knowledge available yet.</p>'
       : knowledgeTopics
           .map(
             (topic) =>
-              `<div class="mirrorbrain-topic-summary"><strong>${topic.title}</strong><p>${topic.summary}</p><p>${topic.recencyLabel}</p></div>`,
+              `<div style="margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--line);"><strong style="font-size: 1rem;">${topic.title}</strong><p style="margin-top: 4px; font-size: 0.9rem;">${topic.summary}</p><p style="margin-top: 4px; font-size: 0.8rem; color: var(--muted);">${topic.recencyLabel}</p></div>`,
           )
           .join(''),
     '</article>',
     '<article class="mirrorbrain-detail-card">',
-    '<h3>Skill Artifact</h3>',
-    skill === null
-      ? '<p>No skill artifact generated yet.</p>'
+    '<h3>Latest Knowledge Artifact</h3>',
+    knowledge === null
+      ? '<p style="color: var(--muted); font-size: 0.9rem;">No knowledge artifact generated yet.</p>'
       : renderDetailRows([
-          { label: 'Skill ID', value: skill.id },
-          { label: 'Approval State', value: skill.approvalState },
+          { label: 'State', value: knowledge.draftState },
           {
-            label: 'Workflow Evidence',
-            value: skill.workflowEvidenceRefs.join(', '),
+            label: 'Inputs',
+            value: `${knowledge.sourceReviewedMemoryIds.length} reviewed memories`,
+          },
+        ]),
+    '</article>',
+    '<article class="mirrorbrain-detail-card">',
+    '<h3>Latest Skill Artifact</h3>',
+    skill === null
+      ? '<p style="color: var(--muted); font-size: 0.9rem;">No skill artifact generated yet.</p>'
+      : renderDetailRows([
+          { label: 'Approval', value: skill.approvalState },
+          {
+            label: 'Evidence',
+            value: `${skill.workflowEvidenceRefs.length} workflow refs`,
           },
           {
-            label: 'Requires Confirmation',
-            value: String(skill.executionSafetyMetadata.requiresConfirmation),
+            label: 'Confirmation',
+            value: skill.executionSafetyMetadata.requiresConfirmation ? 'Required' : 'Optional',
           },
         ]),
     '</article>',
     '</div>',
     '</section>',
   ].join('');
-}
-
-function renderFeedback(
-  feedback: MirrorBrainWebAppState['feedback'],
-): string {
-  if (feedback === null) {
-    return '<p>Status: ready</p>';
-  }
-
-  return `<p data-feedback-kind="${feedback.kind}">Status: ${feedback.message}</p>`;
 }
 
 function renderActivePanel(state: MirrorBrainWebAppState): string {
@@ -415,23 +400,28 @@ export function renderMirrorBrainWebApp(
 ): string {
   const syncSummary =
     state.lastSyncSummary === null
-      ? '<p>Last Sync: not run yet</p>'
-      : `<p>Last Sync: ${state.lastSyncSummary.sourceKey} / ${state.lastSyncSummary.strategy} / ${state.lastSyncSummary.importedCount} / ${state.lastSyncSummary.lastSyncedAt}</p>`;
+      ? '<p style="font-size: 0.9rem;">Last Sync: <span style="color: var(--muted);">not run yet</span></p>'
+      : `<p style="font-size: 0.9rem;">Last Sync: <strong>${state.lastSyncSummary.sourceKey}</strong> • <span style="color: var(--muted);">${state.lastSyncSummary.strategy} / ${state.lastSyncSummary.importedCount} events</span></p>`;
+
+  const statusMessage =
+    state.feedback === null
+      ? ''
+      : `<p style="font-size: 0.85rem; padding: 8px 12px; background: var(--accent-soft); border-radius: 4px; margin-bottom: 8px;">${state.feedback.message}</p>`;
 
   return [
     '<main class="mirrorbrain-app">',
-    '<header>',
-    '<h1>MirrorBrain Phase 1 MVP</h1>',
-    `<p>Service Status: ${state.serviceStatus}</p>`,
+    '<header style="margin-bottom: 48px;">',
+    '<h1 style="margin-bottom: 4px;">MirrorBrain</h1>',
+    '<p style="font-size: 0.9rem; color: var(--muted);">Personal Memory & Knowledge System</p>',
     syncSummary,
-    renderFeedback(state.feedback),
-    '<nav class="mirrorbrain-tabs" aria-label="MirrorBrain sections">',
+    statusMessage,
+    '<nav class="mirrorbrain-tabs" aria-label="MirrorBrain sections" style="margin-top: 24px; border-bottom: 1px solid var(--line); padding-bottom: 8px;">',
     renderTabButton('memory', state.activeTab, 'Memory'),
     renderTabButton('review', state.activeTab, 'Review'),
     renderTabButton('artifacts', state.activeTab, 'Artifacts'),
     '</nav>',
-    renderActivePanel(state),
     '</header>',
+    renderActivePanel(state),
     '</main>',
   ].join('');
 }

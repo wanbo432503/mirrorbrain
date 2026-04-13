@@ -77,6 +77,23 @@ describe('memory source sync workflow', () => {
       strategy: 'initial-backfill',
       importedCount: 1,
       lastSyncedAt: '2026-03-20T08:00:00.000Z',
+      importedEvents: [
+        {
+          id: 'browser:1',
+          sourceType: 'activitywatch-browser',
+          sourceRef: '1',
+          timestamp: '2026-03-20T07:59:00.000Z',
+          authorizationScopeId: 'scope-browser',
+          content: {
+            title: 'Example Tasks',
+            url: 'https://example.com/tasks',
+          },
+          captureMetadata: {
+            upstreamSource: 'activitywatch',
+            checkpoint: '2026-03-20T07:59:00.000Z',
+          },
+        },
+      ],
     });
   });
 

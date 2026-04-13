@@ -138,15 +138,15 @@ describe('mirrorbrain web app', () => {
       reviewWindowEventCount: 3,
     });
 
-    expect(html).toContain('Daily Candidate Streams');
+    expect(html).toContain('Candidate Streams');
     expect(html).toContain('Review Window');
-    expect(html).toContain('2026-03-20 00:00:00 to 2026-03-20 23:59:59');
-    expect(html).toContain('Matched Memory Events');
+    expect(html).toContain('2026-03-20');
+    expect(html).toContain('Events');
     expect(html).toContain('3');
     expect(html).toContain(primaryCandidate.title);
     expect(html).toContain(secondaryCandidate.title);
     expect(html).toContain(primaryCandidate.summary);
-    expect(html).toContain('AI Review Suggestion');
+    expect(html).toContain('AI Suggestion');
     expect(html).toContain('Recommendation');
     expect(html).toContain('strong keep candidate');
     expect(html).not.toContain('knowledge-draft:reviewed:candidate:2026-03-20:activitywatch-browser:docs-example-com:guides');
@@ -180,8 +180,8 @@ describe('mirrorbrain web app', () => {
     });
 
     expect(html).toContain('Page 2 of 3');
-    expect(html).toContain('data-action="memory-first-page"');
-    expect(html).toContain('data-action="memory-last-page"');
+    expect(html).toContain('data-action="memory-prev-page"');
+    expect(html).toContain('data-action="memory-next-page"');
     expect(html).toContain('browser:aw-event-7');
     expect(html).toContain('browser:aw-event-6');
     expect(html).toContain('browser:aw-event-3');
@@ -252,8 +252,7 @@ describe('mirrorbrain web app', () => {
     expect(html).toContain(
       '<a href="https://example.com/browser:aw-event-1" target="_blank" rel="noreferrer">MirrorBrain Phase 1 MVP</a>',
     );
-    expect(html).toContain('(https://example.com/browser:aw-event-1)');
-    expect(html).toContain('2026-04-01T01:13:07.592000+00:00');
+    expect(html).toContain('Apr 1');
   });
 
   it('shows only the actions that belong to the active tab', () => {
