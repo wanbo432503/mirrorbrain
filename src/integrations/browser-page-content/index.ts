@@ -46,12 +46,33 @@ function normalizeTextBlock(value: string): string {
     .join('\n\n');
 }
 
+function selectPrimaryHtmlRegion(html: string): string {
+  const articleMatch = html.match(/<article\b[^>]*>([\s\S]*?)<\/article>/iu);
+
+  if (articleMatch?.[1]) {
+    return articleMatch[1];
+  }
+
+  const mainMatch = html.match(/<main\b[^>]*>([\s\S]*?)<\/main>/iu);
+
+  if (mainMatch?.[1]) {
+    return mainMatch[1];
+  }
+
+  return html
+    .replace(/<header[\s\S]*?<\/header>/giu, ' ')
+    .replace(/<nav[\s\S]*?<\/nav>/giu, ' ')
+    .replace(/<aside[\s\S]*?<\/aside>/giu, ' ')
+    .replace(/<footer[\s\S]*?<\/footer>/giu, ' ');
+}
+
 export function extractReadableTextFromHtml(
   html: string,
 ): ExtractedBrowserPageContent {
   const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/iu);
   const title = normalizeTextBlock(titleMatch?.[1] ?? '');
-  const strippedHtml = html
+  const primaryRegionHtml = selectPrimaryHtmlRegion(html);
+  const strippedHtml = primaryRegionHtml
     .replace(/<script[\s\S]*?<\/script>/giu, ' ')
     .replace(/<style[\s\S]*?<\/style>/giu, ' ')
     .replace(/<\/(article|section|main|div|p|h[1-6]|li|ul|ol|br)>/giu, '\n')

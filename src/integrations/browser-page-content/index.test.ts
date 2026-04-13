@@ -6,6 +6,43 @@ import {
 } from './index.js';
 
 describe('browser page content integration', () => {
+  it('prefers main content over navigation and footer noise', () => {
+    const result = extractReadableTextFromHtml(`
+      <html>
+        <head>
+          <title>Shipping Guide</title>
+        </head>
+        <body>
+          <header>
+            <nav>
+              <a href="/home">Home</a>
+              <a href="/pricing">Pricing</a>
+            </nav>
+          </header>
+          <aside>
+            <p>Related links</p>
+          </aside>
+          <main>
+            <article>
+              <h1>Shipping Guide</h1>
+              <p>Prepare the release branch.</p>
+              <p>Run the deployment checklist.</p>
+            </article>
+          </main>
+          <footer>
+            <p>Copyright Example Inc.</p>
+          </footer>
+        </body>
+      </html>
+    `);
+
+    expect(result).toEqual({
+      title: 'Shipping Guide',
+      text:
+        'Shipping Guide\n\nPrepare the release branch.\n\nRun the deployment checklist.',
+    });
+  });
+
   it('extracts readable text and title from html', () => {
     const result = extractReadableTextFromHtml(`
       <html>
