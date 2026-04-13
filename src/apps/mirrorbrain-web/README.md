@@ -8,6 +8,8 @@ Current responsibility:
 - orchestrate browser sync, shell sync, daily candidate generation, AI review suggestions, explicit review, and artifact generation through an injected API
 - keep imported memory readable through client-side paging in the standalone MVP UI
 - merge a recent `importedEvents` preview from sync responses into local UI state so newly synced memory can appear immediately without waiting for a full backend re-read
+- present the review flow as a structured workbench instead of a flat debug panel
+- provide editable knowledge and skill draft editors in the artifacts tab, including save actions when the backing API is available
 
 Current limitation:
 

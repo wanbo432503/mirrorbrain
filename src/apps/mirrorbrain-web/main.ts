@@ -27,6 +27,7 @@ interface MirrorBrainWebAppState {
   candidateReviewSuggestions: CandidateReviewSuggestion[];
   reviewedMemory: ReviewedMemory | null;
   knowledgeArtifact: KnowledgeArtifact | null;
+  knowledgeDraft?: KnowledgeArtifact | null;
   knowledgeTopics: Array<{
     topicKey: string;
     title: string;
@@ -36,6 +37,7 @@ interface MirrorBrainWebAppState {
     recencyLabel: string;
   }>;
   skillArtifact: SkillArtifact | null;
+  skillDraft?: SkillArtifact | null;
   lastSyncSummary: BrowserSyncSummary | null;
   feedback: {
     kind: 'success' | 'error' | 'info';
@@ -82,6 +84,8 @@ interface MirrorBrainWebAppApi {
     reviewedMemories: ReviewedMemory[],
   ): Promise<KnowledgeArtifact>;
   generateSkill(reviewedMemories: ReviewedMemory[]): Promise<SkillArtifact>;
+  saveKnowledgeArtifact?(artifact: KnowledgeArtifact): Promise<KnowledgeArtifact>;
+  saveSkillArtifact?(artifact: SkillArtifact): Promise<SkillArtifact>;
 }
 
 interface CreateMirrorBrainWebAppInput {
@@ -273,6 +277,19 @@ function renderCandidateList(state: MirrorBrainWebAppState): string {
     .join('');
 }
 
+function renderMetricTile(input: {
+  label: string;
+  value: string;
+  tone?: 'default' | 'accent' | 'success';
+}): string {
+  return [
+    `<div class="mirrorbrain-metric mirrorbrain-metric--${input.tone ?? 'default'}">`,
+    `<span class="mirrorbrain-metric-label">${input.label}</span>`,
+    `<strong class="mirrorbrain-metric-value">${input.value}</strong>`,
+    '</div>',
+  ].join('');
+}
+
 function renderReviewPanel(state: MirrorBrainWebAppState): string {
   const candidate = getSelectedCandidate(state);
   const suggestion = getSelectedCandidateSuggestion(state);
@@ -280,52 +297,81 @@ function renderReviewPanel(state: MirrorBrainWebAppState): string {
     state.reviewWindowDate === null
       ? 'No review window calculated yet.'
       : `${state.reviewWindowDate}`;
+  const recommendationTone =
+    suggestion?.recommendation === 'keep'
+      ? 'success'
+      : suggestion?.recommendation === 'discard'
+        ? 'default'
+        : 'accent';
 
   return [
     '<section class="mirrorbrain-panel">',
-    '<h2>Daily Review</h2>',
-    '<p style="font-size: 0.9rem;">Generate and review candidate memories from your work stream.</p>',
-    '<div class="mirrorbrain-actions"><button type="button" data-action="create-candidate">Create Candidates</button><button type="button" data-action="keep-candidate" style="background: #e3f2e8; border-color: #4caf50;">Keep</button><button type="button" data-action="discard-candidate" style="background: #ffebee; border-color: #f44336;">Discard</button></div>',
+    '<div class="mirrorbrain-panel-header">',
+    '<div>',
+    '<p class="mirrorbrain-eyebrow">Daily Review</p>',
+    '<h2>Review Workbench</h2>',
+    '<p class="mirrorbrain-panel-copy">Generate candidate streams from the full history, inspect the best signal, and make a clear keep or discard decision.</p>',
+    '</div>',
+    '<div class="mirrorbrain-actions">',
+    '<button type="button" data-action="create-candidate" class="mirrorbrain-button mirrorbrain-button--primary">Create Candidates</button>',
+    '<button type="button" data-action="keep-candidate" class="mirrorbrain-button mirrorbrain-button--success">Keep Candidate</button>',
+    '<button type="button" data-action="discard-candidate" class="mirrorbrain-button mirrorbrain-button--ghost">Discard Candidate</button>',
+    '</div>',
+    '</div>',
+    '<div class="mirrorbrain-metric-grid">',
+    renderMetricTile({ label: 'Review Date', value: state.reviewWindowDate ?? 'Not ready', tone: 'accent' }),
+    renderMetricTile({ label: 'Candidate Streams', value: String(state.candidateMemories.length) }),
+    renderMetricTile({ label: 'Matched Events', value: String(state.reviewWindowEventCount) }),
+    renderMetricTile({ label: 'Recommendation', value: suggestion?.recommendation ?? 'Pending', tone: recommendationTone }),
+    '</div>',
     '<div class="mirrorbrain-review-layout">',
-    '<article class="mirrorbrain-detail-card">',
-    '<h3>Candidate Streams</h3>',
+    '<article class="mirrorbrain-detail-card mirrorbrain-detail-card--rail">',
+    '<div class="mirrorbrain-card-heading"><h3>Candidate Streams</h3><span class="mirrorbrain-card-meta">Pick a stream to inspect its evidence</span></div>',
     `<div class="mirrorbrain-candidate-list">${renderCandidateList(state)}</div>`,
     '</article>',
-    '<article class="mirrorbrain-detail-card" style="grid-column: span 1;">',
-    '<h3>Selected Candidate</h3>',
+    '<article class="mirrorbrain-detail-card mirrorbrain-detail-card--focus">',
+    '<div class="mirrorbrain-card-heading"><h3>Selected Candidate</h3><span class="mirrorbrain-card-meta">Summary, time range, and memory ids</span></div>',
     candidate === null
-      ? '<p style="color: var(--muted); font-size: 0.9rem;">Select a candidate stream to review it.</p>'
-      : renderDetailRows([
-          { label: 'Review Window', value: reviewWindowDescription },
-          {
-            label: 'Events',
-            value: String(state.reviewWindowEventCount),
-          },
-          { label: 'Title', value: candidate.title },
-          { label: 'Theme', value: candidate.theme },
-          { label: 'Summary', value: candidate.summary },
-        ]),
+      ? '<p class="mirrorbrain-empty">Select a candidate stream to review it.</p>'
+      : [
+          '<div class="mirrorbrain-highlight-block">',
+          `<h4>${candidate.title}</h4>`,
+          `<p>${candidate.summary}</p>`,
+          '</div>',
+          renderDetailRows([
+            { label: 'Review Window', value: reviewWindowDescription },
+            { label: 'Events', value: String(state.reviewWindowEventCount) },
+            { label: 'Theme', value: candidate.theme },
+            { label: 'Time Range', value: `${candidate.timeRange.startAt} → ${candidate.timeRange.endAt}` },
+            { label: 'Memory IDs', value: candidate.memoryEventIds.join(', ') },
+          ]),
+        ].join(''),
     '</article>',
-    '</div>',
-    '<div class="mirrorbrain-detail-grid" style="margin-top: 24px;">',
-    '<article class="mirrorbrain-detail-card">',
-    '<h3>AI Suggestion</h3>',
+    '<article class="mirrorbrain-detail-card mirrorbrain-detail-card--assist">',
+    '<div class="mirrorbrain-card-heading"><h3>Decision Guidance</h3><span class="mirrorbrain-card-meta">AI guidance plus your latest review result</span></div>',
+    '<div class="mirrorbrain-detail-stack">',
+    '<section class="mirrorbrain-subcard">',
+    '<h4>AI Suggestion</h4>',
     suggestion === null
-      ? '<p style="color: var(--muted); font-size: 0.9rem;">No AI suggestion yet.</p>'
+      ? '<p class="mirrorbrain-empty">No AI suggestion yet.</p>'
       : renderDetailRows([
           { label: 'Recommendation', value: suggestion.recommendation },
-          { label: 'Confidence', value: `${String(suggestion.confidenceScore)}%` },
+          { label: 'Confidence', value: `${Math.round(suggestion.confidenceScore * 100)}%` },
+          { label: 'Priority', value: String(suggestion.priorityScore) },
           { label: 'Rationale', value: suggestion.rationale },
         ]),
-    '</article>',
-    '<article class="mirrorbrain-detail-card">',
-    '<h3>Reviewed Memory</h3>',
+    '</section>',
+    '<section class="mirrorbrain-subcard">',
+    '<h4>Reviewed Memory</h4>',
     state.reviewedMemory === null
-      ? '<p style="color: var(--muted); font-size: 0.9rem;">No reviewed memory yet.</p>'
+      ? '<p class="mirrorbrain-empty">No reviewed memory yet.</p>'
       : renderDetailRows([
           { label: 'Decision', value: state.reviewedMemory.decision },
           { label: 'Reviewed At', value: new Date(state.reviewedMemory.reviewedAt).toLocaleString() },
+          { label: 'Reviewed ID', value: state.reviewedMemory.id },
         ]),
+    '</section>',
+    '</div>',
     '</article>',
     '</div>',
     '</section>',
@@ -334,53 +380,96 @@ function renderReviewPanel(state: MirrorBrainWebAppState): string {
 
 function renderArtifactsPanel(state: MirrorBrainWebAppState): string {
   const knowledge = state.knowledgeArtifact;
+  const knowledgeDraft =
+    state.knowledgeDraft ??
+    (knowledge === null
+      ? null
+      : {
+          ...knowledge,
+          derivedFromKnowledgeIds: [...(knowledge.derivedFromKnowledgeIds ?? [])],
+          provenanceRefs: [...(knowledge.provenanceRefs ?? [])],
+        });
   const knowledgeTopics = state.knowledgeTopics;
   const skill = state.skillArtifact;
+  const skillDraft =
+    state.skillDraft ??
+    (skill === null
+      ? null
+      : {
+          ...skill,
+          workflowEvidenceRefs: [...skill.workflowEvidenceRefs],
+          executionSafetyMetadata: {
+            ...skill.executionSafetyMetadata,
+          },
+        });
+  const workflowEvidenceValue = skillDraft?.workflowEvidenceRefs.join('\n') ?? '';
 
   return [
     '<section class="mirrorbrain-panel">',
-    '<h2>Knowledge & Skills</h2>',
-    '<p style="font-size: 0.9rem;">Generated artifacts from reviewed memories.</p>',
-    '<div class="mirrorbrain-actions"><button type="button" data-action="generate-knowledge">Generate Knowledge</button><button type="button" data-action="generate-skill">Generate Skill</button></div>',
-    '<div class="mirrorbrain-detail-grid" style="margin-top: 24px;">',
-    '<article class="mirrorbrain-detail-card">',
-    '<h3>Topic Knowledge</h3>',
+    '<div class="mirrorbrain-panel-header">',
+    '<div>',
+    '<p class="mirrorbrain-eyebrow">Artifacts</p>',
+    '<h2>Artifact Studio</h2>',
+    '<p class="mirrorbrain-panel-copy">Generate drafts from reviewed memory, refine them in-place, and save the edited artifact back to MirrorBrain.</p>',
+    '</div>',
+    '<div class="mirrorbrain-actions">',
+    '<button type="button" data-action="generate-knowledge" class="mirrorbrain-button mirrorbrain-button--primary">Generate Knowledge</button>',
+    '<button type="button" data-action="generate-skill" class="mirrorbrain-button mirrorbrain-button--primary">Generate Skill</button>',
+    '</div>',
+    '</div>',
+    '<div class="mirrorbrain-artifact-layout">',
+    '<article class="mirrorbrain-detail-card mirrorbrain-detail-card--rail">',
+    '<div class="mirrorbrain-card-heading"><h3>Topic Knowledge</h3><span class="mirrorbrain-card-meta">Current best topic artifacts already saved</span></div>',
     knowledgeTopics.length === 0
-      ? '<p style="color: var(--muted); font-size: 0.9rem;">No topic knowledge available yet.</p>'
+      ? '<p class="mirrorbrain-empty">No topic knowledge available yet.</p>'
       : knowledgeTopics
           .map(
             (topic) =>
-              `<div style="margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--line);"><strong style="font-size: 1rem;">${topic.title}</strong><p style="margin-top: 4px; font-size: 0.9rem;">${topic.summary}</p><p style="margin-top: 4px; font-size: 0.8rem; color: var(--muted);">${topic.recencyLabel}</p></div>`,
+              `<div class="mirrorbrain-topic-item"><strong>${topic.title}</strong><p>${topic.summary}</p><p class="mirrorbrain-card-meta">${topic.recencyLabel}</p></div>`,
           )
           .join(''),
     '</article>',
-    '<article class="mirrorbrain-detail-card">',
-    '<h3>Latest Knowledge Artifact</h3>',
-    knowledge === null
-      ? '<p style="color: var(--muted); font-size: 0.9rem;">No knowledge artifact generated yet.</p>'
-      : renderDetailRows([
-          { label: 'State', value: knowledge.draftState },
-          {
-            label: 'Inputs',
-            value: `${knowledge.sourceReviewedMemoryIds.length} reviewed memories`,
-          },
-        ]),
+    '<article class="mirrorbrain-detail-card mirrorbrain-detail-card--focus">',
+    '<div class="mirrorbrain-card-heading"><h3>Knowledge Draft Editor</h3><span class="mirrorbrain-card-meta">Edit title, summary, and body before saving</span></div>',
+    knowledgeDraft === null
+      ? '<p class="mirrorbrain-empty">Generate knowledge to open the editor.</p>'
+      : [
+          `<label class="mirrorbrain-field"><span>Title</span><input class="mirrorbrain-input" name="knowledge-title" type="text" value="${knowledgeDraft.title ?? ''}" /></label>`,
+          `<label class="mirrorbrain-field"><span>Summary</span><textarea class="mirrorbrain-textarea mirrorbrain-textarea--compact" name="knowledge-summary">${knowledgeDraft.summary ?? ''}</textarea></label>`,
+          `<label class="mirrorbrain-field"><span>Body</span><textarea class="mirrorbrain-textarea" name="knowledge-body">${knowledgeDraft.body ?? ''}</textarea></label>`,
+          '<div class="mirrorbrain-actions mirrorbrain-actions--editor"><button type="button" data-action="save-knowledge" class="mirrorbrain-button mirrorbrain-button--success">Save Knowledge Draft</button></div>',
+          '<div class="mirrorbrain-subcard">',
+          '<h4>Latest Knowledge Artifact</h4>',
+          renderDetailRows([
+            { label: 'State', value: knowledge?.draftState ?? 'draft' },
+            { label: 'Inputs', value: `${knowledge?.sourceReviewedMemoryIds.length ?? 0} reviewed memories` },
+            { label: 'Artifact ID', value: knowledge?.id ?? knowledgeDraft.id },
+          ]),
+          '</div>',
+        ].join(''),
     '</article>',
-    '<article class="mirrorbrain-detail-card">',
-    '<h3>Latest Skill Artifact</h3>',
-    skill === null
-      ? '<p style="color: var(--muted); font-size: 0.9rem;">No skill artifact generated yet.</p>'
-      : renderDetailRows([
-          { label: 'Approval', value: skill.approvalState },
-          {
-            label: 'Evidence',
-            value: `${skill.workflowEvidenceRefs.length} workflow refs`,
-          },
-          {
-            label: 'Confirmation',
-            value: skill.executionSafetyMetadata.requiresConfirmation ? 'Required' : 'Optional',
-          },
-        ]),
+    '<article class="mirrorbrain-detail-card mirrorbrain-detail-card--assist">',
+    '<div class="mirrorbrain-card-heading"><h3>Skill Draft Editor</h3><span class="mirrorbrain-card-meta">Edit approval and execution safety before saving</span></div>',
+    skillDraft === null
+      ? '<p class="mirrorbrain-empty">Generate a skill to open the editor.</p>'
+      : [
+          '<label class="mirrorbrain-field"><span>Approval State</span><select class="mirrorbrain-input" name="skill-approval-state">',
+          `<option value="draft"${skillDraft.approvalState === 'draft' ? ' selected' : ''}>Draft</option>`,
+          `<option value="approved"${skillDraft.approvalState === 'approved' ? ' selected' : ''}>Approved</option>`,
+          '</select></label>',
+          `<label class="mirrorbrain-field"><span>Workflow Evidence Refs</span><textarea class="mirrorbrain-textarea" name="skill-workflow-evidence-refs">${workflowEvidenceValue}</textarea></label>`,
+          `<label class="mirrorbrain-checkbox"><input name="skill-requires-confirmation" type="checkbox"${skillDraft.executionSafetyMetadata.requiresConfirmation ? ' checked' : ''} /><span>Requires explicit confirmation before execution</span></label>`,
+          '<div class="mirrorbrain-actions mirrorbrain-actions--editor"><button type="button" data-action="save-skill" class="mirrorbrain-button mirrorbrain-button--success">Save Skill Draft</button></div>',
+          '<div class="mirrorbrain-subcard">',
+          '<h4>Latest Skill Artifact</h4>',
+          renderDetailRows([
+            { label: 'Approval', value: skill?.approvalState ?? skillDraft.approvalState },
+            { label: 'Evidence', value: `${skill?.workflowEvidenceRefs.length ?? skillDraft.workflowEvidenceRefs.length} workflow refs` },
+            { label: 'Confirmation', value: (skill?.executionSafetyMetadata.requiresConfirmation ?? skillDraft.executionSafetyMetadata.requiresConfirmation) ? 'Required' : 'Optional' },
+            { label: 'Artifact ID', value: skill?.id ?? skillDraft.id },
+          ]),
+          '</div>',
+        ].join(''),
     '</article>',
     '</div>',
     '</section>',
@@ -446,8 +535,10 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
     candidateReviewSuggestions: [],
     reviewedMemory: null,
     knowledgeArtifact: null,
+    knowledgeDraft: null,
     knowledgeTopics: [],
     skillArtifact: null,
+    skillDraft: null,
     lastSyncSummary: null,
     feedback: null,
     activeTab: 'memory',
@@ -462,6 +553,47 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
     state,
     setActiveTab(tab: MirrorBrainWebTab) {
       state.activeTab = tab;
+    },
+    updateKnowledgeDraft(input: {
+      title?: string;
+      summary?: string;
+      body?: string;
+    }) {
+      const knowledgeDraft = state.knowledgeDraft;
+
+      if (knowledgeDraft === null || knowledgeDraft === undefined) {
+        return;
+      }
+
+      state.knowledgeDraft = {
+        ...knowledgeDraft,
+        title: input.title ?? knowledgeDraft.title,
+        summary: input.summary ?? knowledgeDraft.summary,
+        body: input.body ?? knowledgeDraft.body,
+      };
+    },
+    updateSkillDraft(input: {
+      approvalState?: SkillArtifact['approvalState'];
+      workflowEvidenceRefs?: string[];
+      requiresConfirmation?: boolean;
+    }) {
+      const skillDraft = state.skillDraft;
+
+      if (skillDraft === null || skillDraft === undefined) {
+        return;
+      }
+
+      state.skillDraft = {
+        ...skillDraft,
+        approvalState: input.approvalState ?? skillDraft.approvalState,
+        workflowEvidenceRefs:
+          input.workflowEvidenceRefs ?? skillDraft.workflowEvidenceRefs,
+        executionSafetyMetadata: {
+          requiresConfirmation:
+            input.requiresConfirmation ??
+            skillDraft.executionSafetyMetadata.requiresConfirmation,
+        },
+      };
     },
     selectCandidate(candidateId: string) {
       state.selectedCandidateId = candidateId;
@@ -504,6 +636,18 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
 
       if (knowledgeResult.status === 'fulfilled') {
         state.knowledgeArtifact = knowledgeResult.value[0] ?? null;
+        state.knowledgeDraft =
+          state.knowledgeArtifact === null
+            ? null
+            : {
+                ...state.knowledgeArtifact,
+                derivedFromKnowledgeIds: [
+                  ...(state.knowledgeArtifact.derivedFromKnowledgeIds ?? []),
+                ],
+                provenanceRefs: [
+                  ...(state.knowledgeArtifact.provenanceRefs ?? []),
+                ],
+              };
       }
 
       if (topicsResult.status === 'fulfilled') {
@@ -512,6 +656,16 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
 
       if (skillsResult.status === 'fulfilled') {
         state.skillArtifact = skillsResult.value[0] ?? null;
+        state.skillDraft =
+          state.skillArtifact === null
+            ? null
+            : {
+                ...state.skillArtifact,
+                workflowEvidenceRefs: [...state.skillArtifact.workflowEvidenceRefs],
+                executionSafetyMetadata: {
+                  ...state.skillArtifact.executionSafetyMetadata,
+                },
+              };
       }
 
       const firstRejectedResult = [
@@ -633,6 +787,13 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
       state.knowledgeArtifact = await input.api.generateKnowledge([
         state.reviewedMemory,
       ]);
+      state.knowledgeDraft = {
+        ...state.knowledgeArtifact,
+        derivedFromKnowledgeIds: [
+          ...(state.knowledgeArtifact.derivedFromKnowledgeIds ?? []),
+        ],
+        provenanceRefs: [...(state.knowledgeArtifact.provenanceRefs ?? [])],
+      };
       state.activeTab = 'artifacts';
       setFeedback({
         kind: 'success',
@@ -649,10 +810,75 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
       }
 
       state.skillArtifact = await input.api.generateSkill([state.reviewedMemory]);
+      state.skillDraft = {
+        ...state.skillArtifact,
+        workflowEvidenceRefs: [...state.skillArtifact.workflowEvidenceRefs],
+        executionSafetyMetadata: {
+          ...state.skillArtifact.executionSafetyMetadata,
+        },
+      };
       state.activeTab = 'artifacts';
       setFeedback({
         kind: 'success',
         message: `Skill generated: ${state.skillArtifact.id}`,
+      });
+    },
+    async saveKnowledgeDraft() {
+      const knowledgeDraft = state.knowledgeDraft;
+
+      if (
+        knowledgeDraft === null ||
+        knowledgeDraft === undefined ||
+        input.api.saveKnowledgeArtifact === undefined
+      ) {
+        setFeedback({
+          kind: 'error',
+          message: 'Knowledge draft saving is unavailable.',
+        });
+        return;
+      }
+
+      state.knowledgeArtifact = await input.api.saveKnowledgeArtifact(
+        knowledgeDraft,
+      );
+      state.knowledgeDraft = {
+        ...state.knowledgeArtifact,
+        derivedFromKnowledgeIds: [
+          ...(state.knowledgeArtifact.derivedFromKnowledgeIds ?? []),
+        ],
+        provenanceRefs: [...(state.knowledgeArtifact.provenanceRefs ?? [])],
+      };
+      setFeedback({
+        kind: 'success',
+        message: `Knowledge saved: ${state.knowledgeArtifact.id}`,
+      });
+    },
+    async saveSkillDraft() {
+      const skillDraft = state.skillDraft;
+
+      if (
+        skillDraft === null ||
+        skillDraft === undefined ||
+        input.api.saveSkillArtifact === undefined
+      ) {
+        setFeedback({
+          kind: 'error',
+          message: 'Skill draft saving is unavailable.',
+        });
+        return;
+      }
+
+      state.skillArtifact = await input.api.saveSkillArtifact(skillDraft);
+      state.skillDraft = {
+        ...state.skillArtifact,
+        workflowEvidenceRefs: [...state.skillArtifact.workflowEvidenceRefs],
+        executionSafetyMetadata: {
+          ...state.skillArtifact.executionSafetyMetadata,
+        },
+      };
+      setFeedback({
+        kind: 'success',
+        message: `Skill saved: ${state.skillArtifact.id}`,
       });
     },
   };
@@ -826,6 +1052,38 @@ export function createMirrorBrainBrowserApi(
 
       return body.artifact;
     },
+    async saveKnowledgeArtifact(artifact) {
+      const response = await fetch(`${baseUrl}/knowledge`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          artifact,
+        }),
+      });
+      const body = await readJson<{
+        artifact: KnowledgeArtifact;
+      }>(response);
+
+      return body.artifact;
+    },
+    async saveSkillArtifact(artifact) {
+      const response = await fetch(`${baseUrl}/skills`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          artifact,
+        }),
+      });
+      const body = await readJson<{
+        artifact: SkillArtifact;
+      }>(response);
+
+      return body.artifact;
+    },
   };
 }
 
@@ -919,6 +1177,66 @@ export async function mountMirrorBrainWebApp(
       ?.addEventListener('click', async () => {
         await app.generateSkill();
         render();
+      });
+    root
+      .querySelector('[data-action="save-knowledge"]')
+      ?.addEventListener('click', async () => {
+        await app.saveKnowledgeDraft();
+        render();
+      });
+    root
+      .querySelector('[data-action="save-skill"]')
+      ?.addEventListener('click', async () => {
+        await app.saveSkillDraft();
+        render();
+      });
+    root
+      .querySelector<HTMLInputElement>('[name="knowledge-title"]')
+      ?.addEventListener('input', (event) => {
+        app.updateKnowledgeDraft({
+          title: (event.currentTarget as HTMLInputElement).value,
+        });
+      });
+    root
+      .querySelector<HTMLTextAreaElement>('[name="knowledge-summary"]')
+      ?.addEventListener('input', (event) => {
+        app.updateKnowledgeDraft({
+          summary: (event.currentTarget as HTMLTextAreaElement).value,
+        });
+      });
+    root
+      .querySelector<HTMLTextAreaElement>('[name="knowledge-body"]')
+      ?.addEventListener('input', (event) => {
+        app.updateKnowledgeDraft({
+          body: (event.currentTarget as HTMLTextAreaElement).value,
+        });
+      });
+    root
+      .querySelector<HTMLSelectElement>('[name="skill-approval-state"]')
+      ?.addEventListener('change', (event) => {
+        app.updateSkillDraft({
+          approvalState: (event.currentTarget as HTMLSelectElement)
+            .value as SkillArtifact['approvalState'],
+        });
+      });
+    root
+      .querySelector<HTMLTextAreaElement>('[name="skill-workflow-evidence-refs"]')
+      ?.addEventListener('input', (event) => {
+        app.updateSkillDraft({
+          workflowEvidenceRefs: (event.currentTarget as HTMLTextAreaElement)
+            .value
+            .split('\n')
+            .map((value) => value.trim())
+            .filter((value) => value.length > 0),
+        });
+      });
+    root
+      .querySelector<HTMLInputElement>('[name="skill-requires-confirmation"]')
+      ?.addEventListener('change', (event) => {
+        app.updateSkillDraft({
+          requiresConfirmation:
+            (event.currentTarget as HTMLInputElement).checked,
+        });
       });
     root
       .querySelectorAll<HTMLElement>('[data-action="switch-tab"]')

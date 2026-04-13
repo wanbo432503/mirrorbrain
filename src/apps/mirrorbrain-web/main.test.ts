@@ -112,6 +112,7 @@ describe('mirrorbrain web app', () => {
           'reviewed:candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
         ],
       },
+      knowledgeDraft: null,
       skillArtifact: {
         id: 'skill-draft:reviewed:candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
         approvalState: 'draft',
@@ -122,6 +123,7 @@ describe('mirrorbrain web app', () => {
           requiresConfirmation: true,
         },
       },
+      skillDraft: null,
       lastSyncSummary: {
         sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
         strategy: 'incremental',
@@ -150,6 +152,68 @@ describe('mirrorbrain web app', () => {
     expect(html).toContain('Recommendation');
     expect(html).toContain('strong keep candidate');
     expect(html).not.toContain('knowledge-draft:reviewed:candidate:2026-03-20:activitywatch-browser:docs-example-com:guides');
+  });
+
+  it('renders an editable artifacts workbench for knowledge and skill drafts', () => {
+    const html = renderMirrorBrainWebApp({
+      serviceStatus: 'running',
+      memoryEvents: [],
+      candidateMemories: [],
+      selectedCandidateId: null,
+      candidateReviewSuggestions: [],
+      reviewedMemory: createReviewedMemory(
+        createCandidateMemory({
+          id: 'candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
+          memoryEventIds: ['browser:aw-event-1'],
+          title: 'Docs Example Com / guides',
+          summary: '1 browser event about Docs Example Com / guides on 2026-03-20.',
+          theme: 'docs.example.com / guides',
+        }),
+      ),
+      knowledgeTopics: [],
+      knowledgeArtifact: {
+        id: 'knowledge-draft:1',
+        artifactType: 'daily-review-draft',
+        draftState: 'draft',
+        topicKey: null,
+        title: 'Knowledge title',
+        summary: 'Knowledge summary',
+        body: 'Knowledge body',
+        sourceReviewedMemoryIds: ['reviewed:1'],
+        derivedFromKnowledgeIds: [],
+        version: 1,
+        isCurrentBest: false,
+        supersedesKnowledgeId: null,
+        reviewedAt: null,
+        recencyLabel: 'today',
+        provenanceRefs: [],
+      },
+      knowledgeDraft: null,
+      skillArtifact: {
+        id: 'skill-draft:1',
+        approvalState: 'draft',
+        workflowEvidenceRefs: ['reviewed:1'],
+        executionSafetyMetadata: {
+          requiresConfirmation: true,
+        },
+      },
+      skillDraft: null,
+      lastSyncSummary: null,
+      feedback: null,
+      activeTab: 'artifacts',
+      memoryPage: 1,
+      reviewWindowDate: null,
+      reviewWindowEventCount: 0,
+    });
+
+    expect(html).toContain('Artifact Studio');
+    expect(html).toContain('Knowledge Draft Editor');
+    expect(html).toContain('Skill Draft Editor');
+    expect(html).toContain('data-action="save-knowledge"');
+    expect(html).toContain('data-action="save-skill"');
+    expect(html).toContain('name="knowledge-title"');
+    expect(html).toContain('name="knowledge-body"');
+    expect(html).toContain('name="skill-workflow-evidence-refs"');
   });
 
   it('renders memory pagination with 5 events per page', () => {
@@ -265,7 +329,9 @@ describe('mirrorbrain web app', () => {
       reviewedMemory: null,
       knowledgeTopics: [],
       knowledgeArtifact: null,
+      knowledgeDraft: null,
       skillArtifact: null,
+      skillDraft: null,
       lastSyncSummary: null,
       feedback: null,
       memoryPage: 1,
@@ -532,6 +598,93 @@ describe('mirrorbrain web app', () => {
 
     expect(app.state.memoryEvents).toEqual([importedEvent, existingEvent]);
     expect(api.listMemory).toHaveBeenCalledTimes(1);
+  });
+
+  it('allows editing and saving knowledge and skill drafts from the artifacts tab', async () => {
+    const savedKnowledge: KnowledgeArtifact[] = [];
+    const savedSkills: SkillArtifact[] = [];
+    const knowledgeArtifact: KnowledgeArtifact = {
+      id: 'knowledge-draft:1',
+      artifactType: 'daily-review-draft',
+      draftState: 'draft',
+      topicKey: null,
+      title: 'Original title',
+      summary: 'Original summary',
+      body: 'Original body',
+      sourceReviewedMemoryIds: ['reviewed:1'],
+      derivedFromKnowledgeIds: [],
+      version: 1,
+      isCurrentBest: false,
+      supersedesKnowledgeId: null,
+      reviewedAt: null,
+      recencyLabel: 'today',
+      provenanceRefs: [],
+    };
+    const skillArtifact: SkillArtifact = {
+      id: 'skill-draft:1',
+      approvalState: 'draft',
+      workflowEvidenceRefs: ['reviewed:1'],
+      executionSafetyMetadata: {
+        requiresConfirmation: true,
+      },
+    };
+    const api = {
+      getHealth: vi.fn(async () => ({
+        status: 'running' as const,
+      })),
+      listMemory: vi.fn(async () => []),
+      listKnowledge: vi.fn(async () => [knowledgeArtifact]),
+      listKnowledgeTopics: vi.fn(async () => []),
+      listSkills: vi.fn(async () => [skillArtifact]),
+      syncBrowser: vi.fn(),
+      syncShell: vi.fn(),
+      createDailyCandidates: vi.fn(async () => []),
+      suggestCandidateReviews: vi.fn(async () => []),
+      reviewCandidateMemory: vi.fn(),
+      generateKnowledge: vi.fn(async () => knowledgeArtifact),
+      generateSkill: vi.fn(async () => skillArtifact),
+      saveKnowledgeArtifact: vi.fn(async (artifact: KnowledgeArtifact) => {
+        savedKnowledge.push(artifact);
+        return artifact;
+      }),
+      saveSkillArtifact: vi.fn(async (artifact: SkillArtifact) => {
+        savedSkills.push(artifact);
+        return artifact;
+      }),
+    };
+
+    const app = createMirrorBrainWebApp({
+      api,
+      now: () => '2026-03-20T10:00:00.000Z',
+    });
+
+    await app.load();
+    app.updateKnowledgeDraft({
+      title: 'Edited title',
+      summary: 'Edited summary',
+      body: 'Edited body',
+    });
+    app.updateSkillDraft({
+      approvalState: 'approved',
+      workflowEvidenceRefs: ['reviewed:1', 'reviewed:2'],
+      requiresConfirmation: false,
+    });
+
+    await app.saveKnowledgeDraft();
+    await app.saveSkillDraft();
+
+    expect(savedKnowledge[0]).toMatchObject({
+      title: 'Edited title',
+      summary: 'Edited summary',
+      body: 'Edited body',
+    });
+    expect(savedSkills[0]).toMatchObject({
+      approvalState: 'approved',
+      workflowEvidenceRefs: ['reviewed:1', 'reviewed:2'],
+      executionSafetyMetadata: {
+        requiresConfirmation: false,
+      },
+    });
   });
 
   it('keeps memory state valid when the initial memory load fails', async () => {

@@ -2,7 +2,7 @@
 
 ## Summary
 
-The Phase 1 review UI is the smallest standalone surface that lets a user inspect imported memory, generate daily candidate streams, see AI review suggestions, explicitly keep or discard a selected candidate, and then generate knowledge and skill drafts.
+The Phase 1 review UI is the standalone operator surface that lets a user inspect imported memory, work through daily candidate streams in a structured review workbench, see AI review suggestions, explicitly keep or discard a selected candidate, and then generate, edit, and save knowledge and skill drafts.
 
 ## Responsibility Boundary
 
@@ -12,9 +12,12 @@ This UI is responsible for:
 - showing imported memory through a dedicated tab with paging, newest-first ordering, and explicit source/name/timestamp presentation
 - showing five memory records per page with first, previous, next, and last navigation controls
 - exposing daily candidate generation and explicit review actions
+- presenting the review flow as a clearer workbench with candidate streams, focused evidence, and decision guidance
 - showing multiple candidate streams instead of a single current candidate
 - showing AI review suggestions as advisory detail, not final state
 - exposing knowledge and skill generation actions
+- exposing editable knowledge and skill draft forms in the artifacts tab
+- exposing explicit save actions for edited knowledge and skill drafts
 - separating memory, review, and artifacts into distinct tabs instead of stacking all content on one page
 - placing sync, review, and artifact actions inside their corresponding tabs instead of a single global action bar
 - rendering candidate, suggestion, reviewed-memory, and artifact states with explicit field-level detail
@@ -42,8 +45,9 @@ This UI is not responsible for:
 7. The UI lists multiple candidate streams and lets the user pick one.
 8. The UI shows AI review suggestions for the selected candidate without auto-reviewing it.
 9. The user explicitly keeps or discards the selected candidate.
-10. The user generates knowledge and skill drafts and inspects them through the artifacts tab.
-11. The UI renders a visible status message after each action so the workflow is not silent.
+10. The user generates knowledge and skill drafts and edits them in-place through the artifacts tab.
+11. The user can save the edited draft artifact back through the local service API.
+12. The UI renders a visible status message after each action so the workflow is not silent.
 
 ## Test Strategy
 
@@ -59,3 +63,4 @@ This UI is not responsible for:
 - candidate grouping still depends on backend deterministic stream rules rather than richer semantic clustering
 - AI suggestions are advisory placeholders in Phase 1
 - the default daily review window is currently the previous local day to make testing and morning review easier
+- artifact editing currently saves whole draft payloads rather than field-level patches

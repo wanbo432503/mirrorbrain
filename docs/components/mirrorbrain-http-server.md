@@ -36,10 +36,12 @@ Those concerns remain in the service, workflow, module, and integration layers.
 - `GET /memory`
 - `POST /memory/query`
 - `GET /knowledge`
+- `POST /knowledge`
 - `GET /knowledge/topics`
 - `GET /knowledge/topics/:topicKey`
 - `GET /knowledge/topics/:topicKey/history`
 - `GET /skills`
+- `POST /skills`
 - `POST /candidate-memories/daily`
 - `POST /candidate-reviews/suggestions`
 - `POST /reviewed-memories`
@@ -55,8 +57,9 @@ Those concerns remain in the service, workflow, module, and integration layers.
 5. `POST /sync/browser` and `POST /sync/shell` trigger explicit source sync operations through the service layer and return the sync summary without waiting for background narrative rebuild work.
 6. `GET /memory` returns raw memory events for the standalone MVP and review-oriented flows.
 7. `POST /memory/query` forwards a query-shaped retrieval request and returns theme-level memory results.
-8. The server serializes the domain result as JSON and returns an HTTP status that matches the action.
-9. Daily candidate creation and AI suggestions stay separate so suggestion reads cannot silently write reviewed memory.
+8. `POST /knowledge` and `POST /skills` let the standalone UI save edited draft artifacts back through the service layer.
+9. The server serializes the domain result as JSON and returns an HTTP status that matches the action.
+10. Daily candidate creation and AI suggestions stay separate so suggestion reads cannot silently write reviewed memory.
 
 ## Dependencies
 
@@ -75,6 +78,7 @@ Those concerns remain in the service, workflow, module, and integration layers.
 - authentication and multi-user concerns are out of scope for the Phase 1 MVP
 - daily candidate creation expects an explicit `reviewDate`
 - reviewed-memory writes require an explicit `reviewedAt` timestamp for auditability
+- draft save endpoints trust the caller to send a full artifact payload and do not yet offer field-level patch semantics
 - `POST /memory/query` is still a thin Phase 2A contract and does not yet expose pagination or mature ranking controls
 - `POST /sync/shell` depends on an explicitly configured shell history path in the runtime service
 - sync responses can include a recent `importedEvents` preview so standalone clients can surface newly imported memory immediately without returning the full imported event batch

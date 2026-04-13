@@ -253,6 +253,104 @@ describe('mirrorbrain http server', () => {
     });
   });
 
+  it('publishes edited knowledge and skill drafts through save endpoints', async () => {
+    const publishKnowledge = vi.fn(async (input) => input);
+    const publishSkillDraft = vi.fn(async (input) => input);
+    const service = {
+      service: {
+        status: 'running' as const,
+        config: getMirrorBrainConfig(),
+        stop: vi.fn(),
+      },
+      listMemoryEvents: vi.fn(async () => []),
+      queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
+      listKnowledge: vi.fn(async () => []),
+      listSkillDrafts: vi.fn(async () => []),
+      syncBrowserMemory: vi.fn(),
+      syncShellMemory: vi.fn(),
+      createDailyCandidateMemories: vi.fn(),
+      suggestCandidateReviews: vi.fn(),
+      reviewCandidateMemory: vi.fn(),
+      generateKnowledgeFromReviewedMemories: vi.fn(),
+      generateSkillDraftFromReviewedMemories: vi.fn(),
+      publishKnowledge,
+      publishSkillDraft,
+    };
+
+    const server = await startMirrorBrainHttpServer({
+      service,
+      port: 0,
+    });
+    servers.push(server);
+
+    const knowledgeArtifact = {
+      id: 'knowledge-draft:1',
+      artifactType: 'daily-review-draft',
+      draftState: 'draft',
+      topicKey: null,
+      title: 'Edited title',
+      summary: 'Edited summary',
+      body: 'Edited body',
+      sourceReviewedMemoryIds: ['reviewed:1'],
+      derivedFromKnowledgeIds: [],
+      version: 1,
+      isCurrentBest: false,
+      supersedesKnowledgeId: null,
+      reviewedAt: null,
+      recencyLabel: 'today',
+      provenanceRefs: [],
+    };
+    const skillArtifact = {
+      id: 'skill-draft:1',
+      approvalState: 'approved',
+      workflowEvidenceRefs: ['reviewed:1', 'reviewed:2'],
+      executionSafetyMetadata: {
+        requiresConfirmation: false,
+      },
+    };
+
+    const knowledgeResponse = await fetch(`${server.origin}/knowledge`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        artifact: knowledgeArtifact,
+      }),
+    });
+    const skillResponse = await fetch(`${server.origin}/skills`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        artifact: skillArtifact,
+      }),
+    });
+
+    expect(knowledgeResponse.status).toBe(201);
+    expect(skillResponse.status).toBe(201);
+    expect(publishKnowledge).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'knowledge-draft:1',
+        title: 'Edited title',
+        summary: 'Edited summary',
+        body: 'Edited body',
+        draftState: 'draft',
+      }),
+    );
+    expect(publishSkillDraft).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'skill-draft:1',
+        approvalState: 'approved',
+        workflowEvidenceRefs: ['reviewed:1', 'reviewed:2'],
+        executionSafetyMetadata: {
+          requiresConfirmation: false,
+        },
+      }),
+    );
+  });
+
   it('serves theme-level memory retrieval results through a query endpoint', async () => {
     const service = {
       service: {

@@ -40,6 +40,8 @@ interface MirrorBrainHttpService {
   getKnowledgeTopic?(topicKey: string): Promise<KnowledgeArtifact | null>;
   listKnowledgeHistory?(topicKey: string): Promise<KnowledgeArtifact[]>;
   listSkillDrafts(): Promise<SkillArtifact[]>;
+  publishKnowledge?(artifact: KnowledgeArtifact): Promise<unknown>;
+  publishSkillDraft?(artifact: SkillArtifact): Promise<unknown>;
   createDailyCandidateMemories(
     reviewDate: string,
     reviewTimeZone?: string,
@@ -644,6 +646,66 @@ export async function startMirrorBrainHttpServer(
     async () => ({
       items: await input.service.listSkillDrafts(),
     }),
+  );
+
+  app.post<{ Body: { artifact: KnowledgeArtifact } }>(
+    '/knowledge',
+    {
+      schema: {
+        summary: 'Save an edited knowledge artifact',
+        body: {
+          type: 'object',
+          properties: {
+            artifact: knowledgeArtifactSchema,
+          },
+          required: ['artifact'],
+        },
+        response: {
+          201: createArtifactResponseSchema('artifact', knowledgeArtifactSchema),
+        },
+      },
+    },
+    async (request, reply) => {
+      reply.code(201);
+
+      if (input.service.publishKnowledge) {
+        await input.service.publishKnowledge(request.body.artifact);
+      }
+
+      return {
+        artifact: request.body.artifact,
+      };
+    },
+  );
+
+  app.post<{ Body: { artifact: SkillArtifact } }>(
+    '/skills',
+    {
+      schema: {
+        summary: 'Save an edited skill draft',
+        body: {
+          type: 'object',
+          properties: {
+            artifact: skillArtifactSchema,
+          },
+          required: ['artifact'],
+        },
+        response: {
+          201: createArtifactResponseSchema('artifact', skillArtifactSchema),
+        },
+      },
+    },
+    async (request, reply) => {
+      reply.code(201);
+
+      if (input.service.publishSkillDraft) {
+        await input.service.publishSkillDraft(request.body.artifact);
+      }
+
+      return {
+        artifact: request.body.artifact,
+      };
+    },
   );
 
   app.post(
