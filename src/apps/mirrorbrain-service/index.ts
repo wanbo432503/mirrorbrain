@@ -12,6 +12,7 @@ import {
   ingestSkillArtifactToOpenViking,
   listMirrorBrainMemoryEventsFromOpenViking,
   listMirrorBrainMemoryEventsFromWorkspace,
+  listRawMirrorBrainMemoryEventsFromWorkspace,
   listMirrorBrainMemoryNarrativesFromOpenViking,
   type OpenVikingMemoryEventWriter,
 } from '../../integrations/openviking-store/index.js';
@@ -98,6 +99,7 @@ interface CreateMirrorBrainServiceDependencies {
   queryMemory?: typeof queryMemoryFromPluginApi;
   listMemoryEvents?: typeof listMirrorBrainMemoryEventsFromOpenViking;
   listWorkspaceMemoryEvents?: typeof listMirrorBrainMemoryEventsFromWorkspace;
+  listRawWorkspaceMemoryEvents?: typeof listRawMirrorBrainMemoryEventsFromWorkspace;
   listMemoryNarratives?: typeof listMirrorBrainMemoryNarrativesFromOpenViking;
   listKnowledge?: typeof listKnowledgeFromPluginApi;
   listSkillDrafts?: typeof listSkillDraftsFromPluginApi;
@@ -269,6 +271,8 @@ export function createMirrorBrainService(
     dependencies.listMemoryEvents ?? listMirrorBrainMemoryEventsFromOpenViking;
   const listWorkspaceMemoryEvents =
     dependencies.listWorkspaceMemoryEvents ?? listMirrorBrainMemoryEventsFromWorkspace;
+  const listRawWorkspaceMemoryEvents =
+    dependencies.listRawWorkspaceMemoryEvents ?? listRawMirrorBrainMemoryEventsFromWorkspace;
   const listMemoryNarratives =
     dependencies.listMemoryNarratives ?? listMirrorBrainMemoryNarrativesFromOpenViking;
   const listKnowledge = dependencies.listKnowledge ?? listKnowledgeFromPluginApi;
@@ -551,7 +555,9 @@ export function createMirrorBrainService(
       reviewDate: string,
       reviewTimeZone?: string,
     ): Promise<CandidateMemory[]> => {
-      const memoryEvents = await loadMemoryEvents();
+      const memoryEvents = await listRawWorkspaceMemoryEvents({
+        workspaceDir,
+      });
       const artifacts = await buildCandidateMemories({
         reviewDate,
         reviewTimeZone,

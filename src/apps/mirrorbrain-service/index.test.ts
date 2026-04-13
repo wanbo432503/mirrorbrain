@@ -503,6 +503,82 @@ describe('mirrorbrain service', () => {
     });
   });
 
+  it('builds daily candidates from workspace-cached raw memory history', async () => {
+    const service = {
+      status: 'running' as const,
+      config: getMirrorBrainConfig(),
+      syncBrowserMemory: vi.fn(async () => ({
+        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:00:00.000Z',
+        importedEvents: [],
+      })),
+      syncShellMemory: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:00:00.000Z',
+        importedEvents: [],
+      })),
+      stop: vi.fn(),
+    };
+    const rawMemoryEvents = [
+      {
+        id: 'browser:aw-event-1',
+        sourceType: 'activitywatch-browser',
+        sourceRef: 'aw-event-1',
+        timestamp: '2026-04-12T08:00:00.000Z',
+        authorizationScopeId: 'scope-browser',
+        content: {
+          url: 'https://example.com/tasks',
+          title: 'Tasks',
+        },
+        captureMetadata: {
+          upstreamSource: 'activitywatch',
+          checkpoint: '2026-04-12T08:00:00.000Z',
+        },
+      },
+    ];
+    const listRawWorkspaceMemoryEvents = vi.fn(async () => rawMemoryEvents);
+    const createCandidateMemories = vi.fn(() => [
+      createCandidateMemoryFixture({
+        id: 'candidate:2026-04-12:activitywatch-browser:example-com:tasks',
+        memoryEventIds: ['browser:aw-event-1'],
+        reviewDate: '2026-04-12',
+      }),
+    ]);
+
+    const api = createMirrorBrainService(
+      {
+        service,
+        workspaceDir: '/tmp/mirrorbrain-workspace',
+      },
+      {
+        listMemoryEvents: vi.fn(async () => []),
+        listRawWorkspaceMemoryEvents,
+        createCandidateMemories,
+        publishCandidateMemory: vi.fn(async () => ({
+          sourcePath: '/tmp/candidate.json',
+          rootUri: 'viking://resources/candidate',
+        })),
+        listKnowledge: vi.fn(async () => []),
+        listSkillDrafts: vi.fn(async () => []),
+      },
+    );
+
+    await api.createDailyCandidateMemories('2026-04-12', 'Asia/Shanghai');
+
+    expect(listRawWorkspaceMemoryEvents).toHaveBeenCalledWith({
+      workspaceDir: '/tmp/mirrorbrain-workspace',
+    });
+    expect(createCandidateMemories).toHaveBeenCalledWith({
+      reviewDate: '2026-04-12',
+      reviewTimeZone: 'Asia/Shanghai',
+      memoryEvents: rawMemoryEvents,
+    });
+  });
+
   it('persists knowledge and skill artifacts through the configured OpenViking writers', async () => {
     const service = {
       status: 'running' as const,
@@ -797,7 +873,7 @@ describe('mirrorbrain service', () => {
         },
       },
     ];
-    const listMemoryEvents = vi.fn(async () => memoryEvents);
+    const listRawWorkspaceMemoryEvents = vi.fn(async () => memoryEvents);
     const createCandidateMemories = vi.fn(() => [
       createCandidateMemoryFixture({
         id: 'candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
@@ -819,7 +895,7 @@ describe('mirrorbrain service', () => {
         service,
       },
       {
-        listMemoryEvents,
+        listRawWorkspaceMemoryEvents,
         createCandidateMemories,
         publishCandidateMemory,
       },
@@ -838,8 +914,8 @@ describe('mirrorbrain service', () => {
       }),
     ]);
 
-    expect(listMemoryEvents).toHaveBeenCalledWith({
-      baseUrl: expectedOpenVikingBaseUrl,
+    expect(listRawWorkspaceMemoryEvents).toHaveBeenCalledWith({
+      workspaceDir: process.cwd(),
     });
     expect(createCandidateMemories).toHaveBeenCalledWith({
       reviewDate: '2026-03-20',

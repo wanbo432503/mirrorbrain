@@ -397,7 +397,7 @@ describe('mirrorbrain web app', () => {
     expect(app.state.candidateMemories).toEqual(candidates);
     expect(app.state.selectedCandidateId).toBe(candidates[1].id);
     expect(app.state.reviewWindowDate).toBe(expectedReviewDate);
-    expect(app.state.reviewWindowEventCount).toBe(2);
+    expect(app.state.reviewWindowEventCount).toBe(3);
     expect(app.state.candidateReviewSuggestions).toEqual([
       {
         candidateMemoryId: candidates[1].id,
@@ -599,6 +599,69 @@ describe('mirrorbrain web app', () => {
     expect(app.state.activeTab).toBe('memory');
   });
 
+  it('creates candidates even when the current memory tab state does not contain yesterday events', async () => {
+    const referenceNow = '2026-04-13T10:00:00.000Z';
+    const candidates = [
+      createCandidateMemory({
+        id: 'candidate:2026-04-12:activitywatch-browser:example-com:tasks',
+        memoryEventIds: ['browser:aw-event-1'],
+        title: 'Example Com / tasks',
+        summary: '1 browser event about Example Com / tasks on 2026-04-12.',
+        theme: 'example.com / tasks',
+        reviewDate: '2026-04-12',
+      }),
+    ];
+    const api = {
+      getHealth: vi.fn(async () => ({
+        status: 'running' as const,
+      })),
+      listMemory: vi.fn(async () => [
+        createMemoryEvent(
+          'browser:today-only',
+          'Today Event',
+          '2026-04-13T09:00:00.000Z',
+        ),
+      ]),
+      listKnowledge: vi.fn(async () => []),
+      listKnowledgeTopics: vi.fn(async () => []),
+      listSkills: vi.fn(async () => []),
+      syncBrowser: vi.fn(async () => ({
+        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-04-13T09:00:00.000Z',
+        importedEvents: [],
+      })),
+      syncShell: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-04-13T09:05:00.000Z',
+        importedEvents: [],
+      })),
+      createDailyCandidates: vi.fn(async () => candidates),
+      suggestCandidateReviews: vi.fn(async () => []),
+      reviewCandidateMemory: vi.fn(),
+      generateKnowledge: vi.fn(),
+      generateSkill: vi.fn(),
+    };
+
+    const app = createMirrorBrainWebApp({
+      api,
+      now: () => referenceNow,
+    });
+
+    await app.load();
+    await app.createDailyCandidates();
+
+    expect(api.createDailyCandidates).toHaveBeenCalledWith(
+      '2026-04-12',
+      'Asia/Shanghai',
+    );
+    expect(app.state.candidateMemories).toEqual(candidates);
+    expect(app.state.activeTab).toBe('review');
+  });
+
   it('tracks active tab selection and memory pagination in the controller state', async () => {
     const memoryEvents: MemoryEvent[] = Array.from({ length: 25 }, (_, index) =>
       createMemoryEvent(
@@ -619,7 +682,9 @@ describe('mirrorbrain web app', () => {
         listSkills: vi.fn(async () => [] as SkillArtifact[]),
         syncBrowser: vi.fn(),
         syncShell: vi.fn(),
-        createDailyCandidates: vi.fn(),
+        createDailyCandidates: vi.fn(async () => {
+          throw new Error('No memory events found for review date 2026-03-19.');
+        }),
         suggestCandidateReviews: vi.fn(),
         reviewCandidateMemory: vi.fn(),
         generateKnowledge: vi.fn(),
@@ -653,7 +718,9 @@ describe('mirrorbrain web app', () => {
         listSkills: vi.fn(async () => [] as SkillArtifact[]),
         syncBrowser: vi.fn(),
         syncShell: vi.fn(),
-        createDailyCandidates: vi.fn(),
+        createDailyCandidates: vi.fn(async () => {
+          throw new Error('No memory events found for review date 2026-03-19.');
+        }),
         suggestCandidateReviews: vi.fn(),
         reviewCandidateMemory: vi.fn(),
         generateKnowledge: vi.fn(),
@@ -666,7 +733,7 @@ describe('mirrorbrain web app', () => {
     await app.createDailyCandidates();
     expect(app.state.feedback).toEqual({
       kind: 'error',
-      message: 'No memory events are available for yesterday\'s candidate review.',
+      message: 'No memory events found for review date 2026-03-19.',
     });
 
     await app.reviewSelectedCandidate('keep');

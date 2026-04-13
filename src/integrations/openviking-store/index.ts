@@ -949,6 +949,38 @@ export async function listMirrorBrainMemoryEventsFromWorkspace(
   );
 }
 
+export async function listRawMirrorBrainMemoryEventsFromWorkspace(
+  input: WorkspaceMemoryReadInput,
+): Promise<MemoryEvent[]> {
+  const memoryEventsDir = join(input.workspaceDir, 'mirrorbrain', 'memory-events');
+  let files: string[];
+
+  try {
+    files = await readdir(memoryEventsDir);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return [];
+    }
+
+    throw error;
+  }
+
+  const items = await Promise.all(
+    files
+      .filter((file) => file.endsWith('.json'))
+      .map(async (file) => {
+        const content = await readFile(join(memoryEventsDir, file), 'utf8');
+        const parsed = JSON.parse(content) as unknown;
+
+        return isMirrorBrainMemoryEvent(parsed) ? parsed : null;
+      }),
+  );
+
+  return items
+    .filter((item): item is MemoryEvent => item !== null)
+    .sort((left, right) => left.timestamp.localeCompare(right.timestamp));
+}
+
 export async function listMirrorBrainKnowledgeArtifactsFromOpenViking(
   input: OpenVikingReadInput,
   fetchImpl: FetchLike = fetch,

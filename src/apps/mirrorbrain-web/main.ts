@@ -569,33 +569,36 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
     },
     async createDailyCandidates() {
       const reviewDate = getPreviousCalendarDate(now(), timeZone);
-      const reviewWindowEvents = state.memoryEvents.filter((event) =>
-        formatCalendarDate(event.timestamp, timeZone) === reviewDate,
-      );
       state.reviewWindowDate = reviewDate;
-      state.reviewWindowEventCount = reviewWindowEvents.length;
-
-      if (reviewWindowEvents.length === 0) {
+      try {
+        const candidateMemories = await input.api.createDailyCandidates(
+          reviewDate,
+          timeZone,
+        );
+        if (!Array.isArray(candidateMemories)) {
+          throw new Error('Candidate generation returned an invalid response.');
+        }
+        state.candidateMemories = candidateMemories;
+        state.reviewWindowEventCount = state.candidateMemories.reduce(
+          (count, candidate) => count + candidate.memoryEventIds.length,
+          0,
+        );
+        state.candidateReviewSuggestions = await input.api.suggestCandidateReviews(
+          state.candidateMemories,
+        );
+        state.selectedCandidateId = state.candidateMemories[0]?.id ?? null;
+        state.activeTab = 'review';
+        setFeedback({
+          kind: 'success',
+          message: `Generated ${state.candidateMemories.length} daily candidates for ${reviewDate}.`,
+        });
+      } catch (error) {
+        state.reviewWindowEventCount = 0;
         setFeedback({
           kind: 'error',
-          message: "No memory events are available for yesterday's candidate review.",
+          message: toErrorMessage(error),
         });
-        return;
       }
-
-      state.candidateMemories = await input.api.createDailyCandidates(
-        reviewDate,
-        timeZone,
-      );
-      state.candidateReviewSuggestions = await input.api.suggestCandidateReviews(
-        state.candidateMemories,
-      );
-      state.selectedCandidateId = state.candidateMemories[0]?.id ?? null;
-      state.activeTab = 'review';
-      setFeedback({
-        kind: 'success',
-        message: `Generated ${state.candidateMemories.length} daily candidates for ${reviewDate}.`,
-      });
     },
     async reviewSelectedCandidate(decision: ReviewedMemory['decision']) {
       const candidate = getSelectedCandidate(state);
