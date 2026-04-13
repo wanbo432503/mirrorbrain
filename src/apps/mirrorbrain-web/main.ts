@@ -16,6 +16,10 @@ interface BrowserSyncSummary {
 }
 
 type MirrorBrainWebTab = 'memory' | 'review' | 'artifacts';
+type MirrorBrainArtifactsSubtab =
+  | 'history-topics'
+  | 'generate-knowledge'
+  | 'generate-skill';
 
 interface MirrorBrainWebAppState {
   serviceStatus: 'running' | 'stopped' | 'unknown';
@@ -26,6 +30,7 @@ interface MirrorBrainWebAppState {
   selectedCandidateId: string | null;
   candidateReviewSuggestions: CandidateReviewSuggestion[];
   reviewedMemory: ReviewedMemory | null;
+  knowledgeArtifacts?: KnowledgeArtifact[];
   knowledgeArtifact: KnowledgeArtifact | null;
   knowledgeDraft?: KnowledgeArtifact | null;
   knowledgeTopics: Array<{
@@ -36,6 +41,7 @@ interface MirrorBrainWebAppState {
     updatedAt?: string;
     recencyLabel: string;
   }>;
+  skillArtifacts?: SkillArtifact[];
   skillArtifact: SkillArtifact | null;
   skillDraft?: SkillArtifact | null;
   lastSyncSummary: BrowserSyncSummary | null;
@@ -44,7 +50,10 @@ interface MirrorBrainWebAppState {
     message: string;
   } | null;
   activeTab: MirrorBrainWebTab;
+  artifactsSubtab?: MirrorBrainArtifactsSubtab;
   memoryPage: number;
+  knowledgeHistoryPage?: number;
+  skillHistoryPage?: number;
 }
 
 interface MirrorBrainWebAppApi {
@@ -101,6 +110,7 @@ interface MountMirrorBrainWebAppInput {
 }
 
 const MEMORY_PAGE_SIZE = 5;
+const ARTIFACT_HISTORY_PAGE_SIZE = 5;
 
 function getMemoryPageCount(memoryEvents: MemoryEvent[]): number {
   return Math.max(1, Math.ceil(memoryEvents.length / MEMORY_PAGE_SIZE));
@@ -108,6 +118,14 @@ function getMemoryPageCount(memoryEvents: MemoryEvent[]): number {
 
 function clampMemoryPage(memoryEvents: MemoryEvent[], page: number): number {
   return Math.min(Math.max(1, page), getMemoryPageCount(memoryEvents));
+}
+
+function getPageCount(length: number, pageSize: number): number {
+  return Math.max(1, Math.ceil(length / pageSize));
+}
+
+function clampPage(length: number, page: number, pageSize: number): number {
+  return Math.min(Math.max(1, page), getPageCount(length, pageSize));
 }
 
 function toErrorMessage(error: unknown): string {
@@ -290,6 +308,64 @@ function renderMetricTile(input: {
   ].join('');
 }
 
+function renderArtifactsSubtabButton(
+  subtab: MirrorBrainArtifactsSubtab,
+  activeSubtab: MirrorBrainArtifactsSubtab,
+  label: string,
+): string {
+  return `<button type="button" class="mirrorbrain-subtab${
+    subtab === activeSubtab ? ' is-active' : ''
+  }" data-action="switch-artifacts-subtab" data-subtab="${subtab}">${label}</button>`;
+}
+
+function renderHistoryTable(
+  title: string,
+  rows: Array<{ primary: string; secondary: string; tertiary: string }>,
+  page: number,
+  pageSize: number,
+  dataActionPrefix: string,
+): string {
+  if (rows.length === 0) {
+    return [
+      '<section class="mirrorbrain-subcard">',
+      `<h4>${title}</h4>`,
+      '<p class="mirrorbrain-empty">No saved artifacts yet.</p>',
+      '</section>',
+    ].join('');
+  }
+
+  const currentPage = clampPage(rows.length, page, pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const pageRows = rows.slice(startIndex, startIndex + pageSize);
+
+  return [
+    '<section class="mirrorbrain-subcard">',
+    `<div class="mirrorbrain-card-heading"><h4>${title}</h4><span class="mirrorbrain-card-meta">Page ${currentPage} of ${getPageCount(rows.length, pageSize)}</span></div>`,
+    '<div class="mirrorbrain-history-table">',
+    pageRows
+      .map(
+        (row) => [
+          '<div class="mirrorbrain-history-row">',
+          `<strong>${row.primary}</strong>`,
+          `<span>${row.secondary}</span>`,
+          `<span class="mirrorbrain-card-meta">${row.tertiary}</span>`,
+          '</div>',
+        ].join(''),
+      )
+      .join(''),
+    '</div>',
+    '<div class="mirrorbrain-pagination">',
+    `<button type="button" data-action="${dataActionPrefix}-prev"${
+      currentPage === 1 ? ' disabled' : ''
+    }>Previous</button>`,
+    `<button type="button" data-action="${dataActionPrefix}-next"${
+      currentPage === getPageCount(rows.length, pageSize) ? ' disabled' : ''
+    }>Next</button>`,
+    '</div>',
+    '</section>',
+  ].join('');
+}
+
 function renderReviewPanel(state: MirrorBrainWebAppState): string {
   const candidate = getSelectedCandidate(state);
   const suggestion = getSelectedCandidateSuggestion(state);
@@ -379,6 +455,7 @@ function renderReviewPanel(state: MirrorBrainWebAppState): string {
 }
 
 function renderArtifactsPanel(state: MirrorBrainWebAppState): string {
+  const selectedCandidate = getSelectedCandidate(state);
   const knowledge = state.knowledgeArtifact;
   const knowledgeDraft =
     state.knowledgeDraft ??
@@ -403,53 +480,98 @@ function renderArtifactsPanel(state: MirrorBrainWebAppState): string {
           },
         });
   const workflowEvidenceValue = skillDraft?.workflowEvidenceRefs.join('\n') ?? '';
-
-  return [
-    '<section class="mirrorbrain-panel">',
-    '<div class="mirrorbrain-panel-header">',
-    '<div>',
-    '<p class="mirrorbrain-eyebrow">Artifacts</p>',
-    '<h2>Artifact Studio</h2>',
-    '<p class="mirrorbrain-panel-copy">Generate drafts from reviewed memory, refine them in-place, and save the edited artifact back to MirrorBrain.</p>',
+  const knowledgeArtifacts = state.knowledgeArtifacts ?? [];
+  const skillArtifacts = state.skillArtifacts ?? [];
+  const artifactsSubtab = state.artifactsSubtab ?? 'history-topics';
+  const knowledgeHistoryPage = state.knowledgeHistoryPage ?? 1;
+  const skillHistoryPage = state.skillHistoryPage ?? 1;
+  const subtabNav = [
+    '<div class="mirrorbrain-subtabs">',
+    renderArtifactsSubtabButton(
+      'history-topics',
+      artifactsSubtab,
+      'History Topics',
+    ),
+    renderArtifactsSubtabButton(
+      'generate-knowledge',
+      artifactsSubtab,
+      'Generate Knowledge',
+    ),
+    renderArtifactsSubtabButton(
+      'generate-skill',
+      artifactsSubtab,
+      'Generate Skill',
+    ),
     '</div>',
-    '<div class="mirrorbrain-actions">',
-    '<button type="button" data-action="generate-knowledge" class="mirrorbrain-button mirrorbrain-button--primary">Generate Knowledge</button>',
-    '<button type="button" data-action="generate-skill" class="mirrorbrain-button mirrorbrain-button--primary">Generate Skill</button>',
+  ].join('');
+  const historyPanel = [
+    '<div class="mirrorbrain-history-layout">',
+    renderHistoryTable(
+      'Generated Knowledge',
+      knowledgeArtifacts.map((artifact) => ({
+        primary: artifact.title ?? artifact.id,
+        secondary: artifact.summary ?? artifact.id,
+        tertiary: artifact.recencyLabel ?? artifact.draftState,
+      })),
+      knowledgeHistoryPage,
+      ARTIFACT_HISTORY_PAGE_SIZE,
+      'knowledge-history',
+    ),
+    renderHistoryTable(
+      'Generated Skills',
+      skillArtifacts.map((artifact) => ({
+        primary: artifact.id,
+        secondary: artifact.approvalState,
+        tertiary: `${artifact.workflowEvidenceRefs.length} refs`,
+      })),
+      skillHistoryPage,
+      ARTIFACT_HISTORY_PAGE_SIZE,
+      'skill-history',
+    ),
     '</div>',
-    '</div>',
-    '<div class="mirrorbrain-artifact-layout">',
-    '<article class="mirrorbrain-detail-card mirrorbrain-detail-card--rail">',
-    '<div class="mirrorbrain-card-heading"><h3>Topic Knowledge</h3><span class="mirrorbrain-card-meta">Current best topic artifacts already saved</span></div>',
-    knowledgeTopics.length === 0
-      ? '<p class="mirrorbrain-empty">No topic knowledge available yet.</p>'
-      : knowledgeTopics
-          .map(
-            (topic) =>
-              `<div class="mirrorbrain-topic-item"><strong>${topic.title}</strong><p>${topic.summary}</p><p class="mirrorbrain-card-meta">${topic.recencyLabel}</p></div>`,
-          )
-          .join(''),
-    '</article>',
+  ].join('');
+  const candidateContext = selectedCandidate === null
+    ? '<p class="mirrorbrain-empty">Select a candidate in Review before generating an artifact.</p>'
+    : [
+        '<div class="mirrorbrain-highlight-block">',
+        `<h4>${selectedCandidate.title}</h4>`,
+        `<p>${selectedCandidate.summary}</p>`,
+        '</div>',
+        renderDetailRows([
+          { label: 'Theme', value: selectedCandidate.theme },
+          { label: 'Review Date', value: selectedCandidate.reviewDate },
+          { label: 'Time Range', value: `${selectedCandidate.timeRange.startAt} → ${selectedCandidate.timeRange.endAt}` },
+          { label: 'Memory IDs', value: selectedCandidate.memoryEventIds.join(', ') },
+        ]),
+      ].join('');
+  const knowledgePanel = [
+    '<div class="mirrorbrain-generate-layout">',
     '<article class="mirrorbrain-detail-card mirrorbrain-detail-card--focus">',
-    '<div class="mirrorbrain-card-heading"><h3>Knowledge Draft Editor</h3><span class="mirrorbrain-card-meta">Edit title, summary, and body before saving</span></div>',
+    '<div class="mirrorbrain-card-heading"><h3>Candidate Context</h3><span class="mirrorbrain-card-meta">Current Review selection</span></div>',
+    candidateContext,
+    '</article>',
+    '<article class="mirrorbrain-detail-card mirrorbrain-detail-card--assist">',
+    '<div class="mirrorbrain-card-heading"><h3>Knowledge Draft Editor</h3><span class="mirrorbrain-card-meta">Generate or refine a knowledge draft for the selected candidate</span></div>',
+    '<div class="mirrorbrain-actions mirrorbrain-actions--editor"><button type="button" data-action="generate-knowledge" class="mirrorbrain-button mirrorbrain-button--primary">Generate Knowledge</button><button type="button" data-action="save-knowledge" class="mirrorbrain-button mirrorbrain-button--success">Save Knowledge Draft</button></div>',
     knowledgeDraft === null
       ? '<p class="mirrorbrain-empty">Generate knowledge to open the editor.</p>'
       : [
           `<label class="mirrorbrain-field"><span>Title</span><input class="mirrorbrain-input" name="knowledge-title" type="text" value="${knowledgeDraft.title ?? ''}" /></label>`,
           `<label class="mirrorbrain-field"><span>Summary</span><textarea class="mirrorbrain-textarea mirrorbrain-textarea--compact" name="knowledge-summary">${knowledgeDraft.summary ?? ''}</textarea></label>`,
           `<label class="mirrorbrain-field"><span>Body</span><textarea class="mirrorbrain-textarea" name="knowledge-body">${knowledgeDraft.body ?? ''}</textarea></label>`,
-          '<div class="mirrorbrain-actions mirrorbrain-actions--editor"><button type="button" data-action="save-knowledge" class="mirrorbrain-button mirrorbrain-button--success">Save Knowledge Draft</button></div>',
-          '<div class="mirrorbrain-subcard">',
-          '<h4>Latest Knowledge Artifact</h4>',
-          renderDetailRows([
-            { label: 'State', value: knowledge?.draftState ?? 'draft' },
-            { label: 'Inputs', value: `${knowledge?.sourceReviewedMemoryIds.length ?? 0} reviewed memories` },
-            { label: 'Artifact ID', value: knowledge?.id ?? knowledgeDraft.id },
-          ]),
-          '</div>',
         ].join(''),
     '</article>',
+    '</div>',
+  ].join('');
+  const skillPanel = [
+    '<div class="mirrorbrain-generate-layout">',
+    '<article class="mirrorbrain-detail-card mirrorbrain-detail-card--focus">',
+    '<div class="mirrorbrain-card-heading"><h3>Candidate Context</h3><span class="mirrorbrain-card-meta">Current Review selection</span></div>',
+    candidateContext,
+    '</article>',
     '<article class="mirrorbrain-detail-card mirrorbrain-detail-card--assist">',
-    '<div class="mirrorbrain-card-heading"><h3>Skill Draft Editor</h3><span class="mirrorbrain-card-meta">Edit approval and execution safety before saving</span></div>',
+    '<div class="mirrorbrain-card-heading"><h3>Skill Draft Editor</h3><span class="mirrorbrain-card-meta">Generate or refine a skill draft for the selected candidate</span></div>',
+    '<div class="mirrorbrain-actions mirrorbrain-actions--editor"><button type="button" data-action="generate-skill" class="mirrorbrain-button mirrorbrain-button--primary">Generate Skill</button><button type="button" data-action="save-skill" class="mirrorbrain-button mirrorbrain-button--success">Save Skill Draft</button></div>',
     skillDraft === null
       ? '<p class="mirrorbrain-empty">Generate a skill to open the editor.</p>'
       : [
@@ -459,19 +581,26 @@ function renderArtifactsPanel(state: MirrorBrainWebAppState): string {
           '</select></label>',
           `<label class="mirrorbrain-field"><span>Workflow Evidence Refs</span><textarea class="mirrorbrain-textarea" name="skill-workflow-evidence-refs">${workflowEvidenceValue}</textarea></label>`,
           `<label class="mirrorbrain-checkbox"><input name="skill-requires-confirmation" type="checkbox"${skillDraft.executionSafetyMetadata.requiresConfirmation ? ' checked' : ''} /><span>Requires explicit confirmation before execution</span></label>`,
-          '<div class="mirrorbrain-actions mirrorbrain-actions--editor"><button type="button" data-action="save-skill" class="mirrorbrain-button mirrorbrain-button--success">Save Skill Draft</button></div>',
-          '<div class="mirrorbrain-subcard">',
-          '<h4>Latest Skill Artifact</h4>',
-          renderDetailRows([
-            { label: 'Approval', value: skill?.approvalState ?? skillDraft.approvalState },
-            { label: 'Evidence', value: `${skill?.workflowEvidenceRefs.length ?? skillDraft.workflowEvidenceRefs.length} workflow refs` },
-            { label: 'Confirmation', value: (skill?.executionSafetyMetadata.requiresConfirmation ?? skillDraft.executionSafetyMetadata.requiresConfirmation) ? 'Required' : 'Optional' },
-            { label: 'Artifact ID', value: skill?.id ?? skillDraft.id },
-          ]),
-          '</div>',
         ].join(''),
     '</article>',
     '</div>',
+  ].join('');
+
+  return [
+    '<section class="mirrorbrain-panel">',
+    '<div class="mirrorbrain-panel-header">',
+    '<div>',
+    '<p class="mirrorbrain-eyebrow">Artifacts</p>',
+    '<h2>Artifact Studio</h2>',
+    '<p class="mirrorbrain-panel-copy">Generate drafts from reviewed memory, refine them in-place, and save the edited artifact back to MirrorBrain.</p>',
+    '</div>',
+    '</div>',
+    subtabNav,
+    artifactsSubtab === 'history-topics'
+      ? historyPanel
+      : artifactsSubtab === 'generate-knowledge'
+        ? knowledgePanel
+        : skillPanel,
     '</section>',
   ].join('');
 }
@@ -534,15 +663,20 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
     selectedCandidateId: null,
     candidateReviewSuggestions: [],
     reviewedMemory: null,
+    knowledgeArtifacts: [],
     knowledgeArtifact: null,
     knowledgeDraft: null,
     knowledgeTopics: [],
+    skillArtifacts: [],
     skillArtifact: null,
     skillDraft: null,
     lastSyncSummary: null,
     feedback: null,
     activeTab: 'memory',
+    artifactsSubtab: 'history-topics',
     memoryPage: 1,
+    knowledgeHistoryPage: 1,
+    skillHistoryPage: 1,
   };
 
   const setFeedback = (feedback: MirrorBrainWebAppState['feedback']) => {
@@ -553,6 +687,37 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
     state,
     setActiveTab(tab: MirrorBrainWebTab) {
       state.activeTab = tab;
+    },
+    setArtifactsSubtab(subtab: MirrorBrainArtifactsSubtab) {
+      state.artifactsSubtab = subtab;
+    },
+    goToNextKnowledgeHistoryPage() {
+      state.knowledgeHistoryPage = clampPage(
+        state.knowledgeArtifacts?.length ?? 0,
+        (state.knowledgeHistoryPage ?? 1) + 1,
+        ARTIFACT_HISTORY_PAGE_SIZE,
+      );
+    },
+    goToPreviousKnowledgeHistoryPage() {
+      state.knowledgeHistoryPage = clampPage(
+        state.knowledgeArtifacts?.length ?? 0,
+        (state.knowledgeHistoryPage ?? 1) - 1,
+        ARTIFACT_HISTORY_PAGE_SIZE,
+      );
+    },
+    goToNextSkillHistoryPage() {
+      state.skillHistoryPage = clampPage(
+        state.skillArtifacts?.length ?? 0,
+        (state.skillHistoryPage ?? 1) + 1,
+        ARTIFACT_HISTORY_PAGE_SIZE,
+      );
+    },
+    goToPreviousSkillHistoryPage() {
+      state.skillHistoryPage = clampPage(
+        state.skillArtifacts?.length ?? 0,
+        (state.skillHistoryPage ?? 1) - 1,
+        ARTIFACT_HISTORY_PAGE_SIZE,
+      );
     },
     updateKnowledgeDraft(input: {
       title?: string;
@@ -635,6 +800,7 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
       }
 
       if (knowledgeResult.status === 'fulfilled') {
+        state.knowledgeArtifacts = knowledgeResult.value;
         state.knowledgeArtifact = knowledgeResult.value[0] ?? null;
         state.knowledgeDraft =
           state.knowledgeArtifact === null
@@ -655,6 +821,7 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
       }
 
       if (skillsResult.status === 'fulfilled') {
+        state.skillArtifacts = skillsResult.value;
         state.skillArtifact = skillsResult.value[0] ?? null;
         state.skillDraft =
           state.skillArtifact === null
@@ -787,6 +954,12 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
       state.knowledgeArtifact = await input.api.generateKnowledge([
         state.reviewedMemory,
       ]);
+      state.knowledgeArtifacts = [
+        state.knowledgeArtifact,
+        ...(state.knowledgeArtifacts ?? []).filter(
+          (artifact) => artifact.id !== state.knowledgeArtifact?.id,
+        ),
+      ];
       state.knowledgeDraft = {
         ...state.knowledgeArtifact,
         derivedFromKnowledgeIds: [
@@ -810,6 +983,12 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
       }
 
       state.skillArtifact = await input.api.generateSkill([state.reviewedMemory]);
+      state.skillArtifacts = [
+        state.skillArtifact,
+        ...(state.skillArtifacts ?? []).filter(
+          (artifact) => artifact.id !== state.skillArtifact?.id,
+        ),
+      ];
       state.skillDraft = {
         ...state.skillArtifact,
         workflowEvidenceRefs: [...state.skillArtifact.workflowEvidenceRefs],
@@ -841,6 +1020,12 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
       state.knowledgeArtifact = await input.api.saveKnowledgeArtifact(
         knowledgeDraft,
       );
+      state.knowledgeArtifacts = [
+        state.knowledgeArtifact,
+        ...(state.knowledgeArtifacts ?? []).filter(
+          (artifact) => artifact.id !== state.knowledgeArtifact?.id,
+        ),
+      ];
       state.knowledgeDraft = {
         ...state.knowledgeArtifact,
         derivedFromKnowledgeIds: [
@@ -869,6 +1054,12 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
       }
 
       state.skillArtifact = await input.api.saveSkillArtifact(skillDraft);
+      state.skillArtifacts = [
+        state.skillArtifact,
+        ...(state.skillArtifacts ?? []).filter(
+          (artifact) => artifact.id !== state.skillArtifact?.id,
+        ),
+      ];
       state.skillDraft = {
         ...state.skillArtifact,
         workflowEvidenceRefs: [...state.skillArtifact.workflowEvidenceRefs],
@@ -1237,6 +1428,44 @@ export async function mountMirrorBrainWebApp(
           requiresConfirmation:
             (event.currentTarget as HTMLInputElement).checked,
         });
+      });
+    root
+      .querySelectorAll<HTMLElement>('[data-action="switch-artifacts-subtab"]')
+      .forEach((element) => {
+        element.addEventListener('click', () => {
+          const subtab = element.dataset.subtab as
+            | MirrorBrainArtifactsSubtab
+            | undefined;
+
+          if (subtab !== undefined) {
+            app.setArtifactsSubtab(subtab);
+            render();
+          }
+        });
+      });
+    root
+      .querySelector('[data-action="knowledge-history-prev"]')
+      ?.addEventListener('click', () => {
+        app.goToPreviousKnowledgeHistoryPage();
+        render();
+      });
+    root
+      .querySelector('[data-action="knowledge-history-next"]')
+      ?.addEventListener('click', () => {
+        app.goToNextKnowledgeHistoryPage();
+        render();
+      });
+    root
+      .querySelector('[data-action="skill-history-prev"]')
+      ?.addEventListener('click', () => {
+        app.goToPreviousSkillHistoryPage();
+        render();
+      });
+    root
+      .querySelector('[data-action="skill-history-next"]')
+      ?.addEventListener('click', () => {
+        app.goToNextSkillHistoryPage();
+        render();
       });
     root
       .querySelectorAll<HTMLElement>('[data-action="switch-tab"]')

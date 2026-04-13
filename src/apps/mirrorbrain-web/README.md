@@ -10,6 +10,8 @@ Current responsibility:
 - merge a recent `importedEvents` preview from sync responses into local UI state so newly synced memory can appear immediately without waiting for a full backend re-read
 - present the review flow as a structured workbench instead of a flat debug panel
 - provide editable knowledge and skill draft editors in the artifacts tab, including save actions when the backing API is available
+- organize the artifacts tab into focused sub tabs for history topics, knowledge generation, and skill generation
+- scope artifact generation to the candidate currently selected in the review tab
 
 Current limitation:
 

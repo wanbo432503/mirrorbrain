@@ -201,6 +201,7 @@ describe('mirrorbrain web app', () => {
       lastSyncSummary: null,
       feedback: null,
       activeTab: 'artifacts',
+      artifactsSubtab: 'generate-knowledge',
       memoryPage: 1,
       reviewWindowDate: null,
       reviewWindowEventCount: 0,
@@ -208,12 +209,161 @@ describe('mirrorbrain web app', () => {
 
     expect(html).toContain('Artifact Studio');
     expect(html).toContain('Knowledge Draft Editor');
-    expect(html).toContain('Skill Draft Editor');
+    expect(html).toContain('Generate Skill');
     expect(html).toContain('data-action="save-knowledge"');
-    expect(html).toContain('data-action="save-skill"');
+    expect(html).not.toContain('data-action="save-skill"');
     expect(html).toContain('name="knowledge-title"');
     expect(html).toContain('name="knowledge-body"');
-    expect(html).toContain('name="skill-workflow-evidence-refs"');
+    expect(html).toContain('data-subtab="generate-skill"');
+  });
+
+  it('renders artifact subtabs and shows only the active artifact panel', () => {
+    const baseState = {
+      serviceStatus: 'running' as const,
+      memoryEvents: [],
+      candidateMemories: [
+        createCandidateMemory({
+          id: 'candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
+          memoryEventIds: ['browser:aw-event-1'],
+          title: 'Docs Example Com / guides',
+          summary: '1 browser event about Docs Example Com / guides on 2026-03-20.',
+          theme: 'docs.example.com / guides',
+        }),
+      ],
+      selectedCandidateId:
+        'candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
+      candidateReviewSuggestions: [],
+      reviewedMemory: createReviewedMemory(
+        createCandidateMemory({
+          id: 'candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
+          memoryEventIds: ['browser:aw-event-1'],
+          title: 'Docs Example Com / guides',
+          summary: '1 browser event about Docs Example Com / guides on 2026-03-20.',
+          theme: 'docs.example.com / guides',
+        }),
+      ),
+      knowledgeTopics: [],
+      knowledgeArtifacts: [
+        {
+          id: 'knowledge-draft:1',
+          artifactType: 'daily-review-draft' as const,
+          draftState: 'draft' as const,
+          topicKey: null,
+          title: 'Knowledge title',
+          summary: 'Knowledge summary',
+          body: 'Knowledge body',
+          sourceReviewedMemoryIds: ['reviewed:1'],
+          derivedFromKnowledgeIds: [],
+          version: 1,
+          isCurrentBest: false,
+          supersedesKnowledgeId: null,
+          reviewedAt: null,
+          recencyLabel: 'today',
+          provenanceRefs: [],
+        },
+      ],
+      knowledgeArtifact: null,
+      knowledgeDraft: null,
+      skillArtifacts: [
+        {
+          id: 'skill-draft:1',
+          approvalState: 'draft' as const,
+          workflowEvidenceRefs: ['reviewed:1'],
+          executionSafetyMetadata: {
+            requiresConfirmation: true,
+          },
+        },
+      ],
+      skillArtifact: null,
+      skillDraft: null,
+      lastSyncSummary: null,
+      feedback: null,
+      activeTab: 'artifacts' as const,
+      artifactsSubtab: 'history-topics' as const,
+      memoryPage: 1,
+      knowledgeHistoryPage: 1,
+      skillHistoryPage: 1,
+      reviewWindowDate: null,
+      reviewWindowEventCount: 0,
+    };
+
+    const historyHtml = renderMirrorBrainWebApp(baseState);
+    const knowledgeHtml = renderMirrorBrainWebApp({
+      ...baseState,
+      artifactsSubtab: 'generate-knowledge',
+    });
+    const skillHtml = renderMirrorBrainWebApp({
+      ...baseState,
+      artifactsSubtab: 'generate-skill',
+    });
+
+    expect(historyHtml).toContain('data-action="switch-artifacts-subtab"');
+    expect(historyHtml).toContain('History Topics');
+    expect(historyHtml).toContain('Generated Knowledge');
+    expect(historyHtml).toContain('Generated Skills');
+    expect(historyHtml).not.toContain('Knowledge Draft Editor');
+    expect(knowledgeHtml).toContain('Knowledge Draft Editor');
+    expect(knowledgeHtml).not.toContain('Generated Skills');
+    expect(skillHtml).toContain('Skill Draft Editor');
+    expect(skillHtml).not.toContain('Generated Knowledge');
+  });
+
+  it('paginates history topics tables at 5 rows per category', () => {
+    const knowledgeArtifacts = Array.from({ length: 6 }, (_, index) => ({
+      id: `knowledge-draft:${index + 1}`,
+      artifactType: 'daily-review-draft' as const,
+      draftState: 'draft' as const,
+      topicKey: null,
+      title: `Knowledge ${index + 1}`,
+      summary: `Summary ${index + 1}`,
+      body: `Body ${index + 1}`,
+      sourceReviewedMemoryIds: ['reviewed:1'],
+      derivedFromKnowledgeIds: [],
+      version: 1,
+      isCurrentBest: false,
+      supersedesKnowledgeId: null,
+      reviewedAt: null,
+      recencyLabel: 'today',
+      provenanceRefs: [],
+    }));
+    const skillArtifacts = Array.from({ length: 6 }, (_, index) => ({
+      id: `skill-draft:${index + 1}`,
+      approvalState: 'draft' as const,
+      workflowEvidenceRefs: ['reviewed:1'],
+      executionSafetyMetadata: {
+        requiresConfirmation: true,
+      },
+    }));
+
+    const html = renderMirrorBrainWebApp({
+      serviceStatus: 'running',
+      memoryEvents: [],
+      candidateMemories: [],
+      selectedCandidateId: null,
+      candidateReviewSuggestions: [],
+      reviewedMemory: null,
+      knowledgeTopics: [],
+      knowledgeArtifacts,
+      knowledgeArtifact: null,
+      knowledgeDraft: null,
+      skillArtifacts,
+      skillArtifact: null,
+      skillDraft: null,
+      lastSyncSummary: null,
+      feedback: null,
+      activeTab: 'artifacts',
+      artifactsSubtab: 'history-topics',
+      memoryPage: 1,
+      knowledgeHistoryPage: 2,
+      skillHistoryPage: 1,
+      reviewWindowDate: null,
+      reviewWindowEventCount: 0,
+    });
+
+    expect(html).toContain('Knowledge 6');
+    expect(html).not.toContain('Knowledge 1');
+    expect(html).toContain('skill-draft:1');
+    expect(html).toContain('Page 2 of 2');
   });
 
   it('renders memory pagination with 5 events per page', () => {
@@ -357,8 +507,7 @@ describe('mirrorbrain web app', () => {
     expect(reviewHtml).toContain('data-action="create-candidate"');
     expect(reviewHtml).toContain('data-action="keep-candidate"');
     expect(reviewHtml).toContain('data-action="discard-candidate"');
-    expect(artifactsHtml).toContain('data-action="generate-knowledge"');
-    expect(artifactsHtml).toContain('data-action="generate-skill"');
+    expect(artifactsHtml).toContain('data-action="switch-artifacts-subtab"');
   });
 
   it('loads, creates yesterday candidates, reviews the selected candidate, and generates artifacts', async () => {

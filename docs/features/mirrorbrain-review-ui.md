@@ -17,6 +17,8 @@ This UI is responsible for:
 - showing AI review suggestions as advisory detail, not final state
 - exposing knowledge and skill generation actions
 - exposing editable knowledge and skill draft forms in the artifacts tab
+- organizing the artifacts tab into `history topics`, `generate knowledge`, and `generate skill` sub tabs
+- scoping artifact generation views to the candidate currently selected in the review tab
 - exposing explicit save actions for edited knowledge and skill drafts
 - separating memory, review, and artifacts into distinct tabs instead of stacking all content on one page
 - placing sync, review, and artifact actions inside their corresponding tabs instead of a single global action bar
@@ -45,9 +47,11 @@ This UI is not responsible for:
 7. The UI lists multiple candidate streams and lets the user pick one.
 8. The UI shows AI review suggestions for the selected candidate without auto-reviewing it.
 9. The user explicitly keeps or discards the selected candidate.
-10. The user generates knowledge and skill drafts and edits them in-place through the artifacts tab.
-11. The user can save the edited draft artifact back through the local service API.
-12. The UI renders a visible status message after each action so the workflow is not silent.
+10. The user opens the `history topics` sub tab to browse previously generated knowledge and skill artifacts in paged category tables.
+11. The user opens `generate knowledge` or `generate skill` to work against the candidate currently selected in the review tab.
+12. The user generates knowledge and skill drafts and edits them in-place through the artifacts tab.
+13. The user can save the edited draft artifact back through the local service API.
+14. The UI renders a visible status message after each action so the workflow is not silent.
 
 ## Test Strategy
 
