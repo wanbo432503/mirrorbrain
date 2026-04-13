@@ -55,6 +55,19 @@ interface IngestMemoryNarrativeToOpenVikingInput {
   artifact: MemoryNarrative;
 }
 
+interface IngestBrowserPageContentToOpenVikingInput {
+  baseUrl: string;
+  workspaceDir: string;
+  artifact: {
+    id: string;
+    sourceEventId: string;
+    url: string;
+    title: string;
+    fetchedAt: string;
+    text: string;
+  };
+}
+
 interface IngestKnowledgeArtifactToOpenVikingInput {
   baseUrl: string;
   workspaceDir: string;
@@ -121,6 +134,7 @@ function encodeMirrorBrainResourceName(value: string): string {
 export function createMirrorBrainResourceTarget(
   namespace:
     | 'memory-events'
+    | 'browser-page-content'
     | 'memory-narratives'
     | 'candidate-memories'
     | 'reviewed-memories'
@@ -294,6 +308,62 @@ export async function ingestMemoryNarrativeToOpenViking(
     },
     fetchImpl,
   );
+}
+
+export async function ingestBrowserPageContentToOpenViking(
+  input: IngestBrowserPageContentToOpenVikingInput,
+  fetchImpl: FetchLike = fetch,
+): Promise<OpenVikingResourceIngestResult> {
+  const resourceDir = join(
+    input.workspaceDir,
+    'mirrorbrain',
+    'browser-page-content',
+  );
+  const sourcePath = join(resourceDir, `${input.artifact.id}.md`);
+  const targetUri = createMirrorBrainResourceTarget(
+    'browser-page-content',
+    `${input.artifact.id}.md`,
+  );
+  const markdown = [
+    `# ${input.artifact.title}`,
+    '',
+    `- sourceEventId: ${input.artifact.sourceEventId}`,
+    `- url: ${input.artifact.url}`,
+    `- fetchedAt: ${input.artifact.fetchedAt}`,
+    '',
+    input.artifact.text,
+  ].join('\n');
+
+  mkdirSync(resourceDir, { recursive: true });
+  writeFileSync(sourcePath, markdown);
+
+  const response = await fetchImpl(`${input.baseUrl}/api/v1/resources`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      path: sourcePath,
+      target: targetUri,
+      reason: 'MirrorBrain imported browser page content',
+      wait: true,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`OpenViking request failed with status ${response.status}`);
+  }
+
+  const payload = (await response.json()) as {
+    result?: {
+      root_uri?: string;
+    };
+  };
+
+  return {
+    sourcePath,
+    rootUri: payload.result?.root_uri ?? targetUri,
+  };
 }
 
 export async function ingestReviewedMemoryToOpenViking(

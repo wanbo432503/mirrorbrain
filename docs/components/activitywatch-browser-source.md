@@ -26,7 +26,8 @@ This component adapts browser activity coming from `ActivityWatch`, with `aw-wat
 2. The adapter builds a controlled initial backfill request or an incremental request from checkpoint state.
 3. The adapter fetches browser events from the ActivityWatch HTTP API.
 4. The source plugin normalizes browser events and suppresses near-duplicate page records that repeat the same page signature within a short time window before persistence.
-5. The generic source-sync workflow persists sanitized events and advances the checkpoint store.
+5. The browser sync workflow can then enrich sanitized events with fetched page text before persistence.
+6. The generic source-sync workflow persists enriched events and advances the checkpoint store.
 
 ## Operational Note
 

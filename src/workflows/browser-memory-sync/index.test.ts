@@ -20,6 +20,7 @@ describe('browser memory sync workflow', () => {
       updatedAt: string;
     }> = [];
     const persistedRecordIds: string[] = [];
+    const persistedRecordContents: Array<Record<string, unknown>> = [];
 
     const result = await runBrowserMemorySyncOnce(
       {
@@ -27,6 +28,7 @@ describe('browser memory sync workflow', () => {
         now: '2026-03-20T08:00:00.000Z',
         bucketId: 'aw-watcher-web-chrome',
         scopeId: 'scope-browser',
+        workspaceDir: '/tmp/mirrorbrain',
       },
       {
         checkpointStore: {
@@ -62,8 +64,19 @@ describe('browser memory sync workflow', () => {
             },
           ];
         },
+        fetchPageContent: async ({ url, title, fetchedAt }) => ({
+          url,
+          title,
+          fetchedAt,
+          text: `Stored text for ${title}`,
+        }),
+        ingestPageContent: async ({ artifact }) => ({
+          sourcePath: `/tmp/mirrorbrain/mirrorbrain/browser-page-content/${artifact.id}.md`,
+          rootUri: `viking://resources/mirrorbrain-browser-page-content-${artifact.id}.md`,
+        }),
         writeMemoryEvent: async (record) => {
           persistedRecordIds.push(record.recordId);
+          persistedRecordContents.push(record.payload.content);
         },
       },
     );
@@ -107,6 +120,18 @@ describe('browser memory sync workflow', () => {
         updatedAt: '2026-03-20T08:00:00.000Z',
       },
     ]);
+    expect(persistedRecordContents[0]).toMatchObject({
+      url: 'https://example.com/tasks',
+      title: 'Example Tasks',
+      text: 'Stored text for Example Tasks',
+      textStorage: {
+        filePath:
+          '/tmp/mirrorbrain/mirrorbrain/browser-page-content/browser-page:browser-aw-event-1.md',
+        openVikingUri:
+          'viking://resources/mirrorbrain-browser-page-content-browser-page:browser-aw-event-1.md',
+        vectorizationSource: 'openviking-resource',
+      },
+    });
     expect(result).toEqual({
       sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
       strategy: 'initial-backfill',
@@ -122,6 +147,14 @@ describe('browser memory sync workflow', () => {
           content: {
             url: 'https://example.com/tasks',
             title: 'Example Tasks',
+            text: 'Stored text for Example Tasks',
+            textStorage: {
+              filePath:
+                '/tmp/mirrorbrain/mirrorbrain/browser-page-content/browser-page:browser-aw-event-1.md',
+              openVikingUri:
+                'viking://resources/mirrorbrain-browser-page-content-browser-page:browser-aw-event-1.md',
+              vectorizationSource: 'openviking-resource',
+            },
           },
           captureMetadata: {
             upstreamSource: 'activitywatch',
@@ -137,6 +170,14 @@ describe('browser memory sync workflow', () => {
           content: {
             url: 'https://example.com/review',
             title: 'Review',
+            text: 'Stored text for Review',
+            textStorage: {
+              filePath:
+                '/tmp/mirrorbrain/mirrorbrain/browser-page-content/browser-page:browser-aw-event-2.md',
+              openVikingUri:
+                'viking://resources/mirrorbrain-browser-page-content-browser-page:browser-aw-event-2.md',
+              vectorizationSource: 'openviking-resource',
+            },
           },
           captureMetadata: {
             upstreamSource: 'activitywatch',

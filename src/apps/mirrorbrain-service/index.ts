@@ -209,6 +209,7 @@ export function startMirrorBrainService(
         now: now(),
         bucketId: await resolveBrowserBucketId(),
         scopeId: browserScopeId,
+        workspaceDir,
       },
       {
         checkpointStore,

@@ -136,6 +136,7 @@ describe('mirrorbrain service', () => {
         now: '2026-03-20T10:00:00.000Z',
         bucketId: 'aw-watcher-web-chrome',
         scopeId: 'scope-browser',
+        workspaceDir: '/tmp/mirrorbrain-workspace',
       },
       {
         checkpointStore,
@@ -208,6 +209,7 @@ describe('mirrorbrain service', () => {
         now: '2026-04-13T03:53:51.918Z',
         bucketId: 'aw-watcher-web-chrome_wanbodeMacBook-Pro-2.local',
         scopeId: 'scope-browser',
+        workspaceDir: '/tmp/mirrorbrain-workspace',
       },
       {
         checkpointStore,

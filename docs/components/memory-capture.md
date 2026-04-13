@@ -12,6 +12,7 @@ This component is responsible for:
 - registering source plugins behind a stable registry lookup by source key
 - providing source-specific pre-persistence deduplication helpers
 - attaching source attribution and checkpoint metadata
+- allowing source-specific enrichment to extend normalized events before final persistence
 - forwarding normalized events to persistence through the configured writer
 
 This component is not responsible for:

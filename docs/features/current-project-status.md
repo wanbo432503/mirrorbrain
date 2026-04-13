@@ -8,6 +8,7 @@ The project has moved beyond the original narrow MVP. It now supports:
 
 - explicit browser and shell memory sync
 - Phase 2 retrieval-oriented memory shaping
+- browser page-text capture with OpenViking-backed indexing for browser memory
 - Phase 3 topic-oriented knowledge modeling, merge, read, and quality-evaluation baselines
 
 This document is the concise “what is actually done now” companion to the more detailed planning docs.
