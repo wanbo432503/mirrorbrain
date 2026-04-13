@@ -32,6 +32,13 @@ interface FetchActivityWatchBrowserEventsInput {
   end: string;
 }
 
+interface ActivityWatchBucketSummary {
+  id: string;
+  last_updated?: string;
+  created?: string;
+  type?: string;
+}
+
 export interface ActivityWatchBrowserEvent {
   id: string;
   timestamp: string;
@@ -40,6 +47,10 @@ export interface ActivityWatchBrowserEvent {
     title: string;
   };
 }
+
+type FetchActivityWatchBucketsInput = {
+  baseUrl: string;
+};
 
 interface CreateActivityWatchBrowserMemorySourcePluginInput {
   bucketId: string;
@@ -105,6 +116,42 @@ export async function fetchActivityWatchBrowserEvents(
   }
 
   return (await response.json()) as ActivityWatchBrowserEvent[];
+}
+
+export async function fetchActivityWatchBuckets(
+  input: FetchActivityWatchBucketsInput,
+  fetchImpl: FetchLike = fetch,
+): Promise<ActivityWatchBucketSummary[]> {
+  const response = await fetchImpl(new URL('/api/0/buckets/', input.baseUrl).toString());
+
+  if (!response.ok) {
+    throw new Error(`ActivityWatch request failed with status ${response.status}`);
+  }
+
+  const payload = (await response.json()) as Record<string, ActivityWatchBucketSummary>;
+
+  return Object.entries(payload).map(([id, bucket]) => ({
+    ...bucket,
+    id,
+  }));
+}
+
+function isActivityWatchBrowserBucket(bucket: ActivityWatchBucketSummary): boolean {
+  return bucket.id.startsWith('aw-watcher-web');
+}
+
+function getBucketRecencyValue(bucket: ActivityWatchBucketSummary): string {
+  return bucket.last_updated ?? bucket.created ?? '';
+}
+
+export function resolveActivityWatchBrowserBucket(
+  buckets: ActivityWatchBucketSummary[],
+): string | null {
+  return buckets
+    .filter(isActivityWatchBrowserBucket)
+    .sort((left, right) =>
+      getBucketRecencyValue(right).localeCompare(getBucketRecencyValue(left)),
+    )[0]?.id ?? null;
 }
 
 export function getActivityWatchBrowserSourceKey(bucketId: string): string {

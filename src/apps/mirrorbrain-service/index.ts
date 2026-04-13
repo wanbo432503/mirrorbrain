@@ -25,6 +25,10 @@ import {
   type BrowserMemorySyncResult,
 } from '../../workflows/browser-memory-sync/index.js';
 import {
+  fetchActivityWatchBuckets,
+  resolveActivityWatchBrowserBucket,
+} from '../../integrations/activitywatch-browser-source/index.js';
+import {
   runShellMemorySyncOnce,
   type ShellMemorySyncResult,
 } from '../../workflows/shell-memory-sync/index.js';
@@ -70,6 +74,7 @@ interface StartMirrorBrainServiceDependencies {
     config: ReturnType<typeof getMirrorBrainConfig>;
     workspaceDir: string;
   }) => OpenVikingMemoryEventWriter;
+  fetchActivityWatchBuckets?: typeof fetchActivityWatchBuckets;
   runBrowserMemorySyncOnce?: typeof runBrowserMemorySyncOnce;
   runShellMemorySyncOnce?: typeof runShellMemorySyncOnce;
   now?: () => string;
@@ -150,7 +155,7 @@ export function startMirrorBrainService(
 } {
   const config = input.config ?? getMirrorBrainConfig();
   const workspaceDir = input.workspaceDir ?? process.cwd();
-  const browserBucketId = input.browserBucketId ?? 'aw-watcher-web-chrome';
+  const configuredBrowserBucketId = input.browserBucketId;
   const browserScopeId = input.browserScopeId ?? 'scope-browser';
   const shellHistoryPath = input.shellHistoryPath;
   const shellScopeId = input.shellScopeId ?? 'scope-shell';
@@ -171,13 +176,34 @@ export function startMirrorBrainService(
     dependencies.runBrowserMemorySyncOnce ?? runBrowserMemorySyncOnce;
   const executeShellMemorySyncOnce =
     dependencies.runShellMemorySyncOnce ?? runShellMemorySyncOnce;
+  const loadActivityWatchBuckets =
+    dependencies.fetchActivityWatchBuckets ?? fetchActivityWatchBuckets;
   const now = dependencies.now ?? (() => new Date().toISOString());
-  const syncBrowserMemory = () =>
+  const resolveBrowserBucketId = async () => {
+    if (configuredBrowserBucketId !== undefined) {
+      return configuredBrowserBucketId;
+    }
+
+    const bucketId = resolveActivityWatchBrowserBucket(
+      await loadActivityWatchBuckets({
+        baseUrl: config.activityWatch.baseUrl,
+      }),
+    );
+
+    if (bucketId === null) {
+      throw new Error(
+        'No ActivityWatch browser watcher bucket is available for this MirrorBrain runtime.',
+      );
+    }
+
+    return bucketId;
+  };
+  const syncBrowserMemory = async () =>
     executeBrowserMemorySyncOnce(
       {
         config,
         now: now(),
-        bucketId: browserBucketId,
+        bucketId: await resolveBrowserBucketId(),
         scopeId: browserScopeId,
       },
       {

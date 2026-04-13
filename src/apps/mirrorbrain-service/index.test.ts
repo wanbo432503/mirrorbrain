@@ -120,6 +120,9 @@ describe('mirrorbrain service', () => {
       },
     );
 
+    await Promise.resolve();
+    await Promise.resolve();
+
     expect(createCheckpointStore).toHaveBeenCalledWith({
       workspaceDir: '/tmp/mirrorbrain-workspace',
     });
@@ -132,6 +135,78 @@ describe('mirrorbrain service', () => {
         config,
         now: '2026-03-20T10:00:00.000Z',
         bucketId: 'aw-watcher-web-chrome',
+        scopeId: 'scope-browser',
+      },
+      {
+        checkpointStore,
+        writeMemoryEvent,
+      },
+    );
+  });
+
+  it('auto-discovers the most recent ActivityWatch browser bucket for browser sync', async () => {
+    const config = getMirrorBrainConfig();
+    const checkpointStore = {
+      readCheckpoint: vi.fn(async () => null),
+      writeCheckpoint: vi.fn(async () => undefined),
+    };
+    const createCheckpointStore = vi.fn(() => checkpointStore);
+    const writeMemoryEvent = vi.fn(async () => undefined);
+    const createMemoryEventWriter = vi.fn(() => ({
+      writeMemoryEvent,
+    }));
+    const fetchActivityWatchBuckets = vi.fn(async () => [
+      {
+        id: 'aw-watcher-web-chrome',
+        last_updated: '2026-04-03T07:13:14.690000+00:00',
+      },
+      {
+        id: 'aw-watcher-web-chrome_wanbodeMacBook-Pro-2.local',
+        last_updated: '2026-04-13T03:53:00.000000+00:00',
+      },
+    ]);
+    const runBrowserMemorySyncOnce = vi.fn(async () => ({
+      sourceKey: 'activitywatch-browser:aw-watcher-web-chrome_wanbodeMacBook-Pro-2.local',
+      strategy: 'initial-backfill' as const,
+      importedCount: 0,
+      lastSyncedAt: '2026-04-13T03:53:00.000Z',
+      importedEvents: [],
+    }));
+    const startBrowserSyncPolling = vi.fn((_input, dependencies) => {
+      void dependencies.runSyncOnce();
+
+      return {
+        stop: vi.fn(),
+      };
+    });
+
+    startMirrorBrainService(
+      {
+        config,
+        workspaceDir: '/tmp/mirrorbrain-workspace',
+        browserScopeId: 'scope-browser',
+      },
+      {
+        createCheckpointStore,
+        createMemoryEventWriter,
+        fetchActivityWatchBuckets,
+        runBrowserMemorySyncOnce,
+        startBrowserSyncPolling,
+        now: () => '2026-04-13T03:53:51.918Z',
+      },
+    );
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(fetchActivityWatchBuckets).toHaveBeenCalledWith({
+      baseUrl: config.activityWatch.baseUrl,
+    });
+    expect(runBrowserMemorySyncOnce).toHaveBeenCalledWith(
+      {
+        config,
+        now: '2026-04-13T03:53:51.918Z',
+        bucketId: 'aw-watcher-web-chrome_wanbodeMacBook-Pro-2.local',
         scopeId: 'scope-browser',
       },
       {

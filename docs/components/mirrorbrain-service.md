@@ -72,7 +72,7 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
 
 ## Known Limitations
 
-- the service currently defaults to a single browser bucket (`aw-watcher-web-chrome`) and a single browser scope (`scope-browser`) unless overridden at startup
+- the service currently defaults to automatic discovery of the most recently updated ActivityWatch browser watcher bucket and a single browser scope (`scope-browser`) unless a browser bucket is explicitly overridden at startup
 - shell sync is currently explicit only; it does not start a shell polling loop or discover shell history paths automatically
 - the retrieval contract now accepts lightweight query and filter input, but still uses minimal result shaping rather than mature ranking
 - stored browser and shell narratives are rebuilt after explicit service sync operations, but the rebuild now happens in the background and may lag slightly behind the returned sync summary
