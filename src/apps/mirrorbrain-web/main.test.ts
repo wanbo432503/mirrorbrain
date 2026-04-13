@@ -534,6 +534,71 @@ describe('mirrorbrain web app', () => {
     expect(api.listMemory).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps memory state valid when the initial memory load fails', async () => {
+    const api = {
+      getHealth: vi.fn(async () => ({
+        status: 'running' as const,
+      })),
+      listMemory: vi.fn(async () => {
+        throw new Error('fetch failed');
+      }),
+      listKnowledge: vi.fn(async () => []),
+      listKnowledgeTopics: vi.fn(async () => []),
+      listSkills: vi.fn(async () => []),
+      syncBrowser: vi.fn(async () => ({
+        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+        strategy: 'incremental' as const,
+        importedCount: 1,
+        lastSyncedAt: '2026-03-20T09:00:00.000Z',
+        importedEvents: [
+          createMemoryEvent(
+            'browser:imported',
+            'Imported Event',
+            '2026-03-20T09:00:00.000Z',
+          ),
+        ],
+      })),
+      syncShell: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T09:05:00.000Z',
+        importedEvents: [],
+      })),
+      createDailyCandidates: vi.fn(async () => []),
+      suggestCandidateReviews: vi.fn(async () => []),
+      reviewCandidateMemory: vi.fn(),
+      generateKnowledge: vi.fn(),
+      generateSkill: vi.fn(),
+    };
+
+    const app = createMirrorBrainWebApp({
+      api,
+      now: () => '2026-03-20T10:00:00.000Z',
+    });
+
+    await app.load();
+
+    expect(app.state.memoryEvents).toEqual([]);
+    expect(app.state.feedback).toEqual({
+      kind: 'error',
+      message: 'fetch failed',
+    });
+
+    await app.syncBrowserMemory();
+    app.setActiveTab('review');
+    app.setActiveTab('memory');
+
+    expect(app.state.memoryEvents).toEqual([
+      createMemoryEvent(
+        'browser:imported',
+        'Imported Event',
+        '2026-03-20T09:00:00.000Z',
+      ),
+    ]);
+    expect(app.state.activeTab).toBe('memory');
+  });
+
   it('tracks active tab selection and memory pagination in the controller state', async () => {
     const memoryEvents: MemoryEvent[] = Array.from({ length: 25 }, (_, index) =>
       createMemoryEvent(

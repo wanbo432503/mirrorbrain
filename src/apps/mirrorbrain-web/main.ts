@@ -106,6 +106,10 @@ function clampMemoryPage(memoryEvents: MemoryEvent[], page: number): number {
   return Math.min(Math.max(1, page), getMemoryPageCount(memoryEvents));
 }
 
+function toErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Unknown error';
+}
+
 function mergeMemoryEvents(
   currentEvents: MemoryEvent[],
   importedEvents: MemoryEvent[],
@@ -476,29 +480,59 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
     },
     async load() {
       const [
-        health,
-        memoryEvents,
-        knowledgeArtifacts,
-        knowledgeTopics,
-        skillArtifacts,
-      ] =
-        await Promise.all([
-          input.api.getHealth(),
-          input.api.listMemory(),
-          input.api.listKnowledge(),
-          input.api.listKnowledgeTopics(),
-          input.api.listSkills(),
-        ]);
+        healthResult,
+        memoryResult,
+        knowledgeResult,
+        topicsResult,
+        skillsResult,
+      ] = await Promise.allSettled([
+        input.api.getHealth(),
+        input.api.listMemory(),
+        input.api.listKnowledge(),
+        input.api.listKnowledgeTopics(),
+        input.api.listSkills(),
+      ]);
 
-      state.serviceStatus = health.status;
-      state.memoryEvents = memoryEvents;
-      state.memoryPage = clampMemoryPage(memoryEvents, state.memoryPage);
-      state.knowledgeArtifact = knowledgeArtifacts[0] ?? null;
-      state.knowledgeTopics = knowledgeTopics;
-      state.skillArtifact = skillArtifacts[0] ?? null;
+      if (healthResult.status === 'fulfilled') {
+        state.serviceStatus = healthResult.value.status;
+      }
+
+      if (memoryResult.status === 'fulfilled') {
+        state.memoryEvents = memoryResult.value;
+        state.memoryPage = clampMemoryPage(memoryResult.value, state.memoryPage);
+      }
+
+      if (knowledgeResult.status === 'fulfilled') {
+        state.knowledgeArtifact = knowledgeResult.value[0] ?? null;
+      }
+
+      if (topicsResult.status === 'fulfilled') {
+        state.knowledgeTopics = topicsResult.value;
+      }
+
+      if (skillsResult.status === 'fulfilled') {
+        state.skillArtifact = skillsResult.value[0] ?? null;
+      }
+
+      const firstRejectedResult = [
+        healthResult,
+        memoryResult,
+        knowledgeResult,
+        topicsResult,
+        skillsResult,
+      ].find((result) => result.status === 'rejected');
+
+      if (firstRejectedResult?.status === 'rejected') {
+        setFeedback({
+          kind: 'error',
+          message: toErrorMessage(firstRejectedResult.reason),
+        });
+        return;
+      }
+
       setFeedback({
         kind: 'info',
-        message: `Loaded ${memoryEvents.length} memory events.`,
+        message: `Loaded ${state.memoryEvents.length} memory events.`,
       });
     },
     async syncBrowserMemory() {
@@ -624,12 +658,25 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
 export function createMirrorBrainBrowserApi(
   baseUrl: string,
 ): MirrorBrainWebAppApi {
+  const readJson = async <T>(response: Response): Promise<T> => {
+    const body = (await response.json()) as T & {
+      message?: string;
+      error?: string;
+    };
+
+    if (!response.ok) {
+      throw new Error(body.message ?? body.error ?? `Request failed with status ${response.status}`);
+    }
+
+    return body;
+  };
+
   return {
     async getHealth() {
       const response = await fetch(`${baseUrl}/health`);
-      const body = (await response.json()) as {
+      const body = await readJson<{
         status: 'running' | 'stopped';
-      };
+      }>(response);
 
       return {
         status: body.status,
@@ -637,23 +684,23 @@ export function createMirrorBrainBrowserApi(
     },
     async listMemory() {
       const response = await fetch(`${baseUrl}/memory`);
-      const body = (await response.json()) as {
+      const body = await readJson<{
         items: MemoryEvent[];
-      };
+      }>(response);
 
       return body.items;
     },
     async listKnowledge() {
       const response = await fetch(`${baseUrl}/knowledge`);
-      const body = (await response.json()) as {
+      const body = await readJson<{
         items: KnowledgeArtifact[];
-      };
+      }>(response);
 
       return body.items;
     },
     async listKnowledgeTopics() {
       const response = await fetch(`${baseUrl}/knowledge/topics`);
-      const body = (await response.json()) as {
+      const body = await readJson<{
         items: Array<{
           topicKey: string;
           title: string;
@@ -662,15 +709,15 @@ export function createMirrorBrainBrowserApi(
           updatedAt?: string;
           recencyLabel: string;
         }>;
-      };
+      }>(response);
 
       return body.items;
     },
     async listSkills() {
       const response = await fetch(`${baseUrl}/skills`);
-      const body = (await response.json()) as {
+      const body = await readJson<{
         items: SkillArtifact[];
-      };
+      }>(response);
 
       return body.items;
     },
@@ -678,9 +725,9 @@ export function createMirrorBrainBrowserApi(
       const response = await fetch(`${baseUrl}/sync/browser`, {
         method: 'POST',
       });
-      const body = (await response.json()) as {
+      const body = await readJson<{
         sync: BrowserSyncSummary;
-      };
+      }>(response);
 
       return body.sync;
     },
@@ -688,9 +735,9 @@ export function createMirrorBrainBrowserApi(
       const response = await fetch(`${baseUrl}/sync/shell`, {
         method: 'POST',
       });
-      const body = (await response.json()) as {
+      const body = await readJson<{
         sync: BrowserSyncSummary;
-      };
+      }>(response);
 
       return body.sync;
     },
