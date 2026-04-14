@@ -6,6 +6,22 @@ interface ReviewGuidanceProps {
   reviewedMemory: ReviewedMemory | null
 }
 
+type CandidateSourceRef = {
+  contribution?: 'primary' | 'supporting'
+}
+
+export function buildCandidateEvidenceSummary(
+  sourceRefs: CandidateSourceRef[]
+): string {
+  const primaryCount = sourceRefs.filter((sourceRef) => sourceRef.contribution !== 'supporting').length
+  const supportingCount = sourceRefs.filter((sourceRef) => sourceRef.contribution === 'supporting').length
+
+  const primaryLabel = `${primaryCount} primary page${primaryCount === 1 ? '' : 's'}`
+  const supportingLabel = `${supportingCount} supporting page${supportingCount === 1 ? '' : 's'}`
+
+  return `Built from ${primaryLabel} and ${supportingLabel}.`
+}
+
 export default function ReviewGuidance({ suggestion, reviewedMemory }: ReviewGuidanceProps) {
   if (!suggestion && !reviewedMemory) {
     return (
@@ -124,6 +140,7 @@ export default function ReviewGuidance({ suggestion, reviewedMemory }: ReviewGui
                   </ul>
                 </div>
               )}
+
             </div>
           </div>
         )}

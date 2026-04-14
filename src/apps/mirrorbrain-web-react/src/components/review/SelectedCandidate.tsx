@@ -5,6 +5,8 @@ interface SelectedCandidateProps {
   candidate: CandidateMemory | undefined
 }
 
+type CandidateSourceRef = NonNullable<CandidateMemory['sourceRefs']>[number]
+
 export function formatCandidateDuration(startAt: string, endAt: string): string {
   const durationMs = new Date(endAt).getTime() - new Date(startAt).getTime()
 
@@ -26,6 +28,29 @@ export function formatCandidateDuration(startAt: string, endAt: string): string 
   }
 
   return `${hours}h ${minutes}m`
+}
+
+export function splitCandidateSourcesByContribution(
+  sourceRefs: CandidateSourceRef[]
+): {
+  primary: CandidateSourceRef[]
+  supporting: CandidateSourceRef[]
+} {
+  return sourceRefs.reduce(
+    (groups, sourceRef) => {
+      if (sourceRef.contribution === 'supporting') {
+        groups.supporting.push(sourceRef)
+      } else {
+        groups.primary.push(sourceRef)
+      }
+
+      return groups
+    },
+    {
+      primary: [] as CandidateSourceRef[],
+      supporting: [] as CandidateSourceRef[],
+    }
+  )
 }
 
 function formatTimestamp(timestamp: string): string {
@@ -54,6 +79,59 @@ export default function SelectedCandidate({ candidate }: SelectedCandidateProps)
       </Card>
     )
   }
+
+  const { primary, supporting } = splitCandidateSourcesByContribution(
+    candidate.sourceRefs ?? []
+  )
+
+  const renderSourceGroup = (
+    label: string,
+    sources: CandidateSourceRef[],
+    emptyMessage: string
+  ) => (
+    <div>
+      <p className="text-xs font-heading font-semibold text-slate-600 uppercase tracking-wide mb-2">
+        {label}
+      </p>
+      {sources.length === 0 ? (
+        <p className="font-body text-sm text-slate-500">{emptyMessage}</p>
+      ) : (
+        <div className="space-y-2">
+          {sources.map((source) => (
+            <div key={source.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-body text-sm font-medium text-slate-900">
+                    {source.title ?? source.url ?? source.id}
+                  </p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    {source.role && (
+                      <span className="inline-flex items-center rounded-md bg-slate-200 px-2 py-1 text-[11px] font-heading font-semibold uppercase tracking-wide text-slate-700">
+                        {source.role}
+                      </span>
+                    )}
+                    {source.url && (
+                      <a
+                        href={source.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block truncate text-xs text-blue-700 hover:text-blue-900 hover:underline"
+                      >
+                        {source.url}
+                      </a>
+                    )}
+                  </div>
+                </div>
+                <p className="shrink-0 text-xs text-slate-500">
+                  {formatTimestamp(source.timestamp)}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 
   return (
     <Card className="h-full">
@@ -127,31 +205,17 @@ export default function SelectedCandidate({ candidate }: SelectedCandidateProps)
           <p className="text-xs font-heading font-semibold text-slate-600 uppercase tracking-wide mb-1">
             Visited URLs
           </p>
-          <div className="space-y-2">
-            {(candidate.sourceRefs ?? []).map((source) => (
-              <div key={source.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-body text-sm font-medium text-slate-900">
-                      {source.title ?? source.url ?? source.id}
-                    </p>
-                    {source.url && (
-                      <a
-                        href={source.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-1 block truncate text-xs text-blue-700 hover:text-blue-900 hover:underline"
-                      >
-                        {source.url}
-                      </a>
-                    )}
-                  </div>
-                  <p className="shrink-0 text-xs text-slate-500">
-                    {formatTimestamp(source.timestamp)}
-                  </p>
-                </div>
-              </div>
-            ))}
+          <div className="space-y-4">
+            {renderSourceGroup(
+              'Primary Sources',
+              primary,
+              'No primary sources identified.'
+            )}
+            {renderSourceGroup(
+              'Supporting Sources',
+              supporting,
+              'No supporting sources identified.'
+            )}
             {(candidate.sourceRefs ?? []).length === 0 && (
               <p className="font-body text-sm text-slate-700">
                 {candidate.memoryEventIds.length} events included
