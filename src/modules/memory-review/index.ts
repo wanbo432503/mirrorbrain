@@ -100,6 +100,47 @@ const TOKEN_STOP_WORDS = new Set([
   'plan',
   'google',
   'results',
+  // Common technical terms that appear too often across unrelated pages
+  'diff',
+  'list',
+  'sign',
+  'launch',
+  'best',
+  'step',
+  'time',
+  'line',
+  'file',
+  'code',
+  'text',
+  'data',
+  'user',
+  'name',
+  'type',
+  'case',
+  'page',
+  'form',
+  'load',
+  'show',
+  'hide',
+  'call',
+  'send',
+  'move',
+  'copy',
+  'save',
+  'open',
+  'view',
+  'edit',
+  'test',
+  'pass',
+  'fail',
+  'size',
+  'sort',
+  'turn',
+  'pull',
+  'push',
+  'wait',
+  'read',
+  'sync',
 ]);
 
 export function createCandidateMemories(
@@ -508,7 +549,7 @@ function generateContextualSupportingReasons(input: SupportingReasonsInput): str
   // Compressed evidence explanation
   if (input.compressedSourceCount > 0) {
     reasons.push(
-      `Absorbed ${input.compressedSourceCount} low-evidence visit${input.compressedSourceCount === 1 ? '' : 's'} to keep daily review manageable.`,
+      `Absorbed ${input.compressedSourceCount} low-evidence visit${input.compressedSourceCount === 1 ? '' : 's'} to keep daily review under 10 tasks.`,
     );
   }
 
@@ -757,7 +798,7 @@ function extractRepeatedPageTextTokens(
     const isInTitle = titleTokens.has(token);
 
     // Short keyword heuristic: 3-4 chars, appears at least once
-    // But exclude obviously non-technical common words
+    // But exclude obviously non-technical common words and overly generic technical terms
     const COMMON_ENGLISH_WORDS = new Set([
       'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can',
       'had', 'her', 'was', 'one', 'our', 'out', 'has', 'his', 'had',
