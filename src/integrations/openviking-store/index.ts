@@ -356,7 +356,7 @@ export async function ingestBrowserPageContentToOpenViking(
       path: sourcePath,
       target: targetUri,
       reason: 'MirrorBrain imported browser page content',
-      wait: true,
+      wait: false,
     }),
   });
 

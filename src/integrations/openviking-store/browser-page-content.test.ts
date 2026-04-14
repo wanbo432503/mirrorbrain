@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ingestBrowserPageContentToOpenViking } from './index.js';
 
 describe('openviking store browser page content', () => {
-  it('imports browser page text into OpenViking and waits for indexing', async () => {
+  it('imports browser page text into OpenViking without waiting for indexing', async () => {
     const fetchImpl = vi.fn(async () =>
       new Response(
         JSON.stringify({
@@ -51,7 +51,7 @@ describe('openviking store browser page content', () => {
           target:
             'viking://resources/mirrorbrain-browser-page-content-browser-page-url-abc123.md',
           reason: 'MirrorBrain imported browser page content',
-          wait: true,
+          wait: false,
         }),
       }),
     );
