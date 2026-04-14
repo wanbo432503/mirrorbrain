@@ -192,6 +192,28 @@ async function ingestJsonResourceToOpenViking(
   mkdirSync(resourceDir, { recursive: true });
   writeFileSync(sourcePath, JSON.stringify(input.payload, null, 2));
 
+  return ingestFileResourceToOpenViking(
+    {
+      baseUrl: input.baseUrl,
+      sourcePath,
+      targetUri: input.targetUri,
+      reason: input.reason,
+      waitForCompletion: input.waitForCompletion,
+    },
+    fetchImpl,
+  );
+}
+
+async function ingestFileResourceToOpenViking(
+  input: {
+    baseUrl: string;
+    sourcePath: string;
+    targetUri: string;
+    reason: string;
+    waitForCompletion?: boolean;
+  },
+  fetchImpl: FetchLike,
+): Promise<OpenVikingResourceIngestResult> {
   let response: Response | null = null;
 
   for (
@@ -205,7 +227,7 @@ async function ingestJsonResourceToOpenViking(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        path: sourcePath,
+        path: input.sourcePath,
         target: input.targetUri,
         reason: input.reason,
         wait: input.waitForCompletion ?? false,
@@ -246,7 +268,7 @@ async function ingestJsonResourceToOpenViking(
   };
 
   return {
-    sourcePath,
+    sourcePath: input.sourcePath,
     rootUri: body.result?.root_uri ?? input.targetUri,
   };
 }
@@ -347,33 +369,16 @@ export async function ingestBrowserPageContentToOpenViking(
   mkdirSync(resourceDir, { recursive: true });
   writeFileSync(sourcePath, markdown);
 
-  const response = await fetchImpl(`${input.baseUrl}/api/v1/resources`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      path: sourcePath,
-      target: targetUri,
+  return ingestFileResourceToOpenViking(
+    {
+      baseUrl: input.baseUrl,
+      sourcePath,
+      targetUri,
       reason: 'MirrorBrain imported browser page content',
-      wait: false,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`OpenViking request failed with status ${response.status}`);
-  }
-
-  const payload = (await response.json()) as {
-    result?: {
-      root_uri?: string;
-    };
-  };
-
-  return {
-    sourcePath,
-    rootUri: payload.result?.root_uri ?? targetUri,
-  };
+      waitForCompletion: false,
+    },
+    fetchImpl,
+  );
 }
 
 export async function ingestReviewedMemoryToOpenViking(

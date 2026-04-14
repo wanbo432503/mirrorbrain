@@ -9,6 +9,7 @@ import {
   ingestCandidateMemoryToOpenViking,
   createOpenVikingMemoryEventRecord,
   ingestKnowledgeArtifactToOpenViking,
+  ingestBrowserPageContentToOpenViking,
   ingestMemoryEventToOpenViking,
   ingestReviewedMemoryToOpenViking,
   listMirrorBrainMemoryEventsFromWorkspace,
@@ -256,6 +257,57 @@ describe('openviking store adapter', () => {
       ),
     ).rejects.toThrowError(
       'OpenViking request failed with status 500: embedding service unavailable',
+    );
+  });
+
+  it('retries browser page content imports when OpenViking reports a transient point-lock failure', async () => {
+    const workspaceDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-openviking-'));
+    let attempt = 0;
+
+    const result = await ingestBrowserPageContentToOpenViking(
+      {
+        baseUrl: 'http://127.0.0.1:1933',
+        workspaceDir,
+        artifact: {
+          id: 'browser-page:url-a8b0535eab60aa50',
+          url: 'https://example.com/retry-page',
+          title: 'Retry Page',
+          text: 'Retry body',
+          latestAccessedAt: '2026-04-14T02:10:10.381Z',
+          accessTimes: ['2026-04-14T02:10:10.381Z'],
+        },
+      },
+      async () => {
+        attempt += 1;
+
+        if (attempt === 1) {
+          return new Response('Failed to acquire point lock for ["/local/default/resources"]', {
+            status: 500,
+          });
+        }
+
+        return new Response(
+          JSON.stringify({
+            status: 'ok',
+            result: {
+              status: 'success',
+              root_uri:
+                'viking://resources/mirrorbrain/browser-page-content/browser-page:url-a8b0535eab60aa50.md',
+            },
+          }),
+          {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          },
+        );
+      },
+    );
+
+    expect(attempt).toBe(2);
+    expect(result.rootUri).toBe(
+      'viking://resources/mirrorbrain/browser-page-content/browser-page:url-a8b0535eab60aa50.md',
     );
   });
 
