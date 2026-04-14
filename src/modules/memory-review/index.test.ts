@@ -250,6 +250,18 @@ describe('memory review', () => {
       candidates.flatMap((candidate) => candidate.memoryEventIds).includes('browser:noise-search-2'),
     ).toBe(false);
     expect(
+      candidates.some((candidate) =>
+        (candidate.discardedSourceRefs ?? []).some(
+          (source) => source.id === 'browser:noise-search-1' || source.id === 'browser:noise-search-2',
+        ),
+      ),
+    ).toBe(true);
+    expect(
+      candidates.some((candidate) =>
+        (candidate.discardReasons ?? []).some((reason) => reason.includes('Excluded')),
+      ),
+    ).toBe(true);
+    expect(
       candidates.every(
         (candidate) =>
           candidate.memoryEventIds.some((id) => id.startsWith('browser:strong-docs-')) &&

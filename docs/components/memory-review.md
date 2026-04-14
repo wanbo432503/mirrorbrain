@@ -60,6 +60,7 @@ This component is not responsible for:
 - carries `sourceRefs` so the review UI can show the concrete URLs and visit times that justify the task
 - `sourceRefs` can also carry page-role hints that explain whether a page acted like docs, search, chat, issue, PR, debug, or a generic web page
 - `sourceRefs` can distinguish `primary` pages from `supporting` pages so the review UI can separate core task evidence from auxiliary browsing
+- can carry `discardedSourceRefs` and `discardReasons` so the review UI can show which nearby low-evidence pages were excluded instead of being forced into the candidate list
 - remains in `pending` state until an explicit review decision is recorded
 
 ### `ReviewedMemory`
@@ -88,6 +89,7 @@ This component is not responsible for:
 - page-role hints improve grouping, but they are still inferred heuristically from URLs and titles
 - candidate generation is intentionally capped at 10 tasks, which means weak one-off activity may be merged into broader neighbors
 - singleton supporting-only browser pages such as isolated search or chat visits may be dropped instead of being forced into an unrelated candidate
+- when supporting-only pages are dropped, the nearest surviving candidate can retain debug metadata describing the excluded URLs and why they were filtered out
 - when weak fragments are merged to stay under the 10-task cap, the surviving candidate can carry compression metadata and reasons so the UI can explain the merge
 - reviewed memory still requires a caller-supplied timestamp for auditability
 - AI review suggestions are currently heuristic and should be treated as advisory only

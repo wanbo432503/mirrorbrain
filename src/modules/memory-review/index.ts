@@ -25,6 +25,15 @@ interface CandidateStreamGroup {
   hosts: string[];
   formationReasons: string[];
   compressedSourceCount: number;
+  discardedSourceRefs: Array<{
+    id: string;
+    sourceType: string;
+    timestamp: string;
+    title?: string;
+    url?: string;
+    role: EventDescriptor['role'];
+  }>;
+  discardReasons: string[];
 }
 
 interface EventDescriptor {
@@ -137,6 +146,8 @@ export function createCandidateMemories(
         title: typeof event.content.title === 'string' ? event.content.title : undefined,
         url: typeof event.content.url === 'string' ? event.content.url : undefined,
       })),
+      discardedSourceRefs:
+        group.discardedSourceRefs.length > 0 ? [...group.discardedSourceRefs] : undefined,
       title: group.title,
       summary: createCandidateSummary({
         title: group.title,
@@ -150,6 +161,8 @@ export function createCandidateMemories(
       theme: group.theme,
       formationReasons: [...group.formationReasons],
       compressedSourceCount: group.compressedSourceCount,
+      discardReasons:
+        group.discardReasons.length > 0 ? [...group.discardReasons] : undefined,
       reviewDate: input.reviewDate,
       timeRange: {
         startAt: sortedEvents[0]?.timestamp ?? '',
@@ -450,6 +463,8 @@ function createCandidateGroup(descriptor: EventDescriptor): CandidateStreamGroup
       `Started from ${descriptor.role} evidence on ${toTitleCase(taskTokens.join(' ') || descriptor.host)}.`,
     ],
     compressedSourceCount: 0,
+    discardedSourceRefs: [],
+    discardReasons: [],
   };
 }
 
@@ -590,6 +605,7 @@ function limitCandidateGroups(
     const compressionAction = decideCompressionAction(groupToMerge, mergeScore);
 
     if (compressionAction === 'discard') {
+      attachDiscardDiagnostics(mergeTarget, groupToMerge);
       continue;
     }
 
@@ -612,6 +628,30 @@ function limitCandidateGroups(
   return limitedGroups.sort(
     (left, right) =>
       left.memoryEvents[0]?.timestamp.localeCompare(right.memoryEvents[0]?.timestamp ?? '') ?? 0,
+  );
+}
+
+function attachDiscardDiagnostics(
+  targetGroup: CandidateStreamGroup,
+  discardedGroup: CandidateStreamGroup,
+): void {
+  const discardedSourceRefs = discardedGroup.memoryEvents.map((event) => ({
+    id: event.id,
+    sourceType: event.sourceType,
+    timestamp: event.timestamp,
+    title: typeof event.content.title === 'string' ? event.content.title : undefined,
+    url: typeof event.content.url === 'string' ? event.content.url : undefined,
+    role: inferPageRole({
+      url: typeof event.content.url === 'string' ? event.content.url : undefined,
+      title: typeof event.content.title === 'string' ? event.content.title : undefined,
+    }),
+  }));
+
+  targetGroup.discardedSourceRefs.push(...discardedSourceRefs);
+  targetGroup.discardReasons.push(
+    `Excluded ${discardedGroup.memoryEvents.length} low-evidence page${
+      discardedGroup.memoryEvents.length === 1 ? '' : 's'
+    } near this task because ${discardedGroup.title} did not share enough task evidence to stand alone.`,
   );
 }
 

@@ -65,6 +65,12 @@ export function getCandidateFormationReasons(
   ]
 }
 
+export function getCandidateDiscardReasons(
+  candidate: Pick<CandidateMemory, 'discardReasons'>
+): string[] {
+  return candidate.discardReasons ?? []
+}
+
 function formatTimestamp(timestamp: string): string {
   const date = new Date(timestamp)
   return new Intl.DateTimeFormat('en-US', {
@@ -96,6 +102,8 @@ export default function SelectedCandidate({ candidate }: SelectedCandidateProps)
     candidate.sourceRefs ?? []
   )
   const formationReasons = getCandidateFormationReasons(candidate)
+  const discardReasons = getCandidateDiscardReasons(candidate)
+  const discardedSourceRefs = candidate.discardedSourceRefs ?? []
 
   const renderSourceGroup = (
     label: string,
@@ -206,6 +214,61 @@ export default function SelectedCandidate({ candidate }: SelectedCandidateProps)
             ))}
           </div>
         </div>
+
+        {discardReasons.length > 0 && (
+          <div>
+            <p className="text-xs font-heading font-semibold text-slate-600 uppercase tracking-wide mb-1">
+              Excluded Nearby Noise
+            </p>
+            <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+              <div className="space-y-2">
+                {discardReasons.map((reason) => (
+                  <p key={reason} className="font-body text-sm text-slate-700 leading-relaxed">
+                    {reason}
+                  </p>
+                ))}
+              </div>
+              {discardedSourceRefs.length > 0 && (
+                <div className="space-y-2">
+                  {discardedSourceRefs.map((source) => (
+                    <div
+                      key={source.id}
+                      className="rounded-lg border border-amber-200 bg-white/70 p-3"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-body text-sm font-medium text-slate-900">
+                            {source.title ?? source.url ?? source.id}
+                          </p>
+                          <div className="mt-1 flex flex-wrap items-center gap-2">
+                            {source.role && (
+                              <span className="inline-flex items-center rounded-md bg-amber-100 px-2 py-1 text-[11px] font-heading font-semibold uppercase tracking-wide text-amber-700">
+                                {source.role}
+                              </span>
+                            )}
+                            {source.url && (
+                              <a
+                                href={source.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="block truncate text-xs text-blue-700 hover:text-blue-900 hover:underline"
+                              >
+                                {source.url}
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                        <p className="shrink-0 text-xs text-slate-500">
+                          {formatTimestamp(source.timestamp)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Review State */}
         <div>

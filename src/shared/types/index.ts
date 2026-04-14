@@ -111,11 +111,20 @@ export interface CandidateMemory {
     role?: 'search' | 'docs' | 'chat' | 'issue' | 'pull-request' | 'repository' | 'debug' | 'reference' | 'web';
     contribution?: 'primary' | 'supporting';
   }>;
+  discardedSourceRefs?: Array<{
+    id: string;
+    sourceType: string;
+    timestamp: string;
+    title?: string;
+    url?: string;
+    role?: 'search' | 'docs' | 'chat' | 'issue' | 'pull-request' | 'repository' | 'debug' | 'reference' | 'web';
+  }>;
   title: string;
   summary: string;
   theme: string;
   formationReasons?: string[];
   compressedSourceCount?: number;
+  discardReasons?: string[];
   reviewDate: string;
   timeRange: {
     startAt: string;

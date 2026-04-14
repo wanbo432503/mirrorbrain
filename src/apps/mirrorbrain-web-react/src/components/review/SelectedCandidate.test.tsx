@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   formatCandidateDuration,
+  getCandidateDiscardReasons,
   getCandidateFormationReasons,
   splitCandidateSourcesByContribution,
 } from './SelectedCandidate'
@@ -65,5 +66,19 @@ describe('SelectedCandidate helpers', () => {
     ).toEqual([
       'This candidate was formed from related browser activity in the selected review window.',
     ])
+  })
+
+  it('returns explicit discard reasons and falls back to an empty list', () => {
+    expect(
+      getCandidateDiscardReasons({
+        discardReasons: [
+          'Excluded 2 low-evidence pages near this task because they did not share enough evidence to stand alone.',
+        ],
+      })
+    ).toEqual([
+      'Excluded 2 low-evidence pages near this task because they did not share enough evidence to stand alone.',
+    ])
+
+    expect(getCandidateDiscardReasons({})).toEqual([])
   })
 })
