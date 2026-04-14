@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   formatCandidateDuration,
+  getCandidateFormationReasons,
   splitCandidateSourcesByContribution,
 } from './SelectedCandidate'
 
@@ -43,6 +44,26 @@ describe('SelectedCandidate helpers', () => {
     ])
     expect(groups.supporting).toEqual([
       expect.objectContaining({ id: 'browser:search', contribution: 'supporting' }),
+    ])
+  })
+
+  it('returns explicit formation reasons and falls back to a default explanation', () => {
+    expect(
+      getCandidateFormationReasons({
+        formationReasons: [
+          'Started from docs evidence on Cache Invalidation.',
+          'This candidate absorbed 1 low-evidence visit from Work on Search Results to stay within the 10-task daily review limit.',
+        ],
+      })
+    ).toEqual([
+      'Started from docs evidence on Cache Invalidation.',
+      'This candidate absorbed 1 low-evidence visit from Work on Search Results to stay within the 10-task daily review limit.',
+    ])
+
+    expect(
+      getCandidateFormationReasons({})
+    ).toEqual([
+      'This candidate was formed from related browser activity in the selected review window.',
     ])
   })
 })

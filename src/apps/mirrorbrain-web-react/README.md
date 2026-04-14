@@ -62,7 +62,7 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and a 
 
 - **Features:**
   - Create daily candidates
-  - Select candidate + view task title, duration, and concrete visited URLs split into primary/supporting sources
+  - Select candidate + view task title, duration, formation reasons, and concrete visited URLs split into primary/supporting sources
   - AI review suggestions (confidence/priority/rationale/keep score/supporting reasons)
   - Keep/Discard decisions
   - Reviewed memory display

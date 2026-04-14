@@ -53,6 +53,18 @@ export function splitCandidateSourcesByContribution(
   )
 }
 
+export function getCandidateFormationReasons(
+  candidate: Pick<CandidateMemory, 'formationReasons'>
+): string[] {
+  if (candidate.formationReasons && candidate.formationReasons.length > 0) {
+    return candidate.formationReasons
+  }
+
+  return [
+    'This candidate was formed from related browser activity in the selected review window.',
+  ]
+}
+
 function formatTimestamp(timestamp: string): string {
   const date = new Date(timestamp)
   return new Intl.DateTimeFormat('en-US', {
@@ -83,6 +95,7 @@ export default function SelectedCandidate({ candidate }: SelectedCandidateProps)
   const { primary, supporting } = splitCandidateSourcesByContribution(
     candidate.sourceRefs ?? []
   )
+  const formationReasons = getCandidateFormationReasons(candidate)
 
   const renderSourceGroup = (
     label: string,
@@ -178,6 +191,20 @@ export default function SelectedCandidate({ candidate }: SelectedCandidateProps)
           <p className="font-body text-sm text-slate-700 leading-relaxed">
             {candidate.summary}
           </p>
+        </div>
+
+        {/* Formation Reasons */}
+        <div>
+          <p className="text-xs font-heading font-semibold text-slate-600 uppercase tracking-wide mb-1">
+            Why This Candidate Exists
+          </p>
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+            {formationReasons.map((reason) => (
+              <p key={reason} className="font-body text-sm text-slate-700 leading-relaxed">
+                {reason}
+              </p>
+            ))}
+          </div>
         </div>
 
         {/* Review State */}
