@@ -994,4 +994,106 @@ describe('mirrorbrain service', () => {
     expect(suggestCandidateReviews).toHaveBeenCalledWith(candidates);
     expect(publishReviewedMemory).not.toHaveBeenCalled();
   });
+
+  it('persists candidate memories sequentially to avoid OpenViking resource lock contention', async () => {
+    const service = {
+      status: 'running' as const,
+      config: getMirrorBrainConfig(),
+      syncBrowserMemory: vi.fn(async () => ({
+        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:00:00.000Z',
+      })),
+      syncShellMemory: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:00:00.000Z',
+      })),
+      stop: vi.fn(),
+    };
+    const memoryEvents = [
+      {
+        id: 'browser:aw-event-1',
+        sourceType: 'activitywatch-browser',
+        sourceRef: 'aw-event-1',
+        timestamp: '2026-03-20T08:00:00.000Z',
+        authorizationScopeId: 'scope-browser',
+        content: {
+          url: 'https://docs.example.com/guides/mirrorbrain',
+          title: 'MirrorBrain Guide',
+        },
+        captureMetadata: {
+          upstreamSource: 'activitywatch',
+          checkpoint: '2026-03-20T08:00:00.000Z',
+        },
+      },
+    ];
+    const artifacts = [
+      createCandidateMemoryFixture({
+        id: 'candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
+        memoryEventIds: ['browser:aw-event-1'],
+      }),
+      createCandidateMemoryFixture({
+        id: 'candidate:2026-03-20:activitywatch-browser:github-com:example',
+        memoryEventIds: ['browser:aw-event-2'],
+      }),
+    ];
+    const createCandidateMemories = vi.fn(() => artifacts);
+    const publishOrder: string[] = [];
+    let releaseFirstPublish: (() => void) | undefined;
+    const publishCandidateMemory = vi
+      .fn()
+      .mockImplementationOnce(
+        async ({ artifact }: { artifact: { id: string } }) =>
+          await new Promise<{ sourcePath: string; rootUri: string }>((resolve) => {
+            publishOrder.push(`start:${artifact.id}`);
+            releaseFirstPublish = () => {
+              publishOrder.push(`end:${artifact.id}`);
+              resolve({
+                sourcePath: '/tmp/mirrorbrain-workspace/candidate-1.json',
+                rootUri: 'viking://resources/mirrorbrain/candidate-1.json',
+              });
+            };
+          }),
+      )
+      .mockImplementationOnce(async ({ artifact }: { artifact: { id: string } }) => {
+        publishOrder.push(`start:${artifact.id}`);
+        publishOrder.push(`end:${artifact.id}`);
+        return {
+          sourcePath: '/tmp/mirrorbrain-workspace/candidate-2.json',
+          rootUri: 'viking://resources/mirrorbrain/candidate-2.json',
+        };
+      });
+
+    const api = createMirrorBrainService(
+      {
+        service,
+      },
+      {
+        listRawWorkspaceMemoryEvents: vi.fn(async () => memoryEvents),
+        createCandidateMemories,
+        publishCandidateMemory,
+      },
+    );
+
+    const createPromise = api.createDailyCandidateMemories('2026-03-20', 'Asia/Shanghai');
+
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(publishOrder).toEqual([
+      'start:candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
+    ]);
+
+    releaseFirstPublish?.();
+    await createPromise;
+
+    expect(publishOrder).toEqual([
+      'start:candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
+      'end:candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
+      'start:candidate:2026-03-20:activitywatch-browser:github-com:example',
+      'end:candidate:2026-03-20:activitywatch-browser:github-com:example',
+    ]);
+  });
 });

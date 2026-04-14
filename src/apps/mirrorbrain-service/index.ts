@@ -577,15 +577,13 @@ export function createMirrorBrainService(
         memoryEvents,
       });
 
-      await Promise.all(
-        artifacts.map((artifact) =>
-          publishCandidateMemory({
-            baseUrl,
-            workspaceDir,
-            artifact,
-          }),
-        ),
-      );
+      for (const artifact of artifacts) {
+        await publishCandidateMemory({
+          baseUrl,
+          workspaceDir,
+          artifact,
+        });
+      }
 
       return artifacts;
     },

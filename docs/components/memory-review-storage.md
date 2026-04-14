@@ -32,9 +32,10 @@ This slice is not responsible for:
 
 1. Domain logic creates one or more daily `CandidateMemory` streams from raw `MemoryEvent[]`.
 2. The service persists each candidate stream into OpenViking resource storage.
-3. A user review decision produces a `ReviewedMemory`.
-4. The service persists that reviewed memory into OpenViking resource storage.
-5. Later workflows can reload stored candidates or reviewed memories for UI or generation flows.
+3. Candidate persistence is intentionally sequential so multiple candidate writes do not contend on the same OpenViking `/resources` point lock.
+4. A user review decision produces a `ReviewedMemory`.
+5. The service persists that reviewed memory into OpenViking resource storage.
+6. Later workflows can reload stored candidates or reviewed memories for UI or generation flows.
 
 ## Dependencies
 
