@@ -27,8 +27,9 @@ This component adapts browser activity coming from `ActivityWatch`, with `aw-wat
 3. When ActivityWatch bucket metadata includes `created`, the first browser sync prefers that timestamp so MirrorBrain can backfill the whole authorized bucket history instead of truncating to the last 24 hours.
 4. The adapter fetches browser events from the ActivityWatch HTTP API.
 5. The source plugin normalizes browser events and suppresses near-duplicate page records that repeat the same page signature within a short time window before persistence.
-6. The browser sync workflow can then enrich sanitized events with fetched page text before persistence.
-7. The generic source-sync workflow persists enriched events and advances the checkpoint store.
+6. The browser sync workflow attaches URL-level access history to sanitized events before persistence.
+7. Shared page-text backfill happens after the raw browser memory events have already been persisted.
+8. The generic source-sync workflow persists the raw browser events and advances the checkpoint store.
 
 ## Operational Note
 

@@ -1,3 +1,5 @@
+import { join } from 'node:path';
+
 import {
   createActivityWatchBrowserMemorySourcePlugin,
   fetchActivityWatchBrowserEvents,
@@ -15,6 +17,7 @@ import type {
   OpenVikingMemoryEventWriter,
 } from '../../integrations/openviking-store/index.js';
 import {
+  createMirrorBrainResourceTarget,
   createOpenVikingMemoryEventRecord,
   ingestBrowserPageContentToOpenViking,
 } from '../../integrations/openviking-store/index.js';
@@ -57,6 +60,27 @@ interface BrowserMemorySyncPolling {
   stop(): void;
 }
 
+function createBrowserPageContentStorageRef(
+  workspaceDir: string,
+  artifact: BrowserPageContentArtifact,
+): {
+  sourcePath: string;
+  rootUri: string;
+} {
+  return {
+    sourcePath: join(
+      workspaceDir,
+      'mirrorbrain',
+      'browser-page-content',
+      `${artifact.id}.md`,
+    ),
+    rootUri: createMirrorBrainResourceTarget(
+      'browser-page-content',
+      `${artifact.id}.md`,
+    ),
+  };
+}
+
 export async function runBrowserMemorySyncOnce(
   input: RunBrowserMemorySyncOnceInput,
   dependencies: RunBrowserMemorySyncOnceDependencies,
@@ -65,6 +89,12 @@ export async function runBrowserMemorySyncOnce(
   const fetchPage = dependencies.fetchPageContent ?? fetchBrowserPageContent;
   const ingestPage =
     dependencies.ingestPageContent ?? ingestBrowserPageContentToOpenViking;
+  const groupedArtifacts = new Map<string, BrowserPageContentArtifact>();
+  const groupedEvents = new Map<string, MemoryEvent[]>();
+  const existingArtifactStorage = new Map<
+    string,
+    { sourcePath: string; rootUri: string }
+  >();
   const result = await runMemorySourceSyncOnce(
     {
       config: input.config,
@@ -82,7 +112,9 @@ export async function runBrowserMemorySyncOnce(
         }),
       ]),
       prepareEvents: async (events) => {
-        const groupedByUrl = new Map<string, MemoryEvent[]>();
+        groupedArtifacts.clear();
+        groupedEvents.clear();
+        existingArtifactStorage.clear();
 
         for (const event of events) {
           const url =
@@ -96,34 +128,19 @@ export async function runBrowserMemorySyncOnce(
             continue;
           }
 
-          const group = groupedByUrl.get(url) ?? [];
+          const group = groupedEvents.get(url) ?? [];
           group.push(event);
-          groupedByUrl.set(url, group);
+          groupedEvents.set(url, group);
         }
 
-        const sharedArtifacts = new Map<string, BrowserPageContentArtifact>();
-        const storedArtifacts = new Map<
-          string,
-          { sourcePath: string; rootUri: string }
-        >();
-
-        for (const [url, groupedEvents] of groupedByUrl) {
+        for (const [url, urlEvents] of groupedEvents) {
           let sharedArtifact: BrowserPageContentArtifact | null =
             (await loadBrowserPageContentArtifactFromWorkspace({
               workspaceDir,
               url,
             })) ?? null;
-          let pageText =
-            sharedArtifact === null
-              ? null
-              : {
-                  url,
-                  title: sharedArtifact.title,
-                  fetchedAt: input.now,
-                  text: sharedArtifact.text,
-                };
 
-          const sortedEvents = [...groupedEvents].sort((left, right) =>
+          const sortedEvents = [...urlEvents].sort((left, right) =>
             left.timestamp.localeCompare(right.timestamp),
           );
 
@@ -131,34 +148,14 @@ export async function runBrowserMemorySyncOnce(
             continue;
           }
 
-          if (pageText === null) {
-            const firstEvent = sortedEvents[0];
-
-            if (firstEvent === undefined) {
-              continue;
-            }
-
-            const eventTitle =
-              typeof firstEvent.content.title === 'string'
-                ? firstEvent.content.title
-                : 'Untitled Page';
-
-            try {
-              pageText = await fetchPage({
-                url,
-                title: eventTitle,
-                fetchedAt: input.now,
-              });
-            } catch {
-              continue;
-            }
-          }
-
           for (const event of sortedEvents) {
             sharedArtifact = buildBrowserPageContentArtifact({
               url,
-              title: pageText.title,
-              text: pageText.text,
+              title:
+                typeof event.content.title === 'string'
+                  ? event.content.title
+                  : sharedArtifact?.title ?? 'Untitled Page',
+              text: sharedArtifact?.text ?? '',
               accessedAt: event.timestamp,
               existingArtifact: sharedArtifact ?? undefined,
             });
@@ -168,14 +165,14 @@ export async function runBrowserMemorySyncOnce(
             continue;
           }
 
-          const stored = await ingestPage({
-            baseUrl: input.config.openViking.baseUrl,
-            workspaceDir,
-            artifact: sharedArtifact,
-          });
+          groupedArtifacts.set(url, sharedArtifact);
 
-          sharedArtifacts.set(url, sharedArtifact);
-          storedArtifacts.set(url, stored);
+          if (sharedArtifact.text.length > 0) {
+            existingArtifactStorage.set(
+              url,
+              createBrowserPageContentStorageRef(workspaceDir, sharedArtifact),
+            );
+          }
         }
 
         return events.map((event) => {
@@ -186,10 +183,10 @@ export async function runBrowserMemorySyncOnce(
             return event;
           }
 
-          const sharedArtifact = sharedArtifacts.get(url);
-          const stored = storedArtifacts.get(url);
+          const sharedArtifact = groupedArtifacts.get(url);
+          const stored = existingArtifactStorage.get(url);
 
-          if (sharedArtifact === undefined || stored === undefined) {
+          if (sharedArtifact === undefined) {
             return event;
           }
 
@@ -197,7 +194,13 @@ export async function runBrowserMemorySyncOnce(
             ...event,
             content: {
               ...event.content,
-              ...createBrowserPageContentEventContent(sharedArtifact, stored),
+              ...(stored === undefined
+                ? {
+                    title: sharedArtifact.title,
+                    latestAccessedAt: sharedArtifact.latestAccessedAt,
+                    accessTimes: sharedArtifact.accessTimes,
+                  }
+                : createBrowserPageContentEventContent(sharedArtifact, stored)),
             },
           };
         });
@@ -209,6 +212,41 @@ export async function runBrowserMemorySyncOnce(
       },
     },
   );
+
+  if (groupedArtifacts.size > 0) {
+    void (async () => {
+      for (const [url, artifact] of groupedArtifacts) {
+        let artifactToStore = artifact;
+
+        if (artifactToStore.text.length === 0) {
+          try {
+            const page = await fetchPage({
+              url,
+              title: artifactToStore.title,
+              fetchedAt: input.now,
+            });
+            artifactToStore = {
+              ...artifactToStore,
+              title: page.title,
+              text: page.text,
+            };
+          } catch {
+            continue;
+          }
+        }
+
+        try {
+          await ingestPage({
+            baseUrl: input.config.openViking.baseUrl,
+            workspaceDir,
+            artifact: artifactToStore,
+          });
+        } catch {
+          continue;
+        }
+      }
+    })();
+  }
 
   return result;
 }

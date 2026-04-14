@@ -123,18 +123,10 @@ describe('browser memory sync workflow', () => {
     expect(persistedRecordContents[0]).toMatchObject({
       url: 'https://example.com/tasks',
       title: 'Example Tasks',
-      textStorage: {
-        filePath: expect.stringMatching(
-          /^\/tmp\/mirrorbrain\/mirrorbrain\/browser-page-content\/browser-page:url-[a-f0-9]+\.md$/,
-        ),
-        openVikingUri: expect.stringMatching(
-          /^viking:\/\/resources\/mirrorbrain-browser-page-content-browser-page[:\-]url-[a-f0-9]+\.md$/,
-        ),
-        vectorizationSource: 'openviking-resource',
-      },
       latestAccessedAt: '2026-03-20T07:45:00.000Z',
       accessTimes: ['2026-03-20T07:45:00.000Z'],
     });
+    expect(persistedRecordContents[0]).not.toHaveProperty('textStorage');
     expect(result).toEqual({
       sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
       strategy: 'initial-backfill',
@@ -150,15 +142,6 @@ describe('browser memory sync workflow', () => {
           content: {
             url: 'https://example.com/tasks',
             title: 'Example Tasks',
-            textStorage: {
-              filePath: expect.stringMatching(
-                /^\/tmp\/mirrorbrain\/mirrorbrain\/browser-page-content\/browser-page:url-[a-f0-9]+\.md$/,
-              ),
-              openVikingUri: expect.stringMatching(
-                /^viking:\/\/resources\/mirrorbrain-browser-page-content-browser-page[:\-]url-[a-f0-9]+\.md$/,
-              ),
-              vectorizationSource: 'openviking-resource',
-            },
             latestAccessedAt: '2026-03-20T07:45:00.000Z',
             accessTimes: ['2026-03-20T07:45:00.000Z'],
           },
@@ -176,15 +159,6 @@ describe('browser memory sync workflow', () => {
           content: {
             url: 'https://example.com/review',
             title: 'Review',
-            textStorage: {
-              filePath: expect.stringMatching(
-                /^\/tmp\/mirrorbrain\/mirrorbrain\/browser-page-content\/browser-page:url-[a-f0-9]+\.md$/,
-              ),
-              openVikingUri: expect.stringMatching(
-                /^viking:\/\/resources\/mirrorbrain-browser-page-content-browser-page[:\-]url-[a-f0-9]+\.md$/,
-              ),
-              vectorizationSource: 'openviking-resource',
-            },
             latestAccessedAt: '2026-03-20T08:00:00.000Z',
             accessTimes: ['2026-03-20T08:00:00.000Z'],
           },
@@ -247,8 +221,6 @@ describe('browser memory sync workflow', () => {
       },
     );
 
-    expect(fetchPageContent).toHaveBeenCalledTimes(1);
-    expect(ingestPageContent).toHaveBeenCalledTimes(1);
     expect(result.importedEvents?.[0]?.content).toMatchObject({
       url: 'https://example.com/tasks',
       title: 'Example Tasks',
@@ -261,6 +233,11 @@ describe('browser memory sync workflow', () => {
       latestAccessedAt: '2026-03-20T08:00:00.000Z',
       accessTimes: ['2026-03-20T08:00:00.000Z', '2026-03-20T07:45:00.000Z'],
     });
+    expect(result.importedEvents?.[0]?.content).not.toHaveProperty('textStorage');
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(fetchPageContent).toHaveBeenCalledTimes(1);
+    expect(ingestPageContent).toHaveBeenCalledTimes(1);
   });
 
   it('skips page fetch and content import for localhost development urls', async () => {
@@ -479,15 +456,6 @@ describe('browser memory sync workflow', () => {
           content: {
             url: 'https://example.com/tasks',
             title: 'Example Tasks',
-            textStorage: {
-              filePath: expect.stringMatching(
-                /^\/tmp\/mirrorbrain\/mirrorbrain\/browser-page-content\/browser-page:url-[a-f0-9]+\.md$/,
-              ),
-              openVikingUri: expect.stringMatching(
-                /^viking:\/\/resources\/mirrorbrain-browser-page-content-browser-page[:\-]url-[a-f0-9]+\.md$/,
-              ),
-              vectorizationSource: 'openviking-resource',
-            },
             latestAccessedAt: '2026-03-20T07:45:00.000Z',
             accessTimes: ['2026-03-20T07:45:00.000Z'],
           },
@@ -498,6 +466,79 @@ describe('browser memory sync workflow', () => {
         },
       ],
     });
+  });
+
+  it('persists browser memory events before page content backfill completes', async () => {
+    const config = getMirrorBrainConfig();
+    const persistedRecordIds: string[] = [];
+    let releaseFetch: (() => void) | undefined;
+    const fetchPageContent = vi.fn(
+      async ({ url, title, fetchedAt }: { url: string; title: string; fetchedAt: string }) =>
+        await new Promise<{ url: string; title: string; fetchedAt: string; text: string }>((resolve) => {
+          releaseFetch = () =>
+            resolve({
+              url,
+              title,
+              fetchedAt,
+              text: 'Delayed text',
+            });
+        }),
+    );
+    const ingestPageContent = vi.fn(async ({ artifact }) => ({
+      sourcePath: `/tmp/mirrorbrain/mirrorbrain/browser-page-content/${artifact.id}.md`,
+      rootUri: `viking://resources/mirrorbrain-browser-page-content-${artifact.id}.md`,
+    }));
+
+    const result = await runBrowserMemorySyncOnce(
+      {
+        config,
+        now: '2026-03-20T08:00:00.000Z',
+        bucketId: 'aw-watcher-web-chrome',
+        scopeId: 'scope-browser',
+        workspaceDir: '/tmp/mirrorbrain',
+      },
+      {
+        checkpointStore: {
+          readCheckpoint: async () => null,
+          writeCheckpoint: async () => undefined,
+        },
+        fetchBrowserEvents: async () => [
+          {
+            id: 'aw-event-delayed-1',
+            timestamp: '2026-03-20T07:45:00.000Z',
+            data: {
+              url: 'https://example.com/tasks',
+              title: 'Example Tasks',
+            },
+          },
+        ],
+        fetchPageContent,
+        ingestPageContent,
+        writeMemoryEvent: async (record) => {
+          persistedRecordIds.push(record.recordId);
+        },
+      },
+    );
+
+    expect(result.importedEvents?.[0]).toMatchObject({
+      id: 'browser:aw-event-delayed-1',
+      content: {
+        url: 'https://example.com/tasks',
+        title: 'Example Tasks',
+        latestAccessedAt: '2026-03-20T07:45:00.000Z',
+        accessTimes: ['2026-03-20T07:45:00.000Z'],
+      },
+    });
+    expect(result.importedEvents?.[0]?.content).not.toHaveProperty('textStorage');
+    expect(persistedRecordIds).toEqual(['browser:aw-event-delayed-1']);
+    expect(ingestPageContent).not.toHaveBeenCalled();
+
+    releaseFetch?.();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(fetchPageContent).toHaveBeenCalledTimes(1);
+    expect(ingestPageContent).toHaveBeenCalledTimes(1);
   });
 
   it('polls on the configured interval and stops cleanly', async () => {
