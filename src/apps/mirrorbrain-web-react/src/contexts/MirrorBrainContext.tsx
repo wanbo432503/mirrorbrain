@@ -15,6 +15,7 @@ interface MirrorBrainState {
 
   // Memory events
   memoryEvents: MemoryEvent[]
+  hasLoadedMemoryEvents: boolean
 
   // Review workflow
   reviewWindowDate: string | null
@@ -55,6 +56,7 @@ type MirrorBrainAction =
 const initialState: MirrorBrainState = {
   serviceStatus: 'unknown',
   memoryEvents: [],
+  hasLoadedMemoryEvents: false,
   reviewWindowDate: null,
   reviewWindowEventCount: 0,
   candidateMemories: [],
@@ -71,13 +73,18 @@ function mirrorBrainReducer(state: MirrorBrainState, action: MirrorBrainAction):
       return { ...state, serviceStatus: action.payload }
 
     case 'LOAD_MEMORY_EVENTS':
-      return { ...state, memoryEvents: action.payload }
+      return {
+        ...state,
+        memoryEvents: action.payload,
+        hasLoadedMemoryEvents: true,
+      }
 
     case 'SYNC_BROWSER':
     case 'SYNC_SHELL':
       return {
         ...state,
         lastSyncSummary: action.payload,
+        hasLoadedMemoryEvents: true,
         // Merge imported events if present
         memoryEvents: action.payload.importedEvents
           ? [...action.payload.importedEvents, ...state.memoryEvents]

@@ -41,7 +41,7 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and a 
   - `MemoryRecord.tsx` - Individual event display
 
 - **Features:**
-  - Load memory events from API
+  - Load memory events from API once per app session and reuse global state across tab switches
   - Browser/Shell sync operations
   - Pagination (5 events per page)
   - Error handling + loading states

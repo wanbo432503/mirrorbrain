@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import SyncActions from './SyncActions'
 import MemoryList from './MemoryList'
 import Pagination from '../common/Pagination'
@@ -10,9 +10,18 @@ import { usePagination } from '../../hooks/usePagination'
 
 const MEMORY_PAGE_SIZE = 5
 
+export function shouldLoadMemoryEvents(input: {
+  hasLoadedMemoryEvents: boolean
+}) {
+  return !input.hasLoadedMemoryEvents
+}
+
 export default function MemoryPanel() {
   const { state, dispatch } = useMirrorBrain()
-  const api: MirrorBrainWebAppApi = createMirrorBrainBrowserApi(window.location.origin)
+  const api: MirrorBrainWebAppApi = useMemo(
+    () => createMirrorBrainBrowserApi(window.location.origin),
+    []
+  )
 
   const { feedback, isSyncingBrowser, isSyncingShell, syncBrowser, syncShell } =
     useSyncOperations(api)
@@ -24,6 +33,11 @@ export default function MemoryPanel() {
 
   // Load initial memory events on mount
   useEffect(() => {
+    if (!shouldLoadMemoryEvents({ hasLoadedMemoryEvents: state.hasLoadedMemoryEvents })) {
+      setIsLoading(false)
+      return
+    }
+
     const loadMemory = async () => {
       try {
         const events = await api.listMemory()
@@ -36,7 +50,7 @@ export default function MemoryPanel() {
     }
 
     loadMemory()
-  }, [api, dispatch])
+  }, [api, dispatch, state.hasLoadedMemoryEvents])
 
   // Update sync operations to also dispatch to global state
   const handleSyncBrowser = async () => {
