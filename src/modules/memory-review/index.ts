@@ -389,9 +389,85 @@ function createCandidateSummary(input: {
   hostCount: number;
   durationMinutes: number;
 }): string {
-  const eventLabel = input.eventCount === 1 ? 'browser event' : 'browser events';
-  const hostLabel = input.hostCount === 1 ? 'one site' : `${input.hostCount} sites`;
-  return `${input.eventCount} ${eventLabel} connected to ${input.title} across ${hostLabel} over about ${Math.max(1, input.durationMinutes)} minutes.`;
+  // Infer task action from the title structure
+  // Extract action verb if present
+  const titleLower = input.title.toLowerCase();
+
+  const actionVerbs = {
+    'fix': 'Fixed',
+    'implement': 'Implemented',
+    'debug': 'Debugged',
+    'review': 'Reviewed',
+    'build': 'Built',
+    'update': 'Updated',
+    'add': 'Added',
+    'remove': 'Removed',
+    'refactor': 'Refactored',
+    'optimize': 'Optimized',
+    'test': 'Tested',
+    'deploy': 'Deployed',
+    'configure': 'Configured',
+    'integrate': 'Integrated',
+    'document': 'Documented',
+    'migrate': 'Migrated',
+    'upgrade': 'Upgraded',
+    'release': 'Released',
+    'monitor': 'Monitored',
+    'analyze': 'Analyzed',
+  };
+
+  // Try to match action verb from title start
+  const matchedAction = Object.entries(actionVerbs).find(([verb]) =>
+    titleLower.startsWith(verb + ' ') || titleLower.startsWith(verb)
+  );
+
+  if (matchedAction) {
+    // Use past tense action verb
+    const [_, pastTense] = matchedAction;
+    // Extract task topic (remaining title after action verb)
+    const topicMatch = titleLower.match(new RegExp(`^${matchedAction[0]}\\s+(.+)$`));
+    const topic = topicMatch ? topicMatch[1] : input.title.slice(matchedAction[0].length).trim();
+
+    return `${pastTense} ${toTitleCase(topic)} over about ${Math.max(1, input.durationMinutes)} minutes.`;
+  }
+
+  // Fallback: infer action from task context keywords
+  // Check for documentation/research tasks
+  const isResearchTask = titleLower.includes('documentation') ||
+    titleLower.includes('docs') ||
+    titleLower.includes('api') ||
+    titleLower.includes('guide') ||
+    titleLower.includes('reference') ||
+    titleLower.includes('tutorial');
+
+  if (isResearchTask) {
+    // Remove "work on" prefix if present
+    const topic = input.title.replace(/^Work on\s+/i, '').replace(/^work\s+on\s+/i, '');
+    const hostDescription = input.hostCount > 1
+      ? ` from ${input.hostCount} sources`
+      : '';
+
+    return `Reviewed ${topic}${hostDescription} over about ${Math.max(1, input.durationMinutes)} minutes.`;
+  }
+
+  // Check for investigation/exploration tasks
+  const isInvestigationTask = titleLower.includes('stackoverflow') ||
+    titleLower.includes('search') ||
+    titleLower.includes('question') ||
+    titleLower.includes('answer');
+
+  if (isInvestigationTask) {
+    const topic = input.title.replace(/^Work on\s+/i, '').replace(/^work\s+on\s+/i, '');
+    return `Investigated ${topic} over about ${Math.max(1, input.durationMinutes)} minutes.`;
+  }
+
+  // General fallback
+  const topic = input.title.replace(/^Work on\s+/i, '').replace(/^work\s+on\s+/i, '');
+  const hostDescription = input.hostCount > 1
+    ? ` across ${input.hostCount} related sites`
+    : '';
+
+  return `Worked on ${topic}${hostDescription} over about ${Math.max(1, input.durationMinutes)} minutes.`;
 }
 
 function getEventHost(url?: string): string {
@@ -514,6 +590,24 @@ function createTaskTitle(taskTokens: string[], hosts: string[]): string {
     return `Work on ${toTitleCase(hosts[0] ?? 'General Task')}`;
   }
 
+  // Try to infer action verb from the first task token
+  // Common action verbs that appear in issue/PR titles
+  const actionVerbs = [
+    'fix', 'implement', 'debug', 'review', 'build', 'update', 'add', 'remove',
+    'refactor', 'optimize', 'test', 'deploy', 'configure', 'integrate',
+    'document', 'migrate', 'upgrade', 'release', 'monitor', 'analyze',
+  ];
+
+  const firstToken = taskTokens[0].toLowerCase();
+  const isActionVerb = actionVerbs.includes(firstToken);
+
+  if (isActionVerb) {
+    // Use the action verb directly, followed by remaining tokens
+    const remainingTokens = taskTokens.slice(1, 3);
+    return toTitleCase([firstToken, ...remainingTokens].join(' '));
+  }
+
+  // If no action verb detected, prefix with "Work on"
   return `Work on ${toTitleCase(taskTokens.slice(0, 3).join(' '))}`;
 }
 

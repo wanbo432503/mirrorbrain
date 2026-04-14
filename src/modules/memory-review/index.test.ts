@@ -1072,4 +1072,88 @@ describe('memory review', () => {
       }),
     ]);
   });
+
+  it('generates task-oriented titles with action verbs', () => {
+    const events = [
+      {
+        ...createBrowserMemoryEvent({
+          id: 'browser:github-issue-1',
+          timestamp: '2026-03-20T09:00:00.000Z',
+          url: 'https://github.com/repo/issues/123',
+          title: 'Fix authentication bug - Issue #123',
+        }),
+        content: {
+          url: 'https://github.com/repo/issues/123',
+          title: 'Fix authentication bug - Issue #123',
+          pageText: 'Authentication fails when token expires.',
+        },
+      },
+      {
+        ...createBrowserMemoryEvent({
+          id: 'browser:github-pr-1',
+          timestamp: '2026-03-20T09:30:00.000Z',
+          url: 'https://github.com/repo/pull/456',
+          title: 'Implement token refresh - PR #456',
+        }),
+        content: {
+          url: 'https://github.com/repo/pull/456',
+          title: 'Implement token refresh - PR #456',
+          pageText: 'Added JWT refresh logic for authentication.',
+        },
+      },
+    ];
+
+    const candidates = createCandidateMemories({
+      reviewDate: '2026-03-20',
+      memoryEvents: events,
+    });
+
+    // Title should use action verb from roles (fix, implement)
+    // Should be more like "Fix authentication bug" instead of "Work on Authentication Bug"
+    expect(candidates[0].title).toMatch(/^(Fix|Implement|Debug|Review|Build|Update|Add|Remove)/);
+    expect(candidates[0].title.toLowerCase()).toContain('authentication');
+  });
+
+  it('creates task summaries that describe what was done', () => {
+    const events = [
+      {
+        ...createBrowserMemoryEvent({
+          id: 'browser:docs-1',
+          timestamp: '2026-03-20T09:00:00.000Z',
+          url: 'https://docs.example.com/api/authentication',
+          title: 'Authentication API documentation',
+        }),
+        content: {
+          url: 'https://docs.example.com/api/authentication',
+          title: 'Authentication API documentation',
+          pageText: 'How to implement JWT token refresh.',
+        },
+      },
+      {
+        ...createBrowserMemoryEvent({
+          id: 'browser:stackoverflow-1',
+          timestamp: '2026-03-20T09:20:00.000Z',
+          url: 'https://stackoverflow.com/questions/jwt-refresh',
+          title: 'JWT token refresh implementation',
+        }),
+        content: {
+          url: 'https://stackoverflow.com/questions/jwt-refresh',
+          title: 'JWT token refresh implementation',
+          pageText: 'Best practices for authentication token refresh.',
+        },
+      },
+    ];
+
+    const candidates = createCandidateMemories({
+      reviewDate: '2026-03-20',
+      memoryEvents: events,
+    });
+
+    // Summary should describe the task, not just event counts
+    // Should be like "Reviewed authentication documentation and best practices"
+    // instead of "2 browser events connected to Work on Authentication Jwt across 2 sites"
+    expect(candidates[0].summary).toMatch(/^(Reviewed|Investigated|Implemented|Fixed|Debugged|Built|Updated|Explored)/);
+    expect(candidates[0].summary.toLowerCase()).not.toContain('browser events connected to');
+    expect(candidates[0].summary.toLowerCase()).not.toContain('across');
+  });
 });
