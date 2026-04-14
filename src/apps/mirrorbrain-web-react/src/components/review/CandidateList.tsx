@@ -10,6 +10,46 @@ interface CandidateListProps {
   getReviewSuggestion: (candidateId: string) => CandidateReviewSuggestion | undefined
 }
 
+function sortByReviewPriority(
+  candidates: CandidateMemory[],
+  getReviewSuggestion: (candidateId: string) => CandidateReviewSuggestion | undefined,
+): CandidateMemory[] {
+  return [...candidates].sort((left, right) => {
+    const leftSuggestion = getReviewSuggestion(left.id)
+    const rightSuggestion = getReviewSuggestion(right.id)
+
+    // Primary: Keep score (higher = more important)
+    const leftKeepScore = leftSuggestion?.keepScore ?? 0
+    const rightKeepScore = rightSuggestion?.keepScore ?? 0
+    if (leftKeepScore !== rightKeepScore) {
+      return rightKeepScore - leftKeepScore // Higher score first
+    }
+
+    // Secondary: Duration (longer = more significant)
+    const leftDuration = getDurationMinutes(left.timeRange.startAt, left.timeRange.endAt)
+    const rightDuration = getDurationMinutes(right.timeRange.startAt, right.timeRange.endAt)
+    if (leftDuration !== rightDuration) {
+      return rightDuration - leftDuration // Longer first
+    }
+
+    // Tertiary: Source count (more sources = more context)
+    const leftSourceCount = (left.sourceRefs ?? []).length
+    const rightSourceCount = (right.sourceRefs ?? []).length
+    if (leftSourceCount !== rightSourceCount) {
+      return rightSourceCount - leftSourceCount // More sources first
+    }
+
+    // Final: Chronological order (earlier first)
+    return left.timeRange.startAt.localeCompare(right.timeRange.startAt)
+  })
+}
+
+function getDurationMinutes(startAt: string, endAt: string): number {
+  const start = new Date(startAt)
+  const end = new Date(endAt)
+  return Math.round((end.getTime() - start.getTime()) / 60000)
+}
+
 export default function CandidateList({
   candidates,
   selectedCandidateId,
@@ -25,9 +65,12 @@ export default function CandidateList({
     )
   }
 
+  // Sort candidates by review priority
+  const sortedCandidates = sortByReviewPriority(candidates, getReviewSuggestion)
+
   return (
     <div className="space-y-3 overflow-y-auto max-h-[600px] pr-2">
-      {candidates.map((candidate) => (
+      {sortedCandidates.map((candidate) => (
         <CandidateCard
           key={candidate.id}
           candidate={candidate}
