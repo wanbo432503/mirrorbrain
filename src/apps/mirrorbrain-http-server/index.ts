@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import Fastify from 'fastify';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
+import fastifyStatic from '@fastify/static';
 
 import { getMirrorBrainConfig } from '../../shared/config/index.js';
 import type {
@@ -431,42 +432,19 @@ export async function startMirrorBrainHttpServer(
   });
 
   if (input.staticDir !== undefined) {
-    app.get(
-      '/',
-      {
-        schema: {
-          hide: true,
-        },
-      },
-      async (_request, reply) => {
-        reply.type('text/html; charset=utf-8');
-        return readFile(join(input.staticDir!, 'index.html'), 'utf8');
-      },
-    );
-    app.get(
-      '/styles.css',
-      {
-        schema: {
-          hide: true,
-        },
-      },
-      async (_request, reply) => {
-        reply.type('text/css; charset=utf-8');
-        return readFile(join(input.staticDir!, 'styles.css'), 'utf8');
-      },
-    );
-    app.get(
-      '/main.js',
-      {
-        schema: {
-          hide: true,
-        },
-      },
-      async (_request, reply) => {
-        reply.type('application/javascript; charset=utf-8');
-        return readFile(join(input.staticDir!, 'main.js'), 'utf8');
-      },
-    );
+    // Serve React webui static files using @fastify/static
+    await app.register(fastifyStatic, {
+      root: input.staticDir,
+      prefix: '/',
+      decorateReply: true,
+      serve: true,
+    });
+
+    // Fallback to index.html for SPA routing
+    app.setNotFoundHandler((request, reply) => {
+      reply.type('text/html; charset=utf-8');
+      return readFile(join(input.staticDir!, 'index.html'), 'utf8');
+    });
   }
 
   app.get(

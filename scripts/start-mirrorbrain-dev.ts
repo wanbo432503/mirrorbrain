@@ -1,9 +1,8 @@
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { open } from 'node:fs/promises';
+import { open, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { cp, mkdir, readFile, writeFile } from 'node:fs/promises';
-import ts from 'typescript';
+import { readFile } from 'node:fs/promises';
 
 import {
   createMirrorBrainService,
@@ -459,29 +458,25 @@ export async function prepareMirrorBrainWebAssets(
   input: PrepareMirrorBrainWebAssetsInput = {},
 ): Promise<PreparedMirrorBrainWebAssets> {
   const projectDir = input.projectDir ?? process.cwd();
-  const outputDir = input.outputDir ?? join(projectDir, '.mirrorbrain-web');
-  const webDir = join(projectDir, 'src', 'apps', 'mirrorbrain-web');
-  const indexHtmlPath = join(outputDir, 'index.html');
-  const stylesPath = join(outputDir, 'styles.css');
-  const scriptPath = join(outputDir, 'main.js');
-  const sourceScript = await readFile(join(webDir, 'main.ts'), 'utf8');
-  const transpiledScript = ts.transpileModule(sourceScript, {
-    compilerOptions: {
-      target: ts.ScriptTarget.ES2022,
-      module: ts.ModuleKind.ESNext,
-    },
-  });
 
-  await mkdir(outputDir, { recursive: true });
-  await cp(join(webDir, 'index.html'), indexHtmlPath);
-  await cp(join(webDir, 'styles.css'), stylesPath);
-  await writeFile(scriptPath, transpiledScript.outputText, 'utf8');
+  // Use new React webui build output instead of old mirrorbrain-web
+  const reactAppDir = join(projectDir, 'src', 'apps', 'mirrorbrain-web-react');
+  const outputDir = join(reactAppDir, 'dist');
+  const indexHtmlPath = join(outputDir, 'index.html');
+
+  // Check if React build exists
+  const distExists = existsSync(outputDir);
+  if (!distExists) {
+    throw new Error(
+      `React webui build output not found at ${outputDir}. Run: cd src/apps/mirrorbrain-web-react && pnpm build`
+    );
+  }
 
   return {
     outputDir,
     indexHtmlPath,
-    stylesPath,
-    scriptPath,
+    stylesPath: '', // Not used with @fastify/static
+    scriptPath: '', // Not used with @fastify/static
   };
 }
 
