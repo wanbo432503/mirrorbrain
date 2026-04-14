@@ -314,9 +314,19 @@ function groupEventsByStream(
 
     targetGroup.memoryEvents.push(descriptor.event);
     targetGroup.taskTokens = summarizeTaskTokens(targetGroup.memoryEvents);
+    const previousHosts = targetGroup.hosts;
     targetGroup.hosts = Array.from(
       new Set([...targetGroup.hosts, descriptor.host]),
     ).sort();
+
+    // Add formation reason for cross-host merging
+    if (previousHosts.length < targetGroup.hosts.length) {
+      // This merge added a new host
+      const newHost = descriptor.host;
+      const crossHostReason = `Cross-host task grouping: ${newHost} pages support the same task as ${previousHosts.join(', ')} pages.`;
+      targetGroup.formationReasons.push(crossHostReason);
+    }
+
     targetGroup.title = createTaskTitle(targetGroup.taskTokens, targetGroup.hosts);
     targetGroup.theme = createTaskTheme(targetGroup.taskTokens, targetGroup.hosts);
   }
@@ -356,13 +366,19 @@ function buildEventDescriptors(memoryEvents: MemoryEvent[]): EventDescriptor[] {
     };
   });
 
-  const maxCommonCount = Math.max(2, Math.ceil(memoryEvents.length / 3));
+  // For small event sets (<= 6 events), allow highly-shared tokens as salient
+  // This ensures core task keywords like "authentication" are preserved even if they appear in many events
+  const minShared = 2;
+  const maxCommonCount =
+    memoryEvents.length <= 6
+      ? Math.ceil(memoryEvents.length * 0.8) // Allow tokens shared across 80% of events
+      : Math.max(2, Math.ceil(memoryEvents.length / 3));
 
   return baseDescriptors.map((descriptor) => ({
     ...descriptor,
     salientTokens: descriptor.tokens.filter((token) => {
       const count = tokenCounts.get(token) ?? 0;
-      return count >= 2 && count <= maxCommonCount;
+      return count >= minShared && count <= maxCommonCount;
     }),
   }));
 }
@@ -436,9 +452,31 @@ function extractRepeatedPageTextTokens(
     counts.set(token, (counts.get(token) ?? 0) + 1);
   }
 
-  return rawTokens.filter(
-    (token) => (counts.get(token) ?? 0) >= 2 || titleTokens.has(token),
-  );
+  // Keep tokens that:
+  // 1. Appear multiple times in this page text (repeated within page)
+  // 2. Appear in title/pageTitle (strong relevance signal)
+  // 3. Are short (3-4 char) technical-looking keywords
+  //    - Avoid common English words by checking if they appear in technical contexts
+  //    - Technical keywords often appear in URLs, titles, or are repeated
+  return rawTokens.filter((token) => {
+    const count = counts.get(token) ?? 0;
+    const isRepeated = count >= 2;
+    const isInTitle = titleTokens.has(token);
+
+    // Short keyword heuristic: 3-4 chars, appears at least once
+    // But exclude obviously non-technical common words
+    const COMMON_ENGLISH_WORDS = new Set([
+      'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can',
+      'had', 'her', 'was', 'one', 'our', 'out', 'has', 'his', 'had',
+      'see', 'now', 'way', 'may', 'day', 'get', 'new', 'its', 'who',
+      'them', 'did', 'own', 'how', 'why', 'ask', 'any', 'too', 'use',
+      'due', 'top', 'two', 'she', 'yes', 'near', 'far', 'here', 'there',
+    ]);
+
+    const isShortKeyword = token.length >= 3 && token.length <= 4 && count >= 1 && !COMMON_ENGLISH_WORDS.has(token);
+
+    return isRepeated || isInTitle || isShortKeyword;
+  });
 }
 
 function extractTokens(value: string): string[] {
@@ -508,8 +546,30 @@ function summarizeTaskTokens(memoryEvents: MemoryEvent[]): string[] {
     }
   }
 
+  // Sort by frequency first, then alphabetically
+  // But prioritize tokens that are not pure numbers (more semantic)
   return [...counts.entries()]
-    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+    .sort((left, right) => {
+      // Primary: higher frequency
+      if (right[1] !== left[1]) {
+        return right[1] - left[1];
+      }
+
+      // Secondary: prefer non-numeric tokens (more semantic meaning)
+      const leftIsNumeric = /^\d+$/.test(left[0]);
+      const rightIsNumeric = /^\d+$/.test(right[0]);
+
+      if (!leftIsNumeric && rightIsNumeric) {
+        return -1; // Prefer left (non-numeric)
+      }
+
+      if (leftIsNumeric && !rightIsNumeric) {
+        return 1; // Prefer right (non-numeric)
+      }
+
+      // Tertiary: alphabetical order
+      return left[0].localeCompare(right[0]);
+    })
     .slice(0, 3)
     .map(([token]) => token);
 }
@@ -542,6 +602,15 @@ function scoreDescriptorAgainstGroup(
     groupTokens.has(token),
   ).length;
   const anyOverlap = descriptor.tokens.filter((token) => groupTokens.has(token)).length;
+
+  // Semantic similarity is the primary factor - salient tokens are task-specific keywords
+  // High salient overlap (>= 2) indicates strong task relationship
+  if (salientOverlap >= 2) {
+    // Strong semantic match - allow cross-host merging
+    return salientOverlap * 5 + anyOverlap * 2 + 3; // Base score 3 ensures merge
+  }
+
+  // For weaker semantic matches, consider other factors
   const sameHost = group.hosts.includes(descriptor.host) ? 1 : 0;
   const groupRoles = new Set(
     group.memoryEvents.map((event) =>
@@ -573,6 +642,8 @@ function scoreDescriptorAgainstGroup(
     return 0;
   }
 
+  // For moderate semantic overlap, same host helps but is not decisive
+  // This prevents over-merging different tasks on same host when semantic similarity is weak
   return salientOverlap * 4 + anyOverlap * 2 + sameHost + roleBonus + timeBonus;
 }
 

@@ -166,6 +166,221 @@ describe('memory review', () => {
     ).toBe(true);
   });
 
+  it('separates different tasks on the same host when task context differs', () => {
+    const events = [
+      // First task: Fix authentication bug
+      {
+        ...createBrowserMemoryEvent({
+          id: 'browser:github-issue-auth',
+          timestamp: '2026-03-20T09:00:00.000Z',
+          url: 'https://github.com/repo/issues/123',
+          title: 'Fix authentication bug - Issue #123',
+        }),
+        content: {
+          url: 'https://github.com/repo/issues/123',
+          title: 'Fix authentication bug - Issue #123',
+          pageText: 'Authentication fails when token expires. Need to refresh token logic.',
+        },
+      },
+      {
+        ...createBrowserMemoryEvent({
+          id: 'browser:github-repo-auth',
+          timestamp: '2026-03-20T09:10:00.000Z',
+          url: 'https://github.com/repo',
+          title: 'Repository overview',
+        }),
+        content: {
+          url: 'https://github.com/repo',
+          title: 'Repository overview',
+          pageText: 'Authentication module and token refresh implementation.',
+        },
+      },
+      // Second task: Add caching feature (different task on same host)
+      {
+        ...createBrowserMemoryEvent({
+          id: 'browser:github-issue-cache',
+          timestamp: '2026-03-20T10:00:00.000Z',
+          url: 'https://github.com/repo/issues/456',
+          title: 'Add caching layer - Issue #456',
+        }),
+        content: {
+          url: 'https://github.com/repo/issues/456',
+          title: 'Add caching layer - Issue #456',
+          pageText: 'Implement Redis caching for performance optimization.',
+        },
+      },
+      {
+        ...createBrowserMemoryEvent({
+          id: 'browser:github-pr-cache',
+          timestamp: '2026-03-20T10:15:00.000Z',
+          url: 'https://github.com/repo/pull/789',
+          title: 'Caching implementation - PR #789',
+        }),
+        content: {
+          url: 'https://github.com/repo/pull/789',
+          title: 'Caching implementation - PR #789',
+          pageText: 'Redis integration and cache invalidation strategy.',
+        },
+      },
+    ];
+
+    const candidates = createCandidateMemories({
+      reviewDate: '2026-03-20',
+      memoryEvents: events,
+    });
+
+    // Should create at least 2 candidates for the two different tasks
+    expect(candidates.length).toBeGreaterThanOrEqual(2);
+
+    // Find the authentication-related candidate
+    const authCandidate = candidates.find(
+      (candidate) =>
+        candidate.title.toLowerCase().includes('authentication') ||
+        (candidate.sourceRefs ?? []).some(
+          (ref) => ref.url?.includes('issues/123'),
+        ),
+    );
+
+    // Find the caching-related candidate
+    const cacheCandidate = candidates.find(
+      (candidate) =>
+        candidate.title.toLowerCase().includes('caching') ||
+        (candidate.sourceRefs ?? []).some(
+          (ref) => ref.url?.includes('issues/456') || ref.url?.includes('pull/789'),
+        ),
+    );
+
+    // Both candidates should exist
+    expect(authCandidate).toBeDefined();
+    expect(cacheCandidate).toBeDefined();
+
+    // Authentication candidate should NOT include caching pages
+    expect(
+      (authCandidate?.sourceRefs ?? []).some(
+        (ref) => ref.url?.includes('issues/456') || ref.url?.includes('pull/789'),
+      ),
+    ).toBe(false);
+
+    // Caching candidate should NOT include authentication pages
+    expect(
+      (cacheCandidate?.sourceRefs ?? []).some(
+        (ref) => ref.url?.includes('issues/123'),
+      ),
+    ).toBe(false);
+  });
+
+  it('merges cross-host pages for the same task when task context is shared', () => {
+    const events = [
+      // GitHub issue about authentication
+      {
+        ...createBrowserMemoryEvent({
+          id: 'browser:github-issue-auth',
+          timestamp: '2026-03-20T09:00:00.000Z',
+          url: 'https://github.com/repo/issues/123',
+          title: 'Fix authentication bug - Issue #123',
+        }),
+        content: {
+          url: 'https://github.com/repo/issues/123',
+          title: 'Fix authentication bug - Issue #123',
+          pageText: 'Authentication fails when JWT token expires. Need refresh logic.',
+        },
+      },
+      // External documentation about JWT authentication
+      {
+        ...createBrowserMemoryEvent({
+          id: 'browser:jwt-docs',
+          timestamp: '2026-03-20T09:15:00.000Z',
+          url: 'https://jwt.io/docs/authentication',
+          title: 'JWT Authentication Guide',
+        }),
+        content: {
+          url: 'https://jwt.io/docs/authentication',
+          title: 'JWT Authentication Guide',
+          pageText: 'Token refresh strategies and expiration handling.',
+        },
+      },
+      // Stack Overflow answer about JWT refresh
+      {
+        ...createBrowserMemoryEvent({
+          id: 'browser:stackoverflow-jwt',
+          timestamp: '2026-03-20T09:25:00.000Z',
+          url: 'https://stackoverflow.com/questions/jwt-refresh',
+          title: 'JWT token refresh implementation',
+        }),
+        content: {
+          url: 'https://stackoverflow.com/questions/jwt-refresh',
+          title: 'JWT token refresh implementation',
+          pageText: 'Authentication token refresh best practices.',
+        },
+      },
+      // Back to GitHub to implement
+      {
+        ...createBrowserMemoryEvent({
+          id: 'browser:github-repo-auth',
+          timestamp: '2026-03-20T09:35:00.000Z',
+          url: 'https://github.com/repo',
+          title: 'Repository - authentication module',
+        }),
+        content: {
+          url: 'https://github.com/repo',
+          title: 'Repository - authentication module',
+          pageText: 'Implementing JWT refresh in authentication service.',
+        },
+      },
+    ];
+
+    const candidates = createCandidateMemories({
+      reviewDate: '2026-03-20',
+      memoryEvents: events,
+    });
+
+    // Should create ONE candidate for the authentication task
+    expect(candidates.length).toBe(1);
+
+    const authCandidate = candidates[0];
+
+    // Should include all authentication-related pages across different hosts
+    expect(authCandidate.title.toLowerCase()).toContain('authentication');
+
+    // Should include GitHub issue
+    expect(
+      (authCandidate.sourceRefs ?? []).some(
+        (ref) => ref.url?.includes('github.com/repo/issues/123'),
+      ),
+    ).toBe(true);
+
+    // Should include JWT docs (cross-host)
+    expect(
+      (authCandidate.sourceRefs ?? []).some(
+        (ref) => ref.url?.includes('jwt.io'),
+      ),
+    ).toBe(true);
+
+    // Should include Stack Overflow (cross-host)
+    expect(
+      (authCandidate.sourceRefs ?? []).some(
+        (ref) => ref.url?.includes('stackoverflow.com'),
+      ),
+    ).toBe(true);
+
+    // Should include GitHub repo
+    expect(
+      (authCandidate.sourceRefs ?? []).some(
+        (ref) => ref.url?.includes('github.com/repo') && !ref.url?.includes('issues'),
+      ),
+    ).toBe(true);
+
+    // Formation reasons should mention cross-host grouping
+    expect(
+      (authCandidate.formationReasons ?? []).some(
+        (reason) =>
+          reason.toLowerCase().includes('host') ||
+          reason.toLowerCase().includes('cross') ||
+          reason.toLowerCase().includes('shared task'),
+      ),
+    ).toBe(true);
+  });
+
   it('drops unrelated low-evidence search noise before merging stronger task candidates', () => {
     const taskTerms = [
       'atlas',
