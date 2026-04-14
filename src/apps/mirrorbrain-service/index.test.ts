@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { getMirrorBrainConfig } from '../../shared/config/index.js';
+import type { BrowserPageContentArtifact } from '../../integrations/browser-page-content/index.js';
 import type {
   CandidateMemory,
   CandidateReviewSuggestion,
@@ -936,6 +937,94 @@ describe('mirrorbrain service', () => {
     expect(publishCandidateMemory).toHaveBeenCalledTimes(2);
   });
 
+  it('enriches review candidate inputs with browser page text from stored browser page content', async () => {
+    const service = {
+      status: 'running' as const,
+      config: getMirrorBrainConfig(),
+      syncBrowserMemory: vi.fn(async () => ({
+        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-04-14T10:00:00.000Z',
+      })),
+      syncShellMemory: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-04-14T10:00:00.000Z',
+      })),
+      stop: vi.fn(),
+    };
+    const memoryEvents: MemoryEvent[] = [
+      {
+        id: 'browser:aw-event-1',
+        sourceType: 'activitywatch-browser',
+        sourceRef: 'aw-event-1',
+        timestamp: '2026-04-14T08:00:00.000Z',
+        authorizationScopeId: 'scope-browser',
+        content: {
+          url: 'https://docs.example.com/reference/cache-invalidation',
+          title: 'Cache Invalidation Guide',
+        },
+        captureMetadata: {
+          upstreamSource: 'activitywatch',
+          checkpoint: '2026-04-14T08:00:00.000Z',
+        },
+      },
+    ];
+    const loadBrowserPageContentArtifactFromWorkspace = vi.fn(
+      async (): Promise<BrowserPageContentArtifact | null> => ({
+        id: 'browser-page:url-cache',
+        url: 'https://docs.example.com/reference/cache-invalidation',
+        title: 'Cache Invalidation Guide',
+        text: 'MirrorBrain cache invalidation task. Fix stale cache bug.',
+        accessTimes: ['2026-04-14T08:00:00.000Z'],
+        latestAccessedAt: '2026-04-14T08:00:00.000Z',
+      }),
+    );
+    const createCandidateMemories = vi.fn(() => [
+      createCandidateMemoryFixture({
+        id: 'candidate:2026-04-14:activitywatch-browser:cache-invalidation',
+        memoryEventIds: ['browser:aw-event-1'],
+        reviewDate: '2026-04-14',
+      }),
+    ]);
+
+    const api = createMirrorBrainService(
+      {
+        service,
+      },
+      {
+        listRawWorkspaceMemoryEvents: vi.fn(async () => memoryEvents),
+        createCandidateMemories,
+        publishCandidateMemory: vi.fn(async () => ({
+          sourcePath: '/tmp/mirrorbrain-workspace/candidate.json',
+          rootUri: 'viking://resources/mirrorbrain/candidate.json',
+        })),
+        loadBrowserPageContentArtifactFromWorkspace,
+      },
+    );
+
+    await api.createDailyCandidateMemories('2026-04-14', 'Asia/Shanghai');
+
+    expect(loadBrowserPageContentArtifactFromWorkspace).toHaveBeenCalledWith({
+      workspaceDir: process.cwd(),
+      url: 'https://docs.example.com/reference/cache-invalidation',
+    });
+    expect(createCandidateMemories).toHaveBeenCalledWith({
+      reviewDate: '2026-04-14',
+      reviewTimeZone: 'Asia/Shanghai',
+      memoryEvents: [
+        expect.objectContaining({
+          content: expect.objectContaining({
+            pageText: 'MirrorBrain cache invalidation task. Fix stale cache bug.',
+            pageTitle: 'Cache Invalidation Guide',
+          }),
+        }),
+      ],
+    });
+  });
+
   it('returns candidate review suggestions without publishing review artifacts', async () => {
     const service = {
       status: 'running' as const,
@@ -1081,13 +1170,15 @@ describe('mirrorbrain service', () => {
         listRawWorkspaceMemoryEvents: vi.fn(async () => memoryEvents),
         createCandidateMemories,
         publishCandidateMemory,
+        loadBrowserPageContentArtifactFromWorkspace: vi.fn(async () => null),
       },
     );
 
     const createPromise = api.createDailyCandidateMemories('2026-03-20', 'Asia/Shanghai');
 
-    await Promise.resolve();
-    await Promise.resolve();
+    for (let attempt = 0; attempt < 5 && publishOrder.length === 0; attempt += 1) {
+      await Promise.resolve();
+    }
     expect(publishOrder).toEqual([
       'start:candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
     ]);

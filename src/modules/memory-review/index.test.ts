@@ -266,4 +266,46 @@ describe('memory review', () => {
       memoryEventIds: ['browser:morning-1'],
     });
   });
+
+  it('groups related pages from different hosts when browser page text shows the same task', () => {
+    const candidates = createCandidateMemories({
+      reviewDate: '2026-04-14',
+      memoryEvents: [
+        {
+          ...createBrowserMemoryEvent({
+            id: 'browser:docs-text-1',
+            timestamp: '2026-04-14T08:00:00.000Z',
+            url: 'https://docs.example.com/reference/cache-invalidation',
+            title: 'Cache Invalidation Guide',
+          }),
+          content: {
+            url: 'https://docs.example.com/reference/cache-invalidation',
+            title: 'Cache Invalidation Guide',
+            pageText:
+              'MirrorBrain cache invalidation task. Fix stale cache bug after browser sync. Update invalidation workflow and verify stale-cache recovery.',
+          },
+        },
+        {
+          ...createBrowserMemoryEvent({
+            id: 'browser:issue-text-1',
+            timestamp: '2026-04-14T08:20:00.000Z',
+            url: 'https://github.com/example/platform/issues/42',
+            title: 'Stale cache after browser sync',
+          }),
+          content: {
+            url: 'https://github.com/example/platform/issues/42',
+            title: 'Stale cache after browser sync',
+            pageText:
+              'Investigate stale cache bug after browser sync. MirrorBrain invalidation workflow misses browser page refresh and leaves stale cache entries.',
+          },
+        },
+      ],
+    });
+
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]).toMatchObject({
+      memoryEventIds: ['browser:docs-text-1', 'browser:issue-text-1'],
+    });
+    expect(candidates[0]?.title).toMatch(/Cache|Invalidation|Stale/i);
+  });
 });

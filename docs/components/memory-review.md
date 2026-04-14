@@ -30,8 +30,9 @@ This component is not responsible for:
 
 1. A caller passes normalized memory events and a `reviewDate` into `createCandidateMemories(...)`.
 2. The component keeps only events whose timestamp falls on that review date.
-3. The component extracts browser-title and URL tokens, then groups events into task-oriented candidate streams using deterministic heuristic similarity across time, tokens, and hosts.
-4. Each `CandidateMemory` includes stream metadata:
+3. The component prefers browser page-content text and page title when they are available, then falls back to raw browser title and URL tokens.
+4. The component groups events into task-oriented candidate streams using deterministic heuristic similarity across page text, titles, URLs, time, and hosts.
+5. Each `CandidateMemory` includes stream metadata:
    - `id`
    - `memoryEventIds`
    - `sourceRefs`
@@ -41,10 +42,10 @@ This component is not responsible for:
    - `reviewDate`
    - `timeRange`
    - `reviewState`
-5. Candidate generation caps the final result set at 10 streams by merging the weakest low-evidence groups into nearby stronger tasks.
-6. A caller applies an explicit human decision with `reviewCandidateMemory(...)`.
-7. The component returns a `ReviewedMemory` that preserves the candidate title, summary, theme, and memory-event linkage alongside the review decision.
-8. A caller may request `suggestCandidateReviews(...)` to get suggestion-only review hints, supporting reasons, and a keep-score before any human decision is recorded.
+6. Candidate generation caps the final result set at 10 streams by merging the weakest low-evidence groups into nearby stronger tasks.
+7. A caller applies an explicit human decision with `reviewCandidateMemory(...)`.
+8. The component returns a `ReviewedMemory` that preserves the candidate title, summary, theme, and memory-event linkage alongside the review decision.
+9. A caller may request `suggestCandidateReviews(...)` to get suggestion-only review hints, supporting reasons, and a keep-score before any human decision is recorded.
 
 ## Key Data Structures
 
@@ -76,6 +77,7 @@ This component is not responsible for:
 - candidate creation throws if the selected review date has no memory events
 - daily scope currently depends on ISO timestamp prefixes matching the provided `reviewDate`
 - grouping is heuristic rather than model-based, so it can still miss subtle semantic relationships between tasks
+- browser page-content text is used when available, but the flow still falls back to title/URL-only grouping when the page artifact is missing
 - candidate generation is intentionally capped at 10 tasks, which means weak one-off activity may be merged into broader neighbors
 - reviewed memory still requires a caller-supplied timestamp for auditability
 - AI review suggestions are currently heuristic and should be treated as advisory only

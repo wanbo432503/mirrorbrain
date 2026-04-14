@@ -47,12 +47,16 @@ const TOKEN_STOP_WORDS = new Set([
   'home',
   'page',
   'detail',
+  'after',
+  'and',
+  'browser',
   'example',
   'docs',
   'guide',
   'guides',
   'github',
   'issues',
+  'sync',
   'pull',
   'tree',
   'blob',
@@ -246,8 +250,14 @@ function buildEventDescriptors(memoryEvents: MemoryEvent[]): EventDescriptor[] {
       typeof event.content.url === 'string' ? event.content.url : undefined;
     const title =
       typeof event.content.title === 'string' ? event.content.title : undefined;
+    const pageTitle =
+      typeof event.content.pageTitle === 'string'
+        ? event.content.pageTitle
+        : undefined;
+    const pageText =
+      typeof event.content.pageText === 'string' ? event.content.pageText : undefined;
     const host = getEventHost(url);
-    const tokens = extractEventTokens({ url, title, host });
+    const tokens = extractEventTokens({ url, title, pageTitle, pageText, host });
 
     for (const token of new Set(tokens)) {
       tokenCounts.set(token, (tokenCounts.get(token) ?? 0) + 1);
@@ -297,13 +307,25 @@ function getEventHost(url?: string): string {
 function extractEventTokens(input: {
   url?: string;
   title?: string;
+  pageTitle?: string;
+  pageText?: string;
   host: string;
 }): string[] {
   const titleTokens = extractTokens(input.title ?? '');
+  const pageTitleTokens = extractTokens(input.pageTitle ?? '');
+  const pageTextTokens = extractTokens(input.pageText ?? '').slice(0, 40);
   const urlTokens = input.url === undefined ? [] : extractTokens(input.url);
   const hostTokens = extractTokens(input.host);
 
-  return Array.from(new Set([...titleTokens, ...urlTokens, ...hostTokens]));
+  return Array.from(
+    new Set([
+      ...titleTokens,
+      ...pageTitleTokens,
+      ...pageTextTokens,
+      ...urlTokens,
+      ...hostTokens,
+    ]),
+  );
 }
 
 function extractTokens(value: string): string[] {
@@ -354,9 +376,15 @@ function summarizeTaskTokens(memoryEvents: MemoryEvent[]): string[] {
       typeof event.content.url === 'string' ? event.content.url : undefined;
     const title =
       typeof event.content.title === 'string' ? event.content.title : undefined;
+    const pageTitle =
+      typeof event.content.pageTitle === 'string'
+        ? event.content.pageTitle
+        : undefined;
+    const pageText =
+      typeof event.content.pageText === 'string' ? event.content.pageText : undefined;
     const host = getEventHost(url);
 
-    for (const token of extractEventTokens({ url, title, host })) {
+    for (const token of extractEventTokens({ url, title, pageTitle, pageText, host })) {
       counts.set(token, (counts.get(token) ?? 0) + 1);
     }
   }

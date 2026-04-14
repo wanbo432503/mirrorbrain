@@ -31,6 +31,9 @@ import {
   resolveActivityWatchBrowserBucket,
 } from '../../integrations/activitywatch-browser-source/index.js';
 import {
+  loadBrowserPageContentArtifactFromWorkspace,
+} from '../../integrations/browser-page-content/index.js';
+import {
   runShellMemorySyncOnce,
   type ShellMemorySyncResult,
 } from '../../workflows/shell-memory-sync/index.js';
@@ -117,6 +120,7 @@ interface CreateMirrorBrainServiceDependencies {
   reviewMemory?: typeof reviewCandidateMemory;
   createCandidateMemories?: typeof createCandidateMemories;
   suggestCandidateReviews?: typeof suggestCandidateReviews;
+  loadBrowserPageContentArtifactFromWorkspace?: typeof loadBrowserPageContentArtifactFromWorkspace;
 }
 
 const SYNC_IMPORTED_EVENT_PREVIEW_LIMIT = 50;
@@ -317,6 +321,9 @@ export function createMirrorBrainService(
     dependencies.createCandidateMemories ?? createCandidateMemories;
   const analyzeCandidateReviews =
     dependencies.suggestCandidateReviews ?? suggestCandidateReviews;
+  const loadBrowserPageArtifact =
+    dependencies.loadBrowserPageContentArtifactFromWorkspace ??
+    loadBrowserPageContentArtifactFromWorkspace;
   const publishMemoryNarratives = async (artifacts: MemoryNarrative[]) => {
     await Promise.all(
       artifacts.map((artifact) =>
@@ -571,10 +578,42 @@ export function createMirrorBrainService(
       const memoryEvents = await listRawWorkspaceMemoryEvents({
         workspaceDir,
       });
+      const enrichedMemoryEvents = await Promise.all(
+        memoryEvents.map(async (event) => {
+          if (event.sourceType !== 'activitywatch-browser') {
+            return event;
+          }
+
+          const url =
+            typeof event.content.url === 'string' ? event.content.url : null;
+
+          if (url === null) {
+            return event;
+          }
+
+          const pageArtifact = await loadBrowserPageArtifact({
+            workspaceDir,
+            url,
+          });
+
+          if (pageArtifact === null) {
+            return event;
+          }
+
+          return {
+            ...event,
+            content: {
+              ...event.content,
+              pageTitle: pageArtifact.title,
+              pageText: pageArtifact.text,
+            },
+          };
+        }),
+      );
       const artifacts = await buildCandidateMemories({
         reviewDate,
         reviewTimeZone,
-        memoryEvents,
+        memoryEvents: enrichedMemoryEvents,
       });
 
       for (const artifact of artifacts) {

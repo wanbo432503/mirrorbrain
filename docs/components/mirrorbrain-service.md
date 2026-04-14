@@ -41,13 +41,14 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 8. List raw imported memory when review-oriented workflows need event-level records, preferring OpenViking-backed reads and falling back to workspace-cached memory-event files when storage reads fail.
 9. Forward `openclaw` memory retrieval calls through the configured OpenViking base URL and return shaped retrieval results.
 10. Generate daily task-oriented candidate streams for a requested review date, using raw workspace memory history rather than the UI display list.
-11. Return suggestion-only AI review hints without promoting any candidate, including keep-score and supporting reasons for the review UI.
-12. Record explicit keep or discard decisions and publish reviewed memory artifacts.
-13. Forward explicit knowledge and skill publishing calls to the OpenViking ingestion adapter.
-14. Build topic-knowledge merge candidates from stored draft knowledge artifacts when requested.
-15. Merge a daily-review draft into topic knowledge, publishing the new current-best artifact and any superseded previous version.
-16. List current-best topic knowledge summaries, fetch the current-best artifact for one topic key, and return topic history in newest-first order.
-16. For reviewed-memory generation APIs, run the corresponding workflow first and then publish the resulting artifact.
+11. Before candidate generation, enrich browser events with stored `browser-page-content` text when a page artifact is available in the workspace so review grouping can use page semantics instead of URL/title alone.
+12. Return suggestion-only AI review hints without promoting any candidate, including keep-score and supporting reasons for the review UI.
+13. Record explicit keep or discard decisions and publish reviewed memory artifacts.
+14. Forward explicit knowledge and skill publishing calls to the OpenViking ingestion adapter.
+15. Build topic-knowledge merge candidates from stored draft knowledge artifacts when requested.
+16. Merge a daily-review draft into topic knowledge, publishing the new current-best artifact and any superseded previous version.
+17. List current-best topic knowledge summaries, fetch the current-best artifact for one topic key, and return topic history in newest-first order.
+18. For reviewed-memory generation APIs, run the corresponding workflow first and then publish the resulting artifact.
 
 ## Operational Note
 
