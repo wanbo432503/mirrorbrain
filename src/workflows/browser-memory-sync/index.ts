@@ -141,11 +141,15 @@ export async function runBrowserMemorySyncOnce(
                 ? firstEvent.content.title
                 : 'Untitled Page';
 
-            pageText = await fetchPage({
-              url,
-              title: eventTitle,
-              fetchedAt: input.now,
-            });
+            try {
+              pageText = await fetchPage({
+                url,
+                title: eventTitle,
+                fetchedAt: input.now,
+              });
+            } catch {
+              continue;
+            }
           }
 
           for (const event of sortedEvents) {

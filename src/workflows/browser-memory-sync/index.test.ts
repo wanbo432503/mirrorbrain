@@ -309,6 +309,56 @@ describe('browser memory sync workflow', () => {
     expect(result.importedEvents?.[0]?.content).not.toHaveProperty('textStorage');
   });
 
+  it('continues sync when page fetch returns unauthorized for a browser url', async () => {
+    const config = getMirrorBrainConfig();
+    const persistedRecordIds: string[] = [];
+    const ingestPageContent = vi.fn();
+
+    const result = await runBrowserMemorySyncOnce(
+      {
+        config,
+        now: '2026-03-20T08:00:00.000Z',
+        bucketId: 'aw-watcher-web-chrome',
+        scopeId: 'scope-browser',
+        workspaceDir: '/tmp/mirrorbrain',
+      },
+      {
+        checkpointStore: {
+          readCheckpoint: async () => null,
+          writeCheckpoint: async () => undefined,
+        },
+        fetchBrowserEvents: async () => [
+          {
+            id: 'aw-event-auth-1',
+            timestamp: '2026-03-20T08:00:00.000Z',
+            data: {
+              url: 'https://private.example.com/secure',
+              title: 'Secure Page',
+            },
+          },
+        ],
+        fetchPageContent: async () => {
+          throw new Error('Browser page fetch failed with status 401');
+        },
+        ingestPageContent,
+        writeMemoryEvent: async (record) => {
+          persistedRecordIds.push(record.recordId);
+        },
+      },
+    );
+
+    expect(ingestPageContent).not.toHaveBeenCalled();
+    expect(persistedRecordIds).toEqual(['browser:aw-event-auth-1']);
+    expect(result.importedEvents?.[0]).toMatchObject({
+      id: 'browser:aw-event-auth-1',
+      content: {
+        url: 'https://private.example.com/secure',
+        title: 'Secure Page',
+      },
+    });
+    expect(result.importedEvents?.[0]?.content).not.toHaveProperty('textStorage');
+  });
+
   it('uses the stored checkpoint for incremental sync and advances when no new events are returned', async () => {
     const config = getMirrorBrainConfig();
     const checkpoints: Array<{
