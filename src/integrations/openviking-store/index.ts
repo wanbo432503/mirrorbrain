@@ -226,7 +226,13 @@ async function ingestJsonResourceToOpenViking(
       continue;
     }
 
-    throw new Error(`OpenViking request failed with status ${response.status}`);
+    const trimmedErrorBody = errorBody.trim();
+
+    throw new Error(
+      trimmedErrorBody.length > 0
+        ? `OpenViking request failed with status ${response.status}: ${trimmedErrorBody}`
+        : `OpenViking request failed with status ${response.status}`,
+    );
   }
 
   if (response === null || !response.ok) {

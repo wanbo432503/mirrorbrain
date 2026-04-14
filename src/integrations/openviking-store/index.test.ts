@@ -221,6 +221,40 @@ describe('openviking store adapter', () => {
     );
   });
 
+  it('includes the OpenViking error body when a memory event import fails', async () => {
+    const workspaceDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-openviking-'));
+
+    await expect(
+      ingestMemoryEventToOpenViking(
+        {
+          baseUrl: 'http://127.0.0.1:1933',
+          workspaceDir,
+          event: {
+            id: 'browser:aw-event-500',
+            sourceType: 'activitywatch-browser',
+            sourceRef: 'aw-event-500',
+            timestamp: '2026-04-14T01:00:00.000Z',
+            authorizationScopeId: 'scope-browser',
+            content: {
+              url: 'https://example.com/failure',
+              title: 'Failure',
+            },
+            captureMetadata: {
+              upstreamSource: 'activitywatch',
+              checkpoint: '2026-04-14T01:00:00.000Z',
+            },
+          },
+        },
+        async () =>
+          new Response('embedding service unavailable', {
+            status: 500,
+          }),
+      ),
+    ).rejects.toThrowError(
+      'OpenViking request failed with status 500: embedding service unavailable',
+    );
+  });
+
   it('imports a knowledge draft into OpenViking through the resources API', async () => {
     const workspaceDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-openviking-'));
     const requests: Array<{
