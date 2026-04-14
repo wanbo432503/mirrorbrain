@@ -10,7 +10,7 @@ This component is responsible for:
 
 - filtering raw memory events into a daily review window
 - grouping daily events into one or more task-oriented candidate memory streams
-- deriving stream metadata such as `title`, `theme`, `summary`, `timeRange`, and source URL refs
+- deriving stream metadata such as `title`, `theme`, `summary`, `timeRange`, source URL refs, and page-role hints
 - recording explicit `keep` or `discard` review decisions while preserving candidate context
 
 This component is not responsible for:
@@ -31,8 +31,9 @@ This component is not responsible for:
 1. A caller passes normalized memory events and a `reviewDate` into `createCandidateMemories(...)`.
 2. The component keeps only events whose timestamp falls on that review date.
 3. The component prefers browser page-content text and page title when they are available, then falls back to raw browser title and URL tokens.
-4. The component groups events into task-oriented candidate streams using deterministic heuristic similarity across page text, titles, URLs, time, and hosts.
-5. Each `CandidateMemory` includes stream metadata:
+4. The component assigns page-role hints such as search, docs, chat, issue, pull-request, repository, debug, reference, or generic web.
+5. The component groups events into task-oriented candidate streams using deterministic heuristic similarity across page text, titles, URLs, time, hosts, and page-role compatibility.
+6. Each `CandidateMemory` includes stream metadata:
    - `id`
    - `memoryEventIds`
    - `sourceRefs`
@@ -42,10 +43,10 @@ This component is not responsible for:
    - `reviewDate`
    - `timeRange`
    - `reviewState`
-6. Candidate generation caps the final result set at 10 streams by merging the weakest low-evidence groups into nearby stronger tasks.
-7. A caller applies an explicit human decision with `reviewCandidateMemory(...)`.
-8. The component returns a `ReviewedMemory` that preserves the candidate title, summary, theme, and memory-event linkage alongside the review decision.
-9. A caller may request `suggestCandidateReviews(...)` to get suggestion-only review hints, supporting reasons, and a keep-score before any human decision is recorded.
+7. Candidate generation caps the final result set at 10 streams by merging the weakest low-evidence groups into nearby stronger tasks.
+8. A caller applies an explicit human decision with `reviewCandidateMemory(...)`.
+9. The component returns a `ReviewedMemory` that preserves the candidate title, summary, theme, and memory-event linkage alongside the review decision.
+10. A caller may request `suggestCandidateReviews(...)` to get suggestion-only review hints, supporting reasons, and a keep-score before any human decision is recorded.
 
 ## Key Data Structures
 
@@ -54,6 +55,7 @@ This component is not responsible for:
 - represents a single daily memory stream, not a first-event placeholder
 - has a stable id derived from review date plus the stream key
 - carries `sourceRefs` so the review UI can show the concrete URLs and visit times that justify the task
+- `sourceRefs` can also carry page-role hints that explain whether a page acted like docs, search, chat, issue, PR, debug, or a generic web page
 - remains in `pending` state until an explicit review decision is recorded
 
 ### `ReviewedMemory`
@@ -78,6 +80,7 @@ This component is not responsible for:
 - daily scope currently depends on ISO timestamp prefixes matching the provided `reviewDate`
 - grouping is heuristic rather than model-based, so it can still miss subtle semantic relationships between tasks
 - browser page-content text is used when available, but the flow still falls back to title/URL-only grouping when the page artifact is missing
+- page-role hints improve grouping, but they are still inferred heuristically from URLs and titles
 - candidate generation is intentionally capped at 10 tasks, which means weak one-off activity may be merged into broader neighbors
 - reviewed memory still requires a caller-supplied timestamp for auditability
 - AI review suggestions are currently heuristic and should be treated as advisory only
@@ -90,5 +93,6 @@ This component is not responsible for:
 ## Known Risks Or Limitations
 
 - stream grouping is heuristic and task-token-based, so unrelated pages with shallow shared wording can still merge incorrectly
+- page-role hints reduce some false merges, but they do not replace stronger semantic modeling
 - AI review suggestions exist, but they are still heuristic rather than model-backed
 - daily scope assumes caller and source timestamps use a consistent day boundary

@@ -30,6 +30,7 @@ interface EventDescriptor {
   host: string;
   url?: string;
   title?: string;
+  role: 'search' | 'docs' | 'chat' | 'issue' | 'pull-request' | 'repository' | 'debug' | 'reference' | 'web';
   tokens: string[];
   repeatedTokens: string[];
 }
@@ -101,6 +102,10 @@ export function createCandidateMemories(
         timestamp: event.timestamp,
         title: typeof event.content.title === 'string' ? event.content.title : undefined,
         url: typeof event.content.url === 'string' ? event.content.url : undefined,
+        role: inferPageRole({
+          url: typeof event.content.url === 'string' ? event.content.url : undefined,
+          title: typeof event.content.title === 'string' ? event.content.title : undefined,
+        }),
       })),
       title: group.title,
       summary: createCandidateSummary({
@@ -257,6 +262,7 @@ function buildEventDescriptors(memoryEvents: MemoryEvent[]): EventDescriptor[] {
     const pageText =
       typeof event.content.pageText === 'string' ? event.content.pageText : undefined;
     const host = getEventHost(url);
+    const role = inferPageRole({ url, title });
     const tokens = extractEventTokens({ url, title, pageTitle, pageText, host });
 
     for (const token of new Set(tokens)) {
@@ -268,6 +274,7 @@ function buildEventDescriptors(memoryEvents: MemoryEvent[]): EventDescriptor[] {
       host,
       url,
       title,
+      role,
       tokens,
       repeatedTokens: [] as string[],
     };
@@ -424,11 +431,31 @@ function scoreDescriptorAgainstGroup(
   ).length;
   const anyOverlap = descriptor.tokens.filter((token) => groupTokens.has(token)).length;
   const sameHost = group.hosts.includes(descriptor.host) ? 1 : 0;
+  const groupRoles = new Set(
+    group.memoryEvents.map((event) =>
+      inferPageRole({
+        url: typeof event.content.url === 'string' ? event.content.url : undefined,
+        title: typeof event.content.title === 'string' ? event.content.title : undefined,
+      }),
+    ),
+  );
+  const sameRole = groupRoles.has(descriptor.role);
+  const hasPrimaryRole = [...groupRoles].some(
+    (role) => role !== 'search' && role !== 'chat',
+  );
+  const roleBonus =
+    sameRole && anyOverlap > 0
+      ? 1
+      : (descriptor.role === 'search' || descriptor.role === 'chat') &&
+          hasPrimaryRole &&
+          repeatedOverlap > 0
+        ? 1
+        : 0;
   const groupEnd = group.memoryEvents[group.memoryEvents.length - 1]?.timestamp ?? '';
   const minutesGap = getDurationMinutes(groupEnd, descriptor.event.timestamp);
   const timeBonus = minutesGap <= 120 ? 1 : 0;
 
-  return repeatedOverlap * 4 + anyOverlap * 2 + sameHost + timeBonus;
+  return repeatedOverlap * 4 + anyOverlap * 2 + sameHost + roleBonus + timeBonus;
 }
 
 function limitCandidateGroups(
@@ -516,6 +543,49 @@ function getDurationMinutes(startAt: string, endAt: string): number {
   }
 
   return Math.max(0, Math.round((end - start) / (60 * 1000)));
+}
+
+function inferPageRole(input: {
+  url?: string;
+  title?: string;
+}): 'search' | 'docs' | 'chat' | 'issue' | 'pull-request' | 'repository' | 'debug' | 'reference' | 'web' {
+  const url = input.url ?? '';
+  const title = (input.title ?? '').toLowerCase();
+  const normalized = `${url.toLowerCase()} ${title}`;
+
+  if (normalized.includes('/search?') || normalized.includes('google search')) {
+    return 'search';
+  }
+
+  if (normalized.includes('chatgpt.com/') || normalized.includes(' claude ') || normalized.includes('/c/')) {
+    return 'chat';
+  }
+
+  if (normalized.includes('/issues/')) {
+    return 'issue';
+  }
+
+  if (normalized.includes('/pull/')) {
+    return 'pull-request';
+  }
+
+  if (normalized.includes('docs.') || normalized.includes('/docs/') || normalized.includes('guide')) {
+    return 'docs';
+  }
+
+  if (normalized.includes('localhost') || normalized.includes('127.0.0.1')) {
+    return 'debug';
+  }
+
+  if (normalized.includes('github.com/') && !normalized.includes('/issues/') && !normalized.includes('/pull/')) {
+    return 'repository';
+  }
+
+  if (normalized.includes('/reference/')) {
+    return 'reference';
+  }
+
+  return 'web';
 }
 
 function getCalendarDateForComparison(

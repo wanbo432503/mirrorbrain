@@ -26,6 +26,7 @@ function createCandidateMemoryFixture(): CandidateMemory {
         timestamp: '2026-03-20T08:00:00.000Z',
         title: 'Example Tasks',
         url: 'https://example.com/tasks',
+        role: 'web',
       },
     ],
     reviewState: 'pending',

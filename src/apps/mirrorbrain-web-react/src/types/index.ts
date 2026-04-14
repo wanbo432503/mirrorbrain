@@ -116,6 +116,7 @@ export interface CandidateMemory {
     timestamp: string;
     title?: string;
     url?: string;
+    role?: 'search' | 'docs' | 'chat' | 'issue' | 'pull-request' | 'repository' | 'debug' | 'reference' | 'web';
   }>;
   title: string;
   summary: string;

@@ -308,4 +308,157 @@ describe('memory review', () => {
     });
     expect(candidates[0]?.title).toMatch(/Cache|Invalidation|Stale/i);
   });
+
+  it('groups search, docs, chat, and issue pages into one task when their content supports the same work item', () => {
+    const candidates = createCandidateMemories({
+      reviewDate: '2026-04-14',
+      memoryEvents: [
+        {
+          ...createBrowserMemoryEvent({
+            id: 'browser:search-1',
+            timestamp: '2026-04-14T09:00:00.000Z',
+            url: 'https://google.com/search?q=mirrorbrain+stale+cache+bug',
+            title: 'mirrorbrain stale cache bug - Google Search',
+          }),
+          content: {
+            url: 'https://google.com/search?q=mirrorbrain+stale+cache+bug',
+            title: 'mirrorbrain stale cache bug - Google Search',
+            pageText:
+              'Search results for mirrorbrain stale cache bug after browser sync and cache invalidation workflow.',
+          },
+        },
+        {
+          ...createBrowserMemoryEvent({
+            id: 'browser:docs-3',
+            timestamp: '2026-04-14T09:06:00.000Z',
+            url: 'https://docs.example.com/cache/invalidation-runbook',
+            title: 'Cache invalidation runbook',
+          }),
+          content: {
+            url: 'https://docs.example.com/cache/invalidation-runbook',
+            title: 'Cache invalidation runbook',
+            pageText:
+              'Runbook for stale cache recovery in MirrorBrain browser sync. Verify invalidation and rebuild cache entries.',
+          },
+        },
+        {
+          ...createBrowserMemoryEvent({
+            id: 'browser:chat-1',
+            timestamp: '2026-04-14T09:12:00.000Z',
+            url: 'https://chatgpt.com/c/stale-cache-investigation',
+            title: 'stale cache investigation',
+          }),
+          content: {
+            url: 'https://chatgpt.com/c/stale-cache-investigation',
+            title: 'stale cache investigation',
+            pageText:
+              'Reason about the stale cache bug, browser sync invalidation, and likely fixes in MirrorBrain.',
+          },
+        },
+        {
+          ...createBrowserMemoryEvent({
+            id: 'browser:issue-2',
+            timestamp: '2026-04-14T09:20:00.000Z',
+            url: 'https://github.com/example/platform/issues/77',
+            title: 'Fix stale cache after sync',
+          }),
+          content: {
+            url: 'https://github.com/example/platform/issues/77',
+            title: 'Fix stale cache after sync',
+            pageText:
+              'Issue tracking stale cache after browser sync. Root cause points to invalidation workflow and stale cache entries.',
+          },
+        },
+      ],
+    });
+
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]).toMatchObject({
+      memoryEventIds: [
+        'browser:search-1',
+        'browser:docs-3',
+        'browser:chat-1',
+        'browser:issue-2',
+      ],
+    });
+    expect(candidates[0]?.title).toMatch(/Cache|Stale|Invalidation/i);
+  });
+
+  it('keeps same-host pages separate when their page text points to different tasks', () => {
+    const candidates = createCandidateMemories({
+      reviewDate: '2026-04-14',
+      memoryEvents: [
+        {
+          ...createBrowserMemoryEvent({
+            id: 'browser:docs-a',
+            timestamp: '2026-04-14T10:00:00.000Z',
+            url: 'https://docs.example.com/guides/cache-invalidation',
+            title: 'Cache invalidation guide',
+          }),
+          content: {
+            url: 'https://docs.example.com/guides/cache-invalidation',
+            title: 'Cache invalidation guide',
+            pageText:
+              'Fix stale cache bug after browser sync. Cache invalidation workflow and stale cache recovery.',
+          },
+        },
+        {
+          ...createBrowserMemoryEvent({
+            id: 'browser:docs-b',
+            timestamp: '2026-04-14T10:25:00.000Z',
+            url: 'https://docs.example.com/guides/release-checklist',
+            title: 'Release checklist guide',
+          }),
+          content: {
+            url: 'https://docs.example.com/guides/release-checklist',
+            title: 'Release checklist guide',
+            pageText:
+              'Prepare release checklist, validate release notes, and coordinate deployment signoff for the release train.',
+          },
+        },
+      ],
+    });
+
+    expect(candidates).toHaveLength(2);
+    expect(candidates[0]?.title).not.toBe(candidates[1]?.title);
+  });
+
+  it('annotates candidate source refs with page roles for review explainability', () => {
+    const [candidate] = createCandidateMemories({
+      reviewDate: '2026-04-14',
+      memoryEvents: [
+        createBrowserMemoryEvent({
+          id: 'browser:search-role',
+          timestamp: '2026-04-14T09:00:00.000Z',
+          url: 'https://google.com/search?q=stale+cache',
+          title: 'stale cache - Google Search',
+        }),
+        createBrowserMemoryEvent({
+          id: 'browser:docs-role',
+          timestamp: '2026-04-14T09:04:00.000Z',
+          url: 'https://docs.example.com/cache/invalidation',
+          title: 'Cache invalidation guide',
+        }),
+        createBrowserMemoryEvent({
+          id: 'browser:chat-role',
+          timestamp: '2026-04-14T09:08:00.000Z',
+          url: 'https://chatgpt.com/c/stale-cache',
+          title: 'stale cache investigation',
+        }),
+        createBrowserMemoryEvent({
+          id: 'browser:issue-role',
+          timestamp: '2026-04-14T09:12:00.000Z',
+          url: 'https://github.com/example/platform/issues/77',
+          title: 'Fix stale cache after sync',
+        }),
+      ],
+    });
+
+    expect(candidate?.sourceRefs).toEqual([
+      expect.objectContaining({ id: 'browser:search-role', role: 'search' }),
+      expect.objectContaining({ id: 'browser:docs-role', role: 'docs' }),
+      expect.objectContaining({ id: 'browser:chat-role', role: 'chat' }),
+      expect.objectContaining({ id: 'browser:issue-role', role: 'issue' }),
+    ]);
+  });
 });
