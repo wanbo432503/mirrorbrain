@@ -24,6 +24,7 @@ interface RunMemorySourceSyncOnceInput {
 interface RunMemorySourceSyncOnceDependencies {
   checkpointStore: SyncCheckpointStore;
   sourceRegistry: MemorySourceRegistry;
+  prepareEvents?: (events: MemoryEvent[]) => Promise<MemoryEvent[]>;
   writeMemoryEvent: OpenVikingMemoryEventWriter['writeMemoryEvent'];
 }
 
@@ -70,8 +71,12 @@ export async function runMemorySourceSyncOnce(
   );
   const sanitizedEvents =
     source.sanitizeEvents?.(normalizedEvents) ?? normalizedEvents;
+  const preparedEvents =
+    dependencies.prepareEvents === undefined
+      ? sanitizedEvents
+      : await dependencies.prepareEvents(sanitizedEvents);
 
-  for (const event of sanitizedEvents) {
+  for (const event of preparedEvents) {
     await persistMemoryEvent(event, {
       writeMemoryEvent: dependencies.writeMemoryEvent,
     });
@@ -90,10 +95,10 @@ export async function runMemorySourceSyncOnce(
   });
 
   return {
-    sourceKey: source.sourceKey,
-    strategy: plan.strategy,
-    importedCount: sanitizedEvents.length,
-    lastSyncedAt,
-    importedEvents: sanitizedEvents,
-  };
+      sourceKey: source.sourceKey,
+      strategy: plan.strategy,
+      importedCount: preparedEvents.length,
+      lastSyncedAt,
+      importedEvents: preparedEvents,
+    };
 }

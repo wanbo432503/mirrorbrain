@@ -27,12 +27,12 @@ describe('openviking store browser page content', () => {
           baseUrl: 'http://127.0.0.1:1933',
           workspaceDir: '/tmp/mirrorbrain',
           artifact: {
-            id: 'browser-page:aw-event-1',
-            sourceEventId: 'browser:aw-event-1',
+            id: 'browser-page:url-abc123',
             url: 'https://example.com/tasks',
             title: 'Example Tasks',
-            fetchedAt: '2026-04-13T10:00:00.000Z',
             text: 'Open the checklist.\n\nShip the patch.',
+            accessTimes: ['2026-04-13T10:00:00.000Z'],
+            latestAccessedAt: '2026-04-13T10:00:00.000Z',
           },
         },
         fetchImpl,
@@ -47,9 +47,9 @@ describe('openviking store browser page content', () => {
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({
-          path: '/tmp/mirrorbrain/mirrorbrain/browser-page-content/browser-page:aw-event-1.md',
+          path: '/tmp/mirrorbrain/mirrorbrain/browser-page-content/browser-page:url-abc123.md',
           target:
-            'viking://resources/mirrorbrain-browser-page-content-browser-page-aw-event-1.md',
+            'viking://resources/mirrorbrain-browser-page-content-browser-page-url-abc123.md',
           reason: 'MirrorBrain imported browser page content',
           wait: true,
         }),

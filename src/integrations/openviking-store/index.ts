@@ -60,11 +60,11 @@ interface IngestBrowserPageContentToOpenVikingInput {
   workspaceDir: string;
   artifact: {
     id: string;
-    sourceEventId: string;
     url: string;
     title: string;
-    fetchedAt: string;
     text: string;
+    accessTimes: string[];
+    latestAccessedAt: string;
   };
 }
 
@@ -327,9 +327,13 @@ export async function ingestBrowserPageContentToOpenViking(
   const markdown = [
     `# ${input.artifact.title}`,
     '',
-    `- sourceEventId: ${input.artifact.sourceEventId}`,
     `- url: ${input.artifact.url}`,
-    `- fetchedAt: ${input.artifact.fetchedAt}`,
+    `- latestAccessedAt: ${input.artifact.latestAccessedAt}`,
+    '',
+    '## Access Times',
+    ...input.artifact.accessTimes.map((accessedAt) => `- ${accessedAt}`),
+    '',
+    '## Text',
     '',
     input.artifact.text,
   ].join('\n');

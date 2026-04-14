@@ -123,14 +123,17 @@ describe('browser memory sync workflow', () => {
     expect(persistedRecordContents[0]).toMatchObject({
       url: 'https://example.com/tasks',
       title: 'Example Tasks',
-      text: 'Stored text for Example Tasks',
       textStorage: {
-        filePath:
-          '/tmp/mirrorbrain/mirrorbrain/browser-page-content/browser-page:browser-aw-event-1.md',
-        openVikingUri:
-          'viking://resources/mirrorbrain-browser-page-content-browser-page:browser-aw-event-1.md',
+        filePath: expect.stringMatching(
+          /^\/tmp\/mirrorbrain\/mirrorbrain\/browser-page-content\/browser-page:url-[a-f0-9]+\.md$/,
+        ),
+        openVikingUri: expect.stringMatching(
+          /^viking:\/\/resources\/mirrorbrain-browser-page-content-browser-page[:\-]url-[a-f0-9]+\.md$/,
+        ),
         vectorizationSource: 'openviking-resource',
       },
+      latestAccessedAt: '2026-03-20T07:45:00.000Z',
+      accessTimes: ['2026-03-20T07:45:00.000Z'],
     });
     expect(result).toEqual({
       sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
@@ -147,14 +150,17 @@ describe('browser memory sync workflow', () => {
           content: {
             url: 'https://example.com/tasks',
             title: 'Example Tasks',
-            text: 'Stored text for Example Tasks',
             textStorage: {
-              filePath:
-                '/tmp/mirrorbrain/mirrorbrain/browser-page-content/browser-page:browser-aw-event-1.md',
-              openVikingUri:
-                'viking://resources/mirrorbrain-browser-page-content-browser-page:browser-aw-event-1.md',
+              filePath: expect.stringMatching(
+                /^\/tmp\/mirrorbrain\/mirrorbrain\/browser-page-content\/browser-page:url-[a-f0-9]+\.md$/,
+              ),
+              openVikingUri: expect.stringMatching(
+                /^viking:\/\/resources\/mirrorbrain-browser-page-content-browser-page[:\-]url-[a-f0-9]+\.md$/,
+              ),
               vectorizationSource: 'openviking-resource',
             },
+            latestAccessedAt: '2026-03-20T07:45:00.000Z',
+            accessTimes: ['2026-03-20T07:45:00.000Z'],
           },
           captureMetadata: {
             upstreamSource: 'activitywatch',
@@ -170,14 +176,17 @@ describe('browser memory sync workflow', () => {
           content: {
             url: 'https://example.com/review',
             title: 'Review',
-            text: 'Stored text for Review',
             textStorage: {
-              filePath:
-                '/tmp/mirrorbrain/mirrorbrain/browser-page-content/browser-page:browser-aw-event-2.md',
-              openVikingUri:
-                'viking://resources/mirrorbrain-browser-page-content-browser-page:browser-aw-event-2.md',
+              filePath: expect.stringMatching(
+                /^\/tmp\/mirrorbrain\/mirrorbrain\/browser-page-content\/browser-page:url-[a-f0-9]+\.md$/,
+              ),
+              openVikingUri: expect.stringMatching(
+                /^viking:\/\/resources\/mirrorbrain-browser-page-content-browser-page[:\-]url-[a-f0-9]+\.md$/,
+              ),
               vectorizationSource: 'openviking-resource',
             },
+            latestAccessedAt: '2026-03-20T08:00:00.000Z',
+            accessTimes: ['2026-03-20T08:00:00.000Z'],
           },
           captureMetadata: {
             upstreamSource: 'activitywatch',
@@ -185,6 +194,72 @@ describe('browser memory sync workflow', () => {
           },
         },
       ],
+    });
+  });
+
+  it('fetches and stores shared page content once for repeated url visits in the same sync', async () => {
+    const config = getMirrorBrainConfig();
+    const fetchPageContent = vi.fn(async ({ url, title, fetchedAt }) => ({
+      url,
+      title,
+      fetchedAt,
+      text: 'Shared text',
+    }));
+    const ingestPageContent = vi.fn(async ({ artifact }) => ({
+      sourcePath: `/tmp/mirrorbrain/mirrorbrain/browser-page-content/${artifact.id}.md`,
+      rootUri: `viking://resources/mirrorbrain-browser-page-content-${artifact.id}.md`,
+    }));
+
+    const result = await runBrowserMemorySyncOnce(
+      {
+        config,
+        now: '2026-03-20T08:00:00.000Z',
+        bucketId: 'aw-watcher-web-chrome',
+        scopeId: 'scope-browser',
+        workspaceDir: '/tmp/mirrorbrain',
+      },
+      {
+        checkpointStore: {
+          readCheckpoint: async () => null,
+          writeCheckpoint: async () => undefined,
+        },
+        fetchBrowserEvents: async () => [
+          {
+            id: 'aw-event-1',
+            timestamp: '2026-03-20T07:45:00.000Z',
+            data: {
+              url: 'https://example.com/tasks',
+              title: 'Example Tasks',
+            },
+          },
+          {
+            id: 'aw-event-2',
+            timestamp: '2026-03-20T08:00:00.000Z',
+            data: {
+              url: 'https://example.com/tasks',
+              title: 'Updated Example Tasks',
+            },
+          },
+        ],
+        fetchPageContent,
+        ingestPageContent,
+        writeMemoryEvent: async () => undefined,
+      },
+    );
+
+    expect(fetchPageContent).toHaveBeenCalledTimes(1);
+    expect(ingestPageContent).toHaveBeenCalledTimes(1);
+    expect(result.importedEvents?.[0]?.content).toMatchObject({
+      url: 'https://example.com/tasks',
+      title: 'Example Tasks',
+      latestAccessedAt: '2026-03-20T08:00:00.000Z',
+      accessTimes: ['2026-03-20T08:00:00.000Z', '2026-03-20T07:45:00.000Z'],
+    });
+    expect(result.importedEvents?.[1]?.content).toMatchObject({
+      url: 'https://example.com/tasks',
+      title: 'Example Tasks',
+      latestAccessedAt: '2026-03-20T08:00:00.000Z',
+      accessTimes: ['2026-03-20T08:00:00.000Z', '2026-03-20T07:45:00.000Z'],
     });
   });
 
@@ -276,6 +351,16 @@ describe('browser memory sync workflow', () => {
             },
           },
         ],
+        fetchPageContent: async ({ url, title, fetchedAt }) => ({
+          url,
+          title,
+          fetchedAt,
+          text: 'Shared text',
+        }),
+        ingestPageContent: async ({ artifact }) => ({
+          sourcePath: `/tmp/mirrorbrain/mirrorbrain/browser-page-content/${artifact.id}.md`,
+          rootUri: `viking://resources/mirrorbrain-browser-page-content-${artifact.id}.md`,
+        }),
         writeMemoryEvent: async (record) => {
           persistedRecordIds.push(record.recordId);
         },
@@ -298,6 +383,17 @@ describe('browser memory sync workflow', () => {
           content: {
             url: 'https://example.com/tasks',
             title: 'Example Tasks',
+            textStorage: {
+              filePath: expect.stringMatching(
+                /^\/tmp\/mirrorbrain\/mirrorbrain\/browser-page-content\/browser-page:url-[a-f0-9]+\.md$/,
+              ),
+              openVikingUri: expect.stringMatching(
+                /^viking:\/\/resources\/mirrorbrain-browser-page-content-browser-page[:\-]url-[a-f0-9]+\.md$/,
+              ),
+              vectorizationSource: 'openviking-resource',
+            },
+            latestAccessedAt: '2026-03-20T07:45:00.000Z',
+            accessTimes: ['2026-03-20T07:45:00.000Z'],
           },
           captureMetadata: {
             upstreamSource: 'activitywatch',

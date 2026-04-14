@@ -23,6 +23,7 @@ describe('browser memory sync integration', () => {
         now: '2026-03-20T08:00:00.000Z',
         bucketId: 'aw-watcher-web-chrome',
         scopeId: 'scope-browser',
+        workspaceDir,
       },
       {
         checkpointStore,
@@ -36,6 +37,16 @@ describe('browser memory sync integration', () => {
             },
           },
         ],
+        fetchPageContent: async ({ url, title, fetchedAt }) => ({
+          url,
+          title,
+          fetchedAt,
+          text: 'Shared text',
+        }),
+        ingestPageContent: async ({ artifact }) => ({
+          sourcePath: `${workspaceDir}/mirrorbrain/browser-page-content/${artifact.id}.md`,
+          rootUri: `viking://resources/mirrorbrain-browser-page-content-${artifact.id}.md`,
+        }),
         writeMemoryEvent: async (record) => {
           importedRecordIds.push(record.recordId);
         },
@@ -48,6 +59,7 @@ describe('browser memory sync integration', () => {
         now: '2026-03-20T09:00:00.000Z',
         bucketId: 'aw-watcher-web-chrome',
         scopeId: 'scope-browser',
+        workspaceDir,
       },
       {
         checkpointStore,
@@ -57,6 +69,16 @@ describe('browser memory sync integration', () => {
 
           return [];
         },
+        fetchPageContent: async ({ url, title, fetchedAt }) => ({
+          url,
+          title,
+          fetchedAt,
+          text: 'Shared text',
+        }),
+        ingestPageContent: async ({ artifact }) => ({
+          sourcePath: `${workspaceDir}/mirrorbrain/browser-page-content/${artifact.id}.md`,
+          rootUri: `viking://resources/mirrorbrain-browser-page-content-${artifact.id}.md`,
+        }),
         writeMemoryEvent: async (record) => {
           importedRecordIds.push(record.recordId);
         },

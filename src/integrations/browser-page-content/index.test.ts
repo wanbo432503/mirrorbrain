@@ -1,11 +1,73 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildBrowserPageContentArtifact,
   extractReadableTextFromHtml,
   fetchBrowserPageContent,
+  wasBrowserPageAccessedOnReviewDate,
 } from './index.js';
 
 describe('browser page content integration', () => {
+  it('builds one shared page artifact per url and keeps access times sorted newest first', () => {
+    const created = buildBrowserPageContentArtifact({
+      url: 'https://example.com/tasks',
+      title: 'Example Tasks',
+      text: 'Open the checklist.',
+      accessedAt: '2026-04-14T08:00:00.000Z',
+    });
+    const updated = buildBrowserPageContentArtifact({
+      url: 'https://example.com/tasks',
+      title: 'Ignored Later Title',
+      text: 'Ignored later text.',
+      accessedAt: '2026-04-14T09:00:00.000Z',
+      existingArtifact: created,
+    });
+
+    expect(updated).toEqual({
+      id: created.id,
+      url: 'https://example.com/tasks',
+      title: 'Example Tasks',
+      text: 'Open the checklist.',
+      accessTimes: ['2026-04-14T09:00:00.000Z', '2026-04-14T08:00:00.000Z'],
+      latestAccessedAt: '2026-04-14T09:00:00.000Z',
+    });
+  });
+
+  it('detects whether a shared page artifact was accessed on the review date', () => {
+    expect(
+      wasBrowserPageAccessedOnReviewDate(
+        {
+          id: 'browser-page:abc',
+          url: 'https://example.com/tasks',
+          title: 'Example Tasks',
+          text: 'Open the checklist.',
+          accessTimes: ['2026-04-14T00:30:00.000Z', '2026-04-13T14:00:00.000Z'],
+          latestAccessedAt: '2026-04-14T00:30:00.000Z',
+        },
+        {
+          reviewDate: '2026-04-14',
+          reviewTimeZone: 'Asia/Shanghai',
+        },
+      ),
+    ).toBe(true);
+    expect(
+      wasBrowserPageAccessedOnReviewDate(
+        {
+          id: 'browser-page:abc',
+          url: 'https://example.com/tasks',
+          title: 'Example Tasks',
+          text: 'Open the checklist.',
+          accessTimes: ['2026-04-12T00:30:00.000Z'],
+          latestAccessedAt: '2026-04-12T00:30:00.000Z',
+        },
+        {
+          reviewDate: '2026-04-14',
+          reviewTimeZone: 'Asia/Shanghai',
+        },
+      ),
+    ).toBe(false);
+  });
+
   it('prefers main content over navigation and footer noise', () => {
     const result = extractReadableTextFromHtml(`
       <html>

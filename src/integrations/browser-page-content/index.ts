@@ -1,14 +1,23 @@
+import { createHash } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+
 import type { MemoryEvent } from '../../shared/types/index.js';
 
 import type { ingestBrowserPageContentToOpenViking } from '../openviking-store/index.js';
 
+interface BrowserPageContentStorageRef {
+  sourcePath: string;
+  rootUri: string;
+}
+
 export interface BrowserPageContentArtifact {
   id: string;
-  sourceEventId: string;
   url: string;
   title: string;
-  fetchedAt: string;
   text: string;
+  accessTimes: string[];
+  latestAccessedAt: string;
 }
 
 interface FetchBrowserPageContentInput {
@@ -133,13 +142,142 @@ export function createBrowserPageContentArtifact(input: {
   };
 }): BrowserPageContentArtifact {
   return {
-    id: `browser-page:${input.event.id.replace(/:/gu, '-')}`,
-    sourceEventId: input.event.id,
+    id: getBrowserPageContentArtifactId(input.page.url),
     url: input.page.url,
     title: input.page.title,
-    fetchedAt: input.page.fetchedAt,
     text: input.page.text,
+    accessTimes: [input.event.timestamp],
+    latestAccessedAt: input.event.timestamp,
   };
+}
+
+export function getBrowserPageContentArtifactId(url: string): string {
+  const hash = createHash('sha256').update(url).digest('hex').slice(0, 16);
+  return `browser-page:url-${hash}`;
+}
+
+export function buildBrowserPageContentArtifact(input: {
+  url: string;
+  title: string;
+  text: string;
+  accessedAt: string;
+  existingArtifact?: BrowserPageContentArtifact;
+}): BrowserPageContentArtifact {
+  const accessTimes = Array.from(
+    new Set([input.accessedAt, ...(input.existingArtifact?.accessTimes ?? [])]),
+  ).sort((left, right) => right.localeCompare(left));
+
+  return {
+    id: input.existingArtifact?.id ?? getBrowserPageContentArtifactId(input.url),
+    url: input.url,
+    title: input.existingArtifact?.title ?? input.title,
+    text: input.existingArtifact?.text ?? input.text,
+    accessTimes,
+    latestAccessedAt: accessTimes[0] ?? input.accessedAt,
+  };
+}
+
+export async function loadBrowserPageContentArtifactFromWorkspace(input: {
+  workspaceDir: string;
+  url: string;
+}): Promise<BrowserPageContentArtifact | null> {
+  const id = getBrowserPageContentArtifactId(input.url);
+  const sourcePath = join(
+    input.workspaceDir,
+    'mirrorbrain',
+    'browser-page-content',
+    `${id}.md`,
+  );
+
+  try {
+    const markdown = await readFile(sourcePath, 'utf8');
+    return parseBrowserPageContentArtifact(markdown, input.url, id);
+  } catch {
+    return null;
+  }
+}
+
+function parseBrowserPageContentArtifact(
+  markdown: string,
+  url: string,
+  id: string,
+): BrowserPageContentArtifact {
+  const lines = markdown.split('\n');
+  const title = lines[0]?.replace(/^#\s+/, '').trim() ?? '';
+  const latestAccessedAt =
+    lines
+      .find((line) => line.startsWith('- latestAccessedAt: '))
+      ?.replace('- latestAccessedAt: ', '')
+      .trim() ?? '';
+  const accessSectionIndex = lines.findIndex(
+    (line) => line.trim() === '## Access Times',
+  );
+  const textSectionIndex = lines.findIndex((line) => line.trim() === '## Text');
+  const accessTimes =
+    accessSectionIndex === -1
+      ? []
+      : lines
+          .slice(
+            accessSectionIndex + 1,
+            textSectionIndex === -1 ? undefined : textSectionIndex,
+          )
+          .map((line) => line.replace(/^- /, '').trim())
+          .filter((line) => line.length > 0);
+  const text =
+    textSectionIndex === -1
+      ? ''
+      : lines.slice(textSectionIndex + 1).join('\n').trim();
+
+  return {
+    id,
+    url,
+    title,
+    text,
+    accessTimes,
+    latestAccessedAt: latestAccessedAt || accessTimes[0] || '',
+  };
+}
+
+export function wasBrowserPageAccessedOnReviewDate(
+  artifact: BrowserPageContentArtifact,
+  input: {
+    reviewDate: string;
+    reviewTimeZone?: string;
+  },
+): boolean {
+  return artifact.accessTimes.some(
+    (accessedAt) =>
+      getCalendarDateForComparison(accessedAt, input.reviewTimeZone) ===
+      input.reviewDate,
+  );
+}
+
+function getCalendarDateForComparison(value: string, timeZone?: string): string {
+  if (timeZone === undefined) {
+    const date = new Date(value);
+    return [
+      date.getFullYear(),
+      String(date.getMonth() + 1).padStart(2, '0'),
+      String(date.getDate()).padStart(2, '0'),
+    ].join('-');
+  }
+
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const parts = formatter.formatToParts(new Date(value));
+  const year = parts.find((part) => part.type === 'year')?.value;
+  const month = parts.find((part) => part.type === 'month')?.value;
+  const day = parts.find((part) => part.type === 'day')?.value;
+
+  if (year === undefined || month === undefined || day === undefined) {
+    throw new Error(`Failed to derive review date for timestamp ${value}.`);
+  }
+
+  return `${year}-${month}-${day}`;
 }
 
 export async function enrichBrowserMemoryEventWithPageContent(
@@ -152,6 +290,7 @@ export async function enrichBrowserMemoryEventWithPageContent(
   dependencies: {
     fetchPageContent?: typeof fetchBrowserPageContent;
     ingestPageContent?: typeof ingestBrowserPageContentToOpenViking;
+    sharedArtifact?: BrowserPageContentArtifact;
   },
 ): Promise<MemoryEvent> {
   if (input.event.sourceType !== 'activitywatch-browser') {
@@ -176,15 +315,29 @@ export async function enrichBrowserMemoryEventWithPageContent(
     return input.event;
   }
 
-  const page = await fetchPage({
-    url,
-    title,
-    fetchedAt: input.fetchedAt,
-  });
-  const artifact = createBrowserPageContentArtifact({
-    event: input.event,
-    page,
-  });
+  const existingArtifact =
+    dependencies.sharedArtifact ??
+    (await loadBrowserPageContentArtifactFromWorkspace({
+      workspaceDir: input.workspaceDir,
+      url,
+    }));
+  const artifact =
+    existingArtifact === null
+      ? buildBrowserPageContentArtifact({
+          ...(await fetchPage({
+            url,
+            title,
+            fetchedAt: input.fetchedAt,
+          })),
+          accessedAt: input.event.timestamp,
+        })
+      : buildBrowserPageContentArtifact({
+          url,
+          title,
+          text: existingArtifact.text,
+          accessedAt: input.event.timestamp,
+          existingArtifact,
+        });
   const stored = await ingestPage({
     baseUrl: input.baseUrl,
     workspaceDir: input.workspaceDir,
@@ -195,13 +348,23 @@ export async function enrichBrowserMemoryEventWithPageContent(
     ...input.event,
     content: {
       ...input.event.content,
-      title: page.title,
-      text: page.text,
-      textStorage: {
-        filePath: stored.sourcePath,
-        openVikingUri: stored.rootUri,
-        vectorizationSource: 'openviking-resource',
-      },
+      ...createBrowserPageContentEventContent(artifact, stored),
     },
+  };
+}
+
+export function createBrowserPageContentEventContent(
+  artifact: BrowserPageContentArtifact,
+  stored: BrowserPageContentStorageRef,
+): Record<string, unknown> {
+  return {
+    title: artifact.title,
+    textStorage: {
+      filePath: stored.sourcePath,
+      openVikingUri: stored.rootUri,
+      vectorizationSource: 'openviking-resource',
+    },
+    latestAccessedAt: artifact.latestAccessedAt,
+    accessTimes: artifact.accessTimes,
   };
 }
