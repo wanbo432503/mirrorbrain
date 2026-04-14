@@ -846,13 +846,65 @@ function deduplicateById<T extends { id: string }>(items: T[]): T[] {
   return Array.from(new Map(items.map((item) => [item.id, item])).values());
 }
 
-function createBrowserEventSignature(event: MemoryEvent): string {
-  return [
-    event.sourceType,
-    event.authorizationScopeId,
-    String(event.content.url ?? ''),
-    String(event.content.title ?? ''),
-  ].join('|');
+function isBrowserUrlMemoryEvent(event: MemoryEvent): boolean {
+  return (
+    event.sourceType === 'activitywatch-browser' &&
+    typeof event.content.url === 'string' &&
+    event.content.url.length > 0
+  );
+}
+
+function createMemoryEventDisplaySignature(event: MemoryEvent): string {
+  if (isBrowserUrlMemoryEvent(event)) {
+    return [
+      event.sourceType,
+      event.authorizationScopeId,
+      String(event.content.url),
+    ].join('|');
+  }
+
+  return event.id;
+}
+
+function getMemoryEventAccessTimes(event: MemoryEvent): string[] {
+  const contentAccessTimes = Array.isArray(event.content.accessTimes)
+    ? event.content.accessTimes.filter(
+        (value): value is string => typeof value === 'string' && value.length > 0,
+      )
+    : [];
+
+  return Array.from(new Set([event.timestamp, ...contentAccessTimes])).sort(
+    (left, right) => right.localeCompare(left),
+  );
+}
+
+function mergeMemoryEventsForDisplay(
+  previousEvent: MemoryEvent,
+  nextEvent: MemoryEvent,
+): MemoryEvent {
+  const latestEvent =
+    nextEvent.timestamp.localeCompare(previousEvent.timestamp) >= 0
+      ? nextEvent
+      : previousEvent;
+  const mergedAccessTimes = Array.from(
+    new Set([
+      ...getMemoryEventAccessTimes(previousEvent),
+      ...getMemoryEventAccessTimes(nextEvent),
+    ]),
+  ).sort((left, right) => right.localeCompare(left));
+
+  if (!isBrowserUrlMemoryEvent(latestEvent)) {
+    return latestEvent;
+  }
+
+  return {
+    ...latestEvent,
+    content: {
+      ...latestEvent.content,
+      accessTimes: mergedAccessTimes,
+      latestAccessedAt: mergedAccessTimes[0] ?? latestEvent.timestamp,
+    },
+  };
 }
 
 function deduplicateMemoryEventsForDisplay(events: MemoryEvent[]): MemoryEvent[] {
@@ -860,24 +912,18 @@ function deduplicateMemoryEventsForDisplay(events: MemoryEvent[]): MemoryEvent[]
   const latestBySignature = new Map<string, MemoryEvent>();
 
   for (const event of deduplicatedById) {
-    const signature = createBrowserEventSignature(event);
+    const signature = createMemoryEventDisplaySignature(event);
     const previousEvent = latestBySignature.get(signature);
 
     if (previousEvent === undefined) {
-      latestBySignature.set(signature, event);
+      latestBySignature.set(signature, mergeMemoryEventsForDisplay(event, event));
       continue;
     }
 
-    const eventTime = new Date(event.timestamp).getTime();
-    const previousEventTime = new Date(previousEvent.timestamp).getTime();
-    const shouldReplace =
-      Number.isFinite(eventTime) &&
-      Number.isFinite(previousEventTime) &&
-      eventTime >= previousEventTime;
-
-    if (shouldReplace) {
-      latestBySignature.set(signature, event);
-    }
+    latestBySignature.set(
+      signature,
+      mergeMemoryEventsForDisplay(previousEvent, event),
+    );
   }
 
   return [...latestBySignature.values()].sort((left, right) =>

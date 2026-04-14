@@ -48,6 +48,8 @@ describe('openviking store adapter', () => {
         content: {
           url: 'https://example.com/tasks',
           title: 'Example Tasks',
+          latestAccessedAt: '2026-03-20T08:00:00.000Z',
+          accessTimes: ['2026-03-20T08:00:00.000Z'],
         },
         captureMetadata: {
           upstreamSource: 'activitywatch',
@@ -66,6 +68,8 @@ describe('openviking store adapter', () => {
         content: {
           url: 'https://example.com/tasks',
           title: 'Example Tasks',
+          latestAccessedAt: '2026-03-20T08:00:00.000Z',
+          accessTimes: ['2026-03-20T08:00:00.000Z'],
         },
         captureMetadata: {
           upstreamSource: 'activitywatch',
@@ -666,6 +670,8 @@ describe('openviking store adapter', () => {
         content: {
           url: 'https://example.com/tasks',
           title: 'Example Tasks',
+          latestAccessedAt: '2026-03-20T08:00:00.000Z',
+          accessTimes: ['2026-03-20T08:00:00.000Z'],
         },
         captureMetadata: {
           upstreamSource: 'activitywatch',
@@ -723,6 +729,75 @@ describe('openviking store adapter', () => {
     expect(result.map((event) => event.id)).toEqual([
       'browser:aw-event-1',
       'browser:aw-event-2',
+    ]);
+  });
+
+  it('deduplicates browser memory events by url for display and preserves access history', async () => {
+    const workspaceDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-local-memory-dedup-'));
+    const resourceDir = join(workspaceDir, 'mirrorbrain', 'memory-events');
+    mkdirSync(resourceDir, { recursive: true });
+    writeFileSync(
+      join(resourceDir, 'browser:aw-event-1.json'),
+      JSON.stringify({
+        id: 'browser:aw-event-1',
+        sourceType: 'activitywatch-browser',
+        sourceRef: 'aw-event-1',
+        timestamp: '2026-03-18T08:00:00.000Z',
+        authorizationScopeId: 'scope-browser',
+        content: {
+          url: 'https://example.com/tasks',
+          title: 'Example Tasks',
+          latestAccessedAt: '2026-03-18T08:00:00.000Z',
+          accessTimes: ['2026-03-18T08:00:00.000Z'],
+        },
+        captureMetadata: {
+          upstreamSource: 'activitywatch',
+          checkpoint: '2026-03-18T08:00:00.000Z',
+        },
+      }),
+    );
+    writeFileSync(
+      join(resourceDir, 'browser:aw-event-2.json'),
+      JSON.stringify({
+        id: 'browser:aw-event-2',
+        sourceType: 'activitywatch-browser',
+        sourceRef: 'aw-event-2',
+        timestamp: '2026-03-20T09:30:00.000Z',
+        authorizationScopeId: 'scope-browser',
+        content: {
+          url: 'https://example.com/tasks',
+          title: 'Example Tasks Updated',
+          latestAccessedAt: '2026-03-20T09:30:00.000Z',
+          accessTimes: [
+            '2026-03-20T09:30:00.000Z',
+            '2026-03-19T07:15:00.000Z',
+          ],
+        },
+        captureMetadata: {
+          upstreamSource: 'activitywatch',
+          checkpoint: '2026-03-20T09:30:00.000Z',
+        },
+      }),
+    );
+
+    const result = await listMirrorBrainMemoryEventsFromWorkspace({
+      workspaceDir,
+    });
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        id: 'browser:aw-event-2',
+        timestamp: '2026-03-20T09:30:00.000Z',
+        content: expect.objectContaining({
+          url: 'https://example.com/tasks',
+          latestAccessedAt: '2026-03-20T09:30:00.000Z',
+          accessTimes: [
+            '2026-03-20T09:30:00.000Z',
+            '2026-03-19T07:15:00.000Z',
+            '2026-03-18T08:00:00.000Z',
+          ],
+        }),
+      }),
     ]);
   });
 
@@ -811,6 +886,8 @@ describe('openviking store adapter', () => {
           url: 'https://example.com/very-long-page',
           title:
             'A title that forces OpenViking to split resource bodies across fragments because it is long enough to overflow the first chunk',
+          latestAccessedAt: '2026-03-20T07:56:25.354000+00:00',
+          accessTimes: ['2026-03-20T07:56:25.354000+00:00'],
         },
         captureMetadata: {
           upstreamSource: 'activitywatch',
@@ -1132,6 +1209,11 @@ describe('openviking store adapter', () => {
         content: {
           url: 'https://github.com/wanbo432503/mirrorbrain',
           title: 'wanbo432503/mirrorbrain',
+          latestAccessedAt: '2026-03-31T11:31:35.461000+00:00',
+          accessTimes: [
+            '2026-03-31T11:31:35.461000+00:00',
+            '2026-03-31T11:31:35.460000+00:00',
+          ],
         },
         captureMetadata: {
           upstreamSource: 'activitywatch',
@@ -1257,6 +1339,8 @@ describe('openviking store adapter', () => {
         content: {
           url: 'https://github.com/wanbo432503/mirrorbrain',
           title: 'wanbo432503/mirrorbrain',
+          latestAccessedAt: '2026-03-31T11:31:35.460000+00:00',
+          accessTimes: ['2026-03-31T11:31:35.460000+00:00'],
         },
         captureMetadata: {
           upstreamSource: 'activitywatch',

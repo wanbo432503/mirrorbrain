@@ -25,6 +25,21 @@ describe('activitywatch browser source', () => {
     });
   });
 
+  it('uses the explicit bucket creation time for initial sync when available', () => {
+    const config = getMirrorBrainConfig();
+
+    expect(
+      createInitialBrowserSyncPlan(config, {
+        now: '2026-03-20T08:00:00.000Z',
+        startAt: '2026-03-12T03:15:00.000Z',
+      }),
+    ).toMatchObject({
+      strategy: 'initial-backfill',
+      start: '2026-03-12T03:15:00.000Z',
+      end: '2026-03-20T08:00:00.000Z',
+    });
+  });
+
   it('uses a checkpoint for incremental sync', () => {
     const config = getMirrorBrainConfig();
 

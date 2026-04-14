@@ -24,10 +24,11 @@ This component adapts browser activity coming from `ActivityWatch`, with `aw-wat
 
 1. MirrorBrain reads config for backfill window and polling interval.
 2. The adapter builds a controlled initial backfill request or an incremental request from checkpoint state.
-3. The adapter fetches browser events from the ActivityWatch HTTP API.
-4. The source plugin normalizes browser events and suppresses near-duplicate page records that repeat the same page signature within a short time window before persistence.
-5. The browser sync workflow can then enrich sanitized events with fetched page text before persistence.
-6. The generic source-sync workflow persists enriched events and advances the checkpoint store.
+3. When ActivityWatch bucket metadata includes `created`, the first browser sync prefers that timestamp so MirrorBrain can backfill the whole authorized bucket history instead of truncating to the last 24 hours.
+4. The adapter fetches browser events from the ActivityWatch HTTP API.
+5. The source plugin normalizes browser events and suppresses near-duplicate page records that repeat the same page signature within a short time window before persistence.
+6. The browser sync workflow can then enrich sanitized events with fetched page text before persistence.
+7. The generic source-sync workflow persists enriched events and advances the checkpoint store.
 
 ## Operational Note
 

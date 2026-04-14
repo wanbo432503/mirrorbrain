@@ -160,10 +160,12 @@ describe('mirrorbrain service', () => {
       {
         id: 'aw-watcher-web-chrome',
         last_updated: '2026-04-03T07:13:14.690000+00:00',
+        created: '2026-04-01T00:00:00.000000+00:00',
       },
       {
         id: 'aw-watcher-web-chrome_wanbodeMacBook-Pro-2.local',
         last_updated: '2026-04-13T03:53:00.000000+00:00',
+        created: '2026-04-07T10:00:00.000000+00:00',
       },
     ]);
     const runBrowserMemorySyncOnce = vi.fn(async () => ({
@@ -208,6 +210,7 @@ describe('mirrorbrain service', () => {
         config,
         now: '2026-04-13T03:53:51.918Z',
         bucketId: 'aw-watcher-web-chrome_wanbodeMacBook-Pro-2.local',
+        initialBackfillStartAt: '2026-04-07T10:00:00.000000+00:00',
         scopeId: 'scope-browser',
         workspaceDir: '/tmp/mirrorbrain-workspace',
       },

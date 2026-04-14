@@ -354,6 +354,7 @@ describe('mirrorbrain service contract integration', () => {
       {
         queryMemory: async () => ({ items: [] }),
         listMemoryEvents: async () => memoryEvents,
+        listRawWorkspaceMemoryEvents: async () => memoryEvents,
         listKnowledge: async () => [],
         listSkillDrafts: async () => [],
         publishCandidateMemory: async (input) => {

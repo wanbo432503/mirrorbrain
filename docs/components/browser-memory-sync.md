@@ -19,15 +19,16 @@ This workflow executes the live browser ingestion loop for Phase 1. It now acts 
 ## Data Flow
 
 1. Resolve the ActivityWatch browser bucket to sync, using the explicitly configured bucket when present or auto-discovering the most recently updated `aw-watcher-web*` bucket otherwise.
-2. Build an ActivityWatch browser source plugin for the resolved browser bucket.
-3. Register that plugin with the generic memory-source sync workflow.
-4. Let the generic workflow read the checkpoint, compute the sync plan, and fetch browser events.
-5. Normalize events and suppress near-duplicate browser page records.
-6. Group retained browser events by URL.
-7. For each URL, either load the existing shared page artifact or fetch readable page text once and create it.
-8. Update the URL artifact `accessTimes` list, persist it locally, and import it into OpenViking for indexing.
-9. Persist the enriched browser memory events and return the imported-event summary.
-10. Repeat on the configured polling interval when polling is enabled.
+2. When the resolved bucket exposes a `created` timestamp, use it as the initial browser backfill start so the first sync can import the bucket's retained history.
+3. Build an ActivityWatch browser source plugin for the resolved browser bucket.
+4. Register that plugin with the generic memory-source sync workflow.
+5. Let the generic workflow read the checkpoint, compute the sync plan, and fetch browser events.
+6. Normalize events and suppress near-duplicate browser page records.
+7. Group retained browser events by URL.
+8. For each URL, either load the existing shared page artifact or fetch readable page text once and create it.
+9. Update the URL artifact `accessTimes` list, persist it locally, and import it into OpenViking for indexing.
+10. Persist the enriched browser memory events and return the imported-event summary.
+11. Repeat on the configured polling interval when polling is enabled.
 
 ## Test Strategy
 

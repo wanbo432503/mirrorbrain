@@ -8,6 +8,7 @@ import type { MirrorBrainConfig } from '../../shared/types/index.js';
 
 interface InitialBrowserSyncPlanInput {
   now: string;
+  startAt?: string;
 }
 
 interface IncrementalBrowserSyncPlanInput {
@@ -54,6 +55,7 @@ type FetchActivityWatchBucketsInput = {
 
 interface CreateActivityWatchBrowserMemorySourcePluginInput {
   bucketId: string;
+  initialBackfillStartAt?: string;
   fetchBrowserEvents?: typeof fetchActivityWatchBrowserEvents;
 }
 
@@ -69,8 +71,18 @@ export function createInitialBrowserSyncPlan(
   input: InitialBrowserSyncPlanInput,
 ): BrowserSyncPlan {
   const end = new Date(input.now);
-  const start = new Date(end);
-  start.setUTCHours(start.getUTCHours() - config.sync.initialBackfillHours);
+  const requestedStart =
+    typeof input.startAt === 'string' ? new Date(input.startAt) : null;
+  const start =
+    requestedStart !== null &&
+    Number.isFinite(requestedStart.getTime()) &&
+    requestedStart.getTime() <= end.getTime()
+      ? requestedStart
+      : new Date(end);
+
+  if (start.getTime() === end.getTime()) {
+    start.setUTCHours(start.getUTCHours() - config.sync.initialBackfillHours);
+  }
 
   return {
     strategy: 'initial-backfill',
@@ -222,6 +234,7 @@ export function createActivityWatchBrowserMemorySourcePlugin(
           })
         : createInitialBrowserSyncPlan(config, {
             now,
+            startAt: input.initialBackfillStartAt,
           });
     },
     fetchEvents({ config, plan }) {

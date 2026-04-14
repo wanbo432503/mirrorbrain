@@ -183,16 +183,18 @@ export function startMirrorBrainService(
   const loadActivityWatchBuckets =
     dependencies.fetchActivityWatchBuckets ?? fetchActivityWatchBuckets;
   const now = dependencies.now ?? (() => new Date().toISOString());
-  const resolveBrowserBucketId = async () => {
+  const resolveBrowserBucket = async () => {
     if (configuredBrowserBucketId !== undefined) {
-      return configuredBrowserBucketId;
+      return {
+        id: configuredBrowserBucketId,
+        created: undefined,
+      };
     }
 
-    const bucketId = resolveActivityWatchBrowserBucket(
-      await loadActivityWatchBuckets({
-        baseUrl: config.activityWatch.baseUrl,
-      }),
-    );
+    const buckets = await loadActivityWatchBuckets({
+      baseUrl: config.activityWatch.baseUrl,
+    });
+    const bucketId = resolveActivityWatchBrowserBucket(buckets);
 
     if (bucketId === null) {
       throw new Error(
@@ -200,14 +202,23 @@ export function startMirrorBrainService(
       );
     }
 
-    return bucketId;
+    const bucket = buckets.find((item) => item.id === bucketId);
+
+    return {
+      id: bucketId,
+      created: bucket?.created,
+    };
   };
-  const syncBrowserMemory = async () =>
+  const syncBrowserMemory = async () => {
+    const bucket = await resolveBrowserBucket();
+
+    return (
     executeBrowserMemorySyncOnce(
       {
         config,
         now: now(),
-        bucketId: await resolveBrowserBucketId(),
+        bucketId: bucket.id,
+        initialBackfillStartAt: bucket.created,
         scopeId: browserScopeId,
         workspaceDir,
       },
@@ -215,7 +226,8 @@ export function startMirrorBrainService(
         checkpointStore,
         writeMemoryEvent: memoryEventWriter.writeMemoryEvent,
       },
-    );
+    ));
+  };
   const syncShellMemory = () => {
     if (shellHistoryPath === undefined) {
       return Promise.reject(

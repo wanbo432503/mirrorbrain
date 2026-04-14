@@ -30,6 +30,7 @@ interface RunBrowserMemorySyncOnceInput {
   config: MirrorBrainConfig;
   now: string;
   bucketId: string;
+  initialBackfillStartAt?: string;
   scopeId: string;
   workspaceDir?: string;
 }
@@ -76,6 +77,7 @@ export async function runBrowserMemorySyncOnce(
       sourceRegistry: createMemorySourceRegistry([
         createActivityWatchBrowserMemorySourcePlugin({
           bucketId: input.bucketId,
+          initialBackfillStartAt: input.initialBackfillStartAt,
           fetchBrowserEvents: dependencies.fetchBrowserEvents,
         }),
       ]),

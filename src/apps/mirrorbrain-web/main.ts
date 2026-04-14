@@ -154,6 +154,16 @@ function mergeMemoryEvents(
   );
 }
 
+function isCompleteSyncPreview(
+  sync: BrowserSyncSummary,
+): sync is BrowserSyncSummary & { importedEvents: MemoryEvent[] } {
+  return (
+    Array.isArray(sync.importedEvents) &&
+    sync.importedEvents.length === sync.importedCount &&
+    sync.strategy === 'incremental'
+  );
+}
+
 function renderTabButton(
   tab: MirrorBrainWebTab,
   activeTab: MirrorBrainWebTab,
@@ -507,6 +517,17 @@ function renderArtifactsPanel(state: MirrorBrainWebAppState): string {
   const historyPanel = [
     '<div class="mirrorbrain-history-layout">',
     renderHistoryTable(
+      'Topic Knowledge',
+      knowledgeTopics.map((topic) => ({
+        primary: topic.title,
+        secondary: topic.summary,
+        tertiary: topic.recencyLabel,
+      })),
+      1,
+      ARTIFACT_HISTORY_PAGE_SIZE,
+      'knowledge-topics',
+    ),
+    renderHistoryTable(
       'Generated Knowledge',
       knowledgeArtifacts.map((artifact) => ({
         primary: artifact.title ?? artifact.id,
@@ -858,13 +879,17 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
     },
     async syncBrowserMemory() {
       state.lastSyncSummary = await input.api.syncBrowser();
-      state.memoryEvents =
-        state.lastSyncSummary.importedEvents === undefined
-          ? await input.api.listMemory()
-          : mergeMemoryEvents(
-              state.memoryEvents,
-              state.lastSyncSummary.importedEvents,
-            );
+      try {
+        state.memoryEvents = await input.api.listMemory();
+      } catch {
+        state.memoryEvents =
+          state.lastSyncSummary.importedEvents === undefined
+            ? state.memoryEvents
+            : mergeMemoryEvents(
+                state.memoryEvents,
+                state.lastSyncSummary.importedEvents,
+              );
+      }
       state.memoryPage = 1;
       state.activeTab = 'memory';
       setFeedback({
@@ -875,12 +900,12 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
     async syncShellMemory() {
       state.lastSyncSummary = await input.api.syncShell();
       state.memoryEvents =
-        state.lastSyncSummary.importedEvents === undefined
-          ? await input.api.listMemory()
-          : mergeMemoryEvents(
+        isCompleteSyncPreview(state.lastSyncSummary)
+          ? mergeMemoryEvents(
               state.memoryEvents,
               state.lastSyncSummary.importedEvents,
-            );
+            )
+          : await input.api.listMemory();
       state.memoryPage = 1;
       state.activeTab = 'memory';
       setFeedback({

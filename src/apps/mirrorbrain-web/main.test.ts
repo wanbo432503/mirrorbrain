@@ -697,7 +697,7 @@ describe('mirrorbrain web app', () => {
     });
   });
 
-  it('merges imported browser events from sync results without waiting for a full memory reload', async () => {
+  it('reloads memory events after browser sync so url-compressed browser state stays authoritative', async () => {
     const existingEvent = createMemoryEvent(
       'browser:existing',
       'Existing Event',
@@ -712,7 +712,10 @@ describe('mirrorbrain web app', () => {
       getHealth: vi.fn(async () => ({
         status: 'running' as const,
       })),
-      listMemory: vi.fn(async () => [existingEvent]),
+      listMemory: vi
+        .fn<() => Promise<MemoryEvent[]>>()
+        .mockResolvedValueOnce([existingEvent])
+        .mockResolvedValueOnce([importedEvent, existingEvent]),
       listKnowledge: vi.fn(async () => []),
       listKnowledgeTopics: vi.fn(async () => []),
       listSkills: vi.fn(async () => []),
@@ -746,7 +749,68 @@ describe('mirrorbrain web app', () => {
     await app.syncBrowserMemory();
 
     expect(app.state.memoryEvents).toEqual([importedEvent, existingEvent]);
-    expect(api.listMemory).toHaveBeenCalledTimes(1);
+    expect(api.listMemory).toHaveBeenCalledTimes(2);
+  });
+
+  it('reloads the full memory list after browser sync when the sync response is only a preview', async () => {
+    const importedPreviewEvents: MemoryEvent[] = Array.from({ length: 50 }, (_, index) =>
+      createMemoryEvent(
+        `browser:preview-${index + 1}`,
+        `Preview Event ${index + 1}`,
+        `2026-03-20T${String(Math.floor(index / 60)).padStart(2, '0')}:${String(index % 60).padStart(2, '0')}:00.000Z`,
+      ),
+    );
+    const fullMemoryEvents: MemoryEvent[] = [
+      createMemoryEvent(
+        'browser:older',
+        'Older Event',
+        '2026-03-15T08:00:00.000Z',
+      ),
+      ...importedPreviewEvents,
+    ].sort((left, right) => right.timestamp.localeCompare(left.timestamp));
+    const listMemory = vi
+      .fn<() => Promise<MemoryEvent[]>>()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce(fullMemoryEvents);
+    const api = {
+      getHealth: vi.fn(async () => ({
+        status: 'running' as const,
+      })),
+      listMemory,
+      listKnowledge: vi.fn(async () => []),
+      listKnowledgeTopics: vi.fn(async () => []),
+      listSkills: vi.fn(async () => []),
+      syncBrowser: vi.fn(async () => ({
+        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+        strategy: 'initial-backfill' as const,
+        importedCount: 75,
+        lastSyncedAt: '2026-03-20T09:49:00.000Z',
+        importedEvents: importedPreviewEvents,
+      })),
+      syncShell: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T09:50:00.000Z',
+        importedEvents: [],
+      })),
+      createDailyCandidates: vi.fn(async () => []),
+      suggestCandidateReviews: vi.fn(async () => []),
+      reviewCandidateMemory: vi.fn(),
+      generateKnowledge: vi.fn(),
+      generateSkill: vi.fn(),
+    };
+
+    const app = createMirrorBrainWebApp({
+      api,
+      now: () => '2026-03-20T10:00:00.000Z',
+    });
+
+    await app.load();
+    await app.syncBrowserMemory();
+
+    expect(app.state.memoryEvents).toEqual(fullMemoryEvents);
+    expect(listMemory).toHaveBeenCalledTimes(2);
   });
 
   it('allows editing and saving knowledge and skill drafts from the artifacts tab', async () => {
