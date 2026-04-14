@@ -43,6 +43,12 @@ function createReviewedMemoryFixture(): ReviewedMemory {
     candidateTitle: 'Example Com / tasks',
     candidateSummary: '1 browser event about Example Com / tasks on 2026-03-20.',
     candidateTheme: 'example.com / tasks',
+    candidateSourceRefs: undefined,
+    candidateFormationReasons: undefined,
+    candidateTimeRange: {
+      startAt: '2026-03-20T08:00:00.000Z',
+      endAt: '2026-03-20T08:00:00.000Z',
+    },
     memoryEventIds: ['browser:aw-event-1'],
     reviewDate: '2026-03-20',
     decision: 'keep',
