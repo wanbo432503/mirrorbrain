@@ -146,6 +146,24 @@ describe('memory review', () => {
     expect(
       candidates.reduce((count, candidate) => count + candidate.memoryEventIds.length, 0),
     ).toBe(12);
+    expect(
+      candidates.some(
+        (candidate) =>
+          (candidate.compressedSourceCount ?? 0) > 0 &&
+          (candidate.formationReasons ?? []).some((reason) =>
+            reason.includes('absorbed'),
+          ),
+      ),
+    ).toBe(true);
+
+    const suggestions = suggestCandidateReviews(candidates);
+    expect(
+      suggestions.some((suggestion) =>
+        (suggestion.supportingReasons ?? []).some((reason) =>
+          reason.includes('under 10 tasks'),
+        ),
+      ),
+    ).toBe(true);
   });
 
   it('rejects candidate generation when the daily review window has no memory events', () => {

@@ -14,6 +14,8 @@ function createCandidateMemoryFixture(): CandidateMemory {
     title: 'Work on Tasks',
     summary: '1 browser event connected to Work on Tasks across one site over about 1 minutes.',
     theme: 'tasks',
+    formationReasons: ['Started from web evidence on Tasks.'],
+    compressedSourceCount: 0,
     reviewDate: '2026-03-20',
     timeRange: {
       startAt: '2026-03-20T08:00:00.000Z',

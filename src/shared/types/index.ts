@@ -114,6 +114,8 @@ export interface CandidateMemory {
   title: string;
   summary: string;
   theme: string;
+  formationReasons?: string[];
+  compressedSourceCount?: number;
   reviewDate: string;
   timeRange: {
     startAt: string;

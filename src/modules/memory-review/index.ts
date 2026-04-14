@@ -23,6 +23,8 @@ interface CandidateStreamGroup {
   memoryEvents: MemoryEvent[];
   taskTokens: string[];
   hosts: string[];
+  formationReasons: string[];
+  compressedSourceCount: number;
 }
 
 interface EventDescriptor {
@@ -59,6 +61,9 @@ const TOKEN_STOP_WORDS = new Set([
   'issues',
   'sync',
   'pull',
+  'focus',
+  'session',
+  'work',
   'tree',
   'blob',
   'search',
@@ -124,6 +129,8 @@ export function createCandidateMemories(
         ),
       }),
       theme: group.theme,
+      formationReasons: [...group.formationReasons],
+      compressedSourceCount: group.compressedSourceCount,
       reviewDate: input.reviewDate,
       timeRange: {
         startAt: sortedEvents[0]?.timestamp ?? '',
@@ -198,6 +205,14 @@ export function suggestCandidateReviews(
 
     if (uniqueHosts > 1) {
       supportingReasons.push(`The task spans ${uniqueHosts} related hosts.`);
+    }
+
+    if ((candidate.compressedSourceCount ?? 0) > 0) {
+      supportingReasons.push(
+        `The candidate absorbed ${candidate.compressedSourceCount} low-evidence visit${
+          candidate.compressedSourceCount === 1 ? '' : 's'
+        } to keep the daily review list under 10 tasks.`,
+      );
     }
 
     if (keepScore >= 70) {
@@ -382,6 +397,10 @@ function createCandidateGroup(descriptor: EventDescriptor): CandidateStreamGroup
     memoryEvents: [descriptor.event],
     taskTokens,
     hosts,
+    formationReasons: [
+      `Started from ${descriptor.role} evidence on ${toTitleCase(taskTokens.join(' ') || descriptor.host)}.`,
+    ],
+    compressedSourceCount: 0,
   };
 }
 
@@ -527,6 +546,12 @@ function limitCandidateGroups(
     mergeTarget.taskTokens = summarizeTaskTokens(mergeTarget.memoryEvents);
     mergeTarget.title = createTaskTitle(mergeTarget.taskTokens, mergeTarget.hosts);
     mergeTarget.theme = createTaskTheme(mergeTarget.taskTokens, mergeTarget.hosts);
+    mergeTarget.compressedSourceCount += groupToMerge.memoryEvents.length;
+    mergeTarget.formationReasons.push(
+      `This candidate absorbed ${groupToMerge.memoryEvents.length} low-evidence visit${
+        groupToMerge.memoryEvents.length === 1 ? '' : 's'
+      } from ${groupToMerge.title} to stay within the 10-task daily review limit.`,
+    );
   }
 
   return limitedGroups.sort(

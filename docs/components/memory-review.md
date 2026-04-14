@@ -69,7 +69,7 @@ This component is not responsible for:
 
 - suggestion-only artifact for AI-assisted or rule-based triage
 - includes recommendation, rationale, confidence, keep-score, supporting reasons, and priority
-- can include evidence-mix fields such as primary/supporting source counts so the UI can explain how much direct vs auxiliary evidence supports the task
+- can include evidence-mix fields such as primary/supporting source counts and summary copy so the UI can explain how much direct vs auxiliary evidence supports the task
 - must not be treated as a reviewed memory or implicit approval
 
 ## Dependencies
@@ -84,6 +84,7 @@ This component is not responsible for:
 - browser page-content text is used when available, but the flow still falls back to title/URL-only grouping when the page artifact is missing
 - page-role hints improve grouping, but they are still inferred heuristically from URLs and titles
 - candidate generation is intentionally capped at 10 tasks, which means weak one-off activity may be merged into broader neighbors
+- when weak fragments are merged to stay under the 10-task cap, the surviving candidate can carry compression metadata and reasons so the UI can explain the merge
 - reviewed memory still requires a caller-supplied timestamp for auditability
 - AI review suggestions are currently heuristic and should be treated as advisory only
 
