@@ -59,7 +59,8 @@ Those concerns remain in the service, workflow, module, and integration layers.
 7. `POST /memory/query` forwards a query-shaped retrieval request and returns theme-level memory results.
 8. `POST /knowledge` and `POST /skills` let the standalone UI save edited draft artifacts back through the service layer.
 9. The server serializes the domain result as JSON and returns an HTTP status that matches the action.
-10. Daily candidate creation and AI suggestions stay separate so suggestion reads cannot silently write reviewed memory.
+10. Daily candidate creation returns task-oriented candidates with source URL refs, bounded result counts, and explicit time ranges.
+11. AI review suggestions stay separate from reviewed-memory writes, and now include a keep-score plus supporting reasons so the UI can explain why a candidate exists and why it may be worth keeping.
 
 ## Dependencies
 
@@ -77,6 +78,7 @@ Those concerns remain in the service, workflow, module, and integration layers.
 - this server is intentionally local-first and not yet production-hardened
 - authentication and multi-user concerns are out of scope for the Phase 1 MVP
 - daily candidate creation expects an explicit `reviewDate`
+- candidate payloads can include `sourceRefs` so clients can render the concrete visited URLs behind each task
 - reviewed-memory writes require an explicit `reviewedAt` timestamp for auditability
 - draft save endpoints trust the caller to send a full artifact payload and do not yet offer field-level patch semantics
 - `POST /memory/query` is still a thin Phase 2A contract and does not yet expose pagination or mature ranking controls

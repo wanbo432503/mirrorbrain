@@ -2,15 +2,15 @@
 
 ## Summary
 
-This component turns raw `MemoryEvent` records into daily `CandidateMemory` streams and records explicit human review outcomes. In Phase 1, candidate generation is scoped to a single review date and uses deterministic stream grouping so the same daily inputs produce the same candidate ids.
+This component turns raw `MemoryEvent` records into daily `CandidateMemory` streams and records explicit human review outcomes. Candidate generation is scoped to a single review date and now uses deterministic task-oriented browser grouping so related URLs can collapse into a human-reviewable "piece of work" instead of a flat host/path bucket.
 
 ## Responsibility Boundary
 
 This component is responsible for:
 
 - filtering raw memory events into a daily review window
-- grouping daily events into one or more candidate memory streams
-- deriving stream metadata such as `title`, `theme`, `summary`, and `timeRange`
+- grouping daily events into one or more task-oriented candidate memory streams
+- deriving stream metadata such as `title`, `theme`, `summary`, `timeRange`, and source URL refs
 - recording explicit `keep` or `discard` review decisions while preserving candidate context
 
 This component is not responsible for:
@@ -30,19 +30,21 @@ This component is not responsible for:
 
 1. A caller passes normalized memory events and a `reviewDate` into `createCandidateMemories(...)`.
 2. The component keeps only events whose timestamp falls on that review date.
-3. The component groups those events into candidate streams using a deterministic browser-focused stream key.
+3. The component extracts browser-title and URL tokens, then groups events into task-oriented candidate streams using deterministic heuristic similarity across time, tokens, and hosts.
 4. Each `CandidateMemory` includes stream metadata:
    - `id`
    - `memoryEventIds`
+   - `sourceRefs`
    - `title`
    - `theme`
    - `summary`
    - `reviewDate`
    - `timeRange`
    - `reviewState`
-5. A caller applies an explicit human decision with `reviewCandidateMemory(...)`.
-6. The component returns a `ReviewedMemory` that preserves the candidate title, summary, theme, and memory-event linkage alongside the review decision.
-7. A caller may request `suggestCandidateReviews(...)` to get suggestion-only review hints before any human decision is recorded.
+5. Candidate generation caps the final result set at 10 streams by merging the weakest low-evidence groups into nearby stronger tasks.
+6. A caller applies an explicit human decision with `reviewCandidateMemory(...)`.
+7. The component returns a `ReviewedMemory` that preserves the candidate title, summary, theme, and memory-event linkage alongside the review decision.
+8. A caller may request `suggestCandidateReviews(...)` to get suggestion-only review hints, supporting reasons, and a keep-score before any human decision is recorded.
 
 ## Key Data Structures
 
@@ -50,6 +52,7 @@ This component is not responsible for:
 
 - represents a single daily memory stream, not a first-event placeholder
 - has a stable id derived from review date plus the stream key
+- carries `sourceRefs` so the review UI can show the concrete URLs and visit times that justify the task
 - remains in `pending` state until an explicit review decision is recorded
 
 ### `ReviewedMemory`
@@ -61,7 +64,7 @@ This component is not responsible for:
 ### `CandidateReviewSuggestion`
 
 - suggestion-only artifact for AI-assisted or rule-based triage
-- includes recommendation, rationale, confidence, and priority
+- includes recommendation, rationale, confidence, keep-score, supporting reasons, and priority
 - must not be treated as a reviewed memory or implicit approval
 
 ## Dependencies
@@ -72,9 +75,10 @@ This component is not responsible for:
 
 - candidate creation throws if the selected review date has no memory events
 - daily scope currently depends on ISO timestamp prefixes matching the provided `reviewDate`
-- grouping is intentionally simple for Phase 1 and optimized for deterministic browser-event streams, not semantic clustering
+- grouping is heuristic rather than model-based, so it can still miss subtle semantic relationships between tasks
+- candidate generation is intentionally capped at 10 tasks, which means weak one-off activity may be merged into broader neighbors
 - reviewed memory still requires a caller-supplied timestamp for auditability
-- AI review suggestions are currently rule-based placeholders and should be treated as advisory only
+- AI review suggestions are currently heuristic and should be treated as advisory only
 
 ## Test Strategy
 
@@ -83,6 +87,6 @@ This component is not responsible for:
 
 ## Known Risks Or Limitations
 
-- stream grouping is rule-based, so multiple tabs within the same host/path family may collapse into one candidate
-- AI review suggestions exist, but they are not backed by a real model yet
+- stream grouping is heuristic and task-token-based, so unrelated pages with shallow shared wording can still merge incorrectly
+- AI review suggestions exist, but they are still heuristic rather than model-backed
 - daily scope assumes caller and source timestamps use a consistent day boundary

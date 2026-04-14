@@ -110,6 +110,13 @@ export interface MemoryQueryResult {
 export interface CandidateMemory {
   id: string;
   memoryEventIds: string[];
+  sourceRefs?: Array<{
+    id: string;
+    sourceType: string;
+    timestamp: string;
+    title?: string;
+    url?: string;
+  }>;
   title: string;
   summary: string;
   theme: string;
@@ -137,8 +144,10 @@ export interface CandidateReviewSuggestion {
   candidateMemoryId: string;
   recommendation: 'keep' | 'discard' | 'review';
   confidenceScore: number;
+  keepScore?: number;
   priorityScore: number;
   rationale: string;
+  supportingReasons?: string[];
 }
 
 export interface KnowledgeArtifact {

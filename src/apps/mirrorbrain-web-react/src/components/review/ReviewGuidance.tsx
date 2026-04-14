@@ -68,6 +68,26 @@ export default function ReviewGuidance({ suggestion, reviewedMemory }: ReviewGui
                 </div>
               </div>
 
+              {/* Keep Score */}
+              {typeof suggestion.keepScore === 'number' && (
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-heading font-semibold text-slate-600 uppercase">
+                      Keep Score
+                    </p>
+                    <p className="text-sm font-heading font-bold text-slate-900">
+                      {Math.round(suggestion.keepScore)}%
+                    </p>
+                  </div>
+                  <div className="w-full bg-slate-200 rounded-full h-2">
+                    <div
+                      className="bg-emerald-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${Math.max(0, Math.min(100, suggestion.keepScore))}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* Priority Score */}
               <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
                 <div className="flex items-center justify-between">
@@ -89,6 +109,21 @@ export default function ReviewGuidance({ suggestion, reviewedMemory }: ReviewGui
                   {suggestion.rationale}
                 </p>
               </div>
+
+              {suggestion.supportingReasons && suggestion.supportingReasons.length > 0 && (
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                  <p className="text-xs font-heading font-semibold text-slate-600 uppercase mb-2">
+                    Why This Candidate Exists
+                  </p>
+                  <ul className="space-y-2">
+                    {suggestion.supportingReasons.map((reason) => (
+                      <li key={reason} className="font-body text-sm text-slate-700 leading-relaxed">
+                        {reason}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
         )}

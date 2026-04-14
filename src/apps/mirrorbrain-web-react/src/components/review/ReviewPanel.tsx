@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import ReviewActions from './ReviewActions'
 import MetricGrid from './MetricGrid'
 import CandidateList from './CandidateList'
@@ -17,10 +17,15 @@ function getTodayDateString(): string {
 }
 
 export default function ReviewPanel() {
-  const api: MirrorBrainWebAppApi = createMirrorBrainBrowserApi(window.location.origin)
+  const api: MirrorBrainWebAppApi = useMemo(
+    () => createMirrorBrainBrowserApi(window.location.origin),
+    []
+  )
 
   const {
     candidates,
+    reviewWindowDate,
+    reviewWindowEventCount,
     selectedCandidateId,
     reviewedMemory,
     feedback,
@@ -93,8 +98,8 @@ export default function ReviewPanel() {
       {/* Metrics Grid */}
       <MetricGrid
         candidateCount={candidates.length}
-        reviewWindowDate={reviewDate}
-        reviewWindowEventCount={candidates.length}
+        reviewWindowDate={reviewWindowDate ?? reviewDate}
+        reviewWindowEventCount={reviewWindowEventCount}
       />
 
       {/* Three-Column Layout */}

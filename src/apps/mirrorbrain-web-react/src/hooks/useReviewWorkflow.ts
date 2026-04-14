@@ -33,7 +33,13 @@ export function useReviewWorkflow(api: MirrorBrainWebAppApi) {
         // Set review window info
         dispatch({
           type: 'SET_REVIEW_WINDOW',
-          payload: { date: reviewDate, eventCount: candidates.length },
+          payload: {
+            date: reviewDate,
+            eventCount: candidates.reduce(
+              (count, candidate) => count + candidate.memoryEventIds.length,
+              0
+            ),
+          },
         })
 
         setFeedback({
@@ -116,6 +122,8 @@ export function useReviewWorkflow(api: MirrorBrainWebAppApi) {
 
   return {
     candidates: state.candidateMemories,
+    reviewWindowDate: state.reviewWindowDate,
+    reviewWindowEventCount: state.reviewWindowEventCount,
     selectedCandidateId,
     reviewSuggestions,
     reviewedMemory,

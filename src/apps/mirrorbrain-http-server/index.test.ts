@@ -31,6 +31,13 @@ function createCandidateMemoryFixture(input: {
       startAt: '2026-03-20T08:00:00.000Z',
       endAt: '2026-03-20T08:15:00.000Z',
     },
+    sourceRefs: input.memoryEventIds.map((memoryEventId, index) => ({
+      id: memoryEventId,
+      sourceType: 'activitywatch-browser',
+      timestamp: `2026-03-20T08:${String(index).padStart(2, '0')}:00.000Z`,
+      title: `Source ${index + 1}`,
+      url: `https://example.com/${memoryEventId}`,
+    })),
     reviewState: 'pending',
   };
 }
@@ -489,9 +496,14 @@ describe('mirrorbrain http server', () => {
             'candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
           recommendation: 'keep',
           confidenceScore: 0.8,
+          keepScore: 86,
           priorityScore: 2,
           rationale:
             'This daily stream has repeated activity and is a strong keep candidate.',
+          supportingReasons: [
+            'Visited multiple related pages about the same task.',
+            'Spent enough time on the task to justify keeping it.',
+          ],
         },
       ],
     );
@@ -657,9 +669,14 @@ describe('mirrorbrain http server', () => {
             'candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
           recommendation: 'keep',
           confidenceScore: 0.8,
+          keepScore: 86,
           priorityScore: 2,
           rationale:
             'This daily stream has repeated activity and is a strong keep candidate.',
+          supportingReasons: [
+            'Visited multiple related pages about the same task.',
+            'Spent enough time on the task to justify keeping it.',
+          ],
         },
       ],
     });

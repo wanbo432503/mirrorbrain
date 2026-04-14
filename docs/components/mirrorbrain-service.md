@@ -40,8 +40,8 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 7. After explicit browser or shell sync calls through the service contract, return the sync summary immediately and schedule the corresponding narrative rebuild in the background when new events were imported.
 8. List raw imported memory when review-oriented workflows need event-level records, preferring OpenViking-backed reads and falling back to workspace-cached memory-event files when storage reads fail.
 9. Forward `openclaw` memory retrieval calls through the configured OpenViking base URL and return shaped retrieval results.
-10. Generate daily candidate streams for a requested review date.
-11. Return suggestion-only AI review hints without promoting any candidate.
+10. Generate daily task-oriented candidate streams for a requested review date, using raw workspace memory history rather than the UI display list.
+11. Return suggestion-only AI review hints without promoting any candidate, including keep-score and supporting reasons for the review UI.
 12. Record explicit keep or discard decisions and publish reviewed memory artifacts.
 13. Forward explicit knowledge and skill publishing calls to the OpenViking ingestion adapter.
 14. Build topic-knowledge merge candidates from stored draft knowledge artifacts when requested.
@@ -81,8 +81,8 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
 - stored browser and shell narratives are rebuilt after explicit service sync operations, but the rebuild now happens in the background and may lag slightly behind the returned sync summary
 - background browser polling still relies on the raw-event retrieval fallback until a later narrative-refresh hook is added there
 - generation remains caller-driven; the service exposes explicit methods but does not schedule daily review or skill extraction automatically
-- candidate generation is still a deterministic grouping call with minimal ranking logic
-- AI review suggestions are rule-based placeholders in Phase 1
+- candidate generation is heuristic and bounded to at most 10 tasks per review window
+- AI review suggestions are heuristic placeholders in Phase 1
 - retrieval methods still lack pagination and advanced ranking
 - topic-knowledge merge policy is currently a narrow rule-based baseline for Milestone 2, not the final Phase 3 quality engine
 - topic merge remains workflow/service-only in this slice; HTTP/UI exposure belongs to later Phase 3 milestones

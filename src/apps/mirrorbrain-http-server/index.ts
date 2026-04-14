@@ -186,6 +186,20 @@ const candidateMemorySchema = {
       type: 'array',
       items: { type: 'string' },
     },
+    sourceRefs: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          sourceType: { type: 'string' },
+          timestamp: { type: 'string' },
+          title: { type: 'string' },
+          url: { type: 'string' },
+        },
+        required: ['id', 'sourceType', 'timestamp'],
+      },
+    },
     title: { type: 'string' },
     summary: { type: 'string' },
     theme: { type: 'string' },
@@ -250,8 +264,13 @@ const candidateReviewSuggestionSchema = {
       enum: ['keep', 'discard', 'review'],
     },
     confidenceScore: { type: 'number' },
+    keepScore: { type: 'number' },
     priorityScore: { type: 'number' },
     rationale: { type: 'string' },
+    supportingReasons: {
+      type: 'array',
+      items: { type: 'string' },
+    },
   },
   required: [
     'candidateMemoryId',

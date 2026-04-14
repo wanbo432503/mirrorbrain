@@ -9,16 +9,25 @@ import type {
 
 function createCandidateMemoryFixture(): CandidateMemory {
   return {
-    id: 'candidate:2026-03-20:activitywatch-browser:example-com:tasks',
+    id: 'candidate:2026-03-20:activitywatch-browser:tasks',
     memoryEventIds: ['browser:aw-event-1'],
-    title: 'Example Com / tasks',
-    summary: '1 browser event about Example Com / tasks on 2026-03-20.',
-    theme: 'example.com / tasks',
+    title: 'Work on Tasks',
+    summary: '1 browser event connected to Work on Tasks across one site over about 1 minutes.',
+    theme: 'tasks',
     reviewDate: '2026-03-20',
     timeRange: {
       startAt: '2026-03-20T08:00:00.000Z',
       endAt: '2026-03-20T08:00:00.000Z',
     },
+    sourceRefs: [
+      {
+        id: 'browser:aw-event-1',
+        sourceType: 'activitywatch-browser',
+        timestamp: '2026-03-20T08:00:00.000Z',
+        title: 'Example Tasks',
+        url: 'https://example.com/tasks',
+      },
+    ],
     reviewState: 'pending',
   };
 }
@@ -412,9 +421,14 @@ describe('mirrorbrain service contract integration', () => {
         candidateMemoryId: candidate.id,
         recommendation: 'review',
         confidenceScore: 0.55,
+        keepScore: 46,
         priorityScore: 1,
         rationale:
-          'This daily stream has limited evidence and should stay in human review.',
+          'This candidate may be useful, but the evidence is moderate enough that it should stay in human review.',
+        supportingReasons: [
+          '1 related visits were grouped into one task.',
+          'The task lasted about 1 minutes.',
+        ],
       },
     ]);
   });

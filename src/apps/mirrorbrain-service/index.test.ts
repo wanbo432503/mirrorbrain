@@ -18,16 +18,21 @@ function createCandidateMemoryFixture(input: {
   return {
     id: input.id,
     memoryEventIds: input.memoryEventIds,
-    title: 'Docs Example Com / guides',
-    summary: `${input.memoryEventIds.length} browser events about Docs Example Com / guides on ${
-      input.reviewDate ?? '2026-03-20'
-    }.`,
-    theme: 'docs.example.com / guides',
+    title: 'Work on Example Tasks',
+    summary: `${input.memoryEventIds.length} browser event connected to Work on Example Tasks across one site over about 1 minutes.`,
+    theme: 'example / tasks',
     reviewDate: input.reviewDate ?? '2026-03-20',
     timeRange: {
       startAt: '2026-03-20T08:00:00.000Z',
       endAt: '2026-03-20T08:15:00.000Z',
     },
+    sourceRefs: input.memoryEventIds.map((memoryEventId, index) => ({
+      id: memoryEventId,
+      sourceType: 'activitywatch-browser',
+      timestamp: `2026-03-20T08:${String(index).padStart(2, '0')}:00.000Z`,
+      title: `Source ${index + 1}`,
+      url: `https://example.com/${memoryEventId}`,
+    })),
     reviewState: 'pending',
   };
 }
@@ -42,9 +47,10 @@ function createReviewedMemoryFixture(input?: {
     candidateMemoryId:
       input?.candidateMemoryId ??
       'candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
-    candidateTitle: 'Docs Example Com / guides',
-    candidateSummary: '1 browser event about Docs Example Com / guides on 2026-03-20.',
-    candidateTheme: 'docs.example.com / guides',
+    candidateTitle: 'Work on Example Tasks',
+    candidateSummary:
+      '1 browser event connected to Work on Example Tasks across one site over about 1 minutes.',
+    candidateTheme: 'example / tasks',
     memoryEventIds: ['browser:aw-event-1'],
     reviewDate: '2026-03-20',
     decision: input?.decision ?? 'keep',

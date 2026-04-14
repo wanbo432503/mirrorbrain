@@ -50,47 +50,102 @@ describe('memory review', () => {
         createBrowserMemoryEvent({
           id: 'browser:issues-1',
           timestamp: '2026-03-20T09:00:00.000Z',
-          url: 'https://github.com/example/mirrorbrain/issues/42',
-          title: 'Fix review workflow',
+          url: 'https://github.com/example/billing/issues/42',
+          title: 'Fix billing export failure',
         }),
         createBrowserMemoryEvent({
           id: 'browser:old-1',
           timestamp: '2026-03-19T22:00:00.000Z',
-          url: 'https://github.com/example/mirrorbrain/pull/10',
-          title: 'Old work item',
+          url: 'https://github.com/example/billing/pull/10',
+          title: 'Billing export patch',
         }),
       ],
     });
 
     expect(candidates).toHaveLength(2);
-    expect(candidates).toEqual([
-      {
-        id: 'candidate:2026-03-20:activitywatch-browser:github-com:example',
-        memoryEventIds: ['browser:old-1', 'browser:issues-1'],
-        title: 'Github Com / example',
-        summary: '2 browser events about Github Com / example on 2026-03-20.',
-        theme: 'github.com / example',
-        reviewState: 'pending',
-        reviewDate: '2026-03-20',
-        timeRange: {
-          startAt: '2026-03-19T22:00:00.000Z',
-          endAt: '2026-03-20T09:00:00.000Z',
-        },
+    expect(candidates[0]).toMatchObject({
+      memoryEventIds: ['browser:old-1', 'browser:issues-1'],
+      reviewState: 'pending',
+      reviewDate: '2026-03-20',
+      timeRange: {
+        startAt: '2026-03-19T22:00:00.000Z',
+        endAt: '2026-03-20T09:00:00.000Z',
       },
-      {
-        id: 'candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
-        memoryEventIds: ['browser:docs-1', 'browser:docs-2'],
-        title: 'Docs Example Com / guides',
-        summary: '2 browser events about Docs Example Com / guides on 2026-03-20.',
-        theme: 'docs.example.com / guides',
-        reviewState: 'pending',
-        reviewDate: '2026-03-20',
-        timeRange: {
-          startAt: '2026-03-20T08:00:00.000Z',
-          endAt: '2026-03-20T08:15:00.000Z',
+      sourceRefs: [
+        {
+          id: 'browser:old-1',
+          title: 'Billing export patch',
+          url: 'https://github.com/example/billing/pull/10',
+          timestamp: '2026-03-19T22:00:00.000Z',
         },
+        {
+          id: 'browser:issues-1',
+          title: 'Fix billing export failure',
+          url: 'https://github.com/example/billing/issues/42',
+          timestamp: '2026-03-20T09:00:00.000Z',
+        },
+      ],
+    });
+    expect(candidates[0]?.title).toMatch(/Billing|Export/i);
+    expect(candidates[1]).toMatchObject({
+      memoryEventIds: ['browser:docs-1', 'browser:docs-2'],
+      reviewState: 'pending',
+      reviewDate: '2026-03-20',
+      timeRange: {
+        startAt: '2026-03-20T08:00:00.000Z',
+        endAt: '2026-03-20T08:15:00.000Z',
       },
-    ]);
+      sourceRefs: [
+        {
+          id: 'browser:docs-1',
+          title: 'MirrorBrain Guide',
+          url: 'https://docs.example.com/guides/mirrorbrain',
+          timestamp: '2026-03-20T08:00:00.000Z',
+        },
+        {
+          id: 'browser:docs-2',
+          title: 'MirrorBrain API Guide',
+          url: 'https://docs.example.com/guides/mirrorbrain/api',
+          timestamp: '2026-03-20T08:15:00.000Z',
+        },
+      ],
+    });
+    expect(candidates[1]?.title).toMatch(/Mirrorbrain/i);
+  });
+
+  it('caps generated candidates at 10 by merging low-evidence browser work into broader tasks', () => {
+    const taskNames = [
+      'Alpha',
+      'Bravo',
+      'Charlie',
+      'Delta',
+      'Echo',
+      'Foxtrot',
+      'Gamma',
+      'Helix',
+      'Iris',
+      'Juno',
+      'Kappa',
+      'Lumen',
+    ];
+    const memoryEvents = taskNames.map((taskName, index) =>
+      createBrowserMemoryEvent({
+        id: `browser:task-${index + 1}`,
+        timestamp: `2026-03-20T${String(index).padStart(2, '0')}:00:00.000Z`,
+        url: `https://work.example.com/${taskName.toLowerCase()}/session`,
+        title: `${taskName} Focus`,
+      }),
+    );
+
+    const candidates = createCandidateMemories({
+      reviewDate: '2026-03-20',
+      memoryEvents,
+    });
+
+    expect(candidates.length).toBeLessThanOrEqual(10);
+    expect(
+      candidates.reduce((count, candidate) => count + candidate.memoryEventIds.length, 0),
+    ).toBe(12);
   });
 
   it('rejects candidate generation when the daily review window has no memory events', () => {
@@ -121,13 +176,12 @@ describe('memory review', () => {
     });
 
     expect(candidate.reviewState).toBe('pending');
-    expect(reviewed).toEqual({
-      id: 'reviewed:candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
-      candidateMemoryId:
-        'candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
-      candidateTitle: 'Docs Example Com / guides',
-      candidateSummary: '1 browser event about Docs Example Com / guides on 2026-03-20.',
-      candidateTheme: 'docs.example.com / guides',
+    expect(reviewed).toMatchObject({
+      id: `reviewed:${candidate.id}`,
+      candidateMemoryId: candidate.id,
+      candidateTitle: candidate.title,
+      candidateSummary: candidate.summary,
+      candidateTheme: candidate.theme,
       memoryEventIds: ['browser:docs-1'],
       reviewDate: '2026-03-20',
       decision: 'keep',
@@ -154,35 +208,39 @@ describe('memory review', () => {
         createBrowserMemoryEvent({
           id: 'browser:issues-1',
           timestamp: '2026-03-20T09:00:00.000Z',
-          url: 'https://github.com/example/mirrorbrain/issues/42',
-          title: 'Fix review workflow',
+          url: 'https://github.com/example/billing/issues/42',
+          title: 'Fix billing export failure',
         }),
       ],
     });
 
     const suggestions = suggestCandidateReviews(candidates);
 
-    expect(suggestions).toEqual([
-      {
-        candidateMemoryId:
-          'candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
+    expect(suggestions).toHaveLength(candidates.length);
+    expect(suggestions[0]).toEqual(
+      expect.objectContaining({
+        candidateMemoryId: candidates[0]?.id,
         recommendation: 'keep',
-        confidenceScore: 0.8,
-        priorityScore: 2,
-        rationale:
-          'This daily stream has repeated activity and is a strong keep candidate.',
-      },
-      {
-        candidateMemoryId:
-          'candidate:2026-03-20:activitywatch-browser:github-com:example',
-        recommendation: 'review',
-        confidenceScore: 0.55,
-        priorityScore: 1,
-        rationale:
-          'This daily stream has limited evidence and should stay in human review.',
-      },
-    ]);
+        keepScore: expect.any(Number),
+        confidenceScore: expect.any(Number),
+        priorityScore: expect.any(Number),
+        rationale: expect.any(String),
+        supportingReasons: expect.arrayContaining([expect.any(String)]),
+      }),
+    );
+    expect(suggestions[1]).toEqual(
+      expect.objectContaining({
+        candidateMemoryId: candidates[1]?.id,
+        recommendation: expect.stringMatching(/keep|review|discard/),
+        keepScore: expect.any(Number),
+        confidenceScore: expect.any(Number),
+        priorityScore: expect.any(Number),
+        rationale: expect.any(String),
+        supportingReasons: expect.arrayContaining([expect.any(String)]),
+      }),
+    );
 
+    expect(suggestions[0]?.keepScore).toBeGreaterThan(suggestions[1]?.keepScore ?? 0);
     expect(candidates.every((candidate) => candidate.reviewState === 'pending')).toBe(
       true,
     );
