@@ -22,6 +22,7 @@ function createCandidateMemoryFixture(): CandidateMemory {
     sourceRefs: [
       {
         id: 'browser:aw-event-1',
+        contribution: 'primary',
         sourceType: 'activitywatch-browser',
         timestamp: '2026-03-20T08:00:00.000Z',
         title: 'Example Tasks',

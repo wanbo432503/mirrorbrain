@@ -97,15 +97,21 @@ export function createCandidateMemories(
       id: `candidate:${input.reviewDate}:${stableKeys[index]}`,
       memoryEventIds: sortedEvents.map((event) => event.id),
       sourceRefs: sortedEvents.map((event) => ({
+        role: inferPageRole({
+          url: typeof event.content.url === 'string' ? event.content.url : undefined,
+          title: typeof event.content.title === 'string' ? event.content.title : undefined,
+        }),
+        contribution: inferSourceContribution(
+          inferPageRole({
+            url: typeof event.content.url === 'string' ? event.content.url : undefined,
+            title: typeof event.content.title === 'string' ? event.content.title : undefined,
+          }),
+        ),
         id: event.id,
         sourceType: event.sourceType,
         timestamp: event.timestamp,
         title: typeof event.content.title === 'string' ? event.content.title : undefined,
         url: typeof event.content.url === 'string' ? event.content.url : undefined,
-        role: inferPageRole({
-          url: typeof event.content.url === 'string' ? event.content.url : undefined,
-          title: typeof event.content.title === 'string' ? event.content.title : undefined,
-        }),
       })),
       title: group.title,
       summary: createCandidateSummary({
@@ -586,6 +592,16 @@ function inferPageRole(input: {
   }
 
   return 'web';
+}
+
+function inferSourceContribution(
+  role: 'search' | 'docs' | 'chat' | 'issue' | 'pull-request' | 'repository' | 'debug' | 'reference' | 'web',
+): 'primary' | 'supporting' {
+  if (role === 'search' || role === 'chat') {
+    return 'supporting';
+  }
+
+  return 'primary';
 }
 
 function getCalendarDateForComparison(

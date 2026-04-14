@@ -56,6 +56,7 @@ This component is not responsible for:
 - has a stable id derived from review date plus the stream key
 - carries `sourceRefs` so the review UI can show the concrete URLs and visit times that justify the task
 - `sourceRefs` can also carry page-role hints that explain whether a page acted like docs, search, chat, issue, PR, debug, or a generic web page
+- `sourceRefs` can distinguish `primary` pages from `supporting` pages so the review UI can separate core task evidence from auxiliary browsing
 - remains in `pending` state until an explicit review decision is recorded
 
 ### `ReviewedMemory`

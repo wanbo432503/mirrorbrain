@@ -117,6 +117,7 @@ export interface CandidateMemory {
     title?: string;
     url?: string;
     role?: 'search' | 'docs' | 'chat' | 'issue' | 'pull-request' | 'repository' | 'debug' | 'reference' | 'web';
+    contribution?: 'primary' | 'supporting';
   }>;
   title: string;
   summary: string;

@@ -461,4 +461,89 @@ describe('memory review', () => {
       expect.objectContaining({ id: 'browser:issue-role', role: 'issue' }),
     ]);
   });
+
+  it('marks core task pages as primary sources and auxiliary pages as supporting sources', () => {
+    const [candidate] = createCandidateMemories({
+      reviewDate: '2026-04-14',
+      memoryEvents: [
+        {
+          ...createBrowserMemoryEvent({
+            id: 'browser:search-primary',
+            timestamp: '2026-04-14T09:00:00.000Z',
+            url: 'https://google.com/search?q=mirrorbrain+stale+cache',
+            title: 'mirrorbrain stale cache - Google Search',
+          }),
+          content: {
+            url: 'https://google.com/search?q=mirrorbrain+stale+cache',
+            title: 'mirrorbrain stale cache - Google Search',
+            pageText: 'Search results for mirrorbrain stale cache invalidation bug.',
+          },
+        },
+        {
+          ...createBrowserMemoryEvent({
+            id: 'browser:docs-primary',
+            timestamp: '2026-04-14T09:04:00.000Z',
+            url: 'https://docs.example.com/cache/invalidation',
+            title: 'Cache invalidation guide',
+          }),
+          content: {
+            url: 'https://docs.example.com/cache/invalidation',
+            title: 'Cache invalidation guide',
+            pageText:
+              'MirrorBrain cache invalidation guide for stale cache recovery after browser sync.',
+          },
+        },
+        {
+          ...createBrowserMemoryEvent({
+            id: 'browser:issue-primary',
+            timestamp: '2026-04-14T09:12:00.000Z',
+            url: 'https://github.com/example/platform/issues/77',
+            title: 'Fix stale cache after sync',
+          }),
+          content: {
+            url: 'https://github.com/example/platform/issues/77',
+            title: 'Fix stale cache after sync',
+            pageText:
+              'Issue tracking stale cache after browser sync and invalidation failures.',
+          },
+        },
+        {
+          ...createBrowserMemoryEvent({
+            id: 'browser:chat-supporting',
+            timestamp: '2026-04-14T09:16:00.000Z',
+            url: 'https://chatgpt.com/c/stale-cache',
+            title: 'stale cache investigation',
+          }),
+          content: {
+            url: 'https://chatgpt.com/c/stale-cache',
+            title: 'stale cache investigation',
+            pageText: 'Reason about stale cache debugging steps in MirrorBrain.',
+          },
+        },
+      ],
+    });
+
+    expect(candidate?.sourceRefs).toEqual([
+      expect.objectContaining({
+        id: 'browser:search-primary',
+        role: 'search',
+        contribution: 'supporting',
+      }),
+      expect.objectContaining({
+        id: 'browser:docs-primary',
+        role: 'docs',
+        contribution: 'primary',
+      }),
+      expect.objectContaining({
+        id: 'browser:issue-primary',
+        role: 'issue',
+        contribution: 'primary',
+      }),
+      expect.objectContaining({
+        id: 'browser:chat-supporting',
+        role: 'chat',
+        contribution: 'supporting',
+      }),
+    ]);
+  });
 });
