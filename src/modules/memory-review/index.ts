@@ -34,7 +34,7 @@ interface EventDescriptor {
   title?: string;
   role: 'search' | 'docs' | 'chat' | 'issue' | 'pull-request' | 'repository' | 'debug' | 'reference' | 'web';
   tokens: string[];
-  repeatedTokens: string[];
+  salientTokens: string[];
 }
 
 const MAX_DAILY_CANDIDATES = 10;
@@ -72,6 +72,25 @@ const TOKEN_STOP_WORDS = new Set([
   'general',
   'task',
   'overview',
+  'implementation',
+  'verify',
+  'verification',
+  'check',
+  'checks',
+  'checklist',
+  'notes',
+  'status',
+  'issue',
+  'patch',
+  'review',
+  'rollout',
+  'release',
+  'summary',
+  'steps',
+  'guide',
+  'plan',
+  'google',
+  'results',
 ]);
 
 export function createCandidateMemories(
@@ -317,15 +336,18 @@ function buildEventDescriptors(memoryEvents: MemoryEvent[]): EventDescriptor[] {
       title,
       role,
       tokens,
-      repeatedTokens: [] as string[],
+      salientTokens: [] as string[],
     };
   });
 
+  const maxCommonCount = Math.max(2, Math.ceil(memoryEvents.length / 3));
+
   return baseDescriptors.map((descriptor) => ({
     ...descriptor,
-    repeatedTokens: descriptor.tokens.filter(
-      (token) => (tokenCounts.get(token) ?? 0) >= 2,
-    ),
+    salientTokens: descriptor.tokens.filter((token) => {
+      const count = tokenCounts.get(token) ?? 0;
+      return count >= 2 && count <= maxCommonCount;
+    }),
   }));
 }
 
@@ -361,18 +383,45 @@ function extractEventTokens(input: {
 }): string[] {
   const titleTokens = extractTokens(input.title ?? '');
   const pageTitleTokens = extractTokens(input.pageTitle ?? '');
-  const pageTextTokens = extractTokens(input.pageText ?? '').slice(0, 40);
-  const urlTokens = input.url === undefined ? [] : extractTokens(input.url);
-  const hostTokens = extractTokens(input.host);
+  const pageTextTokens = extractRepeatedPageTextTokens(
+    input.pageText ?? '',
+    new Set([...titleTokens, ...pageTitleTokens]),
+  ).slice(0, 40);
+  const fallbackUrlTokens =
+    titleTokens.length === 0 && pageTitleTokens.length === 0 && pageTextTokens.length === 0
+      ? input.url === undefined
+        ? []
+        : extractTokens(input.url)
+      : [];
+  const fallbackHostTokens =
+    titleTokens.length === 0 && pageTitleTokens.length === 0 && pageTextTokens.length === 0
+      ? extractTokens(input.host)
+      : [];
 
   return Array.from(
     new Set([
       ...titleTokens,
       ...pageTitleTokens,
       ...pageTextTokens,
-      ...urlTokens,
-      ...hostTokens,
+      ...fallbackUrlTokens,
+      ...fallbackHostTokens,
     ]),
+  );
+}
+
+function extractRepeatedPageTextTokens(
+  value: string,
+  titleTokens: Set<string>,
+): string[] {
+  const rawTokens = extractTokens(value);
+  const counts = new Map<string, number>();
+
+  for (const token of rawTokens) {
+    counts.set(token, (counts.get(token) ?? 0) + 1);
+  }
+
+  return rawTokens.filter(
+    (token) => (counts.get(token) ?? 0) >= 2 || titleTokens.has(token),
   );
 }
 
@@ -385,8 +434,8 @@ function extractTokens(value: string): string[] {
 }
 
 function createCandidateGroup(descriptor: EventDescriptor): CandidateStreamGroup {
-  const taskTokens = descriptor.repeatedTokens.length > 0
-    ? descriptor.repeatedTokens
+  const taskTokens = descriptor.salientTokens.length > 0
+    ? descriptor.salientTokens
     : descriptor.tokens.slice(0, 3);
   const hosts = [descriptor.host];
 
@@ -471,7 +520,7 @@ function scoreDescriptorAgainstGroup(
   descriptor: EventDescriptor,
 ): number {
   const groupTokens = new Set(group.taskTokens);
-  const repeatedOverlap = descriptor.repeatedTokens.filter((token) =>
+  const salientOverlap = descriptor.salientTokens.filter((token) =>
     groupTokens.has(token),
   ).length;
   const anyOverlap = descriptor.tokens.filter((token) => groupTokens.has(token)).length;
@@ -493,14 +542,20 @@ function scoreDescriptorAgainstGroup(
       ? 1
       : (descriptor.role === 'search' || descriptor.role === 'chat') &&
           hasPrimaryRole &&
-          repeatedOverlap > 0
+          salientOverlap > 0
         ? 1
         : 0;
   const groupEnd = group.memoryEvents[group.memoryEvents.length - 1]?.timestamp ?? '';
   const minutesGap = getDurationMinutes(groupEnd, descriptor.event.timestamp);
   const timeBonus = minutesGap <= 120 ? 1 : 0;
+  const supportingOnlyDescriptor =
+    descriptor.role === 'search' || descriptor.role === 'chat';
 
-  return repeatedOverlap * 4 + anyOverlap * 2 + sameHost + roleBonus + timeBonus;
+  if (supportingOnlyDescriptor && salientOverlap === 0 && anyOverlap === 0) {
+    return 0;
+  }
+
+  return salientOverlap * 4 + anyOverlap * 2 + sameHost + roleBonus + timeBonus;
 }
 
 function limitCandidateGroups(
@@ -510,33 +565,33 @@ function limitCandidateGroups(
   const limitedGroups = [...groups];
 
   while (limitedGroups.length > maxCount) {
-    limitedGroups.sort(
-      (left, right) =>
-        left.memoryEvents.length - right.memoryEvents.length ||
-        getDurationMinutes(
-          left.memoryEvents[0]?.timestamp ?? '',
-          left.memoryEvents[left.memoryEvents.length - 1]?.timestamp ?? '',
-        ) -
-          getDurationMinutes(
-            right.memoryEvents[0]?.timestamp ?? '',
-            right.memoryEvents[right.memoryEvents.length - 1]?.timestamp ?? '',
-          ),
-    );
+    limitedGroups.sort(compareGroupsForCompression);
 
-    const groupToMerge = limitedGroups.shift();
+    const mergeIndex = limitedGroups.findIndex((group) =>
+      classifyGroupForCompression(group) !== 'keep',
+    );
+    const groupToMerge =
+      mergeIndex === -1
+        ? limitedGroups.shift()
+        : limitedGroups.splice(mergeIndex, 1)[0];
 
     if (groupToMerge === undefined || limitedGroups.length === 0) {
       break;
     }
 
-    const mergeTarget =
-      limitedGroups
-        .map((group) => ({
-          group,
-          score: scoreGroupSimilarity(group, groupToMerge),
-        }))
-        .sort((left, right) => right.score - left.score)[0]?.group ??
-      limitedGroups[0];
+    const mergeCandidates = limitedGroups
+      .map((group) => ({
+        group,
+        score: scoreGroupSimilarity(group, groupToMerge),
+      }))
+      .sort((left, right) => right.score - left.score);
+    const mergeTarget = mergeCandidates[0]?.group ?? limitedGroups[0];
+    const mergeScore = mergeCandidates[0]?.score ?? 0;
+    const compressionAction = decideCompressionAction(groupToMerge, mergeScore);
+
+    if (compressionAction === 'discard') {
+      continue;
+    }
 
     mergeTarget.memoryEvents.push(...groupToMerge.memoryEvents);
     mergeTarget.memoryEvents.sort((left, right) => left.timestamp.localeCompare(right.timestamp));
@@ -560,6 +615,19 @@ function limitCandidateGroups(
   );
 }
 
+function decideCompressionAction(
+  group: CandidateStreamGroup,
+  mergeScore: number,
+): 'discard' | 'merge' {
+  const classification = classifyGroupForCompression(group);
+
+  if (classification === 'discard') {
+    return mergeScore >= 4 ? 'merge' : 'discard';
+  }
+
+  return 'merge';
+}
+
 function scoreGroupSimilarity(
   left: CandidateStreamGroup,
   right: CandidateStreamGroup,
@@ -567,8 +635,95 @@ function scoreGroupSimilarity(
   const leftTokens = new Set(left.taskTokens);
   const sharedTokens = right.taskTokens.filter((token) => leftTokens.has(token)).length;
   const sharedHosts = right.hosts.filter((host) => left.hosts.includes(host)).length;
+  const leftRoles = new Set(buildGroupRoles(left));
+  const rightRoles = new Set(buildGroupRoles(right));
+  const supportingOnlyRight = [...rightRoles].every(
+    (role) => role === 'search' || role === 'chat',
+  );
+  const leftHasPrimary = [...leftRoles].some(
+    (role) => role !== 'search' && role !== 'chat',
+  );
+  const roleBonus = supportingOnlyRight && leftHasPrimary && sharedTokens > 0 ? 2 : 0;
+  const timeDistance = Math.abs(
+    getDurationMinutes(
+      left.memoryEvents[left.memoryEvents.length - 1]?.timestamp ?? '',
+      right.memoryEvents[0]?.timestamp ?? '',
+    ),
+  );
+  const timeBonus = timeDistance <= 180 ? 1 : 0;
 
-  return sharedTokens * 3 + sharedHosts;
+  return sharedTokens * 4 + sharedHosts * 2 + roleBonus + timeBonus;
+}
+
+function compareGroupsForCompression(
+  left: CandidateStreamGroup,
+  right: CandidateStreamGroup,
+): number {
+  return (
+    getCompressionStrength(left) - getCompressionStrength(right) ||
+    left.memoryEvents.length - right.memoryEvents.length ||
+    getDurationMinutes(
+      left.memoryEvents[0]?.timestamp ?? '',
+      left.memoryEvents[left.memoryEvents.length - 1]?.timestamp ?? '',
+    ) -
+      getDurationMinutes(
+        right.memoryEvents[0]?.timestamp ?? '',
+        right.memoryEvents[right.memoryEvents.length - 1]?.timestamp ?? '',
+      )
+  );
+}
+
+function classifyGroupForCompression(
+  group: CandidateStreamGroup,
+): 'discard' | 'merge' | 'keep' {
+  const roles = buildGroupRoles(group);
+  const primaryCount = roles.filter((role) => role !== 'search' && role !== 'chat').length;
+  const eventCount = group.memoryEvents.length;
+  const strongPrimaryRole = roles.some(
+    (role) => role === 'issue' || role === 'pull-request' || role === 'debug',
+  );
+  const supportOnly = roles.every((role) => role === 'search' || role === 'chat');
+  const durationMinutes = getDurationMinutes(
+    group.memoryEvents[0]?.timestamp ?? '',
+    group.memoryEvents[group.memoryEvents.length - 1]?.timestamp ?? '',
+  );
+
+  if (supportOnly && eventCount === 1) {
+    return 'discard';
+  }
+
+  if (supportOnly && eventCount <= 2 && durationMinutes <= 5 && group.taskTokens.length < 3) {
+    return 'discard';
+  }
+
+  if (primaryCount >= 2 || strongPrimaryRole || (primaryCount >= 1 && eventCount >= 2)) {
+    return 'keep';
+  }
+
+  return 'merge';
+}
+
+function getCompressionStrength(group: CandidateStreamGroup): number {
+  const roles = buildGroupRoles(group);
+  const primaryCount = roles.filter((role) => role !== 'search' && role !== 'chat').length;
+  const eventCount = group.memoryEvents.length;
+  const durationMinutes = getDurationMinutes(
+    group.memoryEvents[0]?.timestamp ?? '',
+    group.memoryEvents[group.memoryEvents.length - 1]?.timestamp ?? '',
+  );
+
+  return primaryCount * 6 + eventCount * 3 + group.taskTokens.length * 2 + Math.min(durationMinutes, 60) / 15;
+}
+
+function buildGroupRoles(
+  group: CandidateStreamGroup,
+): Array<EventDescriptor['role']> {
+  return group.memoryEvents.map((event) =>
+    inferPageRole({
+      url: typeof event.content.url === 'string' ? event.content.url : undefined,
+      title: typeof event.content.title === 'string' ? event.content.title : undefined,
+    }),
+  );
 }
 
 function assignStableGroupKeys(groups: CandidateStreamGroup[]): string[] {

@@ -43,7 +43,10 @@ This component is not responsible for:
    - `reviewDate`
    - `timeRange`
    - `reviewState`
-7. Candidate generation caps the final result set at 10 streams by merging the weakest low-evidence groups into nearby stronger tasks.
+7. Candidate generation caps the final result set at 10 streams with a three-way compression policy:
+   - keep strong task groups independent
+   - merge weak supporting groups into the most compatible stronger task
+   - discard singleton supporting-only noise when it does not match any stronger task closely enough
 8. A caller applies an explicit human decision with `reviewCandidateMemory(...)`.
 9. The component returns a `ReviewedMemory` that preserves the candidate title, summary, theme, and memory-event linkage alongside the review decision.
 10. A caller may request `suggestCandidateReviews(...)` to get suggestion-only review hints, supporting reasons, and a keep-score before any human decision is recorded.
@@ -84,6 +87,7 @@ This component is not responsible for:
 - browser page-content text is used when available, but the flow still falls back to title/URL-only grouping when the page artifact is missing
 - page-role hints improve grouping, but they are still inferred heuristically from URLs and titles
 - candidate generation is intentionally capped at 10 tasks, which means weak one-off activity may be merged into broader neighbors
+- singleton supporting-only browser pages such as isolated search or chat visits may be dropped instead of being forced into an unrelated candidate
 - when weak fragments are merged to stay under the 10-task cap, the surviving candidate can carry compression metadata and reasons so the UI can explain the merge
 - reviewed memory still requires a caller-supplied timestamp for auditability
 - AI review suggestions are currently heuristic and should be treated as advisory only
@@ -96,6 +100,7 @@ This component is not responsible for:
 ## Known Risks Or Limitations
 
 - stream grouping is heuristic and task-token-based, so unrelated pages with shallow shared wording can still merge incorrectly
+- page-text clustering now prefers terms repeated within a page or echoed by the page title, which reduces generic-word bleed but can still miss sparse one-off clues
 - page-role hints reduce some false merges, but they do not replace stronger semantic modeling
 - AI review suggestions exist, but they are still heuristic rather than model-backed
 - daily scope assumes caller and source timestamps use a consistent day boundary

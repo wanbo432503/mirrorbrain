@@ -166,6 +166,281 @@ describe('memory review', () => {
     ).toBe(true);
   });
 
+  it('drops unrelated low-evidence search noise before merging stronger task candidates', () => {
+    const taskTerms = [
+      'atlas',
+      'beacon',
+      'cipher',
+      'delta',
+      'ember',
+      'falcon',
+      'glacier',
+      'harbor',
+      'ion',
+      'jigsaw',
+    ];
+    const strongTaskEvents = taskTerms.flatMap((taskTerm, index) => [
+      {
+        ...createBrowserMemoryEvent({
+          id: `browser:strong-docs-${index + 1}`,
+          timestamp: `2026-03-20T${String(index).padStart(2, '0')}:00:00.000Z`,
+          url: `https://docs.example.com/${taskTerm}/guide`,
+          title: `${taskTerm} guide`,
+        }),
+        content: {
+          url: `https://docs.example.com/${taskTerm}/guide`,
+          title: `${taskTerm} guide`,
+          pageText: `${taskTerm} rollout notes, ${taskTerm} validation steps, and ${taskTerm} ownership checklist.`,
+        },
+      },
+      {
+        ...createBrowserMemoryEvent({
+          id: `browser:strong-issue-${index + 1}`,
+          timestamp: `2026-03-20T${String(index).padStart(2, '0')}:10:00.000Z`,
+          url: `https://github.com/example/project/issues/${index + 1}`,
+          title: `${taskTerm} issue`,
+        }),
+        content: {
+          url: `https://github.com/example/project/issues/${index + 1}`,
+          title: `${taskTerm} issue`,
+          pageText: `${taskTerm} incident details, ${taskTerm} follow-up checks, and ${taskTerm} release tracking.`,
+        },
+      },
+    ]);
+
+    const noiseEvents = [
+      {
+        ...createBrowserMemoryEvent({
+          id: 'browser:noise-search-1',
+          timestamp: '2026-03-20T10:40:00.000Z',
+          url: 'https://google.com/search?q=weather+tomorrow',
+          title: 'weather tomorrow - Google Search',
+        }),
+        content: {
+          url: 'https://google.com/search?q=weather+tomorrow',
+          title: 'weather tomorrow - Google Search',
+          pageText: 'Search results for weather tomorrow in Shanghai.',
+        },
+      },
+      {
+        ...createBrowserMemoryEvent({
+          id: 'browser:noise-search-2',
+          timestamp: '2026-03-20T10:42:00.000Z',
+          url: 'https://google.com/search?q=lunch+near+me',
+          title: 'lunch near me - Google Search',
+        }),
+        content: {
+          url: 'https://google.com/search?q=lunch+near+me',
+          title: 'lunch near me - Google Search',
+          pageText: 'Search results for lunch near me and nearby restaurants.',
+        },
+      },
+    ];
+
+    const candidates = createCandidateMemories({
+      reviewDate: '2026-03-20',
+      memoryEvents: [...strongTaskEvents, ...noiseEvents],
+    });
+
+    expect(candidates).toHaveLength(10);
+    expect(
+      candidates.flatMap((candidate) => candidate.memoryEventIds).includes('browser:noise-search-1'),
+    ).toBe(false);
+    expect(
+      candidates.flatMap((candidate) => candidate.memoryEventIds).includes('browser:noise-search-2'),
+    ).toBe(false);
+    expect(
+      candidates.every(
+        (candidate) =>
+          candidate.memoryEventIds.some((id) => id.startsWith('browser:strong-docs-')) &&
+          candidate.memoryEventIds.some((id) => id.startsWith('browser:strong-issue-')),
+      ),
+    ).toBe(true);
+  });
+
+  it('preserves a strong singleton issue as its own candidate when the daily limit is reached', () => {
+    const taskTerms = [
+      'atlas',
+      'beacon',
+      'cipher',
+      'delta',
+      'ember',
+      'falcon',
+      'glacier',
+      'harbor',
+      'ion',
+    ];
+    const broadTasks = taskTerms.flatMap((taskTerm, index) => [
+      {
+        ...createBrowserMemoryEvent({
+          id: `browser:broad-docs-${index + 1}`,
+          timestamp: `2026-03-20T${String(index).padStart(2, '0')}:00:00.000Z`,
+          url: `https://docs.example.com/${taskTerm}/guide`,
+          title: `${taskTerm} guide`,
+        }),
+        content: {
+          url: `https://docs.example.com/${taskTerm}/guide`,
+          title: `${taskTerm} guide`,
+          pageText: `${taskTerm} plan, ${taskTerm} review notes, and ${taskTerm} verification list.`,
+        },
+      },
+      {
+        ...createBrowserMemoryEvent({
+          id: `browser:broad-pr-${index + 1}`,
+          timestamp: `2026-03-20T${String(index).padStart(2, '0')}:14:00.000Z`,
+          url: `https://github.com/example/project/pull/${index + 10}`,
+          title: `${taskTerm} rollout PR`,
+        }),
+        content: {
+          url: `https://github.com/example/project/pull/${index + 10}`,
+          title: `${taskTerm} rollout PR`,
+          pageText: `${taskTerm} patch review, ${taskTerm} diff, and ${taskTerm} launch signoff.`,
+        },
+      },
+    ]);
+
+    const singletonIssue = {
+      ...createBrowserMemoryEvent({
+        id: 'browser:singleton-issue',
+        timestamp: '2026-03-20T10:00:00.000Z',
+        url: 'https://github.com/example/project/issues/999',
+        title: 'Production login outage',
+      }),
+      content: {
+        url: 'https://github.com/example/project/issues/999',
+        title: 'Production login outage',
+        pageText:
+          'Urgent issue tracking a production login outage, incident scope, rollback, and mitigations.',
+      },
+    };
+
+    const searchSupport = {
+      ...createBrowserMemoryEvent({
+        id: 'browser:singleton-search',
+        timestamp: '2026-03-20T10:04:00.000Z',
+        url: 'https://google.com/search?q=production+login+outage+rollback',
+        title: 'production login outage rollback - Google Search',
+      }),
+      content: {
+        url: 'https://google.com/search?q=production+login+outage+rollback',
+        title: 'production login outage rollback - Google Search',
+        pageText: 'Search results for production login outage rollback and mitigation steps.',
+      },
+    };
+
+    const candidates = createCandidateMemories({
+      reviewDate: '2026-03-20',
+      memoryEvents: [...broadTasks, singletonIssue, searchSupport],
+    });
+
+    expect(candidates).toHaveLength(10);
+    expect(
+      candidates.some((candidate) => candidate.memoryEventIds.includes('browser:singleton-issue')),
+    ).toBe(true);
+    expect(
+      candidates.find((candidate) => candidate.memoryEventIds.includes('browser:singleton-issue')),
+    ).toMatchObject({
+      memoryEventIds: ['browser:singleton-issue', 'browser:singleton-search'],
+    });
+  });
+
+  it('merges weak supporting pages into the matching task before touching unrelated task candidates', () => {
+    const taskTerms = [
+      'atlas',
+      'beacon',
+      'cipher',
+      'delta',
+      'ember',
+      'falcon',
+      'glacier',
+      'harbor',
+      'ion',
+    ];
+    const broadTasks = taskTerms.flatMap((taskTerm, index) => [
+      {
+        ...createBrowserMemoryEvent({
+          id: `browser:task-docs-${index + 1}`,
+          timestamp: `2026-03-20T${String(index).padStart(2, '0')}:00:00.000Z`,
+          url: `https://docs.example.com/${taskTerm}/guide`,
+          title: `${taskTerm} guide`,
+        }),
+        content: {
+          url: `https://docs.example.com/${taskTerm}/guide`,
+          title: `${taskTerm} guide`,
+          pageText: `${taskTerm} plan, ${taskTerm} notes, and ${taskTerm} verification.`,
+        },
+      },
+      {
+        ...createBrowserMemoryEvent({
+          id: `browser:task-issue-${index + 1}`,
+          timestamp: `2026-03-20T${String(index).padStart(2, '0')}:09:00.000Z`,
+          url: `https://github.com/example/project/issues/${index + 100}`,
+          title: `${taskTerm} issue`,
+        }),
+        content: {
+          url: `https://github.com/example/project/issues/${index + 100}`,
+          title: `${taskTerm} issue`,
+          pageText: `${taskTerm} issue summary, ${taskTerm} status, and ${taskTerm} release checks.`,
+        },
+      },
+    ]);
+
+    const targetTask = [
+      {
+        ...createBrowserMemoryEvent({
+          id: 'browser:target-docs',
+          timestamp: '2026-03-20T09:00:00.000Z',
+          url: 'https://docs.example.com/cache/invalidation',
+          title: 'Cache invalidation guide',
+        }),
+        content: {
+          url: 'https://docs.example.com/cache/invalidation',
+          title: 'Cache invalidation guide',
+          pageText: 'MirrorBrain stale cache invalidation guide and recovery steps.',
+        },
+      },
+      {
+        ...createBrowserMemoryEvent({
+          id: 'browser:target-issue',
+          timestamp: '2026-03-20T09:12:00.000Z',
+          url: 'https://github.com/example/project/issues/777',
+          title: 'Fix stale cache after sync',
+        }),
+        content: {
+          url: 'https://github.com/example/project/issues/777',
+          title: 'Fix stale cache after sync',
+          pageText: 'Issue for stale cache after browser sync and invalidation failures.',
+        },
+      },
+    ];
+
+    const supportingPage = {
+      ...createBrowserMemoryEvent({
+        id: 'browser:target-search',
+        timestamp: '2026-03-20T09:06:00.000Z',
+        url: 'https://google.com/search?q=mirrorbrain+stale+cache+rollback',
+        title: 'mirrorbrain stale cache rollback - Google Search',
+      }),
+      content: {
+        url: 'https://google.com/search?q=mirrorbrain+stale+cache+rollback',
+        title: 'mirrorbrain stale cache rollback - Google Search',
+        pageText: 'Search results for mirrorbrain stale cache rollback and invalidation recovery.',
+      },
+    };
+
+    const candidates = createCandidateMemories({
+      reviewDate: '2026-03-20',
+      memoryEvents: [...broadTasks, ...targetTask, supportingPage],
+    });
+
+    expect(candidates).toHaveLength(10);
+    expect(
+      candidates.find((candidate) => candidate.memoryEventIds.includes('browser:target-docs')),
+    ).toMatchObject({
+      memoryEventIds: ['browser:target-docs', 'browser:target-search', 'browser:target-issue'],
+    });
+  });
+
   it('rejects candidate generation when the daily review window has no memory events', () => {
     expect(() =>
       createCandidateMemories({
