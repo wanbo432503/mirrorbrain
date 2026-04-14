@@ -155,6 +155,17 @@ export function suggestCandidateReviews(
   candidates: CandidateMemory[],
 ): CandidateReviewSuggestion[] {
   return candidates.map((candidate) => {
+    const primarySourceCount = (candidate.sourceRefs ?? []).filter(
+      (source) => source.contribution !== 'supporting',
+    ).length;
+    const supportingSourceCount = (candidate.sourceRefs ?? []).filter(
+      (source) => source.contribution === 'supporting',
+    ).length;
+    const evidenceSummary = `Built from ${primarySourceCount} primary page${
+      primarySourceCount === 1 ? '' : 's'
+    } and ${supportingSourceCount} supporting page${
+      supportingSourceCount === 1 ? '' : 's'
+    }.`;
     const uniqueHosts = new Set(
       (candidate.sourceRefs ?? [])
         .map((source) => source.url)
@@ -195,6 +206,9 @@ export function suggestCandidateReviews(
         recommendation: 'keep',
         confidenceScore: Math.min(0.95, keepScore / 100),
         keepScore,
+        primarySourceCount,
+        supportingSourceCount,
+        evidenceSummary,
         priorityScore: candidate.memoryEventIds.length + durationMinutes / 30,
         rationale:
           'This candidate has enough repeated and sustained activity to preserve as a meaningful work item.',
@@ -208,6 +222,9 @@ export function suggestCandidateReviews(
         recommendation: 'discard',
         confidenceScore: Math.min(0.9, (100 - keepScore) / 100),
         keepScore,
+        primarySourceCount,
+        supportingSourceCount,
+        evidenceSummary,
         priorityScore: candidate.memoryEventIds.length,
         rationale:
           'This candidate looks too small or short-lived to justify keeping without more supporting evidence.',
@@ -220,6 +237,9 @@ export function suggestCandidateReviews(
       recommendation: 'review',
       confidenceScore: 0.55,
       keepScore,
+      primarySourceCount,
+      supportingSourceCount,
+      evidenceSummary,
       priorityScore: candidate.memoryEventIds.length + durationMinutes / 60,
       rationale:
         'This candidate may be useful, but the evidence is moderate enough that it should stay in human review.',

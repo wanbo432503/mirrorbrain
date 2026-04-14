@@ -265,6 +265,9 @@ const candidateReviewSuggestionSchema = {
     },
     confidenceScore: { type: 'number' },
     keepScore: { type: 'number' },
+    primarySourceCount: { type: 'number' },
+    supportingSourceCount: { type: 'number' },
+    evidenceSummary: { type: 'string' },
     priorityScore: { type: 'number' },
     rationale: { type: 'string' },
     supportingReasons: {

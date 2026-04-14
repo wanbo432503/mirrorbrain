@@ -139,6 +139,9 @@ export interface CandidateReviewSuggestion {
   recommendation: 'keep' | 'discard' | 'review';
   confidenceScore: number;
   keepScore?: number;
+  primarySourceCount?: number;
+  supportingSourceCount?: number;
+  evidenceSummary?: string;
   priorityScore: number;
   rationale: string;
   supportingReasons?: string[];

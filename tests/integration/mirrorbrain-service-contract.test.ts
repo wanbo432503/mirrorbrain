@@ -424,6 +424,9 @@ describe('mirrorbrain service contract integration', () => {
         recommendation: 'review',
         confidenceScore: 0.55,
         keepScore: 46,
+        primarySourceCount: 1,
+        supportingSourceCount: 0,
+        evidenceSummary: 'Built from 1 primary page and 0 supporting pages.',
         priorityScore: 1,
         rationale:
           'This candidate may be useful, but the evidence is moderate enough that it should stay in human review.',

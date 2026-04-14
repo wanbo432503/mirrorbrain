@@ -69,6 +69,7 @@ This component is not responsible for:
 
 - suggestion-only artifact for AI-assisted or rule-based triage
 - includes recommendation, rationale, confidence, keep-score, supporting reasons, and priority
+- can include evidence-mix fields such as primary/supporting source counts so the UI can explain how much direct vs auxiliary evidence supports the task
 - must not be treated as a reviewed memory or implicit approval
 
 ## Dependencies

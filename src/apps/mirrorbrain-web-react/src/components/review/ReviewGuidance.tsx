@@ -141,6 +141,17 @@ export default function ReviewGuidance({ suggestion, reviewedMemory }: ReviewGui
                 </div>
               )}
 
+              {suggestion.evidenceSummary && (
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                  <p className="text-xs font-heading font-semibold text-slate-600 uppercase mb-2">
+                    Evidence Mix
+                  </p>
+                  <p className="font-body text-sm text-slate-700 leading-relaxed">
+                    {suggestion.evidenceSummary}
+                  </p>
+                </div>
+              )}
+
             </div>
           </div>
         )}

@@ -497,6 +497,9 @@ describe('mirrorbrain http server', () => {
           recommendation: 'keep',
           confidenceScore: 0.8,
           keepScore: 86,
+          primarySourceCount: 1,
+          supportingSourceCount: 1,
+          evidenceSummary: 'Built from 1 primary page and 1 supporting page.',
           priorityScore: 2,
           rationale:
             'This daily stream has repeated activity and is a strong keep candidate.',
@@ -670,6 +673,9 @@ describe('mirrorbrain http server', () => {
           recommendation: 'keep',
           confidenceScore: 0.8,
           keepScore: 86,
+          primarySourceCount: 1,
+          supportingSourceCount: 1,
+          evidenceSummary: 'Built from 1 primary page and 1 supporting page.',
           priorityScore: 2,
           rationale:
             'This daily stream has repeated activity and is a strong keep candidate.',

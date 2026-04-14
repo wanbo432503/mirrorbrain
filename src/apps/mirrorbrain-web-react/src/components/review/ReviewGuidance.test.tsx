@@ -18,4 +18,14 @@ describe('ReviewGuidance helpers', () => {
       ])
     ).toBe('Built from 2 primary pages and 1 supporting page.')
   })
+
+  it('handles zero supporting pages in evidence copy', () => {
+    expect(
+      buildCandidateEvidenceSummary([
+        {
+          contribution: 'primary',
+        },
+      ])
+    ).toBe('Built from 1 primary page and 0 supporting pages.')
+  })
 })
