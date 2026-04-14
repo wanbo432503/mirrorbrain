@@ -36,6 +36,22 @@ type FetchLike = (
   init?: RequestInit,
 ) => Promise<Response>;
 
+export function isSkippableBrowserPageUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname.toLowerCase();
+
+    return (
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname === '::1' ||
+      hostname === '[::1]'
+    );
+  } catch {
+    return false;
+  }
+}
+
 function decodeHtmlEntities(value: string): string {
   return value
     .replace(/&nbsp;/giu, ' ')
@@ -304,7 +320,11 @@ export async function enrichBrowserMemoryEventWithPageContent(
       ? input.event.content.title
       : 'Untitled Page';
 
-  if (url === null || !/^https?:\/\//iu.test(url)) {
+  if (
+    url === null ||
+    !/^https?:\/\//iu.test(url) ||
+    isSkippableBrowserPageUrl(url)
+  ) {
     return input.event;
   }
 

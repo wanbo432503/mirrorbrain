@@ -4,10 +4,18 @@ import {
   buildBrowserPageContentArtifact,
   extractReadableTextFromHtml,
   fetchBrowserPageContent,
+  isSkippableBrowserPageUrl,
   wasBrowserPageAccessedOnReviewDate,
 } from './index.js';
 
 describe('browser page content integration', () => {
+  it('marks localhost and loopback urls as skippable for page fetch', () => {
+    expect(isSkippableBrowserPageUrl('http://127.0.0.1:5500/app')).toBe(true);
+    expect(isSkippableBrowserPageUrl('http://localhost:3000/docs')).toBe(true);
+    expect(isSkippableBrowserPageUrl('http://[::1]:5173/')).toBe(true);
+    expect(isSkippableBrowserPageUrl('https://example.com/tasks')).toBe(false);
+  });
+
   it('builds one shared page artifact per url and keeps access times sorted newest first', () => {
     const created = buildBrowserPageContentArtifact({
       url: 'https://example.com/tasks',

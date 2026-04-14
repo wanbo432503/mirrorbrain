@@ -263,6 +263,52 @@ describe('browser memory sync workflow', () => {
     });
   });
 
+  it('skips page fetch and content import for localhost development urls', async () => {
+    const config = getMirrorBrainConfig();
+    const fetchPageContent = vi.fn();
+    const ingestPageContent = vi.fn();
+
+    const result = await runBrowserMemorySyncOnce(
+      {
+        config,
+        now: '2026-03-20T08:00:00.000Z',
+        bucketId: 'aw-watcher-web-chrome',
+        scopeId: 'scope-browser',
+        workspaceDir: '/tmp/mirrorbrain',
+      },
+      {
+        checkpointStore: {
+          readCheckpoint: async () => null,
+          writeCheckpoint: async () => undefined,
+        },
+        fetchBrowserEvents: async () => [
+          {
+            id: 'aw-event-local-1',
+            timestamp: '2026-03-20T08:00:00.000Z',
+            data: {
+              url: 'http://127.0.0.1:5500/app',
+              title: 'Local App',
+            },
+          },
+        ],
+        fetchPageContent,
+        ingestPageContent,
+        writeMemoryEvent: async () => undefined,
+      },
+    );
+
+    expect(fetchPageContent).not.toHaveBeenCalled();
+    expect(ingestPageContent).not.toHaveBeenCalled();
+    expect(result.importedEvents?.[0]).toMatchObject({
+      id: 'browser:aw-event-local-1',
+      content: {
+        url: 'http://127.0.0.1:5500/app',
+        title: 'Local App',
+      },
+    });
+    expect(result.importedEvents?.[0]?.content).not.toHaveProperty('textStorage');
+  });
+
   it('uses the stored checkpoint for incremental sync and advances when no new events are returned', async () => {
     const config = getMirrorBrainConfig();
     const checkpoints: Array<{

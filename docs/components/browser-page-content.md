@@ -47,5 +47,6 @@ This component fetches readable page text for browser URLs, extracts a normalize
 
 - extraction is heuristic and intentionally simple; it prefers `article` / `main` regions but is still not a full readability pipeline
 - only `http` and `https` URLs are fetched
+- localhost and loopback development URLs such as `localhost`, `127.0.0.1`, and `::1` are intentionally skipped
 - failed page fetches currently degrade back to the original browser event instead of failing the full sync
 - the artifact title/text are preserved once per URL; later visits update access times but do not refetch or overwrite stored page text by default

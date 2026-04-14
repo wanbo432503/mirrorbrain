@@ -8,6 +8,7 @@ import {
   buildBrowserPageContentArtifact,
   createBrowserPageContentEventContent,
   fetchBrowserPageContent,
+  isSkippableBrowserPageUrl,
   loadBrowserPageContentArtifactFromWorkspace,
 } from '../../integrations/browser-page-content/index.js';
 import type {
@@ -85,7 +86,11 @@ export async function runBrowserMemorySyncOnce(
           const url =
             typeof event.content.url === 'string' ? event.content.url : null;
 
-          if (url === null || !/^https?:\/\//iu.test(url)) {
+          if (
+            url === null ||
+            !/^https?:\/\//iu.test(url) ||
+            isSkippableBrowserPageUrl(url)
+          ) {
             continue;
           }
 
