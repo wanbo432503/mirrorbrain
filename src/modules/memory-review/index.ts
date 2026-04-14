@@ -203,11 +203,32 @@ export function suggestCandidateReviews(
     const supportingSourceCount = (candidate.sourceRefs ?? []).filter(
       (source) => source.contribution === 'supporting',
     ).length;
-    const evidenceSummary = `Built from ${primarySourceCount} primary page${
-      primarySourceCount === 1 ? '' : 's'
-    } and ${supportingSourceCount} supporting page${
-      supportingSourceCount === 1 ? '' : 's'
-    }.`;
+
+    // Analyze task pattern from page roles
+    const pageRoles = (candidate.sourceRefs ?? []).map(source => source.role ?? 'web');
+    const uniqueRoles = new Set(pageRoles);
+    const primaryRoles = pageRoles.filter(role => role !== 'search' && role !== 'chat');
+    const hasIssue = pageRoles.includes('issue');
+    const hasPR = pageRoles.includes('pull-request');
+    const hasRepo = pageRoles.includes('repository');
+    const hasDocs = pageRoles.includes('docs');
+    const hasDebug = pageRoles.includes('debug');
+    const hasSearch = pageRoles.includes('search');
+    const hasReference = pageRoles.includes('reference');
+
+    // Infer task type
+    const taskType = inferTaskType({
+      hasIssue,
+      hasPR,
+      hasRepo,
+      hasDocs,
+      hasDebug,
+      hasSearch,
+      hasReference,
+      pageRoles,
+      title: candidate.title,
+    });
+
     const uniqueHosts = new Set(
       (candidate.sourceRefs ?? [])
         .map((source) => source.url)
@@ -220,35 +241,53 @@ export function suggestCandidateReviews(
           }
         }),
     ).size;
+
     const durationMinutes = getDurationMinutes(
       candidate.timeRange.startAt,
       candidate.timeRange.endAt,
     );
+
+    // Calculate keep score
     const keepScore = Math.min(
       100,
       Math.round(
         28 +
           candidate.memoryEventIds.length * 18 +
           Math.min(durationMinutes, 120) / 2 +
-          (uniqueHosts > 1 ? 8 : 0),
+          (uniqueHosts > 1 ? 8 : 0) +
+          (primarySourceCount >= 2 ? 10 : 0),
       ),
     );
-    const supportingReasons = [
-      `${candidate.memoryEventIds.length} related visits were grouped into one task.`,
-      `The task lasted about ${Math.max(1, durationMinutes)} minutes.`,
-    ];
 
-    if (uniqueHosts > 1) {
-      supportingReasons.push(`The task spans ${uniqueHosts} related hosts.`);
-    }
+    // Generate contextual rationale
+    const rationale = generateContextualRationale({
+      taskType,
+      title: candidate.title,
+      durationMinutes,
+      primarySourceCount,
+      supportingSourceCount,
+      uniqueHosts,
+      pageRoles: uniqueRoles,
+      keepScore,
+    });
 
-    if ((candidate.compressedSourceCount ?? 0) > 0) {
-      supportingReasons.push(
-        `The candidate absorbed ${candidate.compressedSourceCount} low-evidence visit${
-          candidate.compressedSourceCount === 1 ? '' : 's'
-        } to keep the daily review list under 10 tasks.`,
-      );
-    }
+    // Generate contextual supporting reasons
+    const supportingReasons = generateContextualSupportingReasons({
+      taskType,
+      durationMinutes,
+      uniqueHosts,
+      primarySourceCount,
+      supportingSourceCount,
+      pageRoles,
+      title: candidate.title,
+      compressedSourceCount: candidate.compressedSourceCount ?? 0,
+    });
+
+    const evidenceSummary = `Built from ${primarySourceCount} primary page${
+      primarySourceCount === 1 ? '' : 's'
+    } and ${supportingSourceCount} supporting page${
+      supportingSourceCount === 1 ? '' : 's'
+    }.`;
 
     if (keepScore >= 70) {
       return {
@@ -260,8 +299,7 @@ export function suggestCandidateReviews(
         supportingSourceCount,
         evidenceSummary,
         priorityScore: candidate.memoryEventIds.length + durationMinutes / 30,
-        rationale:
-          'This candidate has enough repeated and sustained activity to preserve as a meaningful work item.',
+        rationale,
         supportingReasons,
       };
     }
@@ -276,8 +314,7 @@ export function suggestCandidateReviews(
         supportingSourceCount,
         evidenceSummary,
         priorityScore: candidate.memoryEventIds.length,
-        rationale:
-          'This candidate looks too small or short-lived to justify keeping without more supporting evidence.',
+        rationale,
         supportingReasons,
       };
     }
@@ -291,11 +328,191 @@ export function suggestCandidateReviews(
       supportingSourceCount,
       evidenceSummary,
       priorityScore: candidate.memoryEventIds.length + durationMinutes / 60,
-      rationale:
-        'This candidate may be useful, but the evidence is moderate enough that it should stay in human review.',
+      rationale,
       supportingReasons,
     };
   });
+}
+
+interface TaskTypeInferenceInput {
+  hasIssue: boolean;
+  hasPR: boolean;
+  hasRepo: boolean;
+  hasDocs: boolean;
+  hasDebug: boolean;
+  hasSearch: boolean;
+  hasReference: boolean;
+  pageRoles: string[];
+  title: string;
+}
+
+type TaskType = 'bug-fix' | 'feature-implementation' | 'research' | 'debugging' | 'code-review' | 'general';
+
+function inferTaskType(input: TaskTypeInferenceInput): TaskType {
+  const titleLower = input.title.toLowerCase();
+  const docsRefCount = input.pageRoles.filter(role => role === 'docs' || role === 'reference').length;
+
+  // Bug fix: Issue present (primary debugging indicator)
+  if (input.hasIssue) {
+    return 'bug-fix';
+  }
+
+  // Feature implementation: PR present (primary implementation indicator)
+  if (input.hasPR) {
+    return 'feature-implementation';
+  }
+
+  // Debugging: Localhost/debug pages (active development testing)
+  if (input.hasDebug || input.pageRoles.some(role => role === 'debug')) {
+    return 'debugging';
+  }
+
+  // Research: Docs-heavy pattern (knowledge gathering)
+  if (docsRefCount >= 1) {
+    return 'research';
+  }
+
+  // Code review: Issue + PR + repo (reviewing changes)
+  if (input.hasIssue && input.hasPR && input.hasRepo) {
+    return 'code-review';
+  }
+
+  return 'general';
+}
+
+interface RationaleGenerationInput {
+  taskType: TaskType;
+  title: string;
+  durationMinutes: number;
+  primarySourceCount: number;
+  supportingSourceCount: number;
+  uniqueHosts: number;
+  pageRoles: Set<string>;
+  keepScore: number;
+}
+
+function generateContextualRationale(input: RationaleGenerationInput): string {
+  const durationLabel = input.durationMinutes > 60 ? 'hour' : 'minute';
+  const durationValue = input.durationMinutes > 60
+    ? Math.round(input.durationMinutes / 60)
+    : Math.max(1, input.durationMinutes);
+
+  const actionContext = input.title.replace(/^Work on\s+/i, '').replace(/^work\s+on\s+/i, '');
+
+  switch (input.taskType) {
+    case 'bug-fix':
+      const bugRationale = input.keepScore >= 70
+        ? `Fixed a blocking bug in ${actionContext}. Spent ${durationValue} ${durationLabel}${durationValue === 1 ? '' : 's'} debugging across issue tracking and documentation.`
+        : `Investigated bug in ${actionContext} but may need more context to confirm significance.`;
+      return bugRationale;
+
+    case 'feature-implementation':
+      const implRationale = input.keepScore >= 70
+        ? `Implemented new feature: ${actionContext}. Cross-host work between GitHub and documentation indicates end-to-end implementation.`
+        : `Started feature work on ${actionContext} but scope unclear from available evidence.`;
+      return implRationale;
+
+    case 'research':
+      const researchRationale = input.keepScore >= 70
+        ? `Research session on ${actionContext}. Documentation-heavy pattern suggests knowledge gathering for upcoming implementation work.`
+        : `Brief documentation lookup on ${actionContext}. May be reference check rather than dedicated research.`;
+      return researchRationale;
+
+    case 'debugging':
+      const debugRationale = input.keepScore >= 70
+        ? `Debugging session for ${actionContext}. Localhost activity + docs lookup indicates active troubleshooting with reference support.`
+        : `Quick debugging check on ${actionContext}. May be routine testing rather than significant issue.`;
+      return debugRationale;
+
+    case 'code-review':
+      const reviewRationale = input.keepScore >= 70
+        ? `Code review of ${actionContext}. Issue + PR + repo pattern suggests thorough change review workflow.`
+        : `Partial review of ${actionContext}. Limited engagement may be quick check rather than thorough review.`;
+      return reviewRationale;
+
+    default:
+      const generalRationale = input.keepScore >= 70
+        ? `Worked on ${actionContext} for ${durationValue} ${durationLabel}${durationValue === 1 ? '' : 's'} across ${input.uniqueHosts} related source${input.uniqueHosts === 1 ? '' : 's'}. Sustained activity suggests meaningful work session.`
+        : `Brief activity on ${actionContext}. Short duration suggests quick reference or navigation.`;
+      return generalRationale;
+  }
+}
+
+interface SupportingReasonsInput {
+  taskType: TaskType;
+  durationMinutes: number;
+  uniqueHosts: number;
+  primarySourceCount: number;
+  supportingSourceCount: number;
+  pageRoles: string[];
+  title: string;
+  compressedSourceCount: number;
+}
+
+function generateContextualSupportingReasons(input: SupportingReasonsInput): string[] {
+  const reasons: string[] = [];
+
+  // Task-specific pattern explanation
+  switch (input.taskType) {
+    case 'bug-fix':
+      reasons.push('Issue page + documentation pattern indicates debugging session.');
+      if (input.uniqueHosts > 1) {
+        reasons.push(`Cross-host investigation (${input.uniqueHosts} sources) suggests thorough bug analysis.`);
+      }
+      break;
+
+    case 'feature-implementation':
+      reasons.push('PR + documentation combination suggests implementation work with reference research.');
+      if (input.uniqueHosts > 1) {
+        reasons.push('Cross-host work indicates end-to-end feature development.');
+      }
+      break;
+
+    case 'research':
+      reasons.push('Documentation-heavy pattern indicates knowledge gathering phase.');
+      if (input.supportingSourceCount > 0) {
+        reasons.push('Multiple documentation sources suggest comprehensive research.');
+      }
+      break;
+
+    case 'debugging':
+      if (input.pageRoles.includes('debug')) {
+        reasons.push('Localhost pages indicate active development testing.');
+      }
+      if (input.pageRoles.includes('docs')) {
+        reasons.push('Docs lookup during debugging suggests reference-guided troubleshooting.');
+      }
+      break;
+
+    case 'code-review':
+      reasons.push('Issue + PR + repository pattern indicates review workflow.');
+      break;
+
+    default:
+      if (input.primarySourceCount >= 2) {
+        reasons.push(`Multiple primary pages suggest focused work session.`);
+      }
+      if (input.uniqueHosts > 1) {
+        reasons.push(`Work spanned ${input.uniqueHosts} related sources.`);
+      }
+  }
+
+  // Duration significance
+  const durationValue = Math.max(1, input.durationMinutes);
+  if (durationValue >= 30) {
+    reasons.push(`${durationValue} minutes${durationValue >= 60 ? ' (' + Math.round(durationValue / 60) + ' hour)' : ''} of focused work.`);
+  } else if (durationValue < 10) {
+    reasons.push('Short duration suggests quick reference or navigation.');
+  }
+
+  // Compressed evidence explanation
+  if (input.compressedSourceCount > 0) {
+    reasons.push(
+      `Absorbed ${input.compressedSourceCount} low-evidence visit${input.compressedSourceCount === 1 ? '' : 's'} to keep daily review manageable.`,
+    );
+  }
+
+  return reasons;
 }
 
 function groupEventsByStream(

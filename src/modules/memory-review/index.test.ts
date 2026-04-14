@@ -1156,4 +1156,218 @@ describe('memory review', () => {
     expect(candidates[0].summary.toLowerCase()).not.toContain('browser events connected to');
     expect(candidates[0].summary.toLowerCase()).not.toContain('across');
   });
+
+describe('AI guidance quality', () => {
+  it('generates contextual rationale for bug fix tasks', () => {
+    const events = [
+      {
+        ...createBrowserMemoryEvent({
+          id: 'browser:github-issue',
+          timestamp: '2026-03-20T09:00:00.000Z',
+          url: 'https://github.com/repo/issues/123',
+          title: 'Fix authentication bug - Issue #123',
+        }),
+        content: {
+          url: 'https://github.com/repo/issues/123',
+          title: 'Fix authentication bug - Issue #123',
+          pageText: 'Authentication fails when token expires.',
+        },
+      },
+      {
+        ...createBrowserMemoryEvent({
+          id: 'browser:docs',
+          timestamp: '2026-03-20T09:20:00.000Z',
+          url: 'https://docs.example.com/auth/debug',
+          title: 'Authentication debugging guide',
+        }),
+        content: {
+          url: 'https://docs.example.com/auth/debug',
+          title: 'Authentication debugging guide',
+          pageText: 'How to debug token expiration issues.',
+        },
+      },
+    ];
+
+    const candidates = createCandidateMemories({
+      reviewDate: '2026-03-20',
+      memoryEvents: events,
+    });
+
+    const suggestions = suggestCandidateReviews(candidates);
+
+    // Rationale should mention bug fix context
+    expect(suggestions[0].rationale.toLowerCase()).toMatch(/bug|fix|debug|issue/);
+    expect(suggestions[0].rationale).not.toBe(
+      'This candidate has enough repeated and sustained activity to preserve as a meaningful work item.',
+    );
+
+    // Supporting reasons should describe patterns, not just counts
+    expect(
+      suggestions[0].supportingReasons?.some(reason =>
+        reason.toLowerCase().includes('issue') ||
+        reason.toLowerCase().includes('debugging') ||
+        reason.toLowerCase().includes('documentation')
+      ),
+    ).toBe(true);
+  });
+
+  it('generates contextual rationale for feature implementation', () => {
+    const events = [
+      {
+        ...createBrowserMemoryEvent({
+          id: 'browser:github-pr',
+          timestamp: '2026-03-20T10:00:00.000Z',
+          url: 'https://github.com/repo/pull/456',
+          title: 'Implement JWT refresh - PR #456',
+        }),
+        content: {
+          url: 'https://github.com/repo/pull/456',
+          title: 'Implement JWT refresh - PR #456',
+          pageText: 'JWT refresh implementation for authentication.',
+        },
+      },
+      {
+        ...createBrowserMemoryEvent({
+          id: 'browser:jwt-docs',
+          timestamp: '2026-03-20T10:30:00.000Z',
+          url: 'https://jwt.io/docs',
+          title: 'JWT documentation',
+        }),
+        content: {
+          url: 'https://jwt.io/docs',
+          title: 'JWT documentation',
+          pageText: 'JWT implementation best practices.',
+        },
+      },
+    ];
+
+    const candidates = createCandidateMemories({
+      reviewDate: '2026-03-20',
+      memoryEvents: events,
+    });
+
+    const suggestions = suggestCandidateReviews(candidates);
+
+    // Rationale should mention feature implementation
+    expect(suggestions[0].rationale.toLowerCase()).toMatch(/implement|feature|integration|end-to-end/);
+    expect(suggestions[0].rationale).not.toBe(
+      'This candidate has enough repeated and sustained activity to preserve as a meaningful work item.',
+    );
+
+    // Should recognize cross-host pattern for implementation work
+    expect(
+      suggestions[0].supportingReasons?.some(reason =>
+        reason.toLowerCase().includes('cross-host') ||
+        reason.toLowerCase().includes('github') ||
+        reason.toLowerCase().includes('documentation')
+      ),
+    ).toBe(true);
+  });
+
+  it('generates contextual rationale for research tasks', () => {
+    const events = [
+      {
+        ...createBrowserMemoryEvent({
+          id: 'browser:docs-1',
+          timestamp: '2026-03-20T11:00:00.000Z',
+          url: 'https://docs.example.com/api/authentication',
+          title: 'Authentication API reference',
+        }),
+        content: {
+          url: 'https://docs.example.com/api/authentication',
+          title: 'Authentication API reference',
+          pageText: 'API authentication guide.',
+        },
+      },
+      {
+        ...createBrowserMemoryEvent({
+          id: 'browser:stackoverflow',
+          timestamp: '2026-03-20T11:15:00.000Z',
+          url: 'https://stackoverflow.com/questions/auth',
+          title: 'Authentication best practices',
+        }),
+        content: {
+          url: 'https://stackoverflow.com/questions/auth',
+          title: 'Authentication best practices',
+          pageText: 'Community authentication patterns.',
+        },
+      },
+    ];
+
+    const candidates = createCandidateMemories({
+      reviewDate: '2026-03-20',
+      memoryEvents: events,
+    });
+
+    const suggestions = suggestCandidateReviews(candidates);
+
+    // Rationale should recognize research pattern
+    expect(suggestions[0].rationale.toLowerCase()).toMatch(/research|investigat|document|prepar|knowledge|learn/);
+    expect(suggestions[0].rationale).not.toBe(
+      'This candidate has enough repeated and sustained activity to preserve as a meaningful work item.',
+    );
+
+    // Should mention documentation-heavy pattern
+    expect(
+      suggestions[0].supportingReasons?.some(reason =>
+        reason.toLowerCase().includes('documentation') ||
+        reason.toLowerCase().includes('research') ||
+        reason.toLowerCase().includes('reference')
+      ),
+    ).toBe(true);
+  });
+
+  it('generates contextual rationale for debugging sessions', () => {
+    const events = [
+      {
+        ...createBrowserMemoryEvent({
+          id: 'browser:localhost-1',
+          timestamp: '2026-03-20T14:00:00.000Z',
+          url: 'http://localhost:3000/debug',
+          title: 'Debug dashboard',
+        }),
+        content: {
+          url: 'http://localhost:3000/debug',
+          title: 'Debug dashboard',
+          pageText: 'Local debugging session.',
+        },
+      },
+      {
+        ...createBrowserMemoryEvent({
+          id: 'browser:docs-debug',
+          timestamp: '2026-03-20T14:20:00.000Z',
+          url: 'https://docs.example.com/debugging',
+          title: 'Debugging guide',
+        }),
+        content: {
+          url: 'https://docs.example.com/debugging',
+          title: 'Debugging guide',
+          pageText: 'How to debug local issues.',
+        },
+      },
+    ];
+
+    const candidates = createCandidateMemories({
+      reviewDate: '2026-03-20',
+      memoryEvents: events,
+    });
+
+    const suggestions = suggestCandidateReviews(candidates);
+
+    // Rationale should recognize debugging pattern
+    expect(suggestions[0].rationale.toLowerCase()).toMatch(/debug|test|troubleshoot|localhost|local|development/);
+    expect(suggestions[0].rationale).not.toBe(
+      'This candidate has enough repeated and sustained activity to preserve as a meaningful work item.',
+    );
+
+    // Should mention localhost + docs pattern
+    expect(
+      suggestions[0].supportingReasons?.some(reason =>
+        reason.toLowerCase().includes('localhost') ||
+        reason.toLowerCase().includes('debugging') ||
+        reason.toLowerCase().includes('local')
+      ),
+    ).toBe(true);
+  });
+});
 });
