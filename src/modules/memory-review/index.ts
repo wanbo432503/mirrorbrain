@@ -142,6 +142,8 @@ const TOKEN_STOP_WORDS = new Set([
   'wait',
   'read',
   'sync',
+  // Pure numeric tokens (digits only)
+  // Numbers are filtered during token extraction instead
 ]);
 
 export function createCandidateMemories(
@@ -384,14 +386,38 @@ interface TaskTypeInferenceInput {
   hasDebug: boolean;
   hasSearch: boolean;
   hasReference: boolean;
+  hasShopping: boolean;
+  hasEntertainment: boolean;
+  hasLearning: boolean;
+  hasReading: boolean;
   pageRoles: string[];
   title: string;
 }
 
-type TaskType = 'bug-fix' | 'feature-implementation' | 'research' | 'debugging' | 'code-review' | 'general';
+type TaskType = 'bug-fix' | 'feature-implementation' | 'research' | 'debugging' | 'code-review' | 'shopping' | 'entertainment' | 'learning' | 'reading' | 'general';
 
 function inferTaskType(input: TaskTypeInferenceInput): TaskType {
   const docsRefCount = input.pageRoles.filter(role => role === 'docs' || role === 'reference').length;
+
+  // Shopping: shopping pages present
+  if (input.hasShopping) {
+    return 'shopping';
+  }
+
+  // Entertainment: entertainment pages present (music, video, games)
+  if (input.hasEntertainment) {
+    return 'entertainment';
+  }
+
+  // Learning: learning pages present (courses, tutorials, language)
+  if (input.hasLearning) {
+    return 'learning';
+  }
+
+  // Reading: reading pages present (papers, articles, blogs)
+  if (input.hasReading) {
+    return 'reading';
+  }
 
   // Code review: issue + PR + repo together is stronger than either signal alone
   if (input.hasIssue && input.hasPR && input.hasRepo) {
@@ -676,6 +702,18 @@ function createCandidateSummary(input: {
     'release': 'Released',
     'monitor': 'Monitored',
     'analyze': 'Analyzed',
+    // New activity verbs
+    'shop': 'Shopped',
+    'buy': 'Bought',
+    'purchase': 'Purchased',
+    'enjoy': 'Enjoyed',
+    'watch': 'Watched',
+    'listen': 'Listened',
+    'play': 'Played',
+    'learn': 'Learned',
+    'study': 'Studied',
+    'read': 'Read',
+    'browse': 'Browsed',
   };
 
   // Try to match action verb from title start
@@ -710,6 +748,53 @@ function createCandidateSummary(input: {
       : '';
 
     return `Reviewed ${topic}${hostDescription} over about ${Math.max(1, input.durationMinutes)} minutes.`;
+  }
+
+  // Check for shopping tasks
+  const isShoppingTask = titleLower.includes('shop') ||
+    titleLower.includes('buy') ||
+    titleLower.includes('cart') ||
+    titleLower.includes('checkout') ||
+    titleLower.includes('product');
+
+  if (isShoppingTask) {
+    const topic = input.title.replace(/^Work on\s+/i, '').replace(/^work\s+on\s+/i, '');
+    return `Shopped for ${topic} over about ${Math.max(1, input.durationMinutes)} minutes.`;
+  }
+
+  // Check for entertainment tasks
+  const isEntertainmentTask = titleLower.includes('music') ||
+    titleLower.includes('video') ||
+    titleLower.includes('watch') ||
+    titleLower.includes('listen') ||
+    titleLower.includes('play');
+
+  if (isEntertainmentTask) {
+    const topic = input.title.replace(/^Work on\s+/i, '').replace(/^work\s+on\s+/i, '');
+    return `Enjoyed ${topic} over about ${Math.max(1, input.durationMinutes)} minutes.`;
+  }
+
+  // Check for learning tasks
+  const isLearningTask = titleLower.includes('learn') ||
+    titleLower.includes('course') ||
+    titleLower.includes('tutorial') ||
+    titleLower.includes('english') ||
+    titleLower.includes('language');
+
+  if (isLearningTask) {
+    const topic = input.title.replace(/^Work on\s+/i, '').replace(/^work\s+on\s+/i, '');
+    return `Learned ${topic} over about ${Math.max(1, input.durationMinutes)} minutes.`;
+  }
+
+  // Check for reading tasks
+  const isReadingTask = titleLower.includes('read') ||
+    titleLower.includes('paper') ||
+    titleLower.includes('article') ||
+    titleLower.includes('blog');
+
+  if (isReadingTask) {
+    const topic = input.title.replace(/^Work on\s+/i, '').replace(/^work\s+on\s+/i, '');
+    return `Read ${topic} over about ${Math.max(1, input.durationMinutes)} minutes.`;
   }
 
   // Check for investigation/exploration tasks
@@ -833,7 +918,8 @@ function extractTokens(value: string): string[] {
     .toLowerCase()
     .split(/[^a-z0-9]+/g)
     .filter((part) => part.length >= 3)
-    .filter((part) => !TOKEN_STOP_WORDS.has(part));
+    .filter((part) => !TOKEN_STOP_WORDS.has(part))
+    .filter((part) => !/^\d+$/.test(part)); // Filter pure numeric tokens
 }
 
 function createCandidateGroup(descriptor: EventDescriptor): CandidateStreamGroup {
@@ -877,6 +963,14 @@ function createTaskTitle(
   const taskType = inferTaskTypeFromEvents(memoryEvents, topic);
 
   switch (taskType) {
+    case 'shopping':
+      return `Shop ${topic}`;
+    case 'entertainment':
+      return `Enjoy ${topic}`;
+    case 'learning':
+      return `Learn ${topic}`;
+    case 'reading':
+      return `Read ${topic}`;
     case 'bug-fix':
       return `Fix ${topic}`;
     case 'feature-implementation':
@@ -995,6 +1089,10 @@ function inferTaskTypeFromEvents(
     hasDebug: pageRoles.includes('debug'),
     hasSearch: pageRoles.includes('search'),
     hasReference: pageRoles.includes('reference'),
+    hasShopping: pageRoles.includes('shopping'),
+    hasEntertainment: pageRoles.includes('entertainment'),
+    hasLearning: pageRoles.includes('learning'),
+    hasReading: pageRoles.includes('reading'),
     pageRoles,
     title,
   });
@@ -1360,7 +1458,7 @@ function getDurationMinutes(startAt: string, endAt: string): number {
 function inferPageRole(input: {
   url?: string;
   title?: string;
-}): 'search' | 'docs' | 'chat' | 'issue' | 'pull-request' | 'repository' | 'debug' | 'reference' | 'web' {
+}): 'search' | 'docs' | 'chat' | 'issue' | 'pull-request' | 'repository' | 'debug' | 'reference' | 'shopping' | 'entertainment' | 'learning' | 'reading' | 'web' {
   const url = input.url ?? '';
   const title = (input.title ?? '').toLowerCase();
   const normalized = `${url.toLowerCase()} ${title}`;
@@ -1397,11 +1495,39 @@ function inferPageRole(input: {
     return 'reference';
   }
 
+  // Shopping patterns
+  if (normalized.includes('amazon') || normalized.includes('ebay') || normalized.includes('taobao') ||
+      normalized.includes('jd.com') || normalized.includes('shop') || normalized.includes('cart') ||
+      normalized.includes('checkout') || normalized.includes('product')) {
+    return 'shopping';
+  }
+
+  // Entertainment patterns (music, video, games)
+  if (normalized.includes('music') || normalized.includes('spotify') || normalized.includes('youtube.com/watch') ||
+      normalized.includes('video') || normalized.includes('movie') || normalized.includes('tv') ||
+      normalized.includes('game') || normalized.includes('play')) {
+    return 'entertainment';
+  }
+
+  // Learning patterns (courses, tutorials, language learning)
+  if (normalized.includes('course') || normalized.includes('tutorial') || normalized.includes('learn') ||
+      normalized.includes('english') || normalized.includes('language') || normalized.includes('duolingo') ||
+      normalized.includes('coursera') || normalized.includes('udemy') || normalized.includes('edx')) {
+    return 'learning';
+  }
+
+  // Reading patterns (papers, articles, blogs, news)
+  if (normalized.includes('arxiv') || normalized.includes('paper') || normalized.includes('article') ||
+      normalized.includes('blog') || normalized.includes('news') || normalized.includes('read') ||
+      normalized.includes('pdf') || normalized.includes('scholar')) {
+    return 'reading';
+  }
+
   return 'web';
 }
 
 function inferSourceContribution(
-  role: 'search' | 'docs' | 'chat' | 'issue' | 'pull-request' | 'repository' | 'debug' | 'reference' | 'web',
+  role: 'search' | 'docs' | 'chat' | 'issue' | 'pull-request' | 'repository' | 'debug' | 'reference' | 'shopping' | 'entertainment' | 'learning' | 'reading' | 'web',
 ): 'primary' | 'supporting' {
   if (role === 'search' || role === 'chat') {
     return 'supporting';
