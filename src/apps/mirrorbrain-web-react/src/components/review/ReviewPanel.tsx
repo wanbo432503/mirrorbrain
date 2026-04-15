@@ -6,6 +6,7 @@ import SelectedCandidate from './SelectedCandidate'
 import ReviewGuidance from './ReviewGuidance'
 import { createMirrorBrainBrowserApi, type MirrorBrainWebAppApi } from '../../api/client'
 import { useReviewWorkflow } from '../../hooks/useReviewWorkflow'
+import { useMirrorBrain } from '../../contexts/MirrorBrainContext'
 
 export function getDefaultReviewDate(now: Date = new Date()): string {
   const yesterday = new Date(now)
@@ -22,7 +23,16 @@ export function getLocalTimeZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone
 }
 
+export function shouldAutoLoadDailyCandidates(input: {
+  hasAutoLoaded: boolean
+  candidateCount: number
+  hasLoadedMemoryEvents: boolean
+}) {
+  return !input.hasAutoLoaded && input.candidateCount === 0 && input.hasLoadedMemoryEvents
+}
+
 export default function ReviewPanel() {
+  const { state } = useMirrorBrain()
   const api: MirrorBrainWebAppApi = useMemo(
     () => createMirrorBrainBrowserApi(window.location.origin),
     []
@@ -50,13 +60,28 @@ export default function ReviewPanel() {
 
   // Auto-load daily candidates when entering review tab
   useEffect(() => {
-    if (!hasAutoLoaded && candidates.length === 0) {
-      setHasAutoLoaded(true)
-      createDailyCandidates(reviewDate, reviewTimeZone).catch(() => {
-        // Error already handled by useReviewWorkflow
+    if (
+      !shouldAutoLoadDailyCandidates({
+        hasAutoLoaded,
+        candidateCount: candidates.length,
+        hasLoadedMemoryEvents: state.hasLoadedMemoryEvents,
       })
+    ) {
+      return
     }
-  }, [hasAutoLoaded, candidates.length, createDailyCandidates, reviewDate, reviewTimeZone])
+
+    setHasAutoLoaded(true)
+    createDailyCandidates(reviewDate, reviewTimeZone).catch(() => {
+      // Error already handled by useReviewWorkflow
+    })
+  }, [
+    hasAutoLoaded,
+    candidates.length,
+    state.hasLoadedMemoryEvents,
+    createDailyCandidates,
+    reviewDate,
+    reviewTimeZone,
+  ])
 
   const handleCreateCandidates = async () => {
     try {
@@ -112,6 +137,17 @@ export default function ReviewPanel() {
             role="alert"
           >
             <p className="font-body font-medium text-xs">{feedback.message}</p>
+          </div>
+        )}
+
+        {!state.hasLoadedMemoryEvents && (
+          <div
+            className="flex-1 px-3 py-1.5 rounded-lg border bg-blue-100 border-blue-300 text-blue-700"
+            role="status"
+          >
+            <p className="font-body font-medium text-xs">
+              Waiting for memory to finish loading before generating daily candidates.
+            </p>
           </div>
         )}
       </div>

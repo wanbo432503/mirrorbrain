@@ -63,6 +63,7 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and a 
 
 - **Features:**
   - Create daily candidates for the previous local calendar day
+  - Review auto-generation waits until the first memory load finishes, avoiding concurrent heavy startup requests against OpenViking
   - Select candidate + view task title, duration, formation reasons, and concrete visited URLs split into primary/supporting sources
   - AI review suggestions (confidence/priority/rationale/keep score/supporting reasons)
   - Keep/Discard decisions
