@@ -13,7 +13,7 @@ const SUBTABS: { id: ArtifactsSubtab; label: string }[] = [
 
 export default function SubtabNavigation({ activeSubtab, onSubtabChange }: SubtabNavigationProps) {
   return (
-    <div className="flex gap-3 mb-8">
+    <div className="flex gap-2 mb-3">
       {SUBTABS.map((subtab) => {
         const isActive = activeSubtab === subtab.id
 
@@ -22,7 +22,7 @@ export default function SubtabNavigation({ activeSubtab, onSubtabChange }: Subta
             key={subtab.id}
             onClick={() => onSubtabChange(subtab.id)}
             className={`
-              px-4 py-2 rounded-lg font-heading font-semibold text-sm uppercase tracking-wide
+              px-3 py-1.5 rounded-lg font-heading font-semibold text-xs uppercase tracking-wide
               cursor-pointer transition-all duration-200
               focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none
               ${isActive

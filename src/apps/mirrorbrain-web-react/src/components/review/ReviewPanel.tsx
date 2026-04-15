@@ -79,7 +79,7 @@ export default function ReviewPanel() {
       {/* Feedback Banner */}
       {feedback && (
         <div
-          className={`mb-6 p-4 rounded-lg border ${
+          className={`mb-3 p-3 rounded-lg border ${
             feedback.kind === 'success'
               ? 'bg-green-100 border-green-300 text-green-700'
               : feedback.kind === 'error'
@@ -88,7 +88,7 @@ export default function ReviewPanel() {
           }`}
           role="alert"
         >
-          <p className="font-body font-medium">{feedback.message}</p>
+          <p className="font-body font-medium text-sm">{feedback.message}</p>
         </div>
       )}
 
@@ -110,14 +110,14 @@ export default function ReviewPanel() {
       />
 
       {/* Three-Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         {/* Left Column: Candidate List */}
         <div className="lg:col-span-1">
-          <div className="mb-3">
-            <h2 className="font-heading font-bold text-base text-slate-900 uppercase tracking-wide">
+          <div className="mb-2">
+            <h2 className="font-heading font-bold text-xs text-slate-900 uppercase tracking-wide">
               Candidates
             </h2>
-            <p className="font-body text-sm text-slate-600">
+            <p className="font-body text-xs text-slate-600">
               {candidates.length} candidates generated
             </p>
           </div>
@@ -131,11 +131,11 @@ export default function ReviewPanel() {
 
         {/* Center Column: Selected Candidate */}
         <div className="lg:col-span-1">
-          <div className="mb-3">
-            <h2 className="font-heading font-bold text-base text-slate-900 uppercase tracking-wide">
+          <div className="mb-2">
+            <h2 className="font-heading font-bold text-xs text-slate-900 uppercase tracking-wide">
               Selected Candidate
             </h2>
-            <p className="font-body text-sm text-slate-600">
+            <p className="font-body text-xs text-slate-600">
               {selectedCandidateId ? 'Viewing details' : 'Select from list'}
             </p>
           </div>
@@ -144,11 +144,11 @@ export default function ReviewPanel() {
 
         {/* Right Column: Review Guidance */}
         <div className="lg:col-span-1">
-          <div className="mb-3">
-            <h2 className="font-heading font-bold text-base text-slate-900 uppercase tracking-wide">
+          <div className="mb-2">
+            <h2 className="font-heading font-bold text-xs text-slate-900 uppercase tracking-wide">
               AI Guidance
             </h2>
-            <p className="font-body text-sm text-slate-600">
+            <p className="font-body text-xs text-slate-600">
               Suggestions and reviewed memory
             </p>
           </div>

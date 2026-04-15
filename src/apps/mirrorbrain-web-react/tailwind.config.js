@@ -11,7 +11,7 @@ export default {
         body: ['Fira Sans', 'sans-serif'],
       },
       fontSize: {
-        'hero': 'clamp(3rem, 10vw, 12rem)',
+        'hero': 'clamp(1.5rem, 4vw, 2.5rem)',
       },
       fontWeight: {
         'ultra': '900',

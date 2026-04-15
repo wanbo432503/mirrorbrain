@@ -17,7 +17,7 @@ export default function Button({
   ...props
 }: ButtonProps) {
   const baseClasses = `
-    px-6 py-3 rounded-lg font-heading font-semibold text-sm uppercase tracking-wide
+    px-3 py-1.5 rounded-lg font-heading font-semibold text-xs uppercase tracking-wide
     transition-all duration-200 cursor-pointer
     focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none
     disabled:opacity-40 disabled:cursor-not-allowed

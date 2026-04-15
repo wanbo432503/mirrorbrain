@@ -106,14 +106,14 @@ export default function MemoryPanel() {
       {/* Feedback Banner */}
       {feedback && (
         <div
-          className={`mb-6 p-4 rounded-lg border ${
+          className={`mb-3 p-3 rounded-lg border ${
             feedback.kind === 'success'
               ? 'bg-green-100 border-green-300 text-green-700'
               : 'bg-red-100 border-red-300 text-red-700'
           }`}
           role="alert"
         >
-          <p className="font-body font-medium">{feedback.message}</p>
+          <p className="font-body font-medium text-sm">{feedback.message}</p>
         </div>
       )}
 
@@ -127,8 +127,8 @@ export default function MemoryPanel() {
 
       {/* Last Sync Summary */}
       {state.lastSyncSummary && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
-          <p className="text-sm font-body text-blue-700">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 mb-3">
+          <p className="text-xs font-body text-blue-700">
             Last sync: {state.lastSyncSummary.sourceKey} ({state.lastSyncSummary.importedCount} events,
             {state.lastSyncSummary.strategy})
           </p>

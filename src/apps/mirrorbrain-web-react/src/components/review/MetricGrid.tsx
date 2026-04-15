@@ -21,7 +21,7 @@ export default function MetricGrid({
   reviewWindowEventCount,
 }: MetricGridProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 mb-3">
       <MetricTile
         label="Review Window"
         value={formatDate(reviewWindowDate)}

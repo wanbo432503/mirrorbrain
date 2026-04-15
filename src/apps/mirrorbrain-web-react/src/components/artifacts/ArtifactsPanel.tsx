@@ -75,7 +75,7 @@ export default function ArtifactsPanel() {
       {/* Feedback Banner */}
       {feedback && (
         <div
-          className={`mb-6 p-4 rounded-lg border ${
+          className={`mb-3 p-3 rounded-lg border ${
             feedback.kind === 'success'
               ? 'bg-green-100 border-green-300 text-green-700'
               : feedback.kind === 'error'
@@ -84,7 +84,7 @@ export default function ArtifactsPanel() {
           }`}
           role="alert"
         >
-          <p className="font-body font-medium">{feedback.message}</p>
+          <p className="font-body font-medium text-sm">{feedback.message}</p>
         </div>
       )}
 

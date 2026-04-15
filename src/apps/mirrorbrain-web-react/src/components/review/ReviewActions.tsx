@@ -18,7 +18,7 @@ export default function ReviewActions({
   selectedCandidateId,
 }: ReviewActionsProps) {
   return (
-    <div className="space-y-4 mb-8">
+    <div className="space-y-2 mb-3">
       {/* Create Candidates Button */}
       <Button
         variant="primary"
@@ -31,7 +31,7 @@ export default function ReviewActions({
 
       {/* Review Decision Buttons */}
       {selectedCandidateId && (
-        <div className="flex gap-4">
+        <div className="flex gap-2">
           <Button
             variant="success"
             onClick={onKeepCandidate}

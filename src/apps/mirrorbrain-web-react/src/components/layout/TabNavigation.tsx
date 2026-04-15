@@ -25,7 +25,7 @@ export default function TabNavigation({ activeTab, onTabChange }: TabNavigationP
   return (
     <div
       role="tablist"
-      className="flex gap-4 mb-8"
+      className="flex gap-2 mb-3"
       aria-label="MirrorBrain main navigation"
     >
       {TABS.map((tab) => {
@@ -42,7 +42,7 @@ export default function TabNavigation({ activeTab, onTabChange }: TabNavigationP
             onClick={() => onTabChange(tab)}
             onKeyDown={handleKeyDown}
             className={`
-              px-6 py-3 rounded-lg font-heading font-semibold text-sm uppercase tracking-wide
+              px-3 py-1.5 rounded-lg font-heading font-semibold text-xs uppercase tracking-wide
               cursor-pointer transition-all duration-200
               focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none
               ${isActive

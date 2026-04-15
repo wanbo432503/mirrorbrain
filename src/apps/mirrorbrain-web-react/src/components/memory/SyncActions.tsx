@@ -14,7 +14,7 @@ export default function SyncActions({
   isSyncingShell,
 }: SyncActionsProps) {
   return (
-    <div className="flex gap-4 mb-8">
+    <div className="flex gap-2 mb-3">
       <Button
         variant="primary"
         onClick={onSyncBrowser}
