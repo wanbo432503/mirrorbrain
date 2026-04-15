@@ -14,6 +14,7 @@ import {
   listMirrorBrainMemoryEventsFromWorkspace,
   listRawMirrorBrainMemoryEventsFromWorkspace,
   listMirrorBrainMemoryNarrativesFromOpenViking,
+  listMirrorBrainCandidateMemoriesFromOpenViking,
   type OpenVikingMemoryEventWriter,
 } from '../../integrations/openviking-store/index.js';
 import {
@@ -104,6 +105,7 @@ interface CreateMirrorBrainServiceDependencies {
   listWorkspaceMemoryEvents?: typeof listMirrorBrainMemoryEventsFromWorkspace;
   listRawWorkspaceMemoryEvents?: typeof listRawMirrorBrainMemoryEventsFromWorkspace;
   listMemoryNarratives?: typeof listMirrorBrainMemoryNarrativesFromOpenViking;
+  listCandidateMemories?: typeof listMirrorBrainCandidateMemoriesFromOpenViking;
   listKnowledge?: typeof listKnowledgeFromPluginApi;
   listSkillDrafts?: typeof listSkillDraftsFromPluginApi;
   publishMemoryNarrative?: typeof ingestMemoryNarrativeToOpenViking;
@@ -292,6 +294,8 @@ export function createMirrorBrainService(
     dependencies.listRawWorkspaceMemoryEvents ?? listRawMirrorBrainMemoryEventsFromWorkspace;
   const listMemoryNarratives =
     dependencies.listMemoryNarratives ?? listMirrorBrainMemoryNarrativesFromOpenViking;
+  const listCandidateMemories =
+    dependencies.listCandidateMemories ?? listMirrorBrainCandidateMemoriesFromOpenViking;
   const listKnowledge = dependencies.listKnowledge ?? listKnowledgeFromPluginApi;
   const listSkillDrafts =
     dependencies.listSkillDrafts ?? listSkillDraftsFromPluginApi;
@@ -575,6 +579,20 @@ export function createMirrorBrainService(
       reviewDate: string,
       reviewTimeZone?: string,
     ): Promise<CandidateMemory[]> => {
+      // Query existing candidates first
+      const existingCandidates = await listCandidateMemories({
+        baseUrl,
+      });
+      const candidatesForDate = existingCandidates.filter(
+        (candidate) => candidate.reviewDate === reviewDate,
+      );
+
+      // If candidates already exist, return them directly
+      if (candidatesForDate.length > 0) {
+        return candidatesForDate;
+      }
+
+      // Otherwise, generate new candidates
       await input.service.syncBrowserMemory();
 
       const memoryEvents = await listRawWorkspaceMemoryEvents({
@@ -632,6 +650,15 @@ export function createMirrorBrainService(
       candidates: CandidateMemory[],
     ): Promise<CandidateReviewSuggestion[]> =>
       analyzeCandidateReviews(candidates),
+    listCandidateMemoriesByDate: async (
+      reviewDate: string,
+    ): Promise<CandidateMemory[]> => {
+      const allCandidates = await listCandidateMemories({
+        baseUrl,
+      });
+
+      return allCandidates.filter((candidate) => candidate.reviewDate === reviewDate);
+    },
     createCandidateMemory: async (
       memoryEvents: MemoryEvent[],
     ): Promise<CandidateMemory> => {

@@ -40,6 +40,7 @@ interface MirrorBrainHttpService {
   >;
   getKnowledgeTopic?(topicKey: string): Promise<KnowledgeArtifact | null>;
   listKnowledgeHistory?(topicKey: string): Promise<KnowledgeArtifact[]>;
+  listCandidateMemoriesByDate?(reviewDate: string): Promise<CandidateMemory[]>;
   listSkillDrafts(): Promise<SkillArtifact[]>;
   publishKnowledge?(artifact: KnowledgeArtifact): Promise<unknown>;
   publishSkillDraft?(artifact: SkillArtifact): Promise<unknown>;
@@ -740,6 +741,51 @@ export async function startMirrorBrainHttpServer(
       reply.code(202);
       return {
         sync: await input.service.syncShellMemory(),
+      };
+    },
+  );
+
+  app.get<{
+    Querystring: {
+      reviewDate?: string;
+    };
+  }>(
+    '/candidate-memories',
+    {
+      schema: {
+        summary: 'List candidate memories optionally filtered by review date',
+        querystring: {
+          type: 'object',
+          properties: {
+            reviewDate: { type: 'string' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              candidates: {
+                type: 'array',
+                items: candidateMemorySchema,
+              },
+            },
+            required: ['candidates'],
+          },
+        },
+      },
+    },
+    async (request) => {
+      if (request.query.reviewDate && input.service.listCandidateMemoriesByDate) {
+        return {
+          candidates: await input.service.listCandidateMemoriesByDate(
+            request.query.reviewDate,
+          ),
+        };
+      }
+
+      // Fallback: return empty array if reviewDate is not provided or method not available
+      return {
+        candidates: [],
       };
     },
   );

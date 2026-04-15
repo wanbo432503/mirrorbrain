@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import ReviewActions from './ReviewActions'
 import MetricGrid from './MetricGrid'
 import CandidateList from './CandidateList'
@@ -46,6 +46,17 @@ export default function ReviewPanel() {
 
   const [reviewDate] = useState(getDefaultReviewDate())
   const [reviewTimeZone] = useState(getLocalTimeZone())
+  const [hasAutoLoaded, setHasAutoLoaded] = useState(false)
+
+  // Auto-load daily candidates when entering review tab
+  useEffect(() => {
+    if (!hasAutoLoaded && candidates.length === 0) {
+      setHasAutoLoaded(true)
+      createDailyCandidates(reviewDate, reviewTimeZone).catch(() => {
+        // Error already handled by useReviewWorkflow
+      })
+    }
+  }, [hasAutoLoaded, candidates.length, createDailyCandidates, reviewDate, reviewTimeZone])
 
   const handleCreateCandidates = async () => {
     try {

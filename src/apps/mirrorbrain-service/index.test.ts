@@ -1117,6 +1117,124 @@ describe('mirrorbrain service', () => {
     });
   });
 
+  it('lists candidate memories filtered by review date', async () => {
+    const service = {
+      status: 'running' as const,
+      config: getMirrorBrainConfig(),
+      syncBrowserMemory: vi.fn(async () => ({
+        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:00:00.000Z',
+      })),
+      syncShellMemory: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:00:00.000Z',
+      })),
+      stop: vi.fn(),
+    };
+
+    const allCandidates = [
+      createCandidateMemoryFixture({
+        id: 'candidate:2026-04-12:activitywatch-browser:example-com:task-1',
+        memoryEventIds: ['browser:aw-event-1'],
+        reviewDate: '2026-04-12',
+      }),
+      createCandidateMemoryFixture({
+        id: 'candidate:2026-04-12:activitywatch-browser:example-com:task-2',
+        memoryEventIds: ['browser:aw-event-2'],
+        reviewDate: '2026-04-12',
+      }),
+      createCandidateMemoryFixture({
+        id: 'candidate:2026-04-13:activitywatch-browser:example-com:task-3',
+        memoryEventIds: ['browser:aw-event-3'],
+        reviewDate: '2026-04-13',
+      }),
+    ];
+
+    const api = createMirrorBrainService(
+      {
+        service,
+        workspaceDir: '/tmp/mirrorbrain-workspace',
+      },
+      {
+        listMemoryEvents: vi.fn(async () => []),
+        listCandidateMemories: vi.fn(async () => allCandidates),
+        listKnowledge: vi.fn(async () => []),
+        listSkillDrafts: vi.fn(async () => []),
+      },
+    );
+
+    const candidatesForDate = await api.listCandidateMemoriesByDate('2026-04-12');
+
+    expect(candidatesForDate).toHaveLength(2);
+    expect(candidatesForDate[0]?.reviewDate).toBe('2026-04-12');
+    expect(candidatesForDate[1]?.reviewDate).toBe('2026-04-12');
+  });
+
+  it('returns existing candidates instead of generating new ones when candidates already exist for the review date', async () => {
+    const service = {
+      status: 'running' as const,
+      config: getMirrorBrainConfig(),
+      syncBrowserMemory: vi.fn(async () => ({
+        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-04-12T10:00:00.000Z',
+      })),
+      syncShellMemory: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-04-12T10:00:00.000Z',
+      })),
+      stop: vi.fn(),
+    };
+
+    const existingCandidates = [
+      createCandidateMemoryFixture({
+        id: 'candidate:2026-04-12:activitywatch-browser:example-com:existing-task',
+        memoryEventIds: ['browser:aw-event-1'],
+        reviewDate: '2026-04-12',
+      }),
+    ];
+
+    const listCandidateMemories = vi.fn(async () => existingCandidates);
+    const listRawWorkspaceMemoryEvents = vi.fn(async () => []);
+    const createCandidateMemories = vi.fn(() => []);
+
+    const api = createMirrorBrainService(
+      {
+        service,
+        workspaceDir: '/tmp/mirrorbrain-workspace',
+      },
+      {
+        listMemoryEvents: vi.fn(async () => []),
+        listCandidateMemories,
+        listRawWorkspaceMemoryEvents,
+        createCandidateMemories,
+        publishCandidateMemory: vi.fn(async () => ({
+          sourcePath: '/tmp/candidate.json',
+          rootUri: 'viking://resources/candidate',
+        })),
+        listKnowledge: vi.fn(async () => []),
+        listSkillDrafts: vi.fn(async () => []),
+      },
+    );
+
+    const result = await api.createDailyCandidateMemories('2026-04-12', 'Asia/Shanghai');
+
+    // Should return existing candidates
+    expect(result).toEqual(existingCandidates);
+
+    // Should NOT call sync or generation methods
+    expect(service.syncBrowserMemory).not.toHaveBeenCalled();
+    expect(listRawWorkspaceMemoryEvents).not.toHaveBeenCalled();
+    expect(createCandidateMemories).not.toHaveBeenCalled();
+  });
+
   it('returns candidate review suggestions without publishing review artifacts', async () => {
     const service = {
       status: 'running' as const,
@@ -1259,6 +1377,7 @@ describe('mirrorbrain service', () => {
         service,
       },
       {
+        listCandidateMemories: vi.fn(async () => []),
         listRawWorkspaceMemoryEvents: vi.fn(async () => memoryEvents),
         createCandidateMemories,
         publishCandidateMemory,

@@ -23,6 +23,39 @@ export function useReviewWorkflow(api: MirrorBrainWebAppApi) {
       setFeedback(null)
 
       try {
+        // Check if candidates already exist
+        if (api.listCandidateMemoriesByDate) {
+          const existingCandidates = await api.listCandidateMemoriesByDate(reviewDate)
+
+          if (existingCandidates.length > 0) {
+            dispatch({ type: 'SET_CANDIDATES', payload: existingCandidates })
+
+            // Get review suggestions for all candidates
+            const suggestions = await api.suggestCandidateReviews(existingCandidates)
+            setReviewSuggestions(suggestions)
+
+            // Set review window info
+            dispatch({
+              type: 'SET_REVIEW_WINDOW',
+              payload: {
+                date: reviewDate,
+                eventCount: existingCandidates.reduce(
+                  (count, candidate) => count + candidate.memoryEventIds.length,
+                  0
+                ),
+              },
+            })
+
+            setFeedback({
+              kind: 'info',
+              message: 'Daily candidates already generated',
+            })
+
+            return existingCandidates
+          }
+        }
+
+        // If no existing candidates, create new ones
         const candidates = await api.createDailyCandidates(reviewDate, reviewTimeZone)
         dispatch({ type: 'SET_CANDIDATES', payload: candidates })
 
