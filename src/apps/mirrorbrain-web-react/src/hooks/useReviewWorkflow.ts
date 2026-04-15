@@ -121,6 +121,15 @@ export function useReviewWorkflow(api: MirrorBrainWebAppApi) {
 
         setReviewedMemory(reviewed)
 
+        // Update global state based on decision
+        if (decision === 'keep') {
+          // Add reviewed memory to global state
+          dispatch({ type: 'ADD_REVIEWED_MEMORY', payload: reviewed })
+        } else if (decision === 'discard') {
+          // Remove candidate from global state
+          dispatch({ type: 'REMOVE_CANDIDATE', payload: candidate.id })
+        }
+
         setFeedback({
           kind: 'success',
           message: `Candidate ${decision === 'keep' ? 'kept' : 'discarded'}`,
@@ -135,7 +144,7 @@ export function useReviewWorkflow(api: MirrorBrainWebAppApi) {
         setIsReviewing(false)
       }
     },
-    [api, selectedCandidateId, state.candidateMemories]
+    [api, selectedCandidateId, state.candidateMemories, dispatch]
   )
 
   const getSelectedCandidate = useCallback(() => {

@@ -5,7 +5,8 @@ import KnowledgeGenerator from './KnowledgeGenerator'
 import SkillGenerator from './SkillGenerator'
 import { createMirrorBrainBrowserApi, type MirrorBrainWebAppApi } from '../../api/client'
 import { useArtifacts } from '../../hooks/useArtifacts'
-import type { ReviewedMemory, KnowledgeArtifact, SkillArtifact } from '../../types/index'
+import { useMirrorBrain } from '../../contexts/MirrorBrainContext'
+import type { KnowledgeArtifact, SkillArtifact } from '../../types/index'
 
 type ArtifactsSubtab = 'history-topics' | 'generate-knowledge' | 'generate-skill'
 
@@ -27,10 +28,13 @@ export default function ArtifactsPanel() {
     saveSkillArtifact,
   } = useArtifacts(api)
 
+  const { state } = useMirrorBrain()
+
   const [activeSubtab, setActiveSubtab] = useState<ArtifactsSubtab>('history-topics')
   const [knowledgeDraft, setKnowledgeDraft] = useState<KnowledgeArtifact | null>(null)
   const [skillDraft, setSkillDraft] = useState<SkillArtifact | null>(null)
-  const [reviewedMemories] = useState<ReviewedMemory[]>([])
+  // Use only kept reviewed memories from global state for artifact generation
+  const reviewedMemories = state.reviewedMemories.filter((memory) => memory.decision === 'keep')
 
   // Knowledge handlers
   const handleGenerateKnowledge = async () => {

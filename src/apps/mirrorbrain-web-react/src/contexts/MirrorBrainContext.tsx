@@ -5,6 +5,7 @@ import type {
   KnowledgeArtifact,
   SkillArtifact,
   BrowserSyncSummary,
+  ReviewedMemory,
 } from '../types/index'
 
 type ServiceStatus = 'running' | 'stopped' | 'unknown'
@@ -22,6 +23,7 @@ interface MirrorBrainState {
   reviewWindowEventCount: number
   candidateMemories: CandidateMemory[]
   selectedCandidateId: string | null
+  reviewedMemories: ReviewedMemory[]
 
   // Knowledge artifacts
   knowledgeArtifacts: KnowledgeArtifact[]
@@ -52,6 +54,8 @@ type MirrorBrainAction =
   | { type: 'SET_CANDIDATES'; payload: CandidateMemory[] }
   | { type: 'SET_SELECTED_CANDIDATE'; payload: string | null }
   | { type: 'SET_REVIEW_WINDOW'; payload: { date: string; eventCount: number } }
+  | { type: 'ADD_REVIEWED_MEMORY'; payload: ReviewedMemory }
+  | { type: 'REMOVE_CANDIDATE'; payload: string }
 
 const initialState: MirrorBrainState = {
   serviceStatus: 'unknown',
@@ -61,6 +65,7 @@ const initialState: MirrorBrainState = {
   reviewWindowEventCount: 0,
   candidateMemories: [],
   selectedCandidateId: null,
+  reviewedMemories: [],
   knowledgeArtifacts: [],
   knowledgeTopics: [],
   skillArtifacts: [],
@@ -113,6 +118,20 @@ function mirrorBrainReducer(state: MirrorBrainState, action: MirrorBrainAction):
         reviewWindowEventCount: action.payload.eventCount,
       }
 
+    case 'ADD_REVIEWED_MEMORY':
+      return {
+        ...state,
+        reviewedMemories: [...state.reviewedMemories, action.payload],
+      }
+
+    case 'REMOVE_CANDIDATE':
+      return {
+        ...state,
+        candidateMemories: state.candidateMemories.filter(
+          (candidate) => candidate.id !== action.payload
+        ),
+      }
+
     default:
       return state
   }
@@ -149,4 +168,5 @@ export function useMirrorBrain() {
   return context
 }
 
+export { mirrorBrainReducer, initialState }
 export type { MirrorBrainState, MirrorBrainAction, ServiceStatus }
