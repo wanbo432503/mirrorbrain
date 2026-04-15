@@ -26,6 +26,10 @@ This component is not responsible for:
 - `reviewCandidateMemory(...)`
 - `suggestCandidateReviews(...)`
 
+Detailed algorithm walkthrough:
+
+- [review-candidate-generation-algorithm.md](../features/review-candidate-generation-algorithm.md)
+
 ## Data Flow
 
 1. A caller passes normalized memory events and a `reviewDate` into `createCandidateMemories(...)`.

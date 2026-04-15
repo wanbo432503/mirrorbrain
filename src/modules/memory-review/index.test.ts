@@ -772,6 +772,131 @@ describe('memory review', () => {
     );
   });
 
+  it('treats issue plus pull request plus repository activity as code review instead of bug fix', () => {
+    const [candidate] = createCandidateMemories({
+      reviewDate: '2026-04-15',
+      memoryEvents: [
+        {
+          ...createBrowserMemoryEvent({
+            id: 'browser:review-issue',
+            timestamp: '2026-04-15T08:00:00.000Z',
+            url: 'https://github.com/example/repo/issues/123',
+            title: 'Review rollout risk for cache migration',
+          }),
+          content: {
+            url: 'https://github.com/example/repo/issues/123',
+            title: 'Review rollout risk for cache migration',
+            pageText:
+              'Review rollout risk, acceptance criteria, and edge cases for cache migration.',
+          },
+        },
+        {
+          ...createBrowserMemoryEvent({
+            id: 'browser:review-pr',
+            timestamp: '2026-04-15T08:12:00.000Z',
+            url: 'https://github.com/example/repo/pull/456',
+            title: 'Cache migration rollout review',
+          }),
+          content: {
+            url: 'https://github.com/example/repo/pull/456',
+            title: 'Cache migration rollout review',
+            pageText:
+              'Pull request review for cache migration rollout and reviewer comments.',
+          },
+        },
+        {
+          ...createBrowserMemoryEvent({
+            id: 'browser:review-repo',
+            timestamp: '2026-04-15T08:20:00.000Z',
+            url: 'https://github.com/example/repo',
+            title: 'Repository overview',
+          }),
+          content: {
+            url: 'https://github.com/example/repo',
+            title: 'Repository overview',
+            pageText:
+              'Repository files changed for cache migration rollout review and verification.',
+          },
+        },
+      ],
+    });
+
+    const [suggestion] = suggestCandidateReviews([candidate]);
+
+    expect(suggestion?.rationale.toLowerCase()).toContain('review');
+    expect(suggestion?.supportingReasons?.some((reason) => reason.toLowerCase().includes('review workflow'))).toBe(true);
+  });
+
+  it('splits same-topic browser activity into separate candidates when sessions are far apart', () => {
+    const candidates = createCandidateMemories({
+      reviewDate: '2026-04-15',
+      memoryEvents: [
+        {
+          ...createBrowserMemoryEvent({
+            id: 'browser:session-1-docs',
+            timestamp: '2026-04-15T01:00:00.000Z',
+            url: 'https://docs.example.com/cache/invalidation',
+            title: 'Cache invalidation guide',
+          }),
+          content: {
+            url: 'https://docs.example.com/cache/invalidation',
+            title: 'Cache invalidation guide',
+            pageText: 'Cache invalidation guide for stale cache mitigation and recovery.',
+          },
+        },
+        {
+          ...createBrowserMemoryEvent({
+            id: 'browser:session-1-issue',
+            timestamp: '2026-04-15T01:20:00.000Z',
+            url: 'https://github.com/example/repo/issues/777',
+            title: 'Fix stale cache after sync',
+          }),
+          content: {
+            url: 'https://github.com/example/repo/issues/777',
+            title: 'Fix stale cache after sync',
+            pageText: 'Issue for stale cache after sync and invalidation failures.',
+          },
+        },
+        {
+          ...createBrowserMemoryEvent({
+            id: 'browser:session-2-docs',
+            timestamp: '2026-04-15T08:00:00.000Z',
+            url: 'https://docs.example.com/cache/invalidation',
+            title: 'Cache invalidation guide',
+          }),
+          content: {
+            url: 'https://docs.example.com/cache/invalidation',
+            title: 'Cache invalidation guide',
+            pageText: 'Cache invalidation guide for stale cache mitigation and recovery.',
+          },
+        },
+        {
+          ...createBrowserMemoryEvent({
+            id: 'browser:session-2-pr',
+            timestamp: '2026-04-15T08:10:00.000Z',
+            url: 'https://github.com/example/repo/pull/778',
+            title: 'Cache invalidation rollout',
+          }),
+          content: {
+            url: 'https://github.com/example/repo/pull/778',
+            title: 'Cache invalidation rollout',
+            pageText: 'Pull request for cache invalidation rollout and verification.',
+          },
+        },
+      ],
+    });
+
+    expect(candidates).toHaveLength(2);
+    expect(candidates[0]?.timeRange).toMatchObject({
+      startAt: '2026-04-15T01:00:00.000Z',
+      endAt: '2026-04-15T01:20:00.000Z',
+    });
+    expect(candidates[1]?.timeRange).toMatchObject({
+      startAt: '2026-04-15T08:00:00.000Z',
+      endAt: '2026-04-15T08:10:00.000Z',
+    });
+  });
+
   it('treats UTC timestamps as part of the local review day when a review timezone is provided', () => {
     const candidates = createCandidateMemories({
       reviewDate: '2026-04-01',

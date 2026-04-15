@@ -47,6 +47,7 @@ interface EventDescriptor {
 }
 
 const MAX_DAILY_CANDIDATES = 10;
+const MAX_SESSION_GAP_MINUTES = 180;
 const TOKEN_STOP_WORDS = new Set([
   'http',
   'https',
@@ -158,7 +159,7 @@ export function createCandidateMemories(
     throw new Error(`No memory events found for review date ${input.reviewDate}.`);
   }
 
-  const groups = Array.from(groupEventsByStream(dailyEvents).values());
+  const groups = groupEventsByStream(dailyEvents);
   const limitedGroups = limitCandidateGroups(groups, MAX_DAILY_CANDIDATES);
   const stableKeys = assignStableGroupKeys(limitedGroups);
 
@@ -390,8 +391,12 @@ interface TaskTypeInferenceInput {
 type TaskType = 'bug-fix' | 'feature-implementation' | 'research' | 'debugging' | 'code-review' | 'general';
 
 function inferTaskType(input: TaskTypeInferenceInput): TaskType {
-  const titleLower = input.title.toLowerCase();
   const docsRefCount = input.pageRoles.filter(role => role === 'docs' || role === 'reference').length;
+
+  // Code review: issue + PR + repo together is stronger than either signal alone
+  if (input.hasIssue && input.hasPR && input.hasRepo) {
+    return 'code-review';
+  }
 
   // Bug fix: Issue present (primary debugging indicator)
   if (input.hasIssue) {
@@ -411,11 +416,6 @@ function inferTaskType(input: TaskTypeInferenceInput): TaskType {
   // Research: Docs-heavy pattern (knowledge gathering)
   if (docsRefCount >= 1) {
     return 'research';
-  }
-
-  // Code review: Issue + PR + repo (reviewing changes)
-  if (input.hasIssue && input.hasPR && input.hasRepo) {
-    return 'code-review';
   }
 
   return 'general';
@@ -558,7 +558,7 @@ function generateContextualSupportingReasons(input: SupportingReasonsInput): str
 
 function groupEventsByStream(
   memoryEvents: MemoryEvent[],
-): Map<string, CandidateStreamGroup> {
+): CandidateStreamGroup[] {
   const descriptors = buildEventDescriptors(memoryEvents);
   const groups: CandidateStreamGroup[] = [];
 
@@ -585,11 +585,15 @@ function groupEventsByStream(
       targetGroup.formationReasons.push(crossHostReason);
     }
 
-    targetGroup.title = createTaskTitle(targetGroup.taskTokens, targetGroup.hosts);
+    targetGroup.title = createTaskTitle(
+      targetGroup.memoryEvents,
+      targetGroup.taskTokens,
+      targetGroup.hosts,
+    );
     targetGroup.theme = createTaskTheme(targetGroup.taskTokens, targetGroup.hosts);
   }
 
-  return new Map(groups.map((group) => [group.key, group]));
+  return groups;
 }
 
 function buildEventDescriptors(memoryEvents: MemoryEvent[]): EventDescriptor[] {
@@ -607,7 +611,7 @@ function buildEventDescriptors(memoryEvents: MemoryEvent[]): EventDescriptor[] {
       typeof event.content.pageText === 'string' ? event.content.pageText : undefined;
     const host = getEventHost(url);
     const role = inferPageRole({ url, title });
-    const tokens = extractEventTokens({ url, title, pageTitle, pageText, host });
+    const tokens = extractEventTokens({ url, title, pageTitle, pageText, host, role });
 
     for (const token of new Set(tokens)) {
       tokenCounts.set(token, (tokenCounts.get(token) ?? 0) + 1);
@@ -746,12 +750,14 @@ function extractEventTokens(input: {
   pageTitle?: string;
   pageText?: string;
   host: string;
+  role: EventDescriptor['role'];
 }): string[] {
   const titleTokens = extractTokens(input.title ?? '');
   const pageTitleTokens = extractTokens(input.pageTitle ?? '');
   const pageTextTokens = extractRepeatedPageTextTokens(
     input.pageText ?? '',
     new Set([...titleTokens, ...pageTitleTokens]),
+    input.role,
   ).slice(0, 40);
   const fallbackUrlTokens =
     titleTokens.length === 0 && pageTitleTokens.length === 0 && pageTextTokens.length === 0
@@ -778,8 +784,17 @@ function extractEventTokens(input: {
 function extractRepeatedPageTextTokens(
   value: string,
   titleTokens: Set<string>,
+  role: EventDescriptor['role'],
 ): string[] {
   const rawTokens = extractTokens(value);
+
+  if (
+    rawTokens.length <= 10 &&
+    (role === 'repository' || role === 'debug' || role === 'web')
+  ) {
+    return rawTokens;
+  }
+
   const counts = new Map<string, number>();
 
   for (const token of rawTokens) {
@@ -830,7 +845,7 @@ function createCandidateGroup(descriptor: EventDescriptor): CandidateStreamGroup
   return {
     key: `${sanitizeForId(descriptor.host)}:${sanitizeForId(taskTokens.join('-') || 'general')}`,
     theme: createTaskTheme(taskTokens, hosts),
-    title: createTaskTitle(taskTokens, hosts),
+    title: createTaskTitle([descriptor.event], taskTokens, hosts),
     memoryEvents: [descriptor.event],
     taskTokens,
     hosts,
@@ -843,30 +858,38 @@ function createCandidateGroup(descriptor: EventDescriptor): CandidateStreamGroup
   };
 }
 
-function createTaskTitle(taskTokens: string[], hosts: string[]): string {
+function createTaskTitle(
+  memoryEvents: MemoryEvent[],
+  taskTokens: string[],
+  hosts: string[],
+): string {
+  const representativeTitle = selectRepresentativeSourceTitle(memoryEvents);
+
+  if (representativeTitle !== null) {
+    return representativeTitle;
+  }
+
   if (taskTokens.length === 0) {
     return `Work on ${toTitleCase(hosts[0] ?? 'General Task')}`;
   }
 
-  // Try to infer action verb from the first task token
-  // Common action verbs that appear in issue/PR titles
-  const actionVerbs = [
-    'fix', 'implement', 'debug', 'review', 'build', 'update', 'add', 'remove',
-    'refactor', 'optimize', 'test', 'deploy', 'configure', 'integrate',
-    'document', 'migrate', 'upgrade', 'release', 'monitor', 'analyze',
-  ];
+  const topic = toTitleCase(taskTokens.slice(0, 3).join(' '));
+  const taskType = inferTaskTypeFromEvents(memoryEvents, topic);
 
-  const firstToken = taskTokens[0].toLowerCase();
-  const isActionVerb = actionVerbs.includes(firstToken);
-
-  if (isActionVerb) {
-    // Use the action verb directly, followed by remaining tokens
-    const remainingTokens = taskTokens.slice(1, 3);
-    return toTitleCase([firstToken, ...remainingTokens].join(' '));
+  switch (taskType) {
+    case 'bug-fix':
+      return `Fix ${topic}`;
+    case 'feature-implementation':
+      return `Implement ${topic}`;
+    case 'research':
+      return `Review ${topic}`;
+    case 'debugging':
+      return `Debug ${topic}`;
+    case 'code-review':
+      return `Review ${topic}`;
+    default:
+      return `Work on ${topic}`;
   }
-
-  // If no action verb detected, prefix with "Work on"
-  return `Work on ${toTitleCase(taskTokens.slice(0, 3).join(' '))}`;
 }
 
 function createTaskTheme(taskTokens: string[], hosts: string[]): string {
@@ -875,6 +898,106 @@ function createTaskTheme(taskTokens: string[], hosts: string[]): string {
   }
 
   return taskTokens.slice(0, 3).join(' / ');
+}
+
+function selectRepresentativeSourceTitle(
+  memoryEvents: MemoryEvent[],
+): string | null {
+  const scoredTitles = memoryEvents
+    .map((event) => {
+      const title =
+        typeof event.content.title === 'string' ? event.content.title : undefined;
+      const normalizedTitle = normalizeSourceTitle(title);
+
+      if (normalizedTitle === null) {
+        return null;
+      }
+
+      const role = inferPageRole({
+        url: typeof event.content.url === 'string' ? event.content.url : undefined,
+        title,
+      });
+      const actionPhrase = extractActionPhrase(normalizedTitle);
+
+      return {
+        role,
+        normalizedTitle,
+        actionPhrase,
+        score:
+          (actionPhrase !== null ? 10 : 0) +
+          (role === 'issue' ? 6 : 0) +
+          (role === 'pull-request' ? 5 : 0) +
+          (role === 'debug' ? 4 : 0) +
+          (role === 'docs' || role === 'reference' ? 3 : 0) +
+          normalizedTitle.split(/\s+/).length,
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null)
+    .sort((left, right) => right.score - left.score);
+
+  const best = scoredTitles[0];
+
+  if (best?.actionPhrase) {
+    return best.actionPhrase;
+  }
+
+  return null;
+}
+
+function normalizeSourceTitle(title?: string): string | null {
+  if (typeof title !== 'string' || title.trim().length === 0) {
+    return null;
+  }
+
+  return title
+    .replace(/\s*[-|:]\s*(issue|pr|pull request)\s*#?\d+$/i, '')
+    .replace(/\s*[-|:]\s*google search$/i, '')
+    .replace(/\s*[-|:]\s*stack overflow$/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function extractActionPhrase(title: string): string | null {
+  const actionVerbs = [
+    'fix', 'implement', 'debug', 'review', 'build', 'update', 'add', 'remove',
+    'refactor', 'optimize', 'test', 'deploy', 'configure', 'integrate',
+    'document', 'migrate', 'upgrade', 'release', 'monitor', 'analyze', 'investigate',
+    'explore',
+  ];
+  const tokens = title
+    .split(/[^a-zA-Z0-9]+/)
+    .filter(Boolean);
+  const firstToken = tokens[0]?.toLowerCase();
+
+  if (!firstToken || !actionVerbs.includes(firstToken)) {
+    return null;
+  }
+
+  return toTitleCase(tokens.slice(0, 5).join(' '));
+}
+
+function inferTaskTypeFromEvents(
+  memoryEvents: MemoryEvent[],
+  title: string,
+): TaskType {
+  const pageRoles = memoryEvents.map((event) =>
+    inferPageRole({
+      url: typeof event.content.url === 'string' ? event.content.url : undefined,
+      title: typeof event.content.title === 'string' ? event.content.title : undefined,
+    }),
+  );
+
+  return inferTaskType({
+    hasIssue: pageRoles.includes('issue'),
+    hasPR: pageRoles.includes('pull-request'),
+    hasRepo: pageRoles.includes('repository'),
+    hasDocs: pageRoles.includes('docs'),
+    hasDebug: pageRoles.includes('debug'),
+    hasSearch: pageRoles.includes('search'),
+    hasReference: pageRoles.includes('reference'),
+    pageRoles,
+    title,
+  });
 }
 
 function summarizeTaskTokens(memoryEvents: MemoryEvent[]): string[] {
@@ -893,7 +1016,9 @@ function summarizeTaskTokens(memoryEvents: MemoryEvent[]): string[] {
       typeof event.content.pageText === 'string' ? event.content.pageText : undefined;
     const host = getEventHost(url);
 
-    for (const token of extractEventTokens({ url, title, pageTitle, pageText, host })) {
+    const role = inferPageRole({ url, title });
+
+    for (const token of extractEventTokens({ url, title, pageTitle, pageText, host, role })) {
       counts.set(token, (counts.get(token) ?? 0) + 1);
     }
   }
@@ -954,6 +1079,19 @@ function scoreDescriptorAgainstGroup(
     groupTokens.has(token),
   ).length;
   const anyOverlap = descriptor.tokens.filter((token) => groupTokens.has(token)).length;
+  const groupEnd = group.memoryEvents[group.memoryEvents.length - 1]?.timestamp ?? '';
+  const minutesGap = getDurationMinutes(groupEnd, descriptor.event.timestamp);
+
+  const allowSparseCrossGapMerge =
+    minutesGap > MAX_SESSION_GAP_MINUTES &&
+    group.memoryEvents.length === 1 &&
+    descriptor.role !== 'search' &&
+    descriptor.role !== 'chat' &&
+    salientOverlap >= 2;
+
+  if (minutesGap > MAX_SESSION_GAP_MINUTES && !allowSparseCrossGapMerge) {
+    return 0;
+  }
 
   // Semantic similarity is the primary factor - salient tokens are task-specific keywords
   // High salient overlap (>= 2) indicates strong task relationship
@@ -984,8 +1122,6 @@ function scoreDescriptorAgainstGroup(
           salientOverlap > 0
         ? 1
         : 0;
-  const groupEnd = group.memoryEvents[group.memoryEvents.length - 1]?.timestamp ?? '';
-  const minutesGap = getDurationMinutes(groupEnd, descriptor.event.timestamp);
   const timeBonus = minutesGap <= 120 ? 1 : 0;
   const supportingOnlyDescriptor =
     descriptor.role === 'search' || descriptor.role === 'chat';
@@ -1041,7 +1177,11 @@ function limitCandidateGroups(
       new Set([...mergeTarget.hosts, ...groupToMerge.hosts]),
     ).sort();
     mergeTarget.taskTokens = summarizeTaskTokens(mergeTarget.memoryEvents);
-    mergeTarget.title = createTaskTitle(mergeTarget.taskTokens, mergeTarget.hosts);
+    mergeTarget.title = createTaskTitle(
+      mergeTarget.memoryEvents,
+      mergeTarget.taskTokens,
+      mergeTarget.hosts,
+    );
     mergeTarget.theme = createTaskTheme(mergeTarget.taskTokens, mergeTarget.hosts);
     mergeTarget.compressedSourceCount += groupToMerge.memoryEvents.length;
     mergeTarget.formationReasons.push(
