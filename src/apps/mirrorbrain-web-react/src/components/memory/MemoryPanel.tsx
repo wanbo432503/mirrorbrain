@@ -7,6 +7,7 @@ import { useMirrorBrain } from '../../contexts/MirrorBrainContext'
 import { createMirrorBrainBrowserApi, type MirrorBrainWebAppApi } from '../../api/client'
 import { useSyncOperations } from '../../hooks/useSyncOperations'
 import { usePagination } from '../../hooks/usePagination'
+import type { MemoryEvent } from '../../types/index'
 
 const MEMORY_PAGE_SIZE = 5
 
@@ -14,6 +15,20 @@ export function shouldLoadMemoryEvents(input: {
   hasLoadedMemoryEvents: boolean
 }) {
   return !input.hasLoadedMemoryEvents
+}
+
+export function getVisibleMemoryEvents(input: {
+  memoryEvents: MemoryEvent[]
+  currentPage: number
+  pageSize: number
+}) {
+  const sortedEvents = [...input.memoryEvents].sort((left, right) =>
+    right.timestamp.localeCompare(left.timestamp)
+  )
+  const startIndex = (input.currentPage - 1) * input.pageSize
+  const endIndex = startIndex + input.pageSize
+
+  return sortedEvents.slice(startIndex, endIndex)
 }
 
 export default function MemoryPanel() {
@@ -72,9 +87,11 @@ export default function MemoryPanel() {
   }
 
   // Get current page events
-  const startIndex = (currentPage - 1) * MEMORY_PAGE_SIZE
-  const endIndex = startIndex + MEMORY_PAGE_SIZE
-  const currentEvents = state.memoryEvents.slice(startIndex, endIndex)
+  const currentEvents = getVisibleMemoryEvents({
+    memoryEvents: state.memoryEvents,
+    currentPage,
+    pageSize: MEMORY_PAGE_SIZE,
+  })
 
   if (isLoading) {
     return (

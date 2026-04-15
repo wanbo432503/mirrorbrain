@@ -4,50 +4,97 @@ interface PaginationProps {
   onPageChange: (page: number) => void
 }
 
+export function getPaginationControlState(currentPage: number, totalPages: number) {
+  return {
+    canGoFirst: currentPage > 1,
+    canGoPrevious: currentPage > 1,
+    canGoNext: currentPage < totalPages,
+    canGoLast: currentPage < totalPages,
+  }
+}
+
 export default function Pagination({ currentPage, totalPages, onPageChange }: PaginationProps) {
-  const canGoPrevious = currentPage > 1
-  const canGoNext = currentPage < totalPages
+  const { canGoFirst, canGoPrevious, canGoNext, canGoLast } =
+    getPaginationControlState(currentPage, totalPages)
 
   return (
     <div className="flex items-center justify-between gap-4 mt-6">
-      <button
-        onClick={() => onPageChange(currentPage - 1)}
-        disabled={!canGoPrevious}
-        className={`
-          px-4 py-2 rounded-lg font-heading font-semibold text-sm uppercase tracking-wide
-          transition-all duration-200 cursor-pointer
-          focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none
-          ${canGoPrevious
-            ? 'bg-white text-slate-900 border border-slate-200 hover:bg-slate-50 hover:border-slate-300'
-            : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-50'
-          }
-        `}
-        aria-label="Previous page"
-      >
-        ← Previous
-      </button>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => onPageChange(1)}
+          disabled={!canGoFirst}
+          className={`
+            px-4 py-2 rounded-lg font-heading font-semibold text-sm uppercase tracking-wide
+            transition-all duration-200 cursor-pointer
+            focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none
+            ${canGoFirst
+              ? 'bg-white text-slate-900 border border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+              : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-50'
+            }
+          `}
+          aria-label="First page"
+        >
+          « First
+        </button>
+
+        <button
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={!canGoPrevious}
+          className={`
+            px-4 py-2 rounded-lg font-heading font-semibold text-sm uppercase tracking-wide
+            transition-all duration-200 cursor-pointer
+            focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none
+            ${canGoPrevious
+              ? 'bg-white text-slate-900 border border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+              : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-50'
+            }
+          `}
+          aria-label="Previous page"
+        >
+          ← Previous
+        </button>
+      </div>
 
       <p className="font-body text-sm text-slate-600">
         Page <span className="font-semibold text-slate-900">{currentPage}</span> of{' '}
         <span className="font-semibold text-slate-900">{totalPages}</span>
       </p>
 
-      <button
-        onClick={() => onPageChange(currentPage + 1)}
-        disabled={!canGoNext}
-        className={`
-          px-4 py-2 rounded-lg font-heading font-semibold text-sm uppercase tracking-wide
-          transition-all duration-200 cursor-pointer
-          focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none
-          ${canGoNext
-            ? 'bg-white text-slate-900 border border-slate-200 hover:bg-slate-50 hover:border-slate-300'
-            : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-50'
-          }
-        `}
-        aria-label="Next page"
-      >
-        Next →
-      </button>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={!canGoNext}
+          className={`
+            px-4 py-2 rounded-lg font-heading font-semibold text-sm uppercase tracking-wide
+            transition-all duration-200 cursor-pointer
+            focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none
+            ${canGoNext
+              ? 'bg-white text-slate-900 border border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+              : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-50'
+            }
+          `}
+          aria-label="Next page"
+        >
+          Next →
+        </button>
+
+        <button
+          onClick={() => onPageChange(totalPages)}
+          disabled={!canGoLast}
+          className={`
+            px-4 py-2 rounded-lg font-heading font-semibold text-sm uppercase tracking-wide
+            transition-all duration-200 cursor-pointer
+            focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none
+            ${canGoLast
+              ? 'bg-white text-slate-900 border border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+              : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-50'
+            }
+          `}
+          aria-label="Last page"
+        >
+          Last »
+        </button>
+      </div>
     </div>
   )
 }
