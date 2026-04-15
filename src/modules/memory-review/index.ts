@@ -4,6 +4,7 @@ import type {
   MemoryEvent,
   ReviewedMemory,
 } from '../../shared/types/index.js';
+import { generateTitleWithLLM } from '../../shared/llm-title-generation/http-fetch.js';
 
 interface CreateCandidateMemoriesInput {
   reviewDate: string;
@@ -146,9 +147,9 @@ const TOKEN_STOP_WORDS = new Set([
   // Numbers are filtered during token extraction instead
 ]);
 
-export function createCandidateMemories(
+export async function createCandidateMemories(
   input: CreateCandidateMemoriesInput,
-): CandidateMemory[] {
+): Promise<CandidateMemory[]> {
   const reviewTimeZone = input.reviewTimeZone;
   const dailyEvents = input.memoryEvents
     .filter((event) =>
@@ -165,56 +166,75 @@ export function createCandidateMemories(
   const limitedGroups = limitCandidateGroups(groups, MAX_DAILY_CANDIDATES);
   const stableKeys = assignStableGroupKeys(limitedGroups);
 
-  return limitedGroups.map((group, index) => {
-    const sortedEvents = [...group.memoryEvents].sort((left, right) =>
-      left.timestamp.localeCompare(right.timestamp),
-    );
+  return await Promise.all(
+    limitedGroups.map(async (group, index) => {
+      const sortedEvents = [...group.memoryEvents].sort((left, right) =>
+        left.timestamp.localeCompare(right.timestamp),
+      );
 
-    return {
-      id: `candidate:${input.reviewDate}:${stableKeys[index]}`,
-      memoryEventIds: sortedEvents.map((event) => event.id),
-      sourceRefs: sortedEvents.map((event) => ({
-        role: inferPageRole({
-          url: typeof event.content.url === 'string' ? event.content.url : undefined,
-          title: typeof event.content.title === 'string' ? event.content.title : undefined,
-        }),
-        contribution: inferSourceContribution(
-          inferPageRole({
+      // Prepare LLM context
+      const urls = sortedEvents
+        .map(e => typeof e.content.url === 'string' ? e.content.url : undefined)
+        .filter((url): url is string => url !== undefined);
+
+      const titles = sortedEvents
+        .map(e => typeof e.content.title === 'string' ? e.content.title : undefined)
+        .filter((title): title is string => title !== undefined);
+
+      const pageContents = sortedEvents
+        .map(e => typeof e.content.pageText === 'string' ? e.content.pageText : undefined)
+        .filter((content): content is string => content !== undefined);
+
+      // Generate natural language title/summary using LLM
+      const llmOutput = await generateTitleWithLLM({
+        urls,
+        titles,
+        pageContents,
+        hosts: group.hosts,
+        timeRange: {
+          startAt: sortedEvents[0]?.timestamp ?? '',
+          endAt: sortedEvents[sortedEvents.length - 1]?.timestamp ?? '',
+        },
+      });
+
+      return {
+        id: `candidate:${input.reviewDate}:${stableKeys[index]}`,
+        memoryEventIds: sortedEvents.map((event) => event.id),
+        sourceRefs: sortedEvents.map((event) => ({
+          role: inferPageRole({
             url: typeof event.content.url === 'string' ? event.content.url : undefined,
             title: typeof event.content.title === 'string' ? event.content.title : undefined,
           }),
-        ),
-        id: event.id,
-        sourceType: event.sourceType,
-        timestamp: event.timestamp,
-        title: typeof event.content.title === 'string' ? event.content.title : undefined,
-        url: typeof event.content.url === 'string' ? event.content.url : undefined,
-      })),
-      discardedSourceRefs:
-        group.discardedSourceRefs.length > 0 ? [...group.discardedSourceRefs] : undefined,
-      title: group.title,
-      summary: createCandidateSummary({
-        title: group.title,
-        eventCount: sortedEvents.length,
-        hostCount: new Set(group.hosts).size,
-        durationMinutes: getDurationMinutes(
-          sortedEvents[0]?.timestamp ?? '',
-          sortedEvents[sortedEvents.length - 1]?.timestamp ?? '',
-        ),
-      }),
-      theme: group.theme,
-      formationReasons: [...group.formationReasons],
-      compressedSourceCount: group.compressedSourceCount,
-      discardReasons:
-        group.discardReasons.length > 0 ? [...group.discardReasons] : undefined,
-      reviewDate: input.reviewDate,
-      timeRange: {
-        startAt: sortedEvents[0]?.timestamp ?? '',
-        endAt: sortedEvents[sortedEvents.length - 1]?.timestamp ?? '',
-      },
-      reviewState: 'pending',
-    };
-  });
+          contribution: inferSourceContribution(
+            inferPageRole({
+              url: typeof event.content.url === 'string' ? event.content.url : undefined,
+              title: typeof event.content.title === 'string' ? event.content.title : undefined,
+            }),
+          ),
+          id: event.id,
+          sourceType: event.sourceType,
+          timestamp: event.timestamp,
+          title: typeof event.content.title === 'string' ? event.content.title : undefined,
+          url: typeof event.content.url === 'string' ? event.content.url : undefined,
+        })),
+        discardedSourceRefs:
+          group.discardedSourceRefs.length > 0 ? [...group.discardedSourceRefs] : undefined,
+        title: llmOutput.title, // Use LLM-generated natural language title
+        summary: llmOutput.summary, // Use LLM-generated summary
+        theme: group.theme,
+        formationReasons: [...group.formationReasons],
+        compressedSourceCount: group.compressedSourceCount,
+        discardReasons:
+          group.discardReasons.length > 0 ? [...group.discardReasons] : undefined,
+        reviewDate: input.reviewDate,
+        timeRange: {
+          startAt: sortedEvents[0]?.timestamp ?? '',
+          endAt: sortedEvents[sortedEvents.length - 1]?.timestamp ?? '',
+        },
+        reviewState: 'pending',
+      };
+    }),
+  );
 }
 
 export function reviewCandidateMemory(
