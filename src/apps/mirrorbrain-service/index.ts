@@ -1,3 +1,6 @@
+import { unlink } from 'node:fs/promises';
+import { join } from 'node:path';
+
 import { getMirrorBrainConfig } from '../../shared/config/index.js';
 import {
   createFileSyncCheckpointStore,
@@ -594,6 +597,22 @@ export function createMirrorBrainService(
         workspaceDir,
         artifact,
       });
+
+      // If discard decision, delete the candidate memory file
+      if (review.decision === 'discard') {
+        const candidateFilePath = join(
+          workspaceDir,
+          'mirrorbrain',
+          'candidate-memories',
+          `${candidate.id}.json`,
+        );
+
+        try {
+          await unlink(candidateFilePath);
+        } catch {
+          // Ignore deletion errors - candidate may not exist as file
+        }
+      }
 
       return artifact;
     },
