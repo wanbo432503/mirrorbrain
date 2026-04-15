@@ -6,6 +6,8 @@ interface CandidateCardProps {
   suggestion?: CandidateReviewSuggestion
   isSelected: boolean
   onSelect: () => void
+  onKeep: () => void
+  onDiscard: () => void
 }
 
 function formatTimeRange(startAt: string, endAt: string): string {
@@ -40,6 +42,8 @@ export default function CandidateCard({
   suggestion,
   isSelected,
   onSelect,
+  onKeep,
+  onDiscard,
 }: CandidateCardProps) {
   const recommendationColor =
     suggestion?.recommendation === 'keep'
@@ -143,6 +147,32 @@ export default function CandidateCard({
               </div>
             </>
           )}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onKeep()
+            }}
+            className="inline-flex items-center justify-center w-8 h-8 rounded-md bg-green-100 text-green-700 hover:bg-green-200 transition-colors duration-200 focus:ring-2 focus:ring-green-500 focus:ring-offset-1"
+            aria-label="Keep candidate"
+            type="button"
+          >
+            +
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onDiscard()
+            }}
+            className="inline-flex items-center justify-center w-8 h-8 rounded-md bg-slate-100 text-slate-600 hover:bg-red-100 hover:text-red-700 transition-colors duration-200 focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+            aria-label="Discard candidate"
+            type="button"
+          >
+            🗑
+          </button>
         </div>
       </div>
     </div>

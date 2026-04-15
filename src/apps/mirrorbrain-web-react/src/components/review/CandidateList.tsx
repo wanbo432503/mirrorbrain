@@ -7,6 +7,8 @@ interface CandidateListProps {
   candidates: CandidateMemory[]
   selectedCandidateId: string | null
   onSelectCandidate: (candidateId: string) => void
+  onKeepCandidate: (candidateId: string) => void
+  onDiscardCandidate: (candidateId: string) => void
   getReviewSuggestion: (candidateId: string) => CandidateReviewSuggestion | undefined
 }
 
@@ -54,6 +56,8 @@ export default function CandidateList({
   candidates,
   selectedCandidateId,
   onSelectCandidate,
+  onKeepCandidate,
+  onDiscardCandidate,
   getReviewSuggestion,
 }: CandidateListProps) {
   if (candidates.length === 0) {
@@ -69,7 +73,7 @@ export default function CandidateList({
   const sortedCandidates = sortByReviewPriority(candidates, getReviewSuggestion)
 
   return (
-    <div className="space-y-3 overflow-y-auto max-h-[600px] pr-2">
+    <div className="space-y-3 overflow-y-auto max-h-[540px] pr-2">
       {sortedCandidates.map((candidate) => (
         <CandidateCard
           key={candidate.id}
@@ -77,6 +81,8 @@ export default function CandidateList({
           suggestion={getReviewSuggestion(candidate.id)}
           isSelected={candidate.id === selectedCandidateId}
           onSelect={() => onSelectCandidate(candidate.id)}
+          onKeep={() => onKeepCandidate(candidate.id)}
+          onDiscard={() => onDiscardCandidate(candidate.id)}
         />
       ))}
     </div>

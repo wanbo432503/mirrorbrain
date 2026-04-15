@@ -85,7 +85,7 @@ function formatTimestamp(timestamp: string): string {
 export default function SelectedCandidate({ candidate }: SelectedCandidateProps) {
   if (!candidate) {
     return (
-      <Card className="h-full">
+      <Card className="h-full overflow-y-auto max-h-[540px]">
         <div className="text-center py-12">
           <p className="font-heading font-semibold text-base text-slate-600 mb-2">
             No candidate selected
@@ -155,7 +155,7 @@ export default function SelectedCandidate({ candidate }: SelectedCandidateProps)
   )
 
   return (
-    <Card className="h-full">
+    <Card className="h-full overflow-y-auto max-h-[540px]">
       <div className="space-y-4">
         {/* Title */}
         <div>

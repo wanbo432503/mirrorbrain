@@ -55,16 +55,18 @@ export default function ReviewPanel() {
     }
   }
 
-  const handleKeepCandidate = async () => {
+  const handleKeepCandidate = async (candidateId: string) => {
     try {
+      selectCandidate(candidateId)
       await reviewCandidateMemory('keep')
     } catch (error) {
       // Error already handled by useReviewWorkflow
     }
   }
 
-  const handleDiscardCandidate = async () => {
+  const handleDiscardCandidate = async (candidateId: string) => {
     try {
+      selectCandidate(candidateId)
       await reviewCandidateMemory('discard')
     } catch (error) {
       // Error already handled by useReviewWorkflow
@@ -76,31 +78,32 @@ export default function ReviewPanel() {
 
   return (
     <div>
-      {/* Feedback Banner */}
-      {feedback && (
-        <div
-          className={`mb-3 p-3 rounded-lg border ${
-            feedback.kind === 'success'
-              ? 'bg-green-100 border-green-300 text-green-700'
-              : feedback.kind === 'error'
-              ? 'bg-red-100 border-red-300 text-red-700'
-              : 'bg-blue-100 border-blue-300 text-blue-700'
-          }`}
-          role="alert"
-        >
-          <p className="font-body font-medium text-sm">{feedback.message}</p>
+      {/* Review Actions with Inline Feedback */}
+      <div className="flex items-start gap-3 mb-3">
+        <div className="flex-shrink-0">
+          <ReviewActions
+            onCreateCandidates={handleCreateCandidates}
+            isCreatingCandidates={isCreatingCandidates}
+            isReviewing={isReviewing}
+          />
         </div>
-      )}
 
-      {/* Review Actions */}
-      <ReviewActions
-        onCreateCandidates={handleCreateCandidates}
-        onKeepCandidate={handleKeepCandidate}
-        onDiscardCandidate={handleDiscardCandidate}
-        isCreatingCandidates={isCreatingCandidates}
-        isReviewing={isReviewing}
-        selectedCandidateId={selectedCandidateId}
-      />
+        {/* Feedback Message */}
+        {feedback && (
+          <div
+            className={`flex-1 px-3 py-1.5 rounded-lg border ${
+              feedback.kind === 'success'
+                ? 'bg-green-100 border-green-300 text-green-700'
+                : feedback.kind === 'error'
+                ? 'bg-red-100 border-red-300 text-red-700'
+                : 'bg-blue-100 border-blue-300 text-blue-700'
+            }`}
+            role="alert"
+          >
+            <p className="font-body font-medium text-xs">{feedback.message}</p>
+          </div>
+        )}
+      </div>
 
       {/* Metrics Grid */}
       <MetricGrid
@@ -125,6 +128,8 @@ export default function ReviewPanel() {
             candidates={candidates}
             selectedCandidateId={selectedCandidateId}
             onSelectCandidate={selectCandidate}
+            onKeepCandidate={handleKeepCandidate}
+            onDiscardCandidate={handleDiscardCandidate}
             getReviewSuggestion={getReviewSuggestion}
           />
         </div>
