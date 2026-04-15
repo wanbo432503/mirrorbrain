@@ -1218,6 +1218,38 @@ export async function listMirrorBrainMemoryNarrativesFromOpenViking(
   );
 }
 
+export async function listMirrorBrainCandidateMemoriesFromWorkspace(
+  input: WorkspaceMemoryReadInput,
+): Promise<CandidateMemory[]> {
+  const candidateMemoriesDir = join(input.workspaceDir, 'mirrorbrain', 'candidate-memories');
+  let files: string[];
+
+  try {
+    files = await readdir(candidateMemoriesDir);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return [];
+    }
+
+    throw error;
+  }
+
+  const items = await Promise.all(
+    files
+      .filter((file) => file.endsWith('.json'))
+      .map(async (file) => {
+        const content = await readFile(join(candidateMemoriesDir, file), 'utf8');
+        const parsed = JSON.parse(content) as unknown;
+
+        return isCandidateMemory(parsed) ? parsed : null;
+      }),
+  );
+
+  return deduplicateById(
+    items.filter((item): item is CandidateMemory => item !== null),
+  );
+}
+
 export async function listMirrorBrainCandidateMemoriesFromOpenViking(
   input: OpenVikingReadInput,
   fetchImpl: FetchLike = fetch,

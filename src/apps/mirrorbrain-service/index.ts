@@ -15,6 +15,7 @@ import {
   listRawMirrorBrainMemoryEventsFromWorkspace,
   listMirrorBrainMemoryNarrativesFromOpenViking,
   listMirrorBrainCandidateMemoriesFromOpenViking,
+  listMirrorBrainCandidateMemoriesFromWorkspace,
   type OpenVikingMemoryEventWriter,
 } from '../../integrations/openviking-store/index.js';
 import {
@@ -106,6 +107,7 @@ interface CreateMirrorBrainServiceDependencies {
   listRawWorkspaceMemoryEvents?: typeof listRawMirrorBrainMemoryEventsFromWorkspace;
   listMemoryNarratives?: typeof listMirrorBrainMemoryNarrativesFromOpenViking;
   listCandidateMemories?: typeof listMirrorBrainCandidateMemoriesFromOpenViking;
+  listWorkspaceCandidateMemories?: typeof listMirrorBrainCandidateMemoriesFromWorkspace;
   listKnowledge?: typeof listKnowledgeFromPluginApi;
   listSkillDrafts?: typeof listSkillDraftsFromPluginApi;
   publishMemoryNarrative?: typeof ingestMemoryNarrativeToOpenViking;
@@ -296,6 +298,8 @@ export function createMirrorBrainService(
     dependencies.listMemoryNarratives ?? listMirrorBrainMemoryNarrativesFromOpenViking;
   const listCandidateMemories =
     dependencies.listCandidateMemories ?? listMirrorBrainCandidateMemoriesFromOpenViking;
+  const listWorkspaceCandidateMemories =
+    dependencies.listWorkspaceCandidateMemories ?? listMirrorBrainCandidateMemoriesFromWorkspace;
   const listKnowledge = dependencies.listKnowledge ?? listKnowledgeFromPluginApi;
   const listSkillDrafts =
     dependencies.listSkillDrafts ?? listSkillDraftsFromPluginApi;
@@ -344,6 +348,24 @@ export function createMirrorBrainService(
       return await listMemoryEvents({ baseUrl });
     } catch {
       return listWorkspaceMemoryEvents({
+        workspaceDir,
+      });
+    }
+  };
+  const loadCandidateMemories = async (): Promise<CandidateMemory[]> => {
+    try {
+      const result = await listCandidateMemories({ baseUrl });
+
+      // Fallback to workspace if OpenViking returns empty
+      if (result.length === 0) {
+        return listWorkspaceCandidateMemories({
+          workspaceDir,
+        });
+      }
+
+      return result;
+    } catch {
+      return listWorkspaceCandidateMemories({
         workspaceDir,
       });
     }
@@ -580,9 +602,7 @@ export function createMirrorBrainService(
       reviewTimeZone?: string,
     ): Promise<CandidateMemory[]> => {
       // Query existing candidates first
-      const existingCandidates = await listCandidateMemories({
-        baseUrl,
-      });
+      const existingCandidates = await loadCandidateMemories();
       const candidatesForDate = existingCandidates.filter(
         (candidate) => candidate.reviewDate === reviewDate,
       );
@@ -653,9 +673,7 @@ export function createMirrorBrainService(
     listCandidateMemoriesByDate: async (
       reviewDate: string,
     ): Promise<CandidateMemory[]> => {
-      const allCandidates = await listCandidateMemories({
-        baseUrl,
-      });
+      const allCandidates = await loadCandidateMemories();
 
       return allCandidates.filter((candidate) => candidate.reviewDate === reviewDate);
     },
