@@ -61,11 +61,12 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and a 
   - `ReviewGuidance.tsx` - AI suggestions + reviewed memory
 
 - **Features:**
-  - Create daily candidates
+  - Create daily candidates for the previous local calendar day
   - Select candidate + view task title, duration, formation reasons, and concrete visited URLs split into primary/supporting sources
   - AI review suggestions (confidence/priority/rationale/keep score/supporting reasons)
   - Keep/Discard decisions
   - Reviewed memory display
+  - Review requests now send the local timezone so the service can use the correct day boundary
 
 ### Phase 5: Artifacts Panel + Forms ✅ (Completed)
 - **Artifacts Hooks:**
@@ -212,7 +213,7 @@ pnpm dev
 
 2. **Review Tab:**
    - Click "Review" tab
-   - Click "Create Daily Candidates" to generate candidates
+   - Click "Create Daily Candidates" to generate candidates for yesterday in your local timezone
    - Click candidates to view details
    - Review AI suggestions (confidence/priority/rationale)
    - Click "Keep Candidate" or "Discard Candidate"

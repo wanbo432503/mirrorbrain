@@ -7,13 +7,19 @@ import ReviewGuidance from './ReviewGuidance'
 import { createMirrorBrainBrowserApi, type MirrorBrainWebAppApi } from '../../api/client'
 import { useReviewWorkflow } from '../../hooks/useReviewWorkflow'
 
-function getTodayDateString(): string {
-  const today = new Date()
+export function getDefaultReviewDate(now: Date = new Date()): string {
+  const yesterday = new Date(now)
+  yesterday.setDate(yesterday.getDate() - 1)
+
   return new Intl.DateTimeFormat('en-CA', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).format(today)
+  }).format(yesterday)
+}
+
+export function getLocalTimeZone(): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone
 }
 
 export default function ReviewPanel() {
@@ -38,11 +44,12 @@ export default function ReviewPanel() {
     getReviewSuggestion,
   } = useReviewWorkflow(api)
 
-  const [reviewDate] = useState(getTodayDateString())
+  const [reviewDate] = useState(getDefaultReviewDate())
+  const [reviewTimeZone] = useState(getLocalTimeZone())
 
   const handleCreateCandidates = async () => {
     try {
-      await createDailyCandidates(reviewDate)
+      await createDailyCandidates(reviewDate, reviewTimeZone)
     } catch (error) {
       // Error already handled by useReviewWorkflow
     }

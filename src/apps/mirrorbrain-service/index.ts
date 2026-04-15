@@ -575,6 +575,8 @@ export function createMirrorBrainService(
       reviewDate: string,
       reviewTimeZone?: string,
     ): Promise<CandidateMemory[]> => {
+      await input.service.syncBrowserMemory();
+
       const memoryEvents = await listRawWorkspaceMemoryEvents({
         workspaceDir,
       });
