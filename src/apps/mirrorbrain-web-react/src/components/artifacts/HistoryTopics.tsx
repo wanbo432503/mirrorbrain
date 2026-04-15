@@ -51,7 +51,7 @@ export default function HistoryTopics({
   }))
 
   return (
-    <div className="space-y-6">
+    <div className="grid grid-cols-3 gap-4">
       {/* Knowledge Topics Table */}
       <HistoryTable
         title="Knowledge Topics"
