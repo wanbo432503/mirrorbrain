@@ -140,6 +140,33 @@ describe('start mirrorbrain dev runtime', () => {
     expect(typeof result.stop).toBe('function');
   });
 
+  it('passes the parent PATH into the detached dev child process environment', async () => {
+    const recorded: Array<{ env: NodeJS.ProcessEnv }> = [];
+
+    await runMirrorBrainStartupCli(
+      {
+        projectDir: '/tmp/mirrorbrain-project',
+        env: {
+          MIRRORBRAIN_WORKSPACE_DIR: '/tmp/mirrorbrain-workspace',
+          MIRRORBRAIN_ACTIVITYWATCH_BASE_URL: 'http://127.0.0.1:5600',
+          MIRRORBRAIN_OPENVIKING_BASE_URL: 'http://127.0.0.1:1933',
+        },
+      },
+      {
+        inspectDependencies: async () => [],
+        startDetachedProcess: async (input) => {
+          recorded.push({ env: input.env });
+          return {
+            processId: 12345,
+            logPath: '/tmp/mirrorbrain.log',
+          };
+        },
+      },
+    );
+
+    expect(recorded[0]?.env.PATH).toBe(process.env.PATH);
+  });
+
   it('assembles the service, API contract, static assets, and HTTP server into one dev runtime', async () => {
     const config = getMirrorBrainDevConfig({
       MIRRORBRAIN_WORKSPACE_DIR: '/tmp/mirrorbrain-workspace',

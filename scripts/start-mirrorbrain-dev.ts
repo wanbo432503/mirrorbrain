@@ -423,6 +423,7 @@ export async function runMirrorBrainStartupCli(
   const projectDir = input.projectDir ?? process.cwd();
   const projectEnv = await loadMirrorBrainProjectEnv(projectDir);
   const mergedEnv = {
+    ...process.env,
     ...projectEnv,
     ...input.env,
   };
