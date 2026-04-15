@@ -11,4 +11,7 @@ progress.md
 task_plan.md
 AGENTS.md
 .omx
-dist
+
+# Ignore all dist directories (build outputs)
+**/dist/
+dist/
