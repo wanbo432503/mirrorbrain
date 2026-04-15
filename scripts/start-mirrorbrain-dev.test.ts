@@ -8,6 +8,7 @@ import {
   assertMirrorBrainDependenciesReachable,
   getMirrorBrainDevConfig,
   prepareMirrorBrainWebAssets,
+  waitForFileToExist,
   runMirrorBrainStartupCli,
   startMirrorBrainDevRuntime,
 } from './start-mirrorbrain-dev.js';
@@ -103,47 +104,40 @@ describe('start mirrorbrain dev runtime', () => {
     );
   });
 
-  it('copies the standalone UI shell and transpiles the web entrypoint for local serving', async () => {
+  it('waits for the React dist index to appear after the build watcher starts', async () => {
     const projectDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-project-'));
-    const outputDir = join(projectDir, '.mirrorbrain-web');
-    const webDir = join(projectDir, 'src', 'apps', 'mirrorbrain-web');
+    const outputDir = join(projectDir, 'src', 'apps', 'mirrorbrain-web-react', 'dist');
+    const indexHtmlPath = join(outputDir, 'index.html');
 
-    writeFileSync(
-      join(projectDir, 'tsconfig.json'),
-      JSON.stringify({
-        compilerOptions: {
-          target: 'ES2022',
-          module: 'ESNext',
-        },
-      }),
-    );
-    await import('node:fs/promises').then(({ mkdir }) =>
-      mkdir(webDir, { recursive: true }),
-    );
-    writeFileSync(
-      join(webDir, 'index.html'),
-      '<!doctype html><html><body><div id="app-root"></div></body></html>',
-    );
-    writeFileSync(join(webDir, 'styles.css'), 'body { color: black; }');
-    writeFileSync(
-      join(webDir, 'main.ts'),
-      'export const marker: string = "mirrorbrain-web"; console.log(marker);',
-    );
+    setTimeout(async () => {
+      const { mkdir } = await import('node:fs/promises');
+      await mkdir(outputDir, { recursive: true });
+      writeFileSync(indexHtmlPath, '<!doctype html><html><body>ok</body></html>');
+    }, 20);
+
+    await expect(
+      waitForFileToExist(indexHtmlPath, { timeoutMs: 1000, intervalMs: 10 }),
+    ).resolves.toBeUndefined();
+  });
+
+  it('starts a React build watcher instead of requiring a prebuilt dist directory', async () => {
+    const spawnWebBuildWatcher = vi.fn(async () => ({
+      stop: vi.fn(),
+    }));
 
     const result = await prepareMirrorBrainWebAssets({
-      projectDir,
-      outputDir,
+      projectDir: '/tmp/mirrorbrain-project',
+      waitForFile: vi.fn(async () => undefined),
+      spawnWebBuildWatcher,
     });
 
-    expect(result).toEqual({
-      outputDir,
-      indexHtmlPath: join(outputDir, 'index.html'),
-      stylesPath: join(outputDir, 'styles.css'),
-      scriptPath: join(outputDir, 'main.js'),
+    expect(spawnWebBuildWatcher).toHaveBeenCalledWith({
+      projectDir: '/tmp/mirrorbrain-project',
     });
-    expect(readFileSync(result.indexHtmlPath, 'utf8')).toContain('app-root');
-    expect(readFileSync(result.stylesPath, 'utf8')).toContain('color: black');
-    expect(readFileSync(result.scriptPath, 'utf8')).toContain('mirrorbrain-web');
+    expect(result.outputDir).toBe(
+      '/tmp/mirrorbrain-project/src/apps/mirrorbrain-web-react/dist',
+    );
+    expect(typeof result.stop).toBe('function');
   });
 
   it('assembles the service, API contract, static assets, and HTTP server into one dev runtime', async () => {
@@ -270,6 +264,7 @@ describe('start mirrorbrain dev runtime', () => {
       indexHtmlPath: '/tmp/mirrorbrain-web/index.html',
       stylesPath: '/tmp/mirrorbrain-web/styles.css',
       scriptPath: '/tmp/mirrorbrain-web/main.js',
+      stop: vi.fn(),
     }));
     const startMirrorBrainHttpServer = vi.fn(async () => httpServer);
 

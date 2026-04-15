@@ -27,6 +27,11 @@ interface PreparedMirrorBrainWebAssets {
   indexHtmlPath: string;
   stylesPath: string;
   scriptPath: string;
+  stop(): void;
+}
+
+interface ReactWebBuildWatcher {
+  stop(): void;
 }
 
 interface StartMirrorBrainDevRuntimeInput {
@@ -95,6 +100,15 @@ interface MirrorBrainDevRuntime {
   host: string;
   port: number;
   stop(): Promise<void>;
+}
+
+interface WaitForFileToExistInput {
+  intervalMs?: number;
+  timeoutMs?: number;
+}
+
+interface SpawnReactWebBuildWatcherInput {
+  projectDir: string;
 }
 
 function parseInteger(value: string | undefined, fallback: number): number {
@@ -455,21 +469,22 @@ export async function runMirrorBrainStartupCli(
 }
 
 export async function prepareMirrorBrainWebAssets(
-  input: PrepareMirrorBrainWebAssetsInput = {},
+  input: (PrepareMirrorBrainWebAssetsInput & {
+    spawnWebBuildWatcher?: typeof spawnReactWebBuildWatcher;
+    waitForFile?: typeof waitForFileToExist;
+  }) = {},
 ): Promise<PreparedMirrorBrainWebAssets> {
   const projectDir = input.projectDir ?? process.cwd();
-
-  // Use new React webui build output instead of old mirrorbrain-web
   const reactAppDir = join(projectDir, 'src', 'apps', 'mirrorbrain-web-react');
   const outputDir = join(reactAppDir, 'dist');
   const indexHtmlPath = join(outputDir, 'index.html');
+  const spawnWebBuildWatcher =
+    input.spawnWebBuildWatcher ?? spawnReactWebBuildWatcher;
+  const waitForFile = input.waitForFile ?? waitForFileToExist;
+  const watcher = await spawnWebBuildWatcher({ projectDir });
 
-  // Check if React build exists
-  const distExists = existsSync(outputDir);
-  if (!distExists) {
-    throw new Error(
-      `React webui build output not found at ${outputDir}. Run: cd src/apps/mirrorbrain-web-react && pnpm build`
-    );
+  if (!existsSync(indexHtmlPath)) {
+    await waitForFile(indexHtmlPath);
   }
 
   return {
@@ -477,6 +492,7 @@ export async function prepareMirrorBrainWebAssets(
     indexHtmlPath,
     stylesPath: '', // Not used with @fastify/static
     scriptPath: '', // Not used with @fastify/static
+    stop: () => watcher.stop(),
   };
 }
 
@@ -530,7 +546,57 @@ export async function startMirrorBrainDevRuntime(
     port: httpServer.port,
     stop: async () => {
       await httpServer.stop();
+      webAssets.stop();
       runtimeService.stop();
+    },
+  };
+}
+
+export async function waitForFileToExist(
+  path: string,
+  input: WaitForFileToExistInput = {},
+): Promise<void> {
+  const timeoutMs = input.timeoutMs ?? 30000;
+  const intervalMs = input.intervalMs ?? 100;
+  const startedAt = Date.now();
+
+  while (!existsSync(path)) {
+    if (Date.now() - startedAt > timeoutMs) {
+      throw new Error(`Timed out waiting for frontend build output at ${path}`);
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+}
+
+export async function spawnReactWebBuildWatcher(
+  input: SpawnReactWebBuildWatcherInput,
+): Promise<ReactWebBuildWatcher> {
+  const reactAppDir = join(input.projectDir, 'src', 'apps', 'mirrorbrain-web-react');
+  const vitePath = join(reactAppDir, 'node_modules', '.bin', 'vite');
+  const child = spawn(vitePath, ['build', '--watch'], {
+    cwd: reactAppDir,
+    env: {
+      ...process.env,
+      NODE_ENV: 'development',
+    },
+    stdio: 'inherit',
+  });
+
+  const ensureAlive = () => {
+    if (child.exitCode !== null) {
+      throw new Error(`React web build watcher exited early with code ${child.exitCode}`);
+    }
+  };
+
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  ensureAlive();
+
+  return {
+    stop: () => {
+      if (!child.killed) {
+        child.kill();
+      }
     },
   };
 }

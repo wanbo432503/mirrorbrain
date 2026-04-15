@@ -151,6 +151,12 @@ MIRRORBRAIN_SHELL_HISTORY_PATH=/path_to_workspace/.zsh_history
 pnpm dev
 ```
 
+这个启动命令现在会自动完成前端开发构建准备：
+
+- 自动启动 `src/apps/mirrorbrain-web-react` 的 `vite build --watch`
+- 等待首个 React 构建产物生成完成后再提供 Web UI
+- 因此不再需要手动进入 `mirrorbrain-web-react` 目录执行 `pnpm build`
+
 然后打开：
 
 ```text
