@@ -45,13 +45,6 @@ export default function CandidateCard({
   onKeep,
   onDiscard,
 }: CandidateCardProps) {
-  const recommendationColor =
-    suggestion?.recommendation === 'keep'
-      ? 'bg-green-100 text-green-700 border-green-300'
-      : suggestion?.recommendation === 'discard'
-      ? 'bg-red-100 text-red-700 border-red-300'
-      : 'bg-blue-100 text-blue-700 border-blue-300'
-
   const durationMinutes = calculateDuration(
     candidate.timeRange.startAt,
     candidate.timeRange.endAt,
@@ -127,25 +120,18 @@ export default function CandidateCard({
           {formatTimeRange(candidate.timeRange.startAt, candidate.timeRange.endAt)}
         </p>
 
-        {/* Bottom row: Theme + AI Recommendation + Keep Score */}
+        {/* Bottom row: Theme + Keep Score */}
         <div className="flex items-center gap-2 flex-wrap">
           {/* Theme badge */}
           <div className="inline-flex items-center px-2 py-1 rounded-md text-xs font-heading font-semibold bg-slate-100 text-slate-600">
             {candidate.theme}
           </div>
 
-          {/* AI Recommendation */}
-          {suggestion && (
-            <>
-              <div className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-heading font-semibold ${recommendationColor} border`}>
-                {suggestion.recommendation}
-              </div>
-
-              {/* Keep Score */}
-              <div className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-heading font-semibold bg-slate-50 ${scoreColor}`}>
-                {scoreLabel} ({keepScore})
-              </div>
-            </>
+          {/* Keep Score */}
+          {suggestion && typeof suggestion.keepScore === 'number' && (
+            <div className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-heading font-semibold bg-slate-50 ${scoreColor}`}>
+              {scoreLabel} ({keepScore})
+            </div>
           )}
         </div>
 

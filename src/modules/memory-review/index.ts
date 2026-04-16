@@ -311,15 +311,33 @@ export function suggestCandidateReviews(
       candidate.timeRange.endAt,
     );
 
-    // Calculate keep score
+    // Calculate keep score with better differentiation
+    // New formula design:
+    // - Lower event count weight to avoid premature max scores
+    // - Add task type importance weighting
+    // - Consider source quality distribution
+    // - Use non-linear scoring for high-score range differentiation
+    const taskImportanceWeight =
+      taskType === 'bug-fix' || taskType === 'feature-implementation' ? 15 :
+      taskType === 'code-review' || taskType === 'debugging' ? 10 :
+      taskType === 'research' ? 8 :
+      0;
+
+    const qualityBonus =
+      primarySourceCount >= 4 ? 8 :
+      primarySourceCount >= 3 ? 4 :
+      0;
+
     const keepScore = Math.min(
       100,
       Math.round(
-        28 +
-          candidate.memoryEventIds.length * 18 +
-          Math.min(durationMinutes, 120) / 2 +
-          (uniqueHosts > 1 ? 8 : 0) +
-          (primarySourceCount >= 2 ? 10 : 0),
+        20 +                          // Lower base score (was 28)
+        Math.min(candidate.memoryEventIds.length * 6, 30) +    // Lower event count weight (was 18 per event)
+        Math.min(durationMinutes, 180) / 4 +      // Duration weight (was /2)
+        (uniqueHosts > 1 ? 10 : 0) +               // Cross-host bonus (was 8)
+        (primarySourceCount >= 2 ? 12 : 0) +       // Primary source threshold (was 10)
+        taskImportanceWeight +                     // Task type importance
+        qualityBonus,                              // High-quality source bonus
       ),
     );
 
@@ -353,6 +371,10 @@ export function suggestCandidateReviews(
       supportingSourceCount === 1 ? '' : 's'
     }.`;
 
+    // Recommendation thresholds (adjusted for new scoring algorithm)
+    // High-quality work: 70+ (keep)
+    // Low-quality noise: <40 (discard)
+    // Moderate quality: 40-69 (review)
     if (keepScore >= 70) {
       return {
         candidateMemoryId: candidate.id,

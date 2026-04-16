@@ -3,7 +3,6 @@ import ReviewActions from './ReviewActions'
 import MetricGrid from './MetricGrid'
 import CandidateList from './CandidateList'
 import SelectedCandidate from './SelectedCandidate'
-import ReviewGuidance from './ReviewGuidance'
 import { createMirrorBrainBrowserApi, type MirrorBrainWebAppApi } from '../../api/client'
 import { useReviewWorkflow } from '../../hooks/useReviewWorkflow'
 import { useMirrorBrain } from '../../contexts/MirrorBrainContext'
@@ -43,7 +42,6 @@ export default function ReviewPanel() {
     reviewWindowDate,
     reviewWindowEventCount,
     selectedCandidateId,
-    reviewedMemory,
     feedback,
     isCreatingCandidates,
     isReviewing,
@@ -110,7 +108,6 @@ export default function ReviewPanel() {
   }
 
   const selectedCandidate = getSelectedCandidate()
-  const currentSuggestion = selectedCandidateId ? getReviewSuggestion(selectedCandidateId) : undefined
 
   return (
     <div>
@@ -159,7 +156,7 @@ export default function ReviewPanel() {
         reviewWindowEventCount={reviewWindowEventCount}
       />
 
-      {/* Three-Column Layout */}
+      {/* Two-Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         {/* Left Column: Candidate List */}
         <div className="lg:col-span-1">
@@ -181,8 +178,8 @@ export default function ReviewPanel() {
           />
         </div>
 
-        {/* Center Column: Selected Candidate */}
-        <div className="lg:col-span-1">
+        {/* Right Column: Selected Candidate */}
+        <div className="lg:col-span-2">
           <div className="mb-2">
             <h2 className="font-heading font-bold text-xs text-slate-900 uppercase tracking-wide">
               Selected Candidate
@@ -192,22 +189,6 @@ export default function ReviewPanel() {
             </p>
           </div>
           <SelectedCandidate candidate={selectedCandidate} />
-        </div>
-
-        {/* Right Column: Review Guidance */}
-        <div className="lg:col-span-1">
-          <div className="mb-2">
-            <h2 className="font-heading font-bold text-xs text-slate-900 uppercase tracking-wide">
-              AI Guidance
-            </h2>
-            <p className="font-body text-xs text-slate-600">
-              Suggestions and reviewed memory
-            </p>
-          </div>
-          <ReviewGuidance
-            suggestion={currentSuggestion}
-            reviewedMemory={reviewedMemory}
-          />
         </div>
       </div>
     </div>
