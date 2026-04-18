@@ -71,23 +71,31 @@ describe('mirrorbrain http server', () => {
   });
 
   it('serves health and read endpoints through the local HTTP API', async () => {
-    const listMemoryEvents = vi.fn(async (): Promise<MemoryEvent[]> => [
-      {
-        id: 'browser:aw-event-1',
-        sourceType: 'activitywatch-browser',
-        sourceRef: 'aw-event-1',
-        timestamp: '2026-03-20T08:00:00.000Z',
-        authorizationScopeId: 'scope-browser',
-        content: {
-          url: 'https://example.com/tasks',
-          title: 'Example Tasks',
+    const listMemoryEvents = vi.fn(async () => ({
+      items: [
+        {
+          id: 'browser:aw-event-1',
+          sourceType: 'activitywatch-browser',
+          sourceRef: 'aw-event-1',
+          timestamp: '2026-03-20T08:00:00.000Z',
+          authorizationScopeId: 'scope-browser',
+          content: {
+            url: 'https://example.com/tasks',
+            title: 'Example Tasks',
+          },
+          captureMetadata: {
+            upstreamSource: 'activitywatch',
+            checkpoint: '2026-03-20T08:00:00.000Z',
+          },
         },
-        captureMetadata: {
-          upstreamSource: 'activitywatch',
-          checkpoint: '2026-03-20T08:00:00.000Z',
-        },
+      ] as MemoryEvent[],
+      pagination: {
+        total: 1,
+        page: 1,
+        pageSize: 10,
+        totalPages: 1,
       },
-    ]);
+    }));
     const listKnowledge = vi.fn(async (): Promise<KnowledgeArtifact[]> => [
       {
         id: 'knowledge-draft:reviewed:candidate:browser:aw-event-1',
@@ -198,6 +206,12 @@ describe('mirrorbrain http server', () => {
           },
         },
       ],
+      pagination: {
+        total: 1,
+        page: 1,
+        pageSize: 10,
+        totalPages: 1,
+      },
     });
     expect(knowledgeResponse.status).toBe(200);
     expect(knowledgeBody).toEqual({
@@ -269,7 +283,15 @@ describe('mirrorbrain http server', () => {
         config: getMirrorBrainConfig(),
         stop: vi.fn(),
       },
-      listMemoryEvents: vi.fn(async () => []),
+      listMemoryEvents: vi.fn(async () => ({
+        items: [],
+        pagination: {
+          total: 0,
+          page: 1,
+          pageSize: 10,
+          totalPages: 1,
+        },
+      })),
       queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
       listKnowledge: vi.fn(async () => []),
       listSkillDrafts: vi.fn(async () => []),
@@ -365,7 +387,15 @@ describe('mirrorbrain http server', () => {
         config: getMirrorBrainConfig(),
         stop: vi.fn(),
       },
-      listMemoryEvents: vi.fn(async () => []),
+      listMemoryEvents: vi.fn(async () => ({
+        items: [],
+        pagination: {
+          total: 0,
+          page: 1,
+          pageSize: 10,
+          totalPages: 1,
+        },
+      })),
       queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({
         timeRange: {
           startAt: '2026-03-20T00:00:00.000Z',
@@ -555,7 +585,15 @@ describe('mirrorbrain http server', () => {
         config: getMirrorBrainConfig(),
         stop: vi.fn(),
       },
-      listMemoryEvents: vi.fn(async () => []),
+      listMemoryEvents: vi.fn(async () => ({
+        items: [],
+        pagination: {
+          total: 0,
+          page: 1,
+          pageSize: 10,
+          totalPages: 1,
+        },
+      })),
       queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
       listKnowledge: vi.fn(async () => []),
       listSkillDrafts: vi.fn(async () => []),
@@ -749,7 +787,15 @@ describe('mirrorbrain http server', () => {
         config: getMirrorBrainConfig(),
         stop: vi.fn(),
       },
-      listMemoryEvents: vi.fn(async () => []),
+      listMemoryEvents: vi.fn(async () => ({
+        items: [],
+        pagination: {
+          total: 0,
+          page: 1,
+          pageSize: 10,
+          totalPages: 1,
+        },
+      })),
       queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
       listKnowledge: vi.fn(async () => []),
       listSkillDrafts: vi.fn(async () => []),
@@ -800,7 +846,15 @@ describe('mirrorbrain http server', () => {
         config: getMirrorBrainConfig(),
         stop: vi.fn(),
       },
-      listMemoryEvents: vi.fn(async () => []),
+      listMemoryEvents: vi.fn(async () => ({
+        items: [],
+        pagination: {
+          total: 0,
+          page: 1,
+          pageSize: 10,
+          totalPages: 1,
+        },
+      })),
       queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
       listKnowledge: vi.fn(async () => []),
       listSkillDrafts: vi.fn(async () => []),
@@ -861,7 +915,15 @@ describe('mirrorbrain http server', () => {
         config: getMirrorBrainConfig(),
         stop: vi.fn(),
       },
-      listMemoryEvents: vi.fn(async () => []),
+      listMemoryEvents: vi.fn(async () => ({
+        items: [],
+        pagination: {
+          total: 0,
+          page: 1,
+          pageSize: 10,
+          totalPages: 1,
+        },
+      })),
       queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
       listKnowledge: vi.fn(async () => []),
       listSkillDrafts: vi.fn(async () => []),

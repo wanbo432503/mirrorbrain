@@ -420,7 +420,15 @@ describe('mirrorbrain service', () => {
         service,
       },
       {
-        listMemoryEvents: vi.fn(async () => []),
+        listMemoryEvents: vi.fn(async () => ({
+      items: [],
+      pagination: {
+        total: 0,
+        page: 1,
+        pageSize: 10,
+        totalPages: 1,
+      },
+    })),
         buildBrowserThemeNarratives: vi.fn(() => []),
         publishMemoryNarrative: vi.fn(async () => ({
           sourcePath: '/tmp/memory-narrative.json',
@@ -486,30 +494,56 @@ describe('mirrorbrain service', () => {
         workspaceDir: '/tmp/mirrorbrain-workspace',
       },
       {
-        listMemoryEvents,
-        listWorkspaceMemoryEvents,
+        listMemoryEvents: vi.fn(async () => {
+          throw new Error('fetch failed');
+        }),
+        listWorkspaceMemoryEvents: vi.fn(async () => [
+          {
+            id: 'browser:aw-event-1',
+            sourceType: 'activitywatch-browser',
+            sourceRef: 'aw-event-1',
+            timestamp: '2026-03-20T08:00:00.000Z',
+            authorizationScopeId: 'scope-browser',
+            content: {
+              url: 'https://example.com/tasks',
+              title: 'Example Tasks',
+            },
+            captureMetadata: {
+              upstreamSource: 'activitywatch',
+              checkpoint: '2026-03-20T08:00:00.000Z',
+            },
+          },
+        ]),
         listKnowledge: vi.fn(async () => []),
         listSkillDrafts: vi.fn(async () => []),
       },
     );
 
-    await expect(api.listMemoryEvents()).resolves.toEqual([
-      {
-        id: 'browser:aw-event-1',
-        sourceType: 'activitywatch-browser',
-        sourceRef: 'aw-event-1',
-        timestamp: '2026-03-20T08:00:00.000Z',
-        authorizationScopeId: 'scope-browser',
-        content: {
-          url: 'https://example.com/tasks',
-          title: 'Example Tasks',
+    await expect(api.listMemoryEvents()).resolves.toEqual({
+      items: [
+        {
+          id: 'browser:aw-event-1',
+          sourceType: 'activitywatch-browser',
+          sourceRef: 'aw-event-1',
+          timestamp: '2026-03-20T08:00:00.000Z',
+          authorizationScopeId: 'scope-browser',
+          content: {
+            url: 'https://example.com/tasks',
+            title: 'Example Tasks',
+          },
+          captureMetadata: {
+            upstreamSource: 'activitywatch',
+            checkpoint: '2026-03-20T08:00:00.000Z',
+          },
         },
-        captureMetadata: {
-          upstreamSource: 'activitywatch',
-          checkpoint: '2026-03-20T08:00:00.000Z',
-        },
+      ],
+      pagination: {
+        total: 1,
+        page: 1,
+        pageSize: 10,
+        totalPages: 1,
       },
-    ]);
+    });
     expect(listWorkspaceMemoryEvents).toHaveBeenCalledWith({
       workspaceDir: '/tmp/mirrorbrain-workspace',
     });
@@ -567,7 +601,15 @@ describe('mirrorbrain service', () => {
         workspaceDir: '/tmp/mirrorbrain-workspace',
       },
       {
-        listMemoryEvents: vi.fn(async () => []),
+        listMemoryEvents: vi.fn(async () => ({
+      items: [],
+      pagination: {
+        total: 0,
+        page: 1,
+        pageSize: 10,
+        totalPages: 1,
+      },
+    })),
         listRawWorkspaceMemoryEvents,
         createCandidateMemories,
         publishCandidateMemory: vi.fn(async () => ({
@@ -661,7 +703,15 @@ describe('mirrorbrain service', () => {
         workspaceDir: '/tmp/mirrorbrain-workspace',
       },
       {
-        listMemoryEvents: vi.fn(async () => []),
+        listMemoryEvents: vi.fn(async () => ({
+      items: [],
+      pagination: {
+        total: 0,
+        page: 1,
+        pageSize: 10,
+        totalPages: 1,
+      },
+    })),
         listRawWorkspaceMemoryEvents,
         createCandidateMemories,
         publishCandidateMemory: vi.fn(async () => ({
@@ -1087,6 +1137,8 @@ describe('mirrorbrain service', () => {
         service,
       },
       {
+        listCandidateMemories: vi.fn(async () => []),
+        listWorkspaceCandidateMemories: vi.fn(async () => []),
         listRawWorkspaceMemoryEvents: vi.fn(async () => memoryEvents),
         createCandidateMemories,
         publishCandidateMemory: vi.fn(async () => ({
@@ -1160,7 +1212,15 @@ describe('mirrorbrain service', () => {
         workspaceDir: '/tmp/mirrorbrain-workspace',
       },
       {
-        listMemoryEvents: vi.fn(async () => []),
+        listMemoryEvents: vi.fn(async () => ({
+      items: [],
+      pagination: {
+        total: 0,
+        page: 1,
+        pageSize: 10,
+        totalPages: 1,
+      },
+    })),
         listCandidateMemories: vi.fn(async () => allCandidates),
         listKnowledge: vi.fn(async () => []),
         listSkillDrafts: vi.fn(async () => []),
@@ -1211,7 +1271,15 @@ describe('mirrorbrain service', () => {
         workspaceDir: '/tmp/mirrorbrain-workspace',
       },
       {
-        listMemoryEvents: vi.fn(async () => []),
+        listMemoryEvents: vi.fn(async () => ({
+      items: [],
+      pagination: {
+        total: 0,
+        page: 1,
+        pageSize: 10,
+        totalPages: 1,
+      },
+    })),
         listCandidateMemories,
         listRawWorkspaceMemoryEvents,
         createCandidateMemories,

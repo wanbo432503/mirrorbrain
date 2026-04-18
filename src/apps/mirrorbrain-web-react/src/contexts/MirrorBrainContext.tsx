@@ -7,6 +7,7 @@ import type {
   BrowserSyncSummary,
   ReviewedMemory,
 } from '../types/index'
+import type { PaginatedMemoryEvents } from '../api/client'
 
 type ServiceStatus = 'running' | 'stopped' | 'unknown'
 
@@ -16,6 +17,12 @@ interface MirrorBrainState {
 
   // Memory events
   memoryEvents: MemoryEvent[]
+  memoryPagination?: {
+    total: number
+    page: number
+    pageSize: number
+    totalPages: number
+  }
   hasLoadedMemoryEvents: boolean
 
   // Review workflow
@@ -45,7 +52,7 @@ interface MirrorBrainState {
 
 type MirrorBrainAction =
   | { type: 'SET_SERVICE_STATUS'; payload: ServiceStatus }
-  | { type: 'LOAD_MEMORY_EVENTS'; payload: MemoryEvent[] }
+  | { type: 'LOAD_MEMORY_EVENTS'; payload: PaginatedMemoryEvents }
   | { type: 'SYNC_BROWSER'; payload: BrowserSyncSummary }
   | { type: 'SYNC_SHELL'; payload: BrowserSyncSummary }
   | { type: 'LOAD_KNOWLEDGE'; payload: KnowledgeArtifact[] }
@@ -60,6 +67,7 @@ type MirrorBrainAction =
 const initialState: MirrorBrainState = {
   serviceStatus: 'unknown',
   memoryEvents: [],
+  memoryPagination: undefined,
   hasLoadedMemoryEvents: false,
   reviewWindowDate: null,
   reviewWindowEventCount: 0,
@@ -80,7 +88,8 @@ function mirrorBrainReducer(state: MirrorBrainState, action: MirrorBrainAction):
     case 'LOAD_MEMORY_EVENTS':
       return {
         ...state,
-        memoryEvents: action.payload,
+        memoryEvents: action.payload.items,
+        memoryPagination: action.payload.pagination,
         hasLoadedMemoryEvents: true,
       }
 

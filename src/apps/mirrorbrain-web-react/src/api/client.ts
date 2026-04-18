@@ -8,9 +8,19 @@ import type {
   BrowserSyncSummary,
 } from '../types/index';
 
+export interface PaginatedMemoryEvents {
+  items: MemoryEvent[];
+  pagination: {
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  };
+}
+
 export interface MirrorBrainWebAppApi {
   getHealth(): Promise<{ status: 'running' | 'stopped' }>;
-  listMemory(): Promise<MemoryEvent[]>;
+  listMemory(page?: number, pageSize?: number): Promise<PaginatedMemoryEvents>;
   listKnowledge(): Promise<KnowledgeArtifact[]>;
   listKnowledgeTopics(): Promise<
     Array<{
@@ -72,10 +82,15 @@ export function createMirrorBrainBrowserApi(
       return { status: body.status };
     },
 
-    async listMemory() {
-      const response = await fetch(`${baseUrl}/memory`);
-      const body = await readJson<{ items: MemoryEvent[] }>(response);
-      return body.items;
+    async listMemory(page?: number, pageSize?: number) {
+      const params = new URLSearchParams();
+      if (page !== undefined) params.set('page', String(page));
+      if (pageSize !== undefined) params.set('pageSize', String(pageSize));
+
+      const url = `${baseUrl}/memory${params.toString() ? `?${params.toString()}` : ''}`;
+      const response = await fetch(url);
+      const body = await readJson<PaginatedMemoryEvents>(response);
+      return body;
     },
 
     async listKnowledge() {

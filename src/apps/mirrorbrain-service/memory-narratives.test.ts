@@ -46,7 +46,15 @@ describe('mirrorbrain service memory narratives', () => {
       importedCount: 1,
       lastSyncedAt: '2026-03-20T09:00:00.000Z',
     }));
-    const listMemoryEvents = vi.fn(async () => expectedMemoryEvents);
+    const listMemoryEvents = vi.fn(async () => ({
+      items: expectedMemoryEvents,
+      pagination: {
+        total: expectedMemoryEvents.length,
+        page: 1,
+        pageSize: 10,
+        totalPages: 1,
+      },
+    }));
     const buildBrowserThemeNarratives = vi.fn(() => [browserNarrative]);
     const publishMemoryNarrative = vi.fn(async () => ({
       sourcePath: '/tmp/mirrorbrain/memory-narratives/memory-narrative-browser-theme.json',
@@ -96,7 +104,7 @@ describe('mirrorbrain service memory narratives', () => {
         captureMetadata: { upstreamSource: 'activitywatch', checkpoint: '2026-03-20T08:00:00.000Z' },
       },
     ];
-    let resolveListMemoryEvents: ((value: typeof expectedMemoryEvents) => void) | undefined;
+    let resolveListMemoryEvents: ((value: { items: typeof expectedMemoryEvents; pagination: { total: number; page: number; pageSize: number; totalPages: number } }) => void) | undefined;
     const syncBrowserMemory = vi.fn(async () => ({
       sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
       strategy: 'incremental' as const,
@@ -106,7 +114,7 @@ describe('mirrorbrain service memory narratives', () => {
     }));
     const listMemoryEvents = vi.fn(
       () =>
-        new Promise<typeof expectedMemoryEvents>((resolve) => {
+        new Promise<{ items: typeof expectedMemoryEvents; pagination: { total: number; page: number; pageSize: number; totalPages: number } }>((resolve) => {
           resolveListMemoryEvents = resolve;
         }),
     );

@@ -199,7 +199,15 @@ describe('start mirrorbrain dev runtime', () => {
       service: runtimeService,
       syncBrowserMemory: runtimeService.syncBrowserMemory,
       syncShellMemory: runtimeService.syncShellMemory,
-      listMemoryEvents: vi.fn(async () => []),
+      listMemoryEvents: vi.fn(async () => ({
+        items: [],
+        pagination: {
+          total: 0,
+          page: 1,
+          pageSize: 10,
+          totalPages: 1,
+        },
+      })),
       listMemoryNarratives: vi.fn(async () => []),
       queryMemory: vi.fn(async () => ({ items: [] })),
       listKnowledge: vi.fn(async () => []),

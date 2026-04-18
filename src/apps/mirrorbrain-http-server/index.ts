@@ -25,7 +25,18 @@ interface MirrorBrainHttpService {
   };
   syncBrowserMemory(): Promise<unknown>;
   syncShellMemory(): Promise<unknown>;
-  listMemoryEvents(): Promise<MemoryEvent[]>;
+  listMemoryEvents(input?: {
+    page?: number;
+    pageSize?: number;
+  }): Promise<{
+    items: MemoryEvent[];
+    pagination: {
+      total: number;
+      page: number;
+      pageSize: number;
+      totalPages: number;
+    };
+  }>;
   queryMemory?(input: MemoryQueryInput): Promise<MemoryQueryResult>;
   listKnowledge(): Promise<KnowledgeArtifact[]>;
   listKnowledgeTopics?(): Promise<
@@ -506,19 +517,53 @@ export async function startMirrorBrainHttpServer(
     }),
   );
 
-  app.get(
+  app.get<{
+    Querystring: {
+      page?: number;
+      pageSize?: number;
+    };
+  }>(
     '/memory',
     {
       schema: {
-        summary: 'List imported memory events',
+        summary: 'List imported memory events with pagination',
+        querystring: {
+          type: 'object',
+          properties: {
+            page: { type: 'number' },
+            pageSize: { type: 'number' },
+          },
+        },
         response: {
-          200: createItemsResponseSchema(memoryEventSchema),
+          200: {
+            type: 'object',
+            properties: {
+              items: {
+                type: 'array',
+                items: memoryEventSchema,
+              },
+              pagination: {
+                type: 'object',
+                properties: {
+                  total: { type: 'number' },
+                  page: { type: 'number' },
+                  pageSize: { type: 'number' },
+                  totalPages: { type: 'number' },
+                },
+                required: ['total', 'page', 'pageSize', 'totalPages'],
+              },
+            },
+            required: ['items', 'pagination'],
+          },
         },
       },
     },
-    async () => ({
-      items: await input.service.listMemoryEvents(),
-    }),
+    async (request) => {
+      const page = request.query.page ?? 1;
+      const pageSize = request.query.pageSize ?? 10;
+      const result = await input.service.listMemoryEvents({ page, pageSize });
+      return result;
+    },
   );
 
   app.post<{

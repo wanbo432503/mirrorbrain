@@ -22,6 +22,14 @@ import {
   type OpenVikingMemoryEventWriter,
 } from '../../integrations/openviking-store/index.js';
 import {
+  loadMemoryEventsCache,
+  saveMemoryEventsCache,
+  initializeCacheFromOpenViking,
+  updateCacheWithNewEvents,
+  getEventsFromCache,
+  type MemoryEventsCache,
+} from '../../modules/memory-events-cache/index.js';
+import {
   listKnowledge as listKnowledgeFromPluginApi,
   listSkillDrafts as listSkillDraftsFromPluginApi,
   queryMemory as queryMemoryFromPluginApi,
@@ -346,6 +354,22 @@ export function createMirrorBrainService(
       ),
     );
   };
+  const loadOrInitializeCache = async (): Promise<MemoryEventsCache> => {
+    let cache = await loadMemoryEventsCache(workspaceDir);
+
+    if (cache === null) {
+      cache = await initializeCacheFromOpenViking(
+        workspaceDir,
+        baseUrl,
+        {
+          listWorkspaceMemoryEvents: listWorkspaceMemoryEvents,
+          listOpenVikingMemoryEvents: listMemoryEvents,
+        },
+      );
+    }
+
+    return cache;
+  };
   const loadMemoryEvents = async (): Promise<MemoryEvent[]> => {
     try {
       return await listMemoryEvents({ baseUrl });
@@ -439,16 +463,38 @@ export function createMirrorBrainService(
       const sync = await input.service.syncBrowserMemory();
       scheduleMemoryNarrativeRefresh(sync, buildBrowserThemeNarratives);
 
+      if (sync.importedEvents && sync.importedEvents.length > 0) {
+        await updateCacheWithNewEvents(workspaceDir, baseUrl, sync.importedEvents, 'browser');
+      }
+
       return summarizeImportedEvents(sync) as BrowserMemorySyncResult;
     },
     syncShellMemory: async () => {
       const sync = await input.service.syncShellMemory();
       scheduleMemoryNarrativeRefresh(sync, buildShellProblemNarratives);
 
+      if (sync.importedEvents && sync.importedEvents.length > 0) {
+        await updateCacheWithNewEvents(workspaceDir, baseUrl, sync.importedEvents, 'shell');
+      }
+
       return summarizeImportedEvents(sync) as ShellMemorySyncResult;
     },
-    listMemoryEvents: () =>
-      loadMemoryEvents(),
+    listMemoryEvents: async (input?: { page?: number; pageSize?: number }) => {
+      const page = input?.page ?? 1;
+      const pageSize = input?.pageSize ?? 10;
+      const cache = await loadOrInitializeCache();
+      const { events, total, totalPages } = getEventsFromCache(cache, page, pageSize);
+
+      return {
+        items: events,
+        pagination: {
+          total,
+          page,
+          pageSize,
+          totalPages,
+        },
+      };
+    },
     listMemoryNarratives: () =>
       listMemoryNarratives({
         baseUrl,

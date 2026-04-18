@@ -6,8 +6,6 @@ import LoadingSpinner from '../common/LoadingSpinner'
 import { useMirrorBrain } from '../../contexts/MirrorBrainContext'
 import { createMirrorBrainBrowserApi, type MirrorBrainWebAppApi } from '../../api/client'
 import { useSyncOperations } from '../../hooks/useSyncOperations'
-import { usePagination } from '../../hooks/usePagination'
-import type { MemoryEvent } from '../../types/index'
 
 const MEMORY_PAGE_SIZE = 5
 
@@ -15,20 +13,6 @@ export function shouldLoadMemoryEvents(input: {
   hasLoadedMemoryEvents: boolean
 }) {
   return !input.hasLoadedMemoryEvents
-}
-
-export function getVisibleMemoryEvents(input: {
-  memoryEvents: MemoryEvent[]
-  currentPage: number
-  pageSize: number
-}) {
-  const sortedEvents = [...input.memoryEvents].sort((left, right) =>
-    right.timestamp.localeCompare(left.timestamp)
-  )
-  const startIndex = (input.currentPage - 1) * input.pageSize
-  const endIndex = startIndex + input.pageSize
-
-  return sortedEvents.slice(startIndex, endIndex)
 }
 
 export default function MemoryPanel() {
@@ -41,10 +25,9 @@ export default function MemoryPanel() {
   const { feedback, isSyncingBrowser, isSyncingShell, syncBrowser, syncShell } =
     useSyncOperations(api)
 
-  const totalPages = Math.max(1, Math.ceil(state.memoryEvents.length / MEMORY_PAGE_SIZE))
-  const { currentPage, goToPage } = usePagination(totalPages)
-
   const [isLoading, setIsLoading] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+  const totalPages = state.memoryPagination?.totalPages ?? 1
 
   // Load initial memory events on mount
   useEffect(() => {
@@ -55,8 +38,8 @@ export default function MemoryPanel() {
 
     const loadMemory = async () => {
       try {
-        const events = await api.listMemory()
-        dispatch({ type: 'LOAD_MEMORY_EVENTS', payload: events })
+        const result = await api.listMemory(1, MEMORY_PAGE_SIZE)
+        dispatch({ type: 'LOAD_MEMORY_EVENTS', payload: result })
       } catch (error) {
         console.error('Failed to load memory events:', error)
       } finally {
@@ -67,11 +50,29 @@ export default function MemoryPanel() {
     loadMemory()
   }, [api, dispatch, state.hasLoadedMemoryEvents])
 
+  // Handle page change - load new page from server
+  const goToPage = async (page: number) => {
+    setIsLoading(true)
+    try {
+      const result = await api.listMemory(page, MEMORY_PAGE_SIZE)
+      dispatch({ type: 'LOAD_MEMORY_EVENTS', payload: result })
+      setCurrentPage(page)
+    } catch (error) {
+      console.error('Failed to load page:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   // Update sync operations to also dispatch to global state
   const handleSyncBrowser = async () => {
     try {
       const summary = await syncBrowser()
       dispatch({ type: 'SYNC_BROWSER', payload: summary })
+
+      // Reload memory events after successful sync
+      const result = await api.listMemory(currentPage, MEMORY_PAGE_SIZE)
+      dispatch({ type: 'LOAD_MEMORY_EVENTS', payload: result })
     } catch (error) {
       // Error already handled by useSyncOperations
     }
@@ -81,17 +82,14 @@ export default function MemoryPanel() {
     try {
       const summary = await syncShell()
       dispatch({ type: 'SYNC_SHELL', payload: summary })
+
+      // Reload memory events after successful sync
+      const result = await api.listMemory(currentPage, MEMORY_PAGE_SIZE)
+      dispatch({ type: 'LOAD_MEMORY_EVENTS', payload: result })
     } catch (error) {
       // Error already handled by useSyncOperations
     }
   }
-
-  // Get current page events
-  const currentEvents = getVisibleMemoryEvents({
-    memoryEvents: state.memoryEvents,
-    currentPage,
-    pageSize: MEMORY_PAGE_SIZE,
-  })
 
   if (isLoading) {
     return (
@@ -135,11 +133,18 @@ export default function MemoryPanel() {
         </div>
       )}
 
+      {/* Total count indicator */}
+      {state.memoryPagination && (
+        <div className="text-xs text-gray-600 mb-2">
+          Showing {state.memoryEvents.length} of {state.memoryPagination.total} unique URLs (page {currentPage} of {totalPages})
+        </div>
+      )}
+
       {/* Memory List */}
-      <MemoryList events={currentEvents} />
+      <MemoryList events={state.memoryEvents} />
 
       {/* Pagination */}
-      {state.memoryEvents.length > MEMORY_PAGE_SIZE && (
+      {totalPages > 1 && (
         <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={goToPage} />
       )}
     </div>

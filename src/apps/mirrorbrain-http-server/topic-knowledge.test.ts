@@ -25,7 +25,7 @@ describe('mirrorbrain http server topic knowledge endpoints', () => {
       },
       syncBrowserMemory: vi.fn(),
       syncShellMemory: vi.fn(),
-      listMemoryEvents: vi.fn(async () => []),
+      listMemoryEvents: vi.fn(async () => ({ items: [], pagination: { total: 0, page: 1, pageSize: 10, totalPages: 1 } })),
       queryMemory: vi.fn(async () => ({ items: [] })),
       listKnowledge: vi.fn(async () => []),
       listKnowledgeTopics: vi.fn(async () => [

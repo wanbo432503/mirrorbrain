@@ -173,7 +173,7 @@ it('publishes the superseded topic artifact before the new current-best version 
       },
     },
     {
-      listMemoryEvents: vi.fn(async () => []),
+      listMemoryEvents: vi.fn(async () => ({ items: [], pagination: { total: 0, page: 1, pageSize: 10, totalPages: 1 } })),
       listKnowledge: vi.fn(async () => [dailyReviewDraft, existingCurrentBest]),
       listSkillDrafts: vi.fn(async () => []),
       queryMemory: vi.fn(async () => ({ items: [] })),

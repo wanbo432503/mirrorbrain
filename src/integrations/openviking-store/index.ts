@@ -1009,8 +1009,7 @@ export async function listMirrorBrainMemoryEventsFromOpenViking(
     filterMirrorBrainResourceEntries(
       resourceEntries,
       (entry) =>
-        entry.name.startsWith(MIRRORBRAIN_MEMORY_EVENTS_PREFIX) ||
-        entry.name.startsWith('browser'),
+        entry.name.startsWith(MIRRORBRAIN_MEMORY_EVENTS_PREFIX),
     ).map(async (entry) => {
       const contentUris = await resolveReadableContentUris(
         {
