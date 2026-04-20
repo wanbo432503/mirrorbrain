@@ -81,11 +81,22 @@ describe('DraftGeneration', () => {
     expect(screen.getByDisplayValue('Test Knowledge')).toBeInTheDocument()
   })
 
-  it('renders Skill Draft column with DraftEditor', () => {
-    render(<DraftGeneration {...defaultProps} skillDraft={mockSkillDraft} />)
+  it('switches between Knowledge and Skill tabs', async () => {
+    const user = userEvent.setup()
+    render(<DraftGeneration {...defaultProps} />)
 
-    // Verify Skill Draft Editor shows approval state
-    expect(screen.getByText('Draft')).toBeInTheDocument()
+    // Verify both tabs exist (use getAllByText since multiple renders)
+    const knowledgeDraftTabs = screen.getAllByText('Knowledge Draft')
+    const skillDraftTabs = screen.getAllByText('Skill Draft')
+    expect(knowledgeDraftTabs.length).toBeGreaterThan(0)
+    expect(skillDraftTabs.length).toBeGreaterThan(0)
+
+    // Click Skill Draft tab
+    await user.click(skillDraftTabs[0])
+
+    // Verify Skill tab is now active (blue background)
+    const activeSkillButton = skillDraftTabs.find(btn => btn.className.includes('bg-blue-600'))
+    expect(activeSkillButton).toBeDefined()
   })
 
   it('uses grid-cols-3 for equal column widths on large screens', () => {

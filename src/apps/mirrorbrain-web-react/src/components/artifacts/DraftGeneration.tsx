@@ -1,6 +1,9 @@
+import { useState } from 'react'
 import CandidateContext from './CandidateContext'
 import DraftEditor from './DraftEditor'
 import type { KnowledgeArtifact, SkillArtifact, ReviewedMemory } from '../../types/index'
+
+type DraftTab = 'knowledge' | 'skill'
 
 interface DraftGenerationProps {
   reviewedMemories: ReviewedMemory[]
@@ -39,6 +42,8 @@ export default function DraftGeneration({
   onSkillApprovalStateChange,
   onSkillRequiresConfirmationChange,
 }: DraftGenerationProps) {
+  const [activeTab, setActiveTab] = useState<DraftTab>('knowledge')
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Column 1: Source Context */}
@@ -56,52 +61,67 @@ export default function DraftGeneration({
         </div>
       </div>
 
-      {/* Column 2: Knowledge Draft */}
-      <div className="col-span-1">
-        <div className="mb-3">
-          <h2 className="font-heading font-bold text-base text-slate-900 uppercase tracking-wide">
+      {/* Column 2: Draft Tabs (Knowledge/Skill) */}
+      <div className="lg:col-span-2">
+        {/* Tab Navigation */}
+        <div className="flex gap-2 mb-3">
+          <button
+            onClick={() => setActiveTab('knowledge')}
+            className={`
+              px-3 py-1.5 rounded-lg font-heading font-semibold text-xs uppercase tracking-wide
+              cursor-pointer transition-all duration-200
+              focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none
+              ${activeTab === 'knowledge'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+              }
+            `}
+          >
             Knowledge Draft
-          </h2>
-          <p className="font-body text-sm text-slate-600">
-            Edit generated knowledge artifact
-          </p>
-        </div>
-        <div className="max-h-[550px] overflow-y-auto">
-          <DraftEditor
-            mode="knowledge"
-            draft={knowledgeDraft}
-            onGenerate={onGenerateKnowledge}
-            onSave={onSaveKnowledge}
-            isGenerating={isGeneratingKnowledge}
-            isSaving={isSavingKnowledge}
-            onTitleChange={onKnowledgeTitleChange}
-            onSummaryChange={onKnowledgeSummaryChange}
-            onBodyChange={onKnowledgeBodyChange}
-          />
-        </div>
-      </div>
-
-      {/* Column 3: Skill Draft */}
-      <div className="col-span-1">
-        <div className="mb-3">
-          <h2 className="font-heading font-bold text-base text-slate-900 uppercase tracking-wide">
+          </button>
+          <button
+            onClick={() => setActiveTab('skill')}
+            className={`
+              px-3 py-1.5 rounded-lg font-heading font-semibold text-xs uppercase tracking-wide
+              cursor-pointer transition-all duration-200
+              focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none
+              ${activeTab === 'skill'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+              }
+            `}
+          >
             Skill Draft
-          </h2>
-          <p className="font-body text-sm text-slate-600">
-            Configure generated skill artifact
-          </p>
+          </button>
         </div>
+
+        {/* Tab Content */}
         <div className="max-h-[550px] overflow-y-auto">
-          <DraftEditor
-            mode="skill"
-            draft={skillDraft}
-            onGenerate={onGenerateSkill}
-            onSave={onSaveSkill}
-            isGenerating={isGeneratingSkill}
-            isSaving={isSavingSkill}
-            onApprovalStateChange={onSkillApprovalStateChange}
-            onRequiresConfirmationChange={onSkillRequiresConfirmationChange}
-          />
+          {activeTab === 'knowledge' && (
+            <DraftEditor
+              mode="knowledge"
+              draft={knowledgeDraft}
+              onGenerate={onGenerateKnowledge}
+              onSave={onSaveKnowledge}
+              isGenerating={isGeneratingKnowledge}
+              isSaving={isSavingKnowledge}
+              onTitleChange={onKnowledgeTitleChange}
+              onSummaryChange={onKnowledgeSummaryChange}
+              onBodyChange={onKnowledgeBodyChange}
+            />
+          )}
+          {activeTab === 'skill' && (
+            <DraftEditor
+              mode="skill"
+              draft={skillDraft}
+              onGenerate={onGenerateSkill}
+              onSave={onSaveSkill}
+              isGenerating={isGeneratingSkill}
+              isSaving={isSavingSkill}
+              onApprovalStateChange={onSkillApprovalStateChange}
+              onRequiresConfirmationChange={onSkillRequiresConfirmationChange}
+            />
+          )}
         </div>
       </div>
     </div>
