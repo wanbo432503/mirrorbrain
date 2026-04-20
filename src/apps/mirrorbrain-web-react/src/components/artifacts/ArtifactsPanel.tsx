@@ -1,14 +1,13 @@
 import { useState } from 'react'
 import SubtabNavigation from './SubtabNavigation'
 import HistoryTopics from './HistoryTopics'
-import KnowledgeGenerator from './KnowledgeGenerator'
-import SkillGenerator from './SkillGenerator'
+import DraftGeneration from './DraftGeneration'
 import { createMirrorBrainBrowserApi, type MirrorBrainWebAppApi } from '../../api/client'
 import { useArtifacts } from '../../hooks/useArtifacts'
 import { useMirrorBrain } from '../../contexts/MirrorBrainContext'
 import type { KnowledgeArtifact, SkillArtifact } from '../../types/index'
 
-type ArtifactsSubtab = 'history-topics' | 'generate-knowledge' | 'generate-skill'
+type ArtifactsSubtab = 'history-topics' | 'draft-generation'
 
 export default function ArtifactsPanel() {
   const api: MirrorBrainWebAppApi = createMirrorBrainBrowserApi(window.location.origin)
@@ -105,38 +104,32 @@ export default function ArtifactsPanel() {
           />
         )}
 
-        {activeSubtab === 'generate-knowledge' && (
-          <KnowledgeGenerator
+        {activeSubtab === 'draft-generation' && (
+          <DraftGeneration
             reviewedMemories={reviewedMemories}
             knowledgeDraft={knowledgeDraft}
-            onGenerate={handleGenerateKnowledge}
-            onSave={handleSaveKnowledge}
-            isGenerating={isGeneratingKnowledge}
-            isSaving={isSavingKnowledge}
-            onTitleChange={(title) =>
+            skillDraft={skillDraft}
+            onGenerateKnowledge={handleGenerateKnowledge}
+            onGenerateSkill={handleGenerateSkill}
+            onSaveKnowledge={handleSaveKnowledge}
+            onSaveSkill={handleSaveSkill}
+            isGeneratingKnowledge={isGeneratingKnowledge}
+            isGeneratingSkill={isGeneratingSkill}
+            isSavingKnowledge={isSavingKnowledge}
+            isSavingSkill={isSavingSkill}
+            onKnowledgeTitleChange={(title) =>
               setKnowledgeDraft((prev) => prev ? { ...prev, title } : null)
             }
-            onSummaryChange={(summary) =>
+            onKnowledgeSummaryChange={(summary) =>
               setKnowledgeDraft((prev) => prev ? { ...prev, summary } : null)
             }
-            onBodyChange={(body) =>
+            onKnowledgeBodyChange={(body) =>
               setKnowledgeDraft((prev) => prev ? { ...prev, body } : null)
             }
-          />
-        )}
-
-        {activeSubtab === 'generate-skill' && (
-          <SkillGenerator
-            reviewedMemories={reviewedMemories}
-            skillDraft={skillDraft}
-            onGenerate={handleGenerateSkill}
-            onSave={handleSaveSkill}
-            isGenerating={isGeneratingSkill}
-            isSaving={isSavingSkill}
-            onApprovalStateChange={(approvalState) =>
+            onSkillApprovalStateChange={(approvalState) =>
               setSkillDraft((prev) => prev ? { ...prev, approvalState } : null)
             }
-            onRequiresConfirmationChange={(requiresConfirmation) =>
+            onSkillRequiresConfirmationChange={(requiresConfirmation) =>
               setSkillDraft((prev) =>
                 prev
                   ? {

@@ -1,4 +1,4 @@
-type ArtifactsSubtab = 'history-topics' | 'generate-knowledge' | 'generate-skill'
+type ArtifactsSubtab = 'history-topics' | 'draft-generation'
 
 interface SubtabNavigationProps {
   activeSubtab: ArtifactsSubtab
@@ -7,8 +7,7 @@ interface SubtabNavigationProps {
 
 const SUBTABS: { id: ArtifactsSubtab; label: string }[] = [
   { id: 'history-topics', label: 'History Topics' },
-  { id: 'generate-knowledge', label: 'Generate Knowledge' },
-  { id: 'generate-skill', label: 'Generate Skill' },
+  { id: 'draft-generation', label: 'Draft Generation' },
 ]
 
 export default function SubtabNavigation({ activeSubtab, onSubtabChange }: SubtabNavigationProps) {
