@@ -51,7 +51,7 @@ export default function DraftGeneration({
             Reviewed memories for artifact generation
           </p>
         </div>
-        <div className="max-h-[500px] overflow-y-auto">
+        <div className="max-h-[600px] overflow-y-auto">
           <CandidateContext reviewedMemories={reviewedMemories} />
         </div>
       </div>
@@ -66,7 +66,7 @@ export default function DraftGeneration({
             Edit generated knowledge artifact
           </p>
         </div>
-        <div className="max-h-[500px] overflow-y-auto">
+        <div className="max-h-[600px] overflow-y-auto">
           <DraftEditor
             mode="knowledge"
             draft={knowledgeDraft}
@@ -91,7 +91,7 @@ export default function DraftGeneration({
             Configure generated skill artifact
           </p>
         </div>
-        <div className="max-h-[500px] overflow-y-auto">
+        <div className="max-h-[600px] overflow-y-auto">
           <DraftEditor
             mode="skill"
             draft={skillDraft}
