@@ -51,7 +51,9 @@ export default function DraftGeneration({
             Reviewed memories for artifact generation
           </p>
         </div>
-        <CandidateContext reviewedMemories={reviewedMemories} />
+        <div className="max-h-[500px] overflow-y-auto">
+          <CandidateContext reviewedMemories={reviewedMemories} />
+        </div>
       </div>
 
       {/* Column 2: Knowledge Draft */}
@@ -64,17 +66,19 @@ export default function DraftGeneration({
             Edit generated knowledge artifact
           </p>
         </div>
-        <DraftEditor
-          mode="knowledge"
-          draft={knowledgeDraft}
-          onGenerate={onGenerateKnowledge}
-          onSave={onSaveKnowledge}
-          isGenerating={isGeneratingKnowledge}
-          isSaving={isSavingKnowledge}
-          onTitleChange={onKnowledgeTitleChange}
-          onSummaryChange={onKnowledgeSummaryChange}
-          onBodyChange={onKnowledgeBodyChange}
-        />
+        <div className="max-h-[500px] overflow-y-auto">
+          <DraftEditor
+            mode="knowledge"
+            draft={knowledgeDraft}
+            onGenerate={onGenerateKnowledge}
+            onSave={onSaveKnowledge}
+            isGenerating={isGeneratingKnowledge}
+            isSaving={isSavingKnowledge}
+            onTitleChange={onKnowledgeTitleChange}
+            onSummaryChange={onKnowledgeSummaryChange}
+            onBodyChange={onKnowledgeBodyChange}
+          />
+        </div>
       </div>
 
       {/* Column 3: Skill Draft */}
@@ -87,16 +91,18 @@ export default function DraftGeneration({
             Configure generated skill artifact
           </p>
         </div>
-        <DraftEditor
-          mode="skill"
-          draft={skillDraft}
-          onGenerate={onGenerateSkill}
-          onSave={onSaveSkill}
-          isGenerating={isGeneratingSkill}
-          isSaving={isSavingSkill}
-          onApprovalStateChange={onSkillApprovalStateChange}
-          onRequiresConfirmationChange={onSkillRequiresConfirmationChange}
-        />
+        <div className="max-h-[500px] overflow-y-auto">
+          <DraftEditor
+            mode="skill"
+            draft={skillDraft}
+            onGenerate={onGenerateSkill}
+            onSave={onSaveSkill}
+            isGenerating={isGeneratingSkill}
+            isSaving={isSavingSkill}
+            onApprovalStateChange={onSkillApprovalStateChange}
+            onRequiresConfirmationChange={onSkillRequiresConfirmationChange}
+          />
+        </div>
       </div>
     </div>
   )
