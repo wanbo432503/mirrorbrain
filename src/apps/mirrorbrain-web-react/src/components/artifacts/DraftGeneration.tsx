@@ -52,9 +52,6 @@ export default function DraftGeneration({
           <h2 className="font-heading font-bold text-base text-slate-900 uppercase tracking-wide">
             Source Context
           </h2>
-          <p className="font-body text-sm text-slate-600">
-            Reviewed memories for artifact generation
-          </p>
         </div>
         <div className="h-[550px] overflow-y-auto">
           <CandidateContext reviewedMemories={reviewedMemories} />
