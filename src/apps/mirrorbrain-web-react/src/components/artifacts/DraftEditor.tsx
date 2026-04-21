@@ -159,16 +159,18 @@ export default function DraftEditor({
         )}
 
         {/* Save Button */}
-        <div className="pt-4 border-t border-slate-200">
-          <Button
-            variant="success"
-            onClick={onSave}
-            loading={isSaving}
-            disabled={isSaving || isGenerating}
-          >
-            {isSaving ? 'Saving...' : 'Save Draft'}
-          </Button>
-        </div>
+        {mode === 'skill' && (
+          <div className="pt-4 border-t border-slate-200">
+            <Button
+              variant="success"
+              onClick={onSave}
+              loading={isSaving}
+              disabled={isSaving || isGenerating}
+            >
+              {isSaving ? 'Saving...' : 'Save Draft'}
+            </Button>
+          </div>
+        )}
       </div>
     </Card>
   )
