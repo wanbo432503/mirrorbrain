@@ -65,51 +65,38 @@ export default function DraftEditor({
           <h3 className="font-heading font-bold text-lg text-slate-900 uppercase tracking-wide">
             {mode === 'knowledge' ? 'Knowledge Draft' : 'Skill Draft'}
           </h3>
-          <Button
-            variant="ghost"
-            onClick={onGenerate}
-            loading={isGenerating}
-            disabled={isGenerating || isSaving}
-          >
-            Regenerate
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              onClick={onGenerate}
+              loading={isGenerating}
+              disabled={isGenerating || isSaving}
+            >
+              Regenerate
+            </Button>
+            {mode === 'knowledge' && (
+              <>
+                <Button variant="success">
+                  Approved
+                </Button>
+                <Button variant="primary">
+                  Save
+                </Button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Knowledge Form */}
         {mode === 'knowledge' && (
           <div className="space-y-4">
-            <Input
-              label="Title"
-              value={(draft as KnowledgeArtifact).title || ''}
-              onChange={(e) => onTitleChange?.(e.target.value)}
-              helpText="Title for the knowledge artifact"
-            />
-
             <TextArea
-              label="Summary"
-              value={(draft as KnowledgeArtifact).summary || ''}
-              onChange={(e) => onSummaryChange?.(e.target.value)}
-              rows={3}
-              helpText="Brief summary of the knowledge"
-            />
-
-            <TextArea
-              label="Body"
+              label="Knowledge Content (Markdown)"
               value={(draft as KnowledgeArtifact).body || ''}
               onChange={(e) => onBodyChange?.(e.target.value)}
-              rows={8}
-              helpText="Detailed knowledge content"
+              rows={15}
+              helpText="Edit knowledge content in markdown format"
             />
-
-            {/* Draft State Badge */}
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-              <p className="text-xs font-heading font-semibold text-slate-600 uppercase mb-2">
-                Draft State
-              </p>
-              <div className="inline-flex items-center px-3 py-1.5 rounded-md text-sm font-heading font-semibold bg-yellow-100 text-yellow-700 border border-yellow-300">
-                {(draft as KnowledgeArtifact).draftState}
-              </div>
-            </div>
           </div>
         )}
 

@@ -77,8 +77,8 @@ describe('DraftGeneration', () => {
   it('renders Knowledge Draft column with DraftEditor', () => {
     render(<DraftGeneration {...defaultProps} knowledgeDraft={mockKnowledgeDraft} />)
 
-    // Verify Knowledge Draft Editor shows draft title
-    expect(screen.getByDisplayValue('Test Knowledge')).toBeInTheDocument()
+    // Verify Knowledge Draft Editor shows markdown body content
+    expect(screen.getByDisplayValue('Test knowledge body')).toBeInTheDocument()
   })
 
   it('switches between Knowledge and Skill tabs', async () => {
