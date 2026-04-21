@@ -111,43 +111,39 @@ export default function ReviewPanel() {
 
   return (
     <div>
-      {/* Review Actions with Inline Feedback */}
-      <div className="flex items-start gap-3 mb-3">
-        <div className="flex-shrink-0">
-          <ReviewActions
-            onCreateCandidates={handleCreateCandidates}
-            isCreatingCandidates={isCreatingCandidates}
-            isReviewing={isReviewing}
-          />
+      {/* Feedback Banner */}
+      {feedback && (
+        <div
+          className={`mb-3 p-3 rounded-lg border ${
+            feedback.kind === 'success'
+              ? 'bg-green-100 border-green-300 text-green-700'
+              : feedback.kind === 'error'
+              ? 'bg-red-100 border-red-300 text-red-700'
+              : 'bg-blue-100 border-blue-300 text-blue-700'
+          }`}
+          role="alert"
+        >
+          <p className="font-body font-medium text-sm">{feedback.message}</p>
         </div>
+      )}
 
-        {/* Feedback Message */}
-        {feedback && (
-          <div
-            className={`flex-1 px-3 py-1.5 rounded-lg border ${
-              feedback.kind === 'success'
-                ? 'bg-green-100 border-green-300 text-green-700'
-                : feedback.kind === 'error'
-                ? 'bg-red-100 border-red-300 text-red-700'
-                : 'bg-blue-100 border-blue-300 text-blue-700'
-            }`}
-            role="alert"
-          >
-            <p className="font-body font-medium text-xs">{feedback.message}</p>
-          </div>
-        )}
+      {!state.hasLoadedMemoryEvents && (
+        <div
+          className="mb-3 p-3 rounded-lg border bg-blue-100 border-blue-300 text-blue-700"
+          role="status"
+        >
+          <p className="font-body font-medium text-sm">
+            Waiting for memory to finish loading before generating daily candidates.
+          </p>
+        </div>
+      )}
 
-        {!state.hasLoadedMemoryEvents && (
-          <div
-            className="flex-1 px-3 py-1.5 rounded-lg border bg-blue-100 border-blue-300 text-blue-700"
-            role="status"
-          >
-            <p className="font-body font-medium text-xs">
-              Waiting for memory to finish loading before generating daily candidates.
-            </p>
-          </div>
-        )}
-      </div>
+      {/* Review Actions */}
+      <ReviewActions
+        onCreateCandidates={handleCreateCandidates}
+        isCreatingCandidates={isCreatingCandidates}
+        isReviewing={isReviewing}
+      />
 
       {/* Metrics Grid */}
       <MetricGrid

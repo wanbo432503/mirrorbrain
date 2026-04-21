@@ -61,7 +61,7 @@ export default function DraftEditor({
     <Card className="h-full">
       <div className="space-y-6">
         {/* Action Buttons */}
-        <div className="mb-3 flex items-start gap-2">
+        <div className="mb-3 flex justify-end gap-2">
           <Button
             variant="ghost"
             onClick={onGenerate}
@@ -100,15 +100,17 @@ export default function DraftEditor({
               <p className="text-sm font-heading font-semibold text-slate-900 uppercase tracking-wide">
                 Approval State
               </p>
-              <div className="flex gap-3">
+              <div className="flex border-b border-slate-200">
                 <button
                   onClick={() => onApprovalStateChange?.('draft')}
                   className={`
-                    px-4 py-2 rounded-lg font-heading font-semibold text-sm uppercase tracking-wide
-                    cursor-pointer transition-all duration-200 border
+                    px-4 py-2 font-heading font-semibold text-xs uppercase tracking-wide
+                    cursor-pointer transition-colors duration-200
+                    focus:ring-2 focus:ring-teal-500 focus:ring-inset focus:outline-none
+                    border-b-2 -mb-px
                     ${(draft as SkillArtifact).approvalState === 'draft'
-                      ? 'bg-yellow-100 text-yellow-700 border-yellow-300'
-                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                      ? 'border-yellow-500 text-yellow-700 bg-yellow-50/50'
+                      : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
                     }
                   `}
                 >
@@ -117,11 +119,13 @@ export default function DraftEditor({
                 <button
                   onClick={() => onApprovalStateChange?.('approved')}
                   className={`
-                    px-4 py-2 rounded-lg font-heading font-semibold text-sm uppercase tracking-wide
-                    cursor-pointer transition-all duration-200 border
+                    px-4 py-2 font-heading font-semibold text-xs uppercase tracking-wide
+                    cursor-pointer transition-colors duration-200
+                    focus:ring-2 focus:ring-teal-500 focus:ring-inset focus:outline-none
+                    border-b-2 -mb-px
                     ${(draft as SkillArtifact).approvalState === 'approved'
-                      ? 'bg-green-100 text-green-700 border-green-300'
-                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                      ? 'border-green-500 text-green-700 bg-green-50/50'
+                      : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
                     }
                   `}
                 >
@@ -152,7 +156,7 @@ export default function DraftEditor({
 
         {/* Save Button */}
         {mode === 'skill' && (
-          <div className="pt-4 border-t border-slate-200">
+          <div className="pt-4 border-t border-slate-200 flex justify-end">
             <Button
               variant="success"
               onClick={onSave}

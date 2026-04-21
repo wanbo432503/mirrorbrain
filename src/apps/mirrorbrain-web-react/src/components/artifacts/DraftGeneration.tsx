@@ -48,7 +48,7 @@ export default function DraftGeneration({
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" style={{ height: '590px' }}>
       {/* Column 1: Source Context */}
       <div className="col-span-1">
-        <div className="mb-3">
+        <div className="mb-3 py-2">
           <h2 className="font-heading font-bold text-base text-slate-900 uppercase tracking-wide">
             Source Context
           </h2>
@@ -61,16 +61,17 @@ export default function DraftGeneration({
       {/* Column 2: Draft Tabs (Knowledge/Skill) */}
       <div className="lg:col-span-2">
         {/* Tab Navigation */}
-        <div className="flex gap-2 mb-3">
+        <div className="flex border-b border-slate-200 mb-3">
           <button
             onClick={() => setActiveTab('knowledge')}
             className={`
-              px-3 py-1.5 rounded-lg font-heading font-semibold text-xs uppercase tracking-wide
-              cursor-pointer transition-all duration-200
-              focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none
+              px-4 py-2 font-heading font-semibold text-xs uppercase tracking-wide
+              cursor-pointer transition-colors duration-200
+              focus:ring-2 focus:ring-teal-500 focus:ring-inset focus:outline-none
+              border-b-2 -mb-px
               ${activeTab === 'knowledge'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+                ? 'border-teal-600 text-teal-700 bg-teal-50/50'
+                : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
               }
             `}
           >
@@ -79,12 +80,13 @@ export default function DraftGeneration({
           <button
             onClick={() => setActiveTab('skill')}
             className={`
-              px-3 py-1.5 rounded-lg font-heading font-semibold text-xs uppercase tracking-wide
-              cursor-pointer transition-all duration-200
-              focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none
+              px-4 py-2 font-heading font-semibold text-xs uppercase tracking-wide
+              cursor-pointer transition-colors duration-200
+              focus:ring-2 focus:ring-teal-500 focus:ring-inset focus:outline-none
+              border-b-2 -mb-px
               ${activeTab === 'skill'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+                ? 'border-teal-600 text-teal-700 bg-teal-50/50'
+                : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
               }
             `}
           >

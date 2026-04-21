@@ -71,10 +71,10 @@ export default function CandidateCard({
     <div
       onClick={onSelect}
       className={`
-        bg-white border rounded-lg p-4 cursor-pointer transition-all duration-200
-        hover:shadow-md focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+        bg-white border rounded-lg p-4 cursor-pointer transition-colors duration-200
+        hover:shadow-md focus:ring-2 focus:ring-teal-500 focus:ring-offset-2
         ${isSelected
-          ? 'border-blue-500 shadow-md ring-2 ring-blue-500 ring-offset-2'
+          ? 'border-teal-500 shadow-md ring-2 ring-teal-500 ring-offset-2'
           : 'border-slate-200 hover:border-slate-300'
         }
       `}
@@ -142,7 +142,7 @@ export default function CandidateCard({
               e.stopPropagation()
               onKeep()
             }}
-            className="inline-flex items-center justify-center w-8 h-8 rounded-md bg-green-100 text-green-700 hover:bg-green-200 transition-colors duration-200 focus:ring-2 focus:ring-green-500 focus:ring-offset-1"
+            className="inline-flex items-center justify-center w-8 h-8 rounded-md bg-green-600 text-white hover:bg-green-700 transition-colors duration-200 focus:ring-2 focus:ring-green-500 focus:ring-offset-1 cursor-pointer"
             aria-label="Keep candidate"
             type="button"
           >
@@ -153,7 +153,7 @@ export default function CandidateCard({
               e.stopPropagation()
               onDiscard()
             }}
-            className="inline-flex items-center justify-center w-8 h-8 rounded-md bg-slate-100 text-slate-600 hover:bg-red-100 hover:text-red-700 transition-colors duration-200 focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+            className="inline-flex items-center justify-center w-8 h-8 rounded-md bg-slate-200 text-slate-700 hover:bg-red-600 hover:text-white transition-colors duration-200 focus:ring-2 focus:ring-red-500 focus:ring-offset-1 cursor-pointer"
             aria-label="Discard candidate"
             type="button"
           >

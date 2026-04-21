@@ -12,7 +12,7 @@ export default function ReviewActions({
   isReviewing,
 }: ReviewActionsProps) {
   return (
-    <div className="space-y-2 mb-3">
+    <div className="flex justify-end mb-3">
       {/* Create Candidates Button */}
       <Button
         variant="primary"
