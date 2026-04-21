@@ -15,3 +15,6 @@ AGENTS.md
 # Ignore all dist directories (build outputs)
 **/dist/
 dist/
+
+# Git worktrees (isolated development workspaces)
+.worktrees/
