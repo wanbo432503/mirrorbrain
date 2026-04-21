@@ -56,7 +56,7 @@ export default function DraftGeneration({
             Reviewed memories for artifact generation
           </p>
         </div>
-        <div className="max-h-[550px] overflow-y-auto">
+        <div className="h-[550px] overflow-y-auto">
           <CandidateContext reviewedMemories={reviewedMemories} />
         </div>
       </div>
@@ -96,7 +96,7 @@ export default function DraftGeneration({
         </div>
 
         {/* Tab Content */}
-        <div className="max-h-[550px] overflow-y-auto">
+        <div className="h-[550px] overflow-y-auto">
           {activeTab === 'knowledge' && (
             <DraftEditor
               mode="knowledge"
