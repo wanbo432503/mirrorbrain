@@ -60,44 +60,36 @@ export default function DraftEditor({
   return (
     <Card className="h-full">
       <div className="space-y-6">
-        {/* Generate Button (if draft exists) */}
-        <div className="flex justify-between items-center">
-          <h3 className="font-heading font-bold text-lg text-slate-900 uppercase tracking-wide">
-            {mode === 'knowledge' ? 'Knowledge Draft' : 'Skill Draft'}
-          </h3>
-          <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              onClick={onGenerate}
-              loading={isGenerating}
-              disabled={isGenerating || isSaving}
-            >
-              Regenerate
-            </Button>
-            {mode === 'knowledge' && (
-              <>
-                <Button variant="success">
-                  Approved
-                </Button>
-                <Button variant="primary">
-                  Save
-                </Button>
-              </>
-            )}
-          </div>
+        {/* Action Buttons */}
+        <div className="mb-3 flex items-start gap-2">
+          <Button
+            variant="ghost"
+            onClick={onGenerate}
+            loading={isGenerating}
+            disabled={isGenerating || isSaving}
+          >
+            Regenerate
+          </Button>
+          {mode === 'knowledge' && (
+            <>
+              <Button variant="success">
+                Approved
+              </Button>
+              <Button variant="primary">
+                Save
+              </Button>
+            </>
+          )}
         </div>
 
         {/* Knowledge Form */}
         {mode === 'knowledge' && (
-          <div className="space-y-4">
-            <TextArea
-              label="Knowledge Content (Markdown)"
-              value={(draft as KnowledgeArtifact).body || ''}
-              onChange={(e) => onBodyChange?.(e.target.value)}
-              rows={15}
-              helpText="Edit knowledge content in markdown format"
-            />
-          </div>
+          <TextArea
+            value={(draft as KnowledgeArtifact).body || ''}
+            onChange={(e) => onBodyChange?.(e.target.value)}
+            rows={20}
+            className="h-full"
+          />
         )}
 
         {/* Skill Form */}
