@@ -50,6 +50,14 @@ export interface MirrorBrainWebAppApi {
   generateKnowledge(
     reviewedMemories: ReviewedMemory[]
   ): Promise<KnowledgeArtifact>;
+  regenerateKnowledge?(
+    existingDraft: KnowledgeArtifact,
+    reviewedMemories: ReviewedMemory[]
+  ): Promise<KnowledgeArtifact>;
+  approveKnowledge?(draftId: string): Promise<{
+    publishedArtifact: KnowledgeArtifact;
+    assignedTopic: { topicKey: string; title: string };
+  }>;
   generateSkill(reviewedMemories: ReviewedMemory[]): Promise<SkillArtifact>;
   saveKnowledgeArtifact?(
     artifact: KnowledgeArtifact
@@ -187,6 +195,32 @@ export function createMirrorBrainBrowserApi(
       });
       const body = (await response.json()) as { artifact: KnowledgeArtifact };
       return body.artifact;
+    },
+
+    async regenerateKnowledge(
+      existingDraft: KnowledgeArtifact,
+      reviewedMemories: ReviewedMemory[]
+    ) {
+      const response = await fetch(`${baseUrl}/knowledge/regenerate`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ existingDraft, reviewedMemories }),
+      });
+      const body = (await response.json()) as { artifact: KnowledgeArtifact };
+      return body.artifact;
+    },
+
+    async approveKnowledge(draftId: string) {
+      const response = await fetch(`${baseUrl}/knowledge/approve`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ draftId }),
+      });
+      const body = (await response.json()) as {
+        publishedArtifact: KnowledgeArtifact;
+        assignedTopic: { topicKey: string; title: string };
+      };
+      return body;
     },
 
     async generateSkill(reviewedMemories: ReviewedMemory[]) {

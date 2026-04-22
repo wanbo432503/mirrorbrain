@@ -10,10 +10,14 @@ interface DraftGenerationProps {
   knowledgeDraft: KnowledgeArtifact | null
   skillDraft: SkillArtifact | null
   onGenerateKnowledge: () => void
+  onRegenerateKnowledge: () => void
+  onApproveKnowledge: () => void
   onGenerateSkill: () => void
   onSaveKnowledge: () => void
   onSaveSkill: () => void
   isGeneratingKnowledge: boolean
+  isRegeneratingKnowledge: boolean
+  isApprovingKnowledge: boolean
   isGeneratingSkill: boolean
   isSavingKnowledge: boolean
   isSavingSkill: boolean
@@ -29,10 +33,14 @@ export default function DraftGeneration({
   knowledgeDraft,
   skillDraft,
   onGenerateKnowledge,
+  onRegenerateKnowledge,
+  onApproveKnowledge,
   onGenerateSkill,
   onSaveKnowledge,
   onSaveSkill,
   isGeneratingKnowledge,
+  isRegeneratingKnowledge,
+  isApprovingKnowledge,
   isGeneratingSkill,
   isSavingKnowledge,
   isSavingSkill,
@@ -101,8 +109,12 @@ export default function DraftGeneration({
               mode="knowledge"
               draft={knowledgeDraft}
               onGenerate={onGenerateKnowledge}
+              onRegenerate={onRegenerateKnowledge}
+              onApprove={onApproveKnowledge}
               onSave={onSaveKnowledge}
               isGenerating={isGeneratingKnowledge}
+              isRegenerating={isRegeneratingKnowledge}
+              isApproving={isApprovingKnowledge}
               isSaving={isSavingKnowledge}
               onTitleChange={onKnowledgeTitleChange}
               onSummaryChange={onKnowledgeSummaryChange}

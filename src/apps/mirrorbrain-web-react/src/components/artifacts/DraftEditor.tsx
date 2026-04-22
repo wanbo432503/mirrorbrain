@@ -9,8 +9,12 @@ interface DraftEditorProps {
   mode: 'knowledge' | 'skill'
   draft: KnowledgeArtifact | SkillArtifact | null
   onGenerate: () => void
+  onRegenerate: () => void
+  onApprove: () => void
   onSave: () => void
   isGenerating: boolean
+  isRegenerating: boolean
+  isApproving: boolean
   isSaving: boolean
   // Knowledge-specific handlers
   onTitleChange?: (title: string) => void
@@ -25,8 +29,12 @@ export default function DraftEditor({
   mode,
   draft,
   onGenerate,
+  onRegenerate,
+  onApprove,
   onSave,
   isGenerating,
+  isRegenerating,
+  isApproving,
   isSaving,
   onTitleChange,
   onSummaryChange,
@@ -64,19 +72,29 @@ export default function DraftEditor({
         <div className="mb-3 flex justify-end gap-2">
           <Button
             variant="ghost"
-            onClick={onGenerate}
-            loading={isGenerating}
-            disabled={isGenerating || isSaving}
+            onClick={onRegenerate}
+            loading={isRegenerating}
+            disabled={isRegenerating || isSaving || isApproving}
           >
-            Regenerate
+            {isRegenerating ? 'Regenerating...' : 'Regenerate'}
           </Button>
           {mode === 'knowledge' && (
             <>
-              <Button variant="success">
-                Approved
+              <Button
+                variant="success"
+                onClick={onApprove}
+                loading={isApproving}
+                disabled={isApproving || isSaving || isRegenerating}
+              >
+                {isApproving ? 'Approving...' : 'Approved'}
               </Button>
-              <Button variant="primary">
-                Save
+              <Button
+                variant="primary"
+                onClick={onSave}
+                loading={isSaving}
+                disabled={isSaving || isRegenerating || isApproving}
+              >
+                {isSaving ? 'Saving...' : 'Save'}
               </Button>
             </>
           )}

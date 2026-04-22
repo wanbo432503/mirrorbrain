@@ -18,10 +18,14 @@ export default function ArtifactsPanel() {
     knowledgeTopics,
     feedback,
     isGeneratingKnowledge,
+    isRegeneratingKnowledge,
+    isApprovingKnowledge,
     isGeneratingSkill,
     isSavingKnowledge,
     isSavingSkill,
     generateKnowledge,
+    regenerateKnowledge,
+    approveKnowledge,
     generateSkill,
     saveKnowledgeArtifact,
     saveSkillArtifact,
@@ -40,6 +44,31 @@ export default function ArtifactsPanel() {
     try {
       const artifact = await generateKnowledge(reviewedMemories)
       setKnowledgeDraft(artifact)
+    } catch (error) {
+      // Error handled by useArtifacts
+    }
+  }
+
+  const handleRegenerateKnowledge = async () => {
+    if (!knowledgeDraft || !regenerateKnowledge) return
+    try {
+      const artifact = await regenerateKnowledge(knowledgeDraft, reviewedMemories)
+      if (artifact) {
+        setKnowledgeDraft(artifact)
+      }
+    } catch (error) {
+      // Error handled by useArtifacts
+    }
+  }
+
+  const handleApproveKnowledge = async () => {
+    if (!knowledgeDraft?.id || !approveKnowledge) return
+    try {
+      const result = await approveKnowledge(knowledgeDraft.id)
+      if (result) {
+        // Clear the draft after successful approval
+        setKnowledgeDraft(null)
+      }
     } catch (error) {
       // Error handled by useArtifacts
     }
@@ -110,10 +139,14 @@ export default function ArtifactsPanel() {
             knowledgeDraft={knowledgeDraft}
             skillDraft={skillDraft}
             onGenerateKnowledge={handleGenerateKnowledge}
+            onRegenerateKnowledge={handleRegenerateKnowledge}
+            onApproveKnowledge={handleApproveKnowledge}
             onGenerateSkill={handleGenerateSkill}
             onSaveKnowledge={handleSaveKnowledge}
             onSaveSkill={handleSaveSkill}
             isGeneratingKnowledge={isGeneratingKnowledge}
+            isRegeneratingKnowledge={isRegeneratingKnowledge}
+            isApprovingKnowledge={isApprovingKnowledge}
             isGeneratingSkill={isGeneratingSkill}
             isSavingKnowledge={isSavingKnowledge}
             isSavingSkill={isSavingSkill}

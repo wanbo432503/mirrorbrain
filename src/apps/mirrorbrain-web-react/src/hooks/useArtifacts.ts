@@ -12,6 +12,8 @@ export function useArtifacts(api: MirrorBrainWebAppApi) {
   const { state, dispatch } = useMirrorBrain()
   const [feedback, setFeedback] = useState<ArtifactsFeedback | null>(null)
   const [isGeneratingKnowledge, setIsGeneratingKnowledge] = useState(false)
+  const [isRegeneratingKnowledge, setIsRegeneratingKnowledge] = useState(false)
+  const [isApprovingKnowledge, setIsApprovingKnowledge] = useState(false)
   const [isGeneratingSkill, setIsGeneratingSkill] = useState(false)
   const [isSavingKnowledge, setIsSavingKnowledge] = useState(false)
   const [isSavingSkill, setIsSavingSkill] = useState(false)
@@ -39,6 +41,73 @@ export function useArtifacts(api: MirrorBrainWebAppApi) {
       }
     },
     [api]
+  )
+
+  const regenerateKnowledge = useCallback(
+    async (existingDraft: KnowledgeArtifact, reviewedMemories: ReviewedMemory[]) => {
+      if (!api.regenerateKnowledge) {
+        setFeedback({ kind: 'error', message: 'Regenerate knowledge API not available' })
+        return null
+      }
+
+      setIsRegeneratingKnowledge(true)
+      setFeedback(null)
+
+      try {
+        const artifact = await api.regenerateKnowledge(existingDraft, reviewedMemories)
+
+        setFeedback({
+          kind: 'success',
+          message: 'Knowledge artifact regenerated successfully',
+        })
+
+        return artifact
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to regenerate knowledge'
+        setFeedback({ kind: 'error', message })
+        throw error
+      } finally {
+        setIsRegeneratingKnowledge(false)
+      }
+    },
+    [api]
+  )
+
+  const approveKnowledge = useCallback(
+    async (draftId: string) => {
+      if (!api.approveKnowledge) {
+        setFeedback({ kind: 'error', message: 'Approve knowledge API not available' })
+        return null
+      }
+
+      setIsApprovingKnowledge(true)
+      setFeedback(null)
+
+      try {
+        const { publishedArtifact, assignedTopic } = await api.approveKnowledge(draftId)
+
+        // Update knowledge artifacts list in global state
+        const updatedKnowledge = [...state.knowledgeArtifacts, publishedArtifact]
+        dispatch({ type: 'LOAD_KNOWLEDGE', payload: updatedKnowledge })
+
+        // Clear kept reviewed memories from global state
+        dispatch({ type: 'CLEAR_KEPT_REVIEWED_MEMORIES' })
+
+        setFeedback({
+          kind: 'success',
+          message: `Knowledge published and assigned to topic: ${assignedTopic.title}`,
+        })
+
+        return { publishedArtifact, assignedTopic }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to approve knowledge'
+        setFeedback({ kind: 'error', message })
+        throw error
+      } finally {
+        setIsApprovingKnowledge(false)
+      }
+    },
+    [api, state.knowledgeArtifacts, dispatch]
   )
 
   const generateSkill = useCallback(
@@ -144,10 +213,14 @@ export function useArtifacts(api: MirrorBrainWebAppApi) {
     knowledgeTopics: state.knowledgeTopics,
     feedback,
     isGeneratingKnowledge,
+    isRegeneratingKnowledge,
+    isApprovingKnowledge,
     isGeneratingSkill,
     isSavingKnowledge,
     isSavingSkill,
     generateKnowledge,
+    regenerateKnowledge,
+    approveKnowledge,
     generateSkill,
     saveKnowledgeArtifact,
     saveSkillArtifact,
