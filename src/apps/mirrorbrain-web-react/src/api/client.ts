@@ -47,6 +47,7 @@ export interface MirrorBrainWebAppApi {
     candidate: CandidateMemory,
     review: { decision: ReviewedMemory['decision']; reviewedAt: string }
   ): Promise<ReviewedMemory>;
+  undoCandidateReview(reviewedMemoryId: string): Promise<void>;
   generateKnowledge(
     reviewedMemories: ReviewedMemory[]
   ): Promise<KnowledgeArtifact>;
@@ -185,6 +186,19 @@ export function createMirrorBrainBrowserApi(
         reviewedMemory: ReviewedMemory;
       };
       return body.reviewedMemory;
+    },
+
+    async undoCandidateReview(reviewedMemoryId: string) {
+      const response = await fetch(`${baseUrl}/reviewed-memories/${reviewedMemoryId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error(`Reviewed memory ${reviewedMemoryId} not found`);
+        }
+        throw new Error(`Failed to undo candidate review: ${response.statusText}`);
+      }
     },
 
     async generateKnowledge(reviewedMemories: ReviewedMemory[]) {
