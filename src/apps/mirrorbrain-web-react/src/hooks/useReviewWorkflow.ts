@@ -147,6 +147,29 @@ export function useReviewWorkflow(api: MirrorBrainWebAppApi) {
     [api, selectedCandidateId, state.candidateMemories, dispatch]
   )
 
+  const undoCandidateReview = useCallback(
+    async (reviewedMemoryId: string) => {
+      setFeedback(null)
+
+      try {
+        await api.undoCandidateReview(reviewedMemoryId)
+
+        // Remove from global state
+        dispatch({ type: 'REMOVE_REVIEWED_MEMORY', payload: reviewedMemoryId })
+
+        setFeedback({
+          kind: 'success',
+          message: 'Candidate review undone',
+        })
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to undo review'
+        setFeedback({ kind: 'error', message })
+        throw error
+      }
+    },
+    [api, dispatch]
+  )
+
   const getSelectedCandidate = useCallback(() => {
     return state.candidateMemories.find((c) => c.id === selectedCandidateId)
   }, [state.candidateMemories, selectedCandidateId])
@@ -175,6 +198,7 @@ export function useReviewWorkflow(api: MirrorBrainWebAppApi) {
     createDailyCandidates,
     selectCandidate,
     reviewCandidateMemory,
+    undoCandidateReview,
     getSelectedCandidate,
     getReviewSuggestion,
     dismissFeedback,
