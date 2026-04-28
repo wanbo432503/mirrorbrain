@@ -194,11 +194,22 @@ export function createMirrorBrainBrowserApi(
       });
 
       if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error(`Reviewed memory ${reviewedMemoryId} not found`);
+        // Parse error body to get meaningful message from backend
+        let errorMessage = `Failed to undo candidate review`;
+
+        try {
+          const body = await response.json();
+          if (body.message || body.error) {
+            errorMessage = body.message || body.error;
+          }
+        } catch {
+          // If parsing fails, use status text
+          errorMessage += `: ${response.statusText}`;
         }
-        throw new Error(`Failed to undo candidate review: ${response.statusText}`);
+
+        throw new Error(errorMessage);
       }
+      // Success (204 No Content) - return void implicitly
     },
 
     async generateKnowledge(reviewedMemories: ReviewedMemory[]) {
