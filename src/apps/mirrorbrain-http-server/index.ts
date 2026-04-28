@@ -969,6 +969,43 @@ export async function startMirrorBrainHttpServer(
     },
   );
 
+  app.delete<{ Params: { id: string } }>(
+    '/reviewed-memories/:id',
+    {
+      schema: {
+        summary: 'Undo a candidate memory review by deleting the reviewed memory',
+        params: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' }
+          },
+          required: ['id']
+        },
+        response: {
+          204: { type: 'null' },
+          404: {
+            type: 'object',
+            properties: {
+              message: { type: 'string' },
+            },
+            required: ['message'],
+          },
+        }
+      }
+    },
+    async (request, reply) => {
+      try {
+        await input.service.undoCandidateReview(request.params.id);
+        reply.code(204);
+      } catch (error) {
+        reply.code(404);
+        return {
+          message: `Reviewed memory ${request.params.id} not found`,
+        };
+      }
+    }
+  );
+
   app.post<{ Body: { reviewedMemories: ReviewedMemory[] } }>(
     '/knowledge/generate',
     {
