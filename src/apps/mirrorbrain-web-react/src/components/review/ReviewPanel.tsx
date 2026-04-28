@@ -80,7 +80,7 @@ export default function ReviewPanel() {
   const [reviewTimeZone] = useState(getLocalTimeZone())
   const [hasAutoLoaded, setHasAutoLoaded] = useState(false)
   const [keptCandidateIds, setKeptCandidateIds] = useState<Set<string>>(new Set())
-  const [viewingMode, setViewingMode] = useState<'detail' | 'kept-list'>('detail')
+  const [viewingMode, setViewingMode] = useState<'detail' | 'kept-list' | 'knowledge-draft' | 'skill-draft'>('detail')
 
   // Filter out kept candidates from main list
   const unreviewedCandidates = useMemo(() => {
@@ -149,6 +149,74 @@ export default function ReviewPanel() {
     } catch (error) {
       // Error already handled by useReviewWorkflow
     }
+  }
+
+  const handleGenerateKnowledge = async () => {
+    try {
+      const artifact = await generateKnowledge(keptCandidates)
+      dispatch({ type: 'SET_KNOWLEDGE_DRAFT', payload: artifact })
+      setViewingMode('knowledge-draft')
+    } catch (error) {
+      // Error already handled by useArtifacts
+    }
+  }
+
+  const handleRegenerateKnowledge = async () => {
+    if (!knowledgeDraft || !regenerateKnowledge) return
+    try {
+      const artifact = await regenerateKnowledge(knowledgeDraft, keptCandidates)
+      if (artifact) {
+        dispatch({ type: 'SET_KNOWLEDGE_DRAFT', payload: artifact })
+      }
+    } catch (error) {
+      // Error handled by useArtifacts
+    }
+  }
+
+  const handleApproveKnowledge = async () => {
+    if (!knowledgeDraft?.id || !approveKnowledge) return
+    try {
+      const result = await approveKnowledge(knowledgeDraft)
+      if (result) {
+        dispatch({ type: 'SET_KNOWLEDGE_DRAFT', payload: null })
+        setViewingMode('kept-list')
+      }
+    } catch (error) {
+      // Error handled by useArtifacts
+    }
+  }
+
+  const handleSaveKnowledge = async () => {
+    if (!knowledgeDraft) return
+    try {
+      await saveKnowledgeArtifact(knowledgeDraft)
+    } catch (error) {
+      // Error handled by useArtifacts
+    }
+  }
+
+  const handleKnowledgeTitleChange = (title: string) => {
+    if (!knowledgeDraft) return
+    dispatch({
+      type: 'SET_KNOWLEDGE_DRAFT',
+      payload: { ...knowledgeDraft, title }
+    })
+  }
+
+  const handleKnowledgeSummaryChange = (summary: string) => {
+    if (!knowledgeDraft) return
+    dispatch({
+      type: 'SET_KNOWLEDGE_DRAFT',
+      payload: { ...knowledgeDraft, summary }
+    })
+  }
+
+  const handleKnowledgeBodyChange = (body: string) => {
+    if (!knowledgeDraft) return
+    dispatch({
+      type: 'SET_KNOWLEDGE_DRAFT',
+      payload: { ...knowledgeDraft, body }
+    })
   }
 
   const handleUndoKeep = async (reviewedMemoryId: string) => {
