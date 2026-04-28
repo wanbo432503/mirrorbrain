@@ -7,7 +7,7 @@ import SelectedCandidate, {
   getCandidateFormationReasons,
   splitCandidateSourcesByContribution,
 } from './SelectedCandidate'
-import type { CandidateMemory, ReviewedMemory } from '../../types/index'
+import type { CandidateMemory, ReviewedMemory, KnowledgeArtifact, SkillArtifact } from '../../types/index'
 
 describe('SelectedCandidate helpers', () => {
   it('formats candidate duration from the candidate time range', () => {
@@ -136,6 +136,25 @@ describe('SelectedCandidate component rendering', () => {
         viewingMode="detail"
         keptCandidates={[]}
         onUndoKeep={() => {}}
+        knowledgeDraft={null}
+        skillDraft={null}
+        onGenerateKnowledge={() => {}}
+        onGenerateSkill={() => {}}
+        onRegenerateKnowledge={() => {}}
+        onApproveKnowledge={() => {}}
+        onSaveKnowledge={() => {}}
+        onSaveSkill={() => {}}
+        isGeneratingKnowledge={false}
+        isGeneratingSkill={false}
+        isRegeneratingKnowledge={false}
+        isApprovingKnowledge={false}
+        isSavingKnowledge={false}
+        isSavingSkill={false}
+        onKnowledgeTitleChange={() => {}}
+        onKnowledgeSummaryChange={() => {}}
+        onKnowledgeBodyChange={() => {}}
+        onSkillApprovalStateChange={() => {}}
+        onSkillRequiresConfirmationChange={() => {}}
       />
     )
 
@@ -150,6 +169,25 @@ describe('SelectedCandidate component rendering', () => {
         viewingMode="kept-list"
         keptCandidates={mockKeptCandidates}
         onUndoKeep={() => {}}
+        knowledgeDraft={null}
+        skillDraft={null}
+        onGenerateKnowledge={() => {}}
+        onGenerateSkill={() => {}}
+        onRegenerateKnowledge={() => {}}
+        onApproveKnowledge={() => {}}
+        onSaveKnowledge={() => {}}
+        onSaveSkill={() => {}}
+        isGeneratingKnowledge={false}
+        isGeneratingSkill={false}
+        isRegeneratingKnowledge={false}
+        isApprovingKnowledge={false}
+        isSavingKnowledge={false}
+        isSavingSkill={false}
+        onKnowledgeTitleChange={() => {}}
+        onKnowledgeSummaryChange={() => {}}
+        onKnowledgeBodyChange={() => {}}
+        onSkillApprovalStateChange={() => {}}
+        onSkillRequiresConfirmationChange={() => {}}
       />
     )
 
@@ -168,6 +206,25 @@ describe('SelectedCandidate component rendering', () => {
         viewingMode="kept-list"
         keptCandidates={mockKeptCandidates}
         onUndoKeep={onUndoKeep}
+        knowledgeDraft={null}
+        skillDraft={null}
+        onGenerateKnowledge={() => {}}
+        onGenerateSkill={() => {}}
+        onRegenerateKnowledge={() => {}}
+        onApproveKnowledge={() => {}}
+        onSaveKnowledge={() => {}}
+        onSaveSkill={() => {}}
+        isGeneratingKnowledge={false}
+        isGeneratingSkill={false}
+        isRegeneratingKnowledge={false}
+        isApprovingKnowledge={false}
+        isSavingKnowledge={false}
+        isSavingSkill={false}
+        onKnowledgeTitleChange={() => {}}
+        onKnowledgeSummaryChange={() => {}}
+        onKnowledgeBodyChange={() => {}}
+        onSkillApprovalStateChange={() => {}}
+        onSkillRequiresConfirmationChange={() => {}}
       />
     )
 
@@ -175,5 +232,160 @@ describe('SelectedCandidate component rendering', () => {
     await user.click(undoButtons[0])
 
     expect(onUndoKeep).toHaveBeenCalledWith('reviewed:candidate:test-1')
+  })
+
+  it('should render Generate Knowledge/Generate Skill buttons in kept-list mode', () => {
+    render(
+      <SelectedCandidate
+        viewingMode="kept-list"
+        keptCandidates={mockKeptCandidates}
+        knowledgeDraft={null}
+        skillDraft={null}
+        onGenerateKnowledge={() => {}}
+        onGenerateSkill={() => {}}
+        onRegenerateKnowledge={() => {}}
+        onApproveKnowledge={() => {}}
+        onSaveKnowledge={() => {}}
+        onSaveSkill={() => {}}
+        isGeneratingKnowledge={false}
+        isGeneratingSkill={false}
+        isRegeneratingKnowledge={false}
+        isApprovingKnowledge={false}
+        isSavingKnowledge={false}
+        isSavingSkill={false}
+        onUndoKeep={() => {}}
+        onKnowledgeTitleChange={() => {}}
+        onKnowledgeSummaryChange={() => {}}
+        onKnowledgeBodyChange={() => {}}
+        onSkillApprovalStateChange={() => {}}
+        onSkillRequiresConfirmationChange={() => {}}
+        candidate={undefined}
+      />
+    )
+
+    expect(screen.getByText('Generate Knowledge')).toBeInTheDocument()
+    expect(screen.getByText('Generate Skill')).toBeInTheDocument()
+  })
+
+  it('should call onGenerateKnowledge when Generate Knowledge button clicked', async () => {
+    const user = userEvent.setup()
+    const onGenerateKnowledge = vi.fn()
+
+    render(
+      <SelectedCandidate
+        viewingMode="kept-list"
+        keptCandidates={mockKeptCandidates}
+        knowledgeDraft={null}
+        skillDraft={null}
+        onGenerateKnowledge={onGenerateKnowledge}
+        onGenerateSkill={() => {}}
+        onRegenerateKnowledge={() => {}}
+        onApproveKnowledge={() => {}}
+        onSaveKnowledge={() => {}}
+        onSaveSkill={() => {}}
+        isGeneratingKnowledge={false}
+        isGeneratingSkill={false}
+        isRegeneratingKnowledge={false}
+        isApprovingKnowledge={false}
+        isSavingKnowledge={false}
+        isSavingSkill={false}
+        onUndoKeep={() => {}}
+        onKnowledgeTitleChange={() => {}}
+        onKnowledgeSummaryChange={() => {}}
+        onKnowledgeBodyChange={() => {}}
+        onSkillApprovalStateChange={() => {}}
+        onSkillRequiresConfirmationChange={() => {}}
+        candidate={undefined}
+      />
+    )
+
+    await user.click(screen.getByText('Generate Knowledge'))
+
+    expect(onGenerateKnowledge).toHaveBeenCalled()
+  })
+
+  it('should show loading state in knowledge-draft mode', () => {
+    render(
+      <SelectedCandidate
+        viewingMode="knowledge-draft"
+        knowledgeDraft={null}
+        skillDraft={null}
+        onGenerateKnowledge={() => {}}
+        onGenerateSkill={() => {}}
+        onRegenerateKnowledge={() => {}}
+        onApproveKnowledge={() => {}}
+        onSaveKnowledge={() => {}}
+        onSaveSkill={() => {}}
+        isGeneratingKnowledge={true}
+        isGeneratingSkill={false}
+        isRegeneratingKnowledge={false}
+        isApprovingKnowledge={false}
+        isSavingKnowledge={false}
+        isSavingSkill={false}
+        onUndoKeep={() => {}}
+        onKnowledgeTitleChange={() => {}}
+        onKnowledgeSummaryChange={() => {}}
+        onKnowledgeBodyChange={() => {}}
+        onSkillApprovalStateChange={() => {}}
+        onSkillRequiresConfirmationChange={() => {}}
+        candidate={undefined}
+        keptCandidates={[]}
+      />
+    )
+
+    expect(screen.getByText('Generating knowledge draft...')).toBeInTheDocument()
+  })
+
+  it('should show draft editing interface in knowledge-draft mode', () => {
+    const mockKnowledgeDraft: KnowledgeArtifact = {
+      artifactType: 'daily-review-draft',
+      id: 'knowledge:test',
+      draftState: 'draft',
+      topicKey: null,
+      title: 'Test Knowledge',
+      summary: 'Test summary',
+      body: 'Test body content',
+      sourceReviewedMemoryIds: [],
+      derivedFromKnowledgeIds: [],
+      version: 1,
+      isCurrentBest: false,
+      supersedesKnowledgeId: null,
+      updatedAt: '2026-04-28T10:00:00Z',
+      reviewedAt: null,
+      recencyLabel: 'recent',
+      provenanceRefs: [],
+    }
+
+    render(
+      <SelectedCandidate
+        viewingMode="knowledge-draft"
+        knowledgeDraft={mockKnowledgeDraft}
+        skillDraft={null}
+        onGenerateKnowledge={() => {}}
+        onGenerateSkill={() => {}}
+        onRegenerateKnowledge={() => {}}
+        onApproveKnowledge={() => {}}
+        onSaveKnowledge={() => {}}
+        onSaveSkill={() => {}}
+        isGeneratingKnowledge={false}
+        isGeneratingSkill={false}
+        isRegeneratingKnowledge={false}
+        isApprovingKnowledge={false}
+        isSavingKnowledge={false}
+        isSavingSkill={false}
+        onUndoKeep={() => {}}
+        onKnowledgeTitleChange={() => {}}
+        onKnowledgeSummaryChange={() => {}}
+        onKnowledgeBodyChange={() => {}}
+        onSkillApprovalStateChange={() => {}}
+        onSkillRequiresConfirmationChange={() => {}}
+        candidate={undefined}
+        keptCandidates={[]}
+      />
+    )
+
+    expect(screen.getByText('Knowledge Draft')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Regenerate' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Approve' })).toBeInTheDocument()
   })
 })
