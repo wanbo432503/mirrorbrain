@@ -5,7 +5,9 @@ import CandidateList from './CandidateList'
 import SelectedCandidate from './SelectedCandidate'
 import { createMirrorBrainBrowserApi, type MirrorBrainWebAppApi } from '../../api/client'
 import { useReviewWorkflow } from '../../hooks/useReviewWorkflow'
+import { useArtifacts } from '../../hooks/useArtifacts'
 import { useMirrorBrain } from '../../contexts/MirrorBrainContext'
+import type { KnowledgeArtifact, SkillArtifact } from '../../types/index'
 
 export function getDefaultReviewDate(now: Date = new Date()): string {
   const yesterday = new Date(now)
@@ -31,7 +33,9 @@ export function shouldAutoLoadDailyCandidates(input: {
 }
 
 export default function ReviewPanel() {
-  const { state } = useMirrorBrain()
+  const { state, dispatch } = useMirrorBrain()
+  const knowledgeDraft = state.knowledgeDraft
+  const skillDraft = state.skillDraft
   const api: MirrorBrainWebAppApi = useMemo(
     () => createMirrorBrainBrowserApi(window.location.origin),
     []
@@ -52,6 +56,25 @@ export default function ReviewPanel() {
     getSelectedCandidate,
     getReviewSuggestion,
   } = useReviewWorkflow(api)
+
+  const {
+    knowledgeArtifacts,
+    skillArtifacts,
+    knowledgeTopics,
+    feedback: artifactsFeedback,
+    isGeneratingKnowledge,
+    isRegeneratingKnowledge,
+    isApprovingKnowledge,
+    isGeneratingSkill,
+    isSavingKnowledge,
+    isSavingSkill,
+    generateKnowledge,
+    regenerateKnowledge,
+    approveKnowledge,
+    generateSkill,
+    saveKnowledgeArtifact,
+    saveSkillArtifact,
+  } = useArtifacts(api)
 
   const [reviewDate] = useState(getDefaultReviewDate())
   const [reviewTimeZone] = useState(getLocalTimeZone())
