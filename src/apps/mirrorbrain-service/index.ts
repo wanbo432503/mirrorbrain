@@ -335,6 +335,14 @@ export function createMirrorBrainService(
   const undoReviewedMemory =
     dependencies.undoReviewedMemory ??
     (async (reviewedMemoryId: string, workspaceDir: string) => {
+      // Validate ID format to prevent path traversal
+      if (!reviewedMemoryId.startsWith('reviewed:') ||
+          reviewedMemoryId.includes('..') ||
+          reviewedMemoryId.includes('/') ||
+          reviewedMemoryId.includes('\\')) {
+        throw new Error(`Invalid reviewed memory ID format: ${reviewedMemoryId}`);
+      }
+
       const reviewedFilePath = join(
         workspaceDir,
         'mirrorbrain',
@@ -342,13 +350,17 @@ export function createMirrorBrainService(
         `${reviewedMemoryId}.json`,
       );
 
+      console.log(`[undoCandidateReview] Deleting reviewed memory file: ${reviewedFilePath}`);
+
       try {
         await unlink(reviewedFilePath);
+        console.log(`[undoCandidateReview] Successfully deleted: ${reviewedMemoryId}`);
       } catch (error) {
-        if ((error as any).code === 'ENOENT') {
-          // File doesn't exist - already deleted, treat as success
+        if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+          console.log(`[undoCandidateReview] File already deleted: ${reviewedFilePath}`);
           return;
         }
+        console.error(`[undoCandidateReview] Error deleting file: ${reviewedFilePath}`, error);
         throw error;
       }
     });
