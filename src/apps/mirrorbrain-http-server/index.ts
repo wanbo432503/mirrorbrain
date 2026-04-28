@@ -69,6 +69,7 @@ interface MirrorBrainHttpService {
       reviewedAt: string;
     },
   ): Promise<ReviewedMemory>;
+  undoCandidateReview(reviewedMemoryId: string): Promise<void>;
   generateKnowledgeFromReviewedMemories(
     reviewedMemories: ReviewedMemory[],
   ): Promise<KnowledgeArtifact>;
