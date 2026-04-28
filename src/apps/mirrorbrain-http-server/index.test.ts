@@ -1,10 +1,12 @@
 import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtemp, mkdir, writeFile, access, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { getMirrorBrainConfig } from '../../shared/config/index.js';
+import { ValidationError } from '../mirrorbrain-service/errors.js';
 import type {
   CandidateMemory,
   CandidateReviewSuggestion,
@@ -1079,5 +1081,192 @@ describe('mirrorbrain http server', () => {
     expect(schemaBody.paths['/styles.css']).toBeUndefined();
     expect(schemaBody.paths['/main.js']).toBeUndefined();
     expect(schemaBody.paths['/health']).toBeDefined();
+  });
+
+  it('DELETE /reviewed-memories/:id should delete reviewed memory file', async () => {
+    const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-test-'));
+
+    // Setup: create a reviewed memory file
+    const reviewedMemory: ReviewedMemory = {
+      id: 'reviewed:candidate:test-1',
+      candidateMemoryId: 'candidate:test-1',
+      candidateTitle: 'Test Candidate',
+      candidateSummary: 'Test summary',
+      candidateTheme: 'test',
+      memoryEventIds: ['event-1'],
+      reviewDate: '2026-04-28',
+      decision: 'keep',
+      reviewedAt: new Date().toISOString(),
+    };
+
+    const reviewedDir = join(workspaceDir, 'mirrorbrain', 'reviewed-memories');
+    await mkdir(reviewedDir, { recursive: true });
+    await writeFile(
+      join(reviewedDir, `${reviewedMemory.id}.json`),
+      JSON.stringify(reviewedMemory, null, 2)
+    );
+
+    const service = {
+      service: {
+        status: 'running' as const,
+        config: getMirrorBrainConfig(),
+        stop: vi.fn(),
+      },
+      listMemoryEvents: vi.fn(async () => ({
+        items: [],
+        pagination: {
+          total: 0,
+          page: 1,
+          pageSize: 10,
+          totalPages: 1,
+        },
+      })),
+      queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
+      listKnowledge: vi.fn(async () => []),
+      listSkillDrafts: vi.fn(async () => []),
+      syncBrowserMemory: vi.fn(),
+      syncShellMemory: vi.fn(),
+      createDailyCandidateMemories: vi.fn(),
+      suggestCandidateReviews: vi.fn(),
+      reviewCandidateMemory: vi.fn(),
+      undoCandidateReview: vi.fn(async (reviewedMemoryId: string) => {
+        // Validate ID format
+        if (!reviewedMemoryId.startsWith('reviewed:candidate:')) {
+          throw new ValidationError('Invalid reviewed memory ID format: must start with reviewed:candidate:');
+        }
+        // Delete the file
+        const filePath = join(reviewedDir, `${reviewedMemoryId}.json`);
+        try {
+          await rm(filePath, { force: true });
+        } catch (error) {
+          // Ignore errors - operation is idempotent
+        }
+      }),
+      generateKnowledgeFromReviewedMemories: vi.fn(),
+      generateSkillDraftFromReviewedMemories: vi.fn(),
+      publishKnowledge: vi.fn(),
+      publishSkillDraft: vi.fn(),
+    };
+
+    const server = await startMirrorBrainHttpServer({ service, workspaceDir, port: 0 });
+    servers.push(server);
+
+    // Delete the reviewed memory
+    const response = await fetch(`${server.origin}/reviewed-memories/${reviewedMemory.id}`, {
+      method: 'DELETE',
+    });
+
+    expect(response.status).toBe(204);
+
+    // Verify file is deleted
+    const filePath = join(reviewedDir, `${reviewedMemory.id}.json`);
+    await expect(access(filePath)).rejects.toThrow();
+
+    await rm(workspaceDir, { recursive: true, force: true });
+  });
+
+  it('DELETE /reviewed-memories/:id should return 400 for invalid reviewed memory ID format', async () => {
+    const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-test-'));
+    const service = {
+      service: {
+        status: 'running' as const,
+        config: getMirrorBrainConfig(),
+        stop: vi.fn(),
+      },
+      listMemoryEvents: vi.fn(async () => ({
+        items: [],
+        pagination: {
+          total: 0,
+          page: 1,
+          pageSize: 10,
+          totalPages: 1,
+        },
+      })),
+      queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
+      listKnowledge: vi.fn(async () => []),
+      listSkillDrafts: vi.fn(async () => []),
+      syncBrowserMemory: vi.fn(),
+      syncShellMemory: vi.fn(),
+      createDailyCandidateMemories: vi.fn(),
+      suggestCandidateReviews: vi.fn(),
+      reviewCandidateMemory: vi.fn(),
+      undoCandidateReview: vi.fn(async (reviewedMemoryId: string) => {
+        if (!reviewedMemoryId.startsWith('reviewed:candidate:')) {
+          throw new ValidationError('Invalid reviewed memory ID format: must start with reviewed:candidate:');
+        }
+      }),
+      generateKnowledgeFromReviewedMemories: vi.fn(),
+      generateSkillDraftFromReviewedMemories: vi.fn(),
+      publishKnowledge: vi.fn(),
+      publishSkillDraft: vi.fn(),
+    };
+
+    const server = await startMirrorBrainHttpServer({ service, workspaceDir, port: 0 });
+    servers.push(server);
+
+    const response = await fetch(`${server.origin}/reviewed-memories/invalid-id`, {
+      method: 'DELETE',
+    });
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.message).toContain('Invalid reviewed memory ID format');
+
+    await rm(workspaceDir, { recursive: true, force: true });
+  });
+
+  it('DELETE /reviewed-memories/:id should return 204 when reviewed memory already deleted (idempotent)', async () => {
+    const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-test-'));
+    const service = {
+      service: {
+        status: 'running' as const,
+        config: getMirrorBrainConfig(),
+        stop: vi.fn(),
+      },
+      listMemoryEvents: vi.fn(async () => ({
+        items: [],
+        pagination: {
+          total: 0,
+          page: 1,
+          pageSize: 10,
+          totalPages: 1,
+        },
+      })),
+      queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
+      listKnowledge: vi.fn(async () => []),
+      listSkillDrafts: vi.fn(async () => []),
+      syncBrowserMemory: vi.fn(),
+      syncShellMemory: vi.fn(),
+      createDailyCandidateMemories: vi.fn(),
+      suggestCandidateReviews: vi.fn(),
+      reviewCandidateMemory: vi.fn(),
+      undoCandidateReview: vi.fn(async (reviewedMemoryId: string) => {
+        // Validate ID format
+        if (!reviewedMemoryId.startsWith('reviewed:candidate:')) {
+          throw new ValidationError('Invalid reviewed memory ID format: must start with reviewed:candidate:');
+        }
+        // Try to delete (file doesn't exist, but operation is idempotent)
+        const reviewedDir = join(workspaceDir, 'mirrorbrain', 'reviewed-memories');
+        const filePath = join(reviewedDir, `${reviewedMemoryId}.json`);
+        await rm(filePath, { force: true });
+      }),
+      generateKnowledgeFromReviewedMemories: vi.fn(),
+      generateSkillDraftFromReviewedMemories: vi.fn(),
+      publishKnowledge: vi.fn(),
+      publishSkillDraft: vi.fn(),
+    };
+
+    const server = await startMirrorBrainHttpServer({ service, workspaceDir, port: 0 });
+    servers.push(server);
+
+    // Delete non-existent reviewed memory (file doesn't exist)
+    const response = await fetch(`${server.origin}/reviewed-memories/reviewed:candidate:nonexistent`, {
+      method: 'DELETE',
+    });
+
+    // Should succeed (idempotent operation)
+    expect(response.status).toBe(204);
+
+    await rm(workspaceDir, { recursive: true, force: true });
   });
 });
