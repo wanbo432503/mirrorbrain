@@ -7,7 +7,6 @@ import { createMirrorBrainBrowserApi, type MirrorBrainWebAppApi } from '../../ap
 import { useReviewWorkflow } from '../../hooks/useReviewWorkflow'
 import { useArtifacts } from '../../hooks/useArtifacts'
 import { useMirrorBrain } from '../../contexts/MirrorBrainContext'
-import type { KnowledgeArtifact, SkillArtifact } from '../../types/index'
 
 export function getDefaultReviewDate(now: Date = new Date()): string {
   const yesterday = new Date(now)
@@ -58,10 +57,6 @@ export default function ReviewPanel() {
   } = useReviewWorkflow(api)
 
   const {
-    knowledgeArtifacts,
-    skillArtifacts,
-    knowledgeTopics,
-    feedback: artifactsFeedback,
     isGeneratingKnowledge,
     isRegeneratingKnowledge,
     isApprovingKnowledge,
@@ -219,6 +214,44 @@ export default function ReviewPanel() {
     })
   }
 
+  const handleGenerateSkill = async () => {
+    try {
+      const artifact = await generateSkill(keptCandidates)
+      dispatch({ type: 'SET_SKILL_DRAFT', payload: artifact })
+      setViewingMode('skill-draft')
+    } catch (error) {
+      // Error handled by useArtifacts
+    }
+  }
+
+  const handleSaveSkill = async () => {
+    if (!skillDraft) return
+    try {
+      await saveSkillArtifact(skillDraft)
+    } catch (error) {
+      // Error handled by useArtifacts
+    }
+  }
+
+  const handleSkillApprovalStateChange = (approvalState: 'draft' | 'approved') => {
+    if (!skillDraft) return
+    dispatch({
+      type: 'SET_SKILL_DRAFT',
+      payload: { ...skillDraft, approvalState }
+    })
+  }
+
+  const handleSkillRequiresConfirmationChange = (requiresConfirmation: boolean) => {
+    if (!skillDraft) return
+    dispatch({
+      type: 'SET_SKILL_DRAFT',
+      payload: {
+        ...skillDraft,
+        executionSafetyMetadata: { requiresConfirmation }
+      }
+    })
+  }
+
   const handleUndoKeep = async (reviewedMemoryId: string) => {
     try {
       await undoCandidateReview(reviewedMemoryId)
@@ -333,6 +366,25 @@ export default function ReviewPanel() {
             viewingMode={viewingMode}
             keptCandidates={keptCandidates}
             onUndoKeep={handleUndoKeep}
+            knowledgeDraft={knowledgeDraft}
+            skillDraft={skillDraft}
+            onGenerateKnowledge={handleGenerateKnowledge}
+            onGenerateSkill={handleGenerateSkill}
+            onRegenerateKnowledge={handleRegenerateKnowledge}
+            onApproveKnowledge={handleApproveKnowledge}
+            onSaveKnowledge={handleSaveKnowledge}
+            onSaveSkill={handleSaveSkill}
+            isGeneratingKnowledge={isGeneratingKnowledge}
+            isGeneratingSkill={isGeneratingSkill}
+            isRegeneratingKnowledge={isRegeneratingKnowledge}
+            isApprovingKnowledge={isApprovingKnowledge}
+            isSavingKnowledge={isSavingKnowledge}
+            isSavingSkill={isSavingSkill}
+            onKnowledgeTitleChange={handleKnowledgeTitleChange}
+            onKnowledgeSummaryChange={handleKnowledgeSummaryChange}
+            onKnowledgeBodyChange={handleKnowledgeBodyChange}
+            onSkillApprovalStateChange={handleSkillApprovalStateChange}
+            onSkillRequiresConfirmationChange={handleSkillRequiresConfirmationChange}
           />
         </div>
       </div>
