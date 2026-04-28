@@ -72,6 +72,14 @@ interface MirrorBrainHttpService {
   generateKnowledgeFromReviewedMemories(
     reviewedMemories: ReviewedMemory[],
   ): Promise<KnowledgeArtifact>;
+  regenerateKnowledgeDraft?(
+    existingDraft: KnowledgeArtifact,
+    reviewedMemories: ReviewedMemory[],
+  ): Promise<KnowledgeArtifact>;
+  approveKnowledgeDraft?(draftId: string, draftSnapshot?: KnowledgeArtifact): Promise<{
+    publishedArtifact: KnowledgeArtifact;
+    assignedTopic: { topicKey: string; title: string };
+  }>;
   generateSkillDraftFromReviewedMemories(
     reviewedMemories: ReviewedMemory[],
   ): Promise<SkillArtifact>;
@@ -305,7 +313,7 @@ const knowledgeArtifactSchema = {
     },
     id: { type: 'string' },
     draftState: { type: 'string', enum: ['draft', 'published'] },
-    topicKey: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+    topicKey: { type: ['string', 'null'] },
     title: { type: 'string' },
     summary: { type: 'string' },
     body: { type: 'string' },
@@ -319,9 +327,9 @@ const knowledgeArtifactSchema = {
     },
     version: { type: 'number' },
     isCurrentBest: { type: 'boolean' },
-    supersedesKnowledgeId: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+    supersedesKnowledgeId: { type: ['string', 'null'] },
     updatedAt: { type: 'string' },
-    reviewedAt: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+    reviewedAt: { type: ['string', 'null'] },
     recencyLabel: { type: 'string' },
     provenanceRefs: {
       type: 'array',
@@ -986,6 +994,102 @@ export async function startMirrorBrainHttpServer(
         artifact: await input.service.generateKnowledgeFromReviewedMemories(
           request.body.reviewedMemories,
         ),
+      };
+    },
+  );
+
+  app.post<{
+    Body: {
+      existingDraft: KnowledgeArtifact;
+      reviewedMemories: ReviewedMemory[];
+    };
+  }>(
+    '/knowledge/regenerate',
+    {
+      schema: {
+        summary: 'Regenerate a knowledge draft with existing context',
+        body: {
+          type: 'object',
+          properties: {
+            existingDraft: knowledgeArtifactSchema,
+            reviewedMemories: {
+              type: 'array',
+              items: reviewedMemorySchema,
+            },
+          },
+          required: ['existingDraft', 'reviewedMemories'],
+        },
+        response: {
+          201: createArtifactResponseSchema('artifact', knowledgeArtifactSchema),
+        },
+      },
+    },
+    async (request, reply) => {
+      if (input.service.regenerateKnowledgeDraft === undefined) {
+        reply.code(501);
+        return {
+          message: 'Knowledge regeneration is not available.',
+        };
+      }
+
+      reply.code(201);
+      return {
+        artifact: await input.service.regenerateKnowledgeDraft(
+          request.body.existingDraft,
+          request.body.reviewedMemories,
+        ),
+      };
+    },
+  );
+
+  app.post<{ Body: { draftId: string; draft?: KnowledgeArtifact } }>(
+    '/knowledge/approve',
+    {
+      schema: {
+        summary: 'Approve a knowledge draft and publish it',
+        body: {
+          type: 'object',
+          properties: {
+            draftId: { type: 'string' },
+            draft: knowledgeArtifactSchema,
+          },
+          required: ['draftId'],
+        },
+        response: {
+          201: {
+            type: 'object',
+            properties: {
+              publishedArtifact: knowledgeArtifactSchema,
+              assignedTopic: {
+                type: 'object',
+                properties: {
+                  topicKey: { type: 'string' },
+                  title: { type: 'string' },
+                },
+                required: ['topicKey', 'title'],
+              },
+            },
+            required: ['publishedArtifact', 'assignedTopic'],
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      if (input.service.approveKnowledgeDraft === undefined) {
+        reply.code(501);
+        return {
+          message: 'Knowledge approval is not available.',
+        };
+      }
+
+      reply.code(201);
+      const result = await input.service.approveKnowledgeDraft(
+        request.body.draftId,
+        request.body.draft,
+      );
+      return {
+        publishedArtifact: result.publishedArtifact,
+        assignedTopic: result.assignedTopic,
       };
     },
   );

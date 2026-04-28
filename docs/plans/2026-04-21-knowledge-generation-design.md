@@ -62,7 +62,7 @@ Extend `src/apps/mirrorbrain-service/index.ts`:
 // New service methods
 generateKnowledgeFromReviewedMemories(reviewedMemories: ReviewedMemory[]): Promise<KnowledgeArtifact>
 regenerateKnowledgeDraft(draftId: string, reviewedMemories: ReviewedMemory[]): Promise<KnowledgeArtifact>
-approveKnowledgeDraft(draftId: string): Promise<{
+approveKnowledgeDraft(draftId: string, draftSnapshot?: KnowledgeArtifact): Promise<{
   publishedArtifact: KnowledgeArtifact,
   assignedTopic: { topicKey: string, title: string }
 }>
@@ -120,7 +120,7 @@ Response: { artifact: KnowledgeArtifact }
 
 ```
 POST /knowledge/approve
-Body: { draftId: string }
+Body: { draftId: string, draft?: KnowledgeArtifact }
 Response: {
   publishedArtifact: KnowledgeArtifact,
   assignedTopic: { topicKey: string, title: string }
@@ -176,8 +176,11 @@ interface MirrorBrainState {
 
 **New action types:**
 - `SET_KNOWLEDGE_DRAFT` - set generated/regenerated draft
-- `CLEAR_KNOWLEDGE_DRAFT` - clear after approval
+- `SET_SKILL_DRAFT` - set generated/edited skill draft
+- `SET_KNOWLEDGE_DRAFT` with `null` - clear after approval
 - `CLEAR_KEPT_REVIEWED_MEMORIES` - remove kept memories after approval
+
+Draft state must remain in `MirrorBrainContext` so switching away from the Artifacts tab does not unmount `ArtifactsPanel` and discard unsaved generated content.
 
 ### ArtifactsPanel Handlers
 
@@ -238,7 +241,7 @@ const handleApproveKnowledge = async () => {
 
   const response = await fetch('/knowledge/approve', {
     method: 'POST',
-    body: JSON.stringify({ draftId: knowledgeDraft.id })
+    body: JSON.stringify({ draftId: knowledgeDraft.id, draft: knowledgeDraft })
   })
 
   const { publishedArtifact, assignedTopic } = await response.json()

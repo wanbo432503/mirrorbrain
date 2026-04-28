@@ -771,6 +771,122 @@ describe('mirrorbrain http server', () => {
     });
   });
 
+  it('passes the current draft snapshot to the knowledge approval service', async () => {
+    const draft: KnowledgeArtifact = {
+      id: 'knowledge-draft:reviewed:candidate:browser:vitest',
+      artifactType: 'daily-review-draft',
+      draftState: 'draft',
+      topicKey: 'vitest-testing',
+      title: 'Vitest setup and debugging',
+      summary: '1 reviewed memory synthesized into tutorial knowledge.',
+      body: '## Source Synthesis\nStep 1: install Vitest and configure projects.',
+      sourceReviewedMemoryIds: ['reviewed:candidate:browser:vitest'],
+      derivedFromKnowledgeIds: [],
+      version: 1,
+      isCurrentBest: false,
+      supersedesKnowledgeId: null,
+      updatedAt: '2026-04-21T12:00:00.000Z',
+      reviewedAt: '2026-04-21T10:00:00.000Z',
+      recencyLabel: '2026-04-21',
+      provenanceRefs: [
+        {
+          kind: 'reviewed-memory',
+          id: 'reviewed:candidate:browser:vitest',
+        },
+      ],
+    };
+    const publishedArtifact: KnowledgeArtifact = {
+      ...draft,
+      id: 'knowledge:topic:vitest-testing:v1',
+      artifactType: 'topic-knowledge',
+      draftState: 'published',
+      isCurrentBest: true,
+    };
+    const approveKnowledgeDraft = vi.fn(
+      async (
+        _draftId: string,
+        _draftSnapshot?: KnowledgeArtifact,
+      ): Promise<{
+        publishedArtifact: KnowledgeArtifact;
+        assignedTopic: { topicKey: string; title: string };
+      }> => ({
+        publishedArtifact,
+        assignedTopic: {
+          topicKey: 'vitest-testing',
+          title: 'Vitest setup and debugging',
+        },
+      }),
+    );
+    const service = {
+      service: {
+        status: 'running' as const,
+        config: getMirrorBrainConfig(),
+        stop: vi.fn(),
+      },
+      listMemoryEvents: vi.fn(async () => ({
+        items: [],
+        pagination: {
+          total: 0,
+          page: 1,
+          pageSize: 10,
+          totalPages: 1,
+        },
+      })),
+      queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
+      listKnowledge: vi.fn(async () => []),
+      listSkillDrafts: vi.fn(async () => []),
+      syncBrowserMemory: vi.fn(async () => ({
+        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:00:00.000Z',
+      })),
+      syncShellMemory: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:05:00.000Z',
+      })),
+      createDailyCandidateMemories: vi.fn(),
+      suggestCandidateReviews: vi.fn(),
+      reviewCandidateMemory: vi.fn(),
+      generateKnowledgeFromReviewedMemories: vi.fn(),
+      regenerateKnowledgeDraft: vi.fn(),
+      approveKnowledgeDraft,
+      generateSkillDraftFromReviewedMemories: vi.fn(),
+      publishKnowledge: vi.fn(),
+      publishSkillDraft: vi.fn(),
+    };
+
+    const server = await startMirrorBrainHttpServer({
+      service,
+      port: 0,
+    });
+    servers.push(server);
+
+    const response = await fetch(`${server.origin}/knowledge/approve`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        draftId: draft.id,
+        draft,
+      }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(body).toEqual({
+      publishedArtifact,
+      assignedTopic: {
+        topicKey: 'vitest-testing',
+        title: 'Vitest setup and debugging',
+      },
+    });
+    expect(approveKnowledgeDraft).toHaveBeenCalledWith(draft.id, draft);
+  });
+
   it('serves the standalone UI shell and static assets when a static directory is configured', async () => {
     const staticDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-http-static-'));
 

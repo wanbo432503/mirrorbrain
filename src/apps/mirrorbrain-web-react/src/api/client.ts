@@ -54,7 +54,7 @@ export interface MirrorBrainWebAppApi {
     existingDraft: KnowledgeArtifact,
     reviewedMemories: ReviewedMemory[]
   ): Promise<KnowledgeArtifact>;
-  approveKnowledge?(draftId: string): Promise<{
+  approveKnowledge?(draft: KnowledgeArtifact): Promise<{
     publishedArtifact: KnowledgeArtifact;
     assignedTopic: { topicKey: string; title: string };
   }>;
@@ -193,7 +193,7 @@ export function createMirrorBrainBrowserApi(
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ reviewedMemories }),
       });
-      const body = (await response.json()) as { artifact: KnowledgeArtifact };
+      const body = await readJson<{ artifact: KnowledgeArtifact }>(response);
       return body.artifact;
     },
 
@@ -206,20 +206,20 @@ export function createMirrorBrainBrowserApi(
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ existingDraft, reviewedMemories }),
       });
-      const body = (await response.json()) as { artifact: KnowledgeArtifact };
+      const body = await readJson<{ artifact: KnowledgeArtifact }>(response);
       return body.artifact;
     },
 
-    async approveKnowledge(draftId: string) {
+    async approveKnowledge(draft: KnowledgeArtifact) {
       const response = await fetch(`${baseUrl}/knowledge/approve`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ draftId }),
+        body: JSON.stringify({ draftId: draft.id, draft }),
       });
-      const body = (await response.json()) as {
+      const body = await readJson<{
         publishedArtifact: KnowledgeArtifact;
         assignedTopic: { topicKey: string; title: string };
-      };
+      }>(response);
       return body;
     },
 
@@ -229,7 +229,7 @@ export function createMirrorBrainBrowserApi(
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ reviewedMemories }),
       });
-      const body = (await response.json()) as { artifact: SkillArtifact };
+      const body = await readJson<{ artifact: SkillArtifact }>(response);
       return body.artifact;
     },
 

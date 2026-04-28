@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { mirrorBrainReducer, initialState } from '../contexts/MirrorBrainContext'
-import type { CandidateMemory, ReviewedMemory } from '../types/index'
+import type { CandidateMemory, KnowledgeArtifact, ReviewedMemory } from '../types/index'
 
 describe('Review to Artifacts integration', () => {
   it('keeps a candidate and makes it available in artifacts', () => {
@@ -130,4 +130,32 @@ describe('Review to Artifacts integration', () => {
     const keptMemories = state.reviewedMemories.filter((m) => m.decision === 'keep')
     expect(keptMemories).toHaveLength(0) // Discarded memories not shown in artifacts
   })
-})
+
+  it('keeps generated knowledge draft in shared app state across tab remounts', () => {
+    const draft: KnowledgeArtifact = {
+      id: 'knowledge-draft:reviewed-1',
+      artifactType: 'daily-review-draft',
+      draftState: 'draft',
+      topicKey: 'mail-ppt-workshop',
+      title: '使用AI生成PPT并处理邮件与研讨会资料',
+      summary: '整理 PPT 生成、网易邮箱处理和研讨会资料准备。',
+      body: '## 核心结论\n这是一份仍在编辑的知识草稿。',
+      sourceReviewedMemoryIds: ['reviewed-1'],
+      derivedFromKnowledgeIds: [],
+      version: 1,
+      isCurrentBest: false,
+      supersedesKnowledgeId: null,
+      updatedAt: '2026-04-28T10:00:00.000Z',
+      reviewedAt: '2026-04-28T09:00:00.000Z',
+      recencyLabel: '2026-04-28',
+      provenanceRefs: [{ kind: 'reviewed-memory', id: 'reviewed-1' }],
+    }
+
+    const state = mirrorBrainReducer(initialState, {
+      type: 'SET_KNOWLEDGE_DRAFT',
+      payload: draft,
+    })
+
+    expect(state.knowledgeDraft).toEqual(draft)
+  })
+}) 

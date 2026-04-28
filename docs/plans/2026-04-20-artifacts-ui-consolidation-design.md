@@ -111,13 +111,17 @@ Each DraftEditor manages its own loading indicators:
 
 ## State Management
 
-### Centralized in ArtifactsPanel
-No changes to existing state structure:
+### Centralized in MirrorBrainContext
+Draft workspace state must live in shared app state, not `ArtifactsPanel` local state. `ArtifactsPanel` is unmounted when the user switches to another top-level MirrorBrain tab, so local `useState` would lose an in-progress draft.
+
 ```tsx
-const [activeSubtab, setActiveSubtab] = useState<ArtifactsSubtab>('history-topics')
-const [knowledgeDraft, setKnowledgeDraft] = useState<KnowledgeArtifact | null>(null)
-const [skillDraft, setSkillDraft] = useState<SkillArtifact | null>(null)
+interface MirrorBrainState {
+  knowledgeDraft: KnowledgeArtifact | null
+  skillDraft: SkillArtifact | null
+}
 ```
+
+`ArtifactsPanel` may keep display-only state such as the active artifacts subtab locally, but generated draft artifacts are set through `SET_KNOWLEDGE_DRAFT` and `SET_SKILL_DRAFT`.
 
 ### Props Flow
 DraftGeneration receives from ArtifactsPanel:

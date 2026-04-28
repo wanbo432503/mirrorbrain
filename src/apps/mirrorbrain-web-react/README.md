@@ -26,7 +26,7 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and a 
 
 ### Phase 3: Memory Panel + Hooks ✅ (Completed)
 - **Global State Management:**
-  - `MirrorBrainContext.tsx` - useReducer + Context (30 state properties)
+  - `MirrorBrainContext.tsx` - useReducer + Context for memory, review, artifacts, and draft workspace state
   - `useMirrorBrainState.ts` - Initial data loading hook
 
 - **Memory Hooks:**
@@ -82,19 +82,18 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and a 
   - `Checkbox.tsx` - Checkbox input
 
 - **Artifacts Components:**
-  - `ArtifactsPanel.tsx` - Artifacts tab container (3 subtabs)
-  - `SubtabNavigation.tsx` - History/Knowledge/Skill subtabs
+  - `ArtifactsPanel.tsx` - Artifacts tab container
+  - `SubtabNavigation.tsx` - History Topics / Draft Generation subtabs
   - `HistoryTable.tsx` - Reusable history table
   - `HistoryTopics.tsx` - History topics view (3 tables)
   - `CandidateContext.tsx` - Reviewed memory context
   - `DraftEditor.tsx` - Knowledge/Skill draft editor
-  - `KnowledgeGenerator.tsx` - Knowledge generation + editing
-  - `SkillGenerator.tsx` - Skill generation + editing
 
 - **Features:**
   - History topics display (3 paginated tables)
   - Generate knowledge from reviewed memories
   - Generate skill from reviewed memories
+  - Generated knowledge and skill drafts remain in shared app state across top-level tab switches
   - Draft editing (title/summary/body for knowledge)
   - Draft editing (approval state/confirmation for skill)
   - Save artifacts to API

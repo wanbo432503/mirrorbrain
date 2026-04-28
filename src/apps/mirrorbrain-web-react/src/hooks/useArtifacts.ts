@@ -74,7 +74,7 @@ export function useArtifacts(api: MirrorBrainWebAppApi) {
   )
 
   const approveKnowledge = useCallback(
-    async (draftId: string) => {
+    async (draft: KnowledgeArtifact) => {
       if (!api.approveKnowledge) {
         setFeedback({ kind: 'error', message: 'Approve knowledge API not available' })
         return null
@@ -84,7 +84,7 @@ export function useArtifacts(api: MirrorBrainWebAppApi) {
       setFeedback(null)
 
       try {
-        const { publishedArtifact, assignedTopic } = await api.approveKnowledge(draftId)
+        const { publishedArtifact, assignedTopic } = await api.approveKnowledge(draft)
 
         // Update knowledge artifacts list in global state
         const updatedKnowledge = [...state.knowledgeArtifacts, publishedArtifact]

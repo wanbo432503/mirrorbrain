@@ -46,6 +46,8 @@ Those concerns remain in the service, workflow, module, and integration layers.
 - `POST /candidate-reviews/suggestions`
 - `POST /reviewed-memories`
 - `POST /knowledge/generate`
+- `POST /knowledge/regenerate`
+- `POST /knowledge/approve`
 - `POST /skills/generate`
 
 ## Data Flow
@@ -61,6 +63,8 @@ Those concerns remain in the service, workflow, module, and integration layers.
 9. The server serializes the domain result as JSON and returns an HTTP status that matches the action.
 10. Daily candidate creation returns task-oriented candidates with source URL refs, bounded result counts, and explicit time ranges.
 11. AI review suggestions stay separate from reviewed-memory writes, and now include a keep-score plus supporting reasons so the UI can explain why a candidate exists and why it may be worth keeping.
+12. Knowledge generation, regeneration, and approval routes delegate to the service layer and return structured errors when a capability is unavailable.
+13. `POST /knowledge/approve` accepts the current draft snapshot along with `draftId` so the service can publish the visible draft even if the storage index has not exposed it yet.
 
 ## Dependencies
 
@@ -84,10 +88,12 @@ Those concerns remain in the service, workflow, module, and integration layers.
 - `POST /memory/query` is still a thin Phase 2A contract and does not yet expose pagination or mature ranking controls
 - `POST /sync/shell` depends on an explicitly configured shell history path in the runtime service
 - sync responses can include a recent `importedEvents` preview so standalone clients can surface newly imported memory immediately without returning the full imported event batch
+- knowledge approval depends on a persisted draft id; missing ids return a request error rather than a partially shaped success payload
 
 ## Test Strategy
 
 - unit-style HTTP behavior coverage in `src/apps/mirrorbrain-http-server/index.test.ts`
 - unit-style coverage for Swagger UI and OpenAPI schema publication
 - broader integration coverage through the wrapped service contract tests
+- API client coverage verifies failed knowledge approval responses are surfaced as errors before UI state reads topic metadata
 - `tsc --noEmit` after TypeScript changes

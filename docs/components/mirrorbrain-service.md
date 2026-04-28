@@ -19,7 +19,7 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 - exposes daily candidate-memory generation and review suggestion operations
 - exposes explicit candidate review decisions as service-level operations
 - publishes knowledge and skill artifacts through explicit OpenViking-backed service methods
-- generates knowledge drafts from reviewed memories before publishing them
+- generates source-content-aware knowledge drafts from reviewed memories before publishing them
 - exposes topic-merge helper methods that turn daily-review drafts into topic merge candidates and publish topic knowledge artifacts
 - exposes read-oriented topic knowledge helpers for listing current-best topics, reading one current-best topic, and reading topic history
 - does not own domain logic for memory review, knowledge generation, or skill generation
@@ -49,7 +49,9 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 16. Build topic-knowledge merge candidates from stored draft knowledge artifacts when requested.
 17. Merge a daily-review draft into topic knowledge, publishing the new current-best artifact and any superseded previous version.
 18. List current-best topic knowledge summaries, fetch the current-best artifact for one topic key, and return topic history in newest-first order.
-19. For reviewed-memory generation APIs, run the corresponding workflow first and then publish the resulting artifact.
+19. For reviewed-memory knowledge generation APIs, resolve captured page text from reviewed memory events before creating the draft, then publish the resulting artifact.
+20. Approve a knowledge draft by loading the persisted draft by id and passing it through the existing topic-knowledge merge workflow.
+21. If the draft is not yet visible in the persisted knowledge list, approve can use the caller-provided draft snapshot after verifying its id matches `draftId`; this preserves the visible UI draft, source reviewed-memory ids, and provenance refs during publish.
 
 ## Operational Note
 
@@ -71,7 +73,9 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
 - unit and integration tests verify candidate review suggestions stay suggestion-only
 - unit and integration tests verify explicit keep and discard review decisions publish reviewed memory artifacts through the service contract
 - unit and integration tests verify the service forwards explicit knowledge and skill publishing calls to OpenViking ingestion with runtime configuration
-- unit and integration tests verify reviewed memories can be turned into publishable Phase 3-ready knowledge artifacts through the service contract
+- unit and integration tests verify reviewed memories can be turned into publishable Phase 3-ready knowledge artifacts through the service contract, including captured page text in the generated body
+- unit tests verify knowledge draft approval publishes through the topic merge workflow instead of reading unstored JSON files
+- unit tests verify knowledge draft approval can publish the caller draft snapshot when the persisted lookup has not caught up
 - unit and integration tests verify topic merge candidates can be built and merged through the service contract, including superseded-history publication on update
 - type checks ensure the service surface composes with the workflow layer
 

@@ -5,7 +5,6 @@ import DraftGeneration from './DraftGeneration'
 import { createMirrorBrainBrowserApi, type MirrorBrainWebAppApi } from '../../api/client'
 import { useArtifacts } from '../../hooks/useArtifacts'
 import { useMirrorBrain } from '../../contexts/MirrorBrainContext'
-import type { KnowledgeArtifact, SkillArtifact } from '../../types/index'
 
 type ArtifactsSubtab = 'history-topics' | 'draft-generation'
 
@@ -31,11 +30,11 @@ export default function ArtifactsPanel() {
     saveSkillArtifact,
   } = useArtifacts(api)
 
-  const { state } = useMirrorBrain()
+  const { state, dispatch } = useMirrorBrain()
 
   const [activeSubtab, setActiveSubtab] = useState<ArtifactsSubtab>('history-topics')
-  const [knowledgeDraft, setKnowledgeDraft] = useState<KnowledgeArtifact | null>(null)
-  const [skillDraft, setSkillDraft] = useState<SkillArtifact | null>(null)
+  const knowledgeDraft = state.knowledgeDraft
+  const skillDraft = state.skillDraft
   // Use only kept reviewed memories from global state for artifact generation
   const reviewedMemories = state.reviewedMemories.filter((memory) => memory.decision === 'keep')
 
@@ -43,7 +42,7 @@ export default function ArtifactsPanel() {
   const handleGenerateKnowledge = async () => {
     try {
       const artifact = await generateKnowledge(reviewedMemories)
-      setKnowledgeDraft(artifact)
+      dispatch({ type: 'SET_KNOWLEDGE_DRAFT', payload: artifact })
     } catch (error) {
       // Error handled by useArtifacts
     }
@@ -54,7 +53,7 @@ export default function ArtifactsPanel() {
     try {
       const artifact = await regenerateKnowledge(knowledgeDraft, reviewedMemories)
       if (artifact) {
-        setKnowledgeDraft(artifact)
+        dispatch({ type: 'SET_KNOWLEDGE_DRAFT', payload: artifact })
       }
     } catch (error) {
       // Error handled by useArtifacts
@@ -64,10 +63,10 @@ export default function ArtifactsPanel() {
   const handleApproveKnowledge = async () => {
     if (!knowledgeDraft?.id || !approveKnowledge) return
     try {
-      const result = await approveKnowledge(knowledgeDraft.id)
+      const result = await approveKnowledge(knowledgeDraft)
       if (result) {
         // Clear the draft after successful approval
-        setKnowledgeDraft(null)
+        dispatch({ type: 'SET_KNOWLEDGE_DRAFT', payload: null })
       }
     } catch (error) {
       // Error handled by useArtifacts
@@ -87,7 +86,7 @@ export default function ArtifactsPanel() {
   const handleGenerateSkill = async () => {
     try {
       const artifact = await generateSkill(reviewedMemories)
-      setSkillDraft(artifact)
+      dispatch({ type: 'SET_SKILL_DRAFT', payload: artifact })
     } catch (error) {
       // Error handled by useArtifacts
     }
@@ -151,26 +150,39 @@ export default function ArtifactsPanel() {
             isSavingKnowledge={isSavingKnowledge}
             isSavingSkill={isSavingSkill}
             onKnowledgeTitleChange={(title) =>
-              setKnowledgeDraft((prev) => prev ? { ...prev, title } : null)
+              dispatch({
+                type: 'SET_KNOWLEDGE_DRAFT',
+                payload: knowledgeDraft ? { ...knowledgeDraft, title } : null,
+              })
             }
             onKnowledgeSummaryChange={(summary) =>
-              setKnowledgeDraft((prev) => prev ? { ...prev, summary } : null)
+              dispatch({
+                type: 'SET_KNOWLEDGE_DRAFT',
+                payload: knowledgeDraft ? { ...knowledgeDraft, summary } : null,
+              })
             }
             onKnowledgeBodyChange={(body) =>
-              setKnowledgeDraft((prev) => prev ? { ...prev, body } : null)
+              dispatch({
+                type: 'SET_KNOWLEDGE_DRAFT',
+                payload: knowledgeDraft ? { ...knowledgeDraft, body } : null,
+              })
             }
             onSkillApprovalStateChange={(approvalState) =>
-              setSkillDraft((prev) => prev ? { ...prev, approvalState } : null)
+              dispatch({
+                type: 'SET_SKILL_DRAFT',
+                payload: skillDraft ? { ...skillDraft, approvalState } : null,
+              })
             }
             onSkillRequiresConfirmationChange={(requiresConfirmation) =>
-              setSkillDraft((prev) =>
-                prev
+              dispatch({
+                type: 'SET_SKILL_DRAFT',
+                payload: skillDraft
                   ? {
-                      ...prev,
+                      ...skillDraft,
                       executionSafetyMetadata: { requiresConfirmation },
                     }
-                  : null
-              )
+                  : null,
+              })
             }
           />
         )}

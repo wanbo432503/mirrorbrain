@@ -33,6 +33,7 @@ interface MirrorBrainState {
   reviewedMemories: ReviewedMemory[]
 
   // Knowledge artifacts
+  knowledgeDraft: KnowledgeArtifact | null
   knowledgeArtifacts: KnowledgeArtifact[]
   knowledgeTopics: Array<{
     topicKey: string
@@ -44,6 +45,7 @@ interface MirrorBrainState {
   }>
 
   // Skill artifacts
+  skillDraft: SkillArtifact | null
   skillArtifacts: SkillArtifact[]
 
   // Sync state
@@ -57,12 +59,15 @@ type MirrorBrainAction =
   | { type: 'SYNC_SHELL'; payload: BrowserSyncSummary }
   | { type: 'LOAD_KNOWLEDGE'; payload: KnowledgeArtifact[] }
   | { type: 'LOAD_KNOWLEDGE_TOPICS'; payload: MirrorBrainState['knowledgeTopics'] }
+  | { type: 'SET_KNOWLEDGE_DRAFT'; payload: KnowledgeArtifact | null }
   | { type: 'LOAD_SKILLS'; payload: SkillArtifact[] }
+  | { type: 'SET_SKILL_DRAFT'; payload: SkillArtifact | null }
   | { type: 'SET_CANDIDATES'; payload: CandidateMemory[] }
   | { type: 'SET_SELECTED_CANDIDATE'; payload: string | null }
   | { type: 'SET_REVIEW_WINDOW'; payload: { date: string; eventCount: number } }
   | { type: 'ADD_REVIEWED_MEMORY'; payload: ReviewedMemory }
   | { type: 'REMOVE_CANDIDATE'; payload: string }
+  | { type: 'CLEAR_KEPT_REVIEWED_MEMORIES' }
 
 const initialState: MirrorBrainState = {
   serviceStatus: 'unknown',
@@ -74,8 +79,10 @@ const initialState: MirrorBrainState = {
   candidateMemories: [],
   selectedCandidateId: null,
   reviewedMemories: [],
+  knowledgeDraft: null,
   knowledgeArtifacts: [],
   knowledgeTopics: [],
+  skillDraft: null,
   skillArtifacts: [],
   lastSyncSummary: null,
 }
@@ -111,8 +118,14 @@ function mirrorBrainReducer(state: MirrorBrainState, action: MirrorBrainAction):
     case 'LOAD_KNOWLEDGE_TOPICS':
       return { ...state, knowledgeTopics: action.payload }
 
+    case 'SET_KNOWLEDGE_DRAFT':
+      return { ...state, knowledgeDraft: action.payload }
+
     case 'LOAD_SKILLS':
       return { ...state, skillArtifacts: action.payload }
+
+    case 'SET_SKILL_DRAFT':
+      return { ...state, skillDraft: action.payload }
 
     case 'SET_CANDIDATES':
       return { ...state, candidateMemories: action.payload }
@@ -138,6 +151,14 @@ function mirrorBrainReducer(state: MirrorBrainState, action: MirrorBrainAction):
         ...state,
         candidateMemories: state.candidateMemories.filter(
           (candidate) => candidate.id !== action.payload
+        ),
+      }
+
+    case 'CLEAR_KEPT_REVIEWED_MEMORIES':
+      return {
+        ...state,
+        reviewedMemories: state.reviewedMemories.filter(
+          (memory) => memory.decision !== 'keep'
         ),
       }
 
