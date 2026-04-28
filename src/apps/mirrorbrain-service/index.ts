@@ -129,6 +129,7 @@ interface CreateMirrorBrainServiceDependencies {
   publishSkill?: typeof ingestSkillArtifactToOpenViking;
   publishCandidateMemory?: typeof ingestCandidateMemoryToOpenViking;
   publishReviewedMemory?: typeof ingestReviewedMemoryToOpenViking;
+  undoReviewedMemory?: (reviewedMemoryId: string, workspaceDir: string) => Promise<void>;
   buildBrowserThemeNarratives?: typeof generateBrowserThemeNarratives;
   buildShellProblemNarratives?: typeof generateShellProblemNarratives;
   buildTopicKnowledgeCandidates?: typeof buildTopicKnowledgeCandidates;
@@ -331,6 +332,26 @@ export function createMirrorBrainService(
     dependencies.publishCandidateMemory ?? ingestCandidateMemoryToOpenViking;
   const publishReviewedMemory =
     dependencies.publishReviewedMemory ?? ingestReviewedMemoryToOpenViking;
+  const undoReviewedMemory =
+    dependencies.undoReviewedMemory ??
+    (async (reviewedMemoryId: string, workspaceDir: string) => {
+      const reviewedFilePath = join(
+        workspaceDir,
+        'mirrorbrain',
+        'reviewed-memories',
+        `${reviewedMemoryId}.json`,
+      );
+
+      try {
+        await unlink(reviewedFilePath);
+      } catch (error) {
+        if ((error as any).code === 'ENOENT') {
+          // File doesn't exist - already deleted, treat as success
+          return;
+        }
+        throw error;
+      }
+    });
   const buildBrowserThemeNarratives =
     dependencies.buildBrowserThemeNarratives ?? generateBrowserThemeNarratives;
   const buildShellProblemNarratives =
@@ -752,6 +773,9 @@ export function createMirrorBrainService(
       }
 
       return artifact;
+    },
+    undoCandidateReview: async (reviewedMemoryId: string): Promise<void> => {
+      await undoReviewedMemory(reviewedMemoryId, workspaceDir);
     },
     createDailyCandidateMemories: async (
       reviewDate: string,
