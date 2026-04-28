@@ -66,6 +66,7 @@ type MirrorBrainAction =
   | { type: 'SET_SELECTED_CANDIDATE'; payload: string | null }
   | { type: 'SET_REVIEW_WINDOW'; payload: { date: string; eventCount: number } }
   | { type: 'ADD_REVIEWED_MEMORY'; payload: ReviewedMemory }
+  | { type: 'REMOVE_REVIEWED_MEMORY'; payload: string }
   | { type: 'REMOVE_CANDIDATE'; payload: string }
   | { type: 'CLEAR_KEPT_REVIEWED_MEMORIES' }
 
@@ -144,6 +145,12 @@ function mirrorBrainReducer(state: MirrorBrainState, action: MirrorBrainAction):
       return {
         ...state,
         reviewedMemories: [...state.reviewedMemories, action.payload],
+      }
+
+    case 'REMOVE_REVIEWED_MEMORY':
+      return {
+        ...state,
+        reviewedMemories: state.reviewedMemories.filter(r => r.id !== action.payload),
       }
 
     case 'REMOVE_CANDIDATE':
