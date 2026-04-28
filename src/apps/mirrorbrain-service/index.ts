@@ -2,6 +2,7 @@ import { unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { getMirrorBrainConfig } from '../../shared/config/index.js';
+import { ValidationError } from './errors.js';
 import {
   createFileSyncCheckpointStore,
   type SyncCheckpointStore,
@@ -340,7 +341,7 @@ export function createMirrorBrainService(
           reviewedMemoryId.includes('..') ||
           reviewedMemoryId.includes('/') ||
           reviewedMemoryId.includes('\\')) {
-        throw new Error(`Invalid reviewed memory ID format: ${reviewedMemoryId}`);
+        throw new ValidationError(`Invalid reviewed memory ID format: ${reviewedMemoryId}`);
       }
 
       const reviewedFilePath = join(

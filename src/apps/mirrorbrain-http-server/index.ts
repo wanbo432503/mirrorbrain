@@ -7,6 +7,7 @@ import fastifySwaggerUi from '@fastify/swagger-ui';
 import fastifyStatic from '@fastify/static';
 
 import { getMirrorBrainConfig } from '../../shared/config/index.js';
+import { ValidationError } from '../mirrorbrain-service/errors.js';
 import type {
   CandidateMemory,
   CandidateReviewSuggestion,
@@ -998,25 +999,15 @@ export async function startMirrorBrainHttpServer(
         await input.service.undoCandidateReview(request.params.id);
         reply.code(204);
       } catch (error) {
-        // Distinguish error types
-        if (error instanceof Error) {
-          if (error.message.includes('Invalid reviewed memory ID format')) {
-            // Validation error - bad request
-            reply.code(400);
-            return {
-              message: error.message,
-            };
-          }
-          // Other errors - server error
-          reply.code(500);
-          return {
-            message: `Failed to delete reviewed memory: ${error.message}`,
-          };
+        if (error instanceof ValidationError) {
+          // Validation error - bad request
+          reply.code(400);
+          return { message: error.message };
         }
-        // Unknown error type
+        // Other errors - server error
         reply.code(500);
         return {
-          message: 'Failed to delete reviewed memory: Unknown error',
+          message: `Failed to delete reviewed memory: ${error instanceof Error ? error.message : 'Unknown error'}`,
         };
       }
     }
