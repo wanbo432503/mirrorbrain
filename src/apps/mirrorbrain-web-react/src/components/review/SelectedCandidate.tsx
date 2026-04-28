@@ -1,8 +1,12 @@
 import Card from '../common/Card'
-import type { CandidateMemory } from '../../types/index'
+import KeptCandidateCard from './KeptCandidateCard'
+import type { CandidateMemory, ReviewedMemory } from '../../types/index'
 
 interface SelectedCandidateProps {
   candidate: CandidateMemory | undefined
+  viewingMode: 'detail' | 'kept-list'
+  keptCandidates: ReviewedMemory[]
+  onUndoKeep: (reviewedMemoryId: string) => void
 }
 
 type CandidateSourceRef = NonNullable<CandidateMemory['sourceRefs']>[number]
@@ -82,7 +86,50 @@ function formatTimestamp(timestamp: string): string {
   }).format(date)
 }
 
-export default function SelectedCandidate({ candidate }: SelectedCandidateProps) {
+export default function SelectedCandidate({
+  candidate,
+  viewingMode,
+  keptCandidates,
+  onUndoKeep,
+}: SelectedCandidateProps) {
+  // Kept list mode
+  if (viewingMode === 'kept-list') {
+    if (keptCandidates.length === 0) {
+      return (
+        <Card className="h-full overflow-y-auto max-h-[540px]">
+          <div className="text-center py-12">
+            <p className="font-heading font-semibold text-base text-slate-600 mb-2">
+              No kept candidates
+            </p>
+            <p className="font-body text-sm text-slate-500">
+              Click "Keep" on candidates to add them here
+            </p>
+          </div>
+        </Card>
+      )
+    }
+
+    return (
+      <Card className="h-full overflow-y-auto max-h-[540px]">
+        <div className="space-y-3">
+          <div className="mb-2">
+            <h3 className="font-heading font-bold text-xs text-slate-900 uppercase tracking-wide">
+              Kept Candidates ({keptCandidates.length})
+            </h3>
+          </div>
+          {keptCandidates.map((reviewedMemory) => (
+            <KeptCandidateCard
+              key={reviewedMemory.id}
+              reviewedMemory={reviewedMemory}
+              onUndo={onUndoKeep}
+            />
+          ))}
+        </div>
+      </Card>
+    )
+  }
+
+  // Detail mode (existing behavior)
   if (!candidate) {
     return (
       <Card className="h-full overflow-y-auto max-h-[540px]">

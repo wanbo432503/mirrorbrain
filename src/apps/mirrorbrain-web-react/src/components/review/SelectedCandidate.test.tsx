@@ -1,11 +1,13 @@
-import { describe, expect, it } from 'vitest'
-
-import {
+import { describe, expect, it, afterEach, vi } from 'vitest'
+import { render, screen, cleanup } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import SelectedCandidate, {
   formatCandidateDuration,
   getCandidateDiscardReasons,
   getCandidateFormationReasons,
   splitCandidateSourcesByContribution,
 } from './SelectedCandidate'
+import type { CandidateMemory, ReviewedMemory } from '../../types/index'
 
 describe('SelectedCandidate helpers', () => {
   it('formats candidate duration from the candidate time range', () => {
@@ -80,5 +82,98 @@ describe('SelectedCandidate helpers', () => {
     ])
 
     expect(getCandidateDiscardReasons({})).toEqual([])
+  })
+})
+
+describe('SelectedCandidate component rendering', () => {
+  const mockCandidate: CandidateMemory = {
+    id: 'candidate:test-1',
+    memoryEventIds: ['event-1'],
+    title: 'Test Candidate',
+    summary: 'Test summary',
+    theme: 'test',
+    reviewDate: '2026-04-28',
+    timeRange: {
+      startAt: '2026-04-28T10:00:00Z',
+      endAt: '2026-04-28T11:00:00Z',
+    },
+    reviewState: 'pending',
+  }
+
+  const mockKeptCandidates: ReviewedMemory[] = [
+    {
+      id: 'reviewed:candidate:test-1',
+      candidateMemoryId: 'candidate:test-1',
+      candidateTitle: 'Kept Candidate 1',
+      candidateSummary: 'Summary',
+      candidateTheme: 'test',
+      memoryEventIds: ['event-1'],
+      reviewDate: '2026-04-28',
+      decision: 'keep',
+      reviewedAt: '2026-04-28T10:00:00Z',
+    },
+    {
+      id: 'reviewed:candidate:test-2',
+      candidateMemoryId: 'candidate:test-2',
+      candidateTitle: 'Kept Candidate 2',
+      candidateSummary: 'Summary 2',
+      candidateTheme: 'test',
+      memoryEventIds: ['event-2'],
+      reviewDate: '2026-04-28',
+      decision: 'keep',
+      reviewedAt: '2026-04-28T11:00:00Z',
+    },
+  ]
+
+  afterEach(() => {
+    cleanup()
+  })
+
+  it('should render detail view when viewingMode is detail', () => {
+    render(
+      <SelectedCandidate
+        candidate={mockCandidate}
+        viewingMode="detail"
+        keptCandidates={[]}
+        onUndoKeep={() => {}}
+      />
+    )
+
+    expect(screen.getByText('Test Candidate')).toBeInTheDocument()
+    expect(screen.getByText('Test summary')).toBeInTheDocument()
+  })
+
+  it('should render kept list view when viewingMode is kept-list', () => {
+    render(
+      <SelectedCandidate
+        candidate={undefined}
+        viewingMode="kept-list"
+        keptCandidates={mockKeptCandidates}
+        onUndoKeep={() => {}}
+      />
+    )
+
+    expect(screen.getByText('Kept Candidate 1')).toBeInTheDocument()
+    expect(screen.getByText('Kept Candidate 2')).toBeInTheDocument()
+    expect(screen.getAllByText('Kept')).toHaveLength(2)
+  })
+
+  it('should call onUndoKeep when undo button clicked in kept list', async () => {
+    const user = userEvent.setup()
+    const onUndoKeep = vi.fn()
+
+    render(
+      <SelectedCandidate
+        candidate={undefined}
+        viewingMode="kept-list"
+        keptCandidates={mockKeptCandidates}
+        onUndoKeep={onUndoKeep}
+      />
+    )
+
+    const undoButtons = screen.getAllByRole('button', { name: 'Undo keep' })
+    await user.click(undoButtons[0])
+
+    expect(onUndoKeep).toHaveBeenCalledWith('reviewed:candidate:test-1')
   })
 })
