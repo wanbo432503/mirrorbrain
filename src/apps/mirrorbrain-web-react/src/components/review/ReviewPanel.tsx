@@ -48,6 +48,7 @@ export default function ReviewPanel() {
     createDailyCandidates,
     selectCandidate,
     reviewCandidateMemory,
+    undoCandidateReview,
     getSelectedCandidate,
     getReviewSuggestion,
   } = useReviewWorkflow(api)
@@ -55,6 +56,20 @@ export default function ReviewPanel() {
   const [reviewDate] = useState(getDefaultReviewDate())
   const [reviewTimeZone] = useState(getLocalTimeZone())
   const [hasAutoLoaded, setHasAutoLoaded] = useState(false)
+  const [keptCandidateIds, setKeptCandidateIds] = useState<Set<string>>(new Set())
+  const [viewingMode, setViewingMode] = useState<'detail' | 'kept-list'>('detail')
+
+  // Filter out kept candidates from main list
+  const unreviewedCandidates = useMemo(() => {
+    return candidates.filter(c => !keptCandidateIds.has(c.id))
+  }, [candidates, keptCandidateIds])
+
+  // Get kept candidates data from reviewed memories
+  const keptCandidates = useMemo(() => {
+    return state.reviewedMemories.filter(r =>
+      r.decision === 'keep' && keptCandidateIds.has(r.candidateMemoryId)
+    )
+  }, [state.reviewedMemories, keptCandidateIds])
 
   // Auto-load daily candidates when entering review tab
   useEffect(() => {
@@ -93,6 +108,12 @@ export default function ReviewPanel() {
     try {
       selectCandidate(candidateId)
       await reviewCandidateMemory('keep')
+
+      // Add to kept set
+      setKeptCandidateIds(prev => new Set([...prev, candidateId]))
+
+      // Switch to kept-list view
+      setViewingMode('kept-list')
     } catch (error) {
       // Error already handled by useReviewWorkflow
     }
@@ -105,6 +126,34 @@ export default function ReviewPanel() {
     } catch (error) {
       // Error already handled by useReviewWorkflow
     }
+  }
+
+  const handleUndoKeep = async (reviewedMemoryId: string) => {
+    try {
+      await undoCandidateReview(reviewedMemoryId)
+
+      // Extract candidate ID from reviewed memory ID
+      const candidateId = reviewedMemoryId.replace(/^reviewed:/, '')
+
+      // Remove from kept set
+      setKeptCandidateIds(prev => {
+        const next = new Set(prev)
+        next.delete(candidateId)
+        return next
+      })
+
+      // If no kept candidates left, switch back to detail view
+      if (keptCandidateIds.size === 1) {
+        setViewingMode('detail')
+      }
+    } catch (error) {
+      // Error already handled by useReviewWorkflow
+    }
+  }
+
+  const handleSelectCandidate = (candidateId: string) => {
+    selectCandidate(candidateId)
+    setViewingMode('detail')
   }
 
   const selectedCandidate = getSelectedCandidate()
@@ -161,13 +210,13 @@ export default function ReviewPanel() {
               Candidates
             </h2>
             <p className="font-body text-xs text-slate-600">
-              {candidates.length} candidates generated
+              {unreviewedCandidates.length} candidates generated
             </p>
           </div>
           <CandidateList
-            candidates={candidates}
+            candidates={unreviewedCandidates}
             selectedCandidateId={selectedCandidateId}
-            onSelectCandidate={selectCandidate}
+            onSelectCandidate={handleSelectCandidate}
             onKeepCandidate={handleKeepCandidate}
             onDiscardCandidate={handleDiscardCandidate}
             getReviewSuggestion={getReviewSuggestion}
@@ -178,13 +227,22 @@ export default function ReviewPanel() {
         <div className="lg:col-span-2">
           <div className="mb-2">
             <h2 className="font-heading font-bold text-xs text-slate-900 uppercase tracking-wide">
-              Selected Candidate
+              {viewingMode === 'kept-list' ? 'Kept Candidates' : 'Selected Candidate'}
             </h2>
             <p className="font-body text-xs text-slate-600">
-              {selectedCandidateId ? 'Viewing details' : 'Select from list'}
+              {viewingMode === 'kept-list'
+                ? `${keptCandidates.length} candidates kept`
+                : selectedCandidateId
+                ? 'Viewing details'
+                : 'Select from list'}
             </p>
           </div>
-          <SelectedCandidate candidate={selectedCandidate} />
+          <SelectedCandidate
+            candidate={selectedCandidate}
+            viewingMode={viewingMode}
+            keptCandidates={keptCandidates}
+            onUndoKeep={handleUndoKeep}
+          />
         </div>
       </div>
     </div>
