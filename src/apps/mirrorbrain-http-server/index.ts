@@ -998,9 +998,25 @@ export async function startMirrorBrainHttpServer(
         await input.service.undoCandidateReview(request.params.id);
         reply.code(204);
       } catch (error) {
-        reply.code(404);
+        // Distinguish error types
+        if (error instanceof Error) {
+          if (error.message.includes('Invalid reviewed memory ID format')) {
+            // Validation error - bad request
+            reply.code(400);
+            return {
+              message: error.message,
+            };
+          }
+          // Other errors - server error
+          reply.code(500);
+          return {
+            message: `Failed to delete reviewed memory: ${error.message}`,
+          };
+        }
+        // Unknown error type
+        reply.code(500);
         return {
-          message: `Reviewed memory ${request.params.id} not found`,
+          message: 'Failed to delete reviewed memory: Unknown error',
         };
       }
     }
