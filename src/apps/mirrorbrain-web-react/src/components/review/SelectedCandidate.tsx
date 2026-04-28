@@ -1,12 +1,41 @@
 import Card from '../common/Card'
+import Button from '../common/Button'
+import TextArea from '../forms/TextArea'
+import Checkbox from '../forms/Checkbox'
+import LoadingSpinner from '../common/LoadingSpinner'
 import KeptCandidateCard from './KeptCandidateCard'
-import type { CandidateMemory, ReviewedMemory } from '../../types/index'
+import type { CandidateMemory, ReviewedMemory, KnowledgeArtifact, SkillArtifact } from '../../types/index'
 
 interface SelectedCandidateProps {
   candidate: CandidateMemory | undefined
-  viewingMode: 'detail' | 'kept-list'
+  viewingMode: 'detail' | 'kept-list' | 'knowledge-draft' | 'skill-draft'
   keptCandidates: ReviewedMemory[]
   onUndoKeep: (reviewedMemoryId: string) => void
+
+  // Add draft generation props
+  knowledgeDraft: KnowledgeArtifact | null
+  skillDraft: SkillArtifact | null
+  onGenerateKnowledge: () => void
+  onGenerateSkill: () => void
+  onRegenerateKnowledge: () => void
+  onApproveKnowledge: () => void
+  onSaveKnowledge: () => void
+  onSaveSkill: () => void
+  isGeneratingKnowledge: boolean
+  isGeneratingSkill: boolean
+  isRegeneratingKnowledge: boolean
+  isApprovingKnowledge: boolean
+  isSavingKnowledge: boolean
+  isSavingSkill: boolean
+
+  // Knowledge editing handlers
+  onKnowledgeTitleChange: (title: string) => void
+  onKnowledgeSummaryChange: (summary: string) => void
+  onKnowledgeBodyChange: (body: string) => void
+
+  // Skill editing handlers
+  onSkillApprovalStateChange: (state: 'draft' | 'approved') => void
+  onSkillRequiresConfirmationChange: (requiresConfirmation: boolean) => void
 }
 
 type CandidateSourceRef = NonNullable<CandidateMemory['sourceRefs']>[number]
