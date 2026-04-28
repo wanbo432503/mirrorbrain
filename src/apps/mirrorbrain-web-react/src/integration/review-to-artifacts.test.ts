@@ -158,4 +158,81 @@ describe('Review to Artifacts integration', () => {
 
     expect(state.knowledgeDraft).toEqual(draft)
   })
+
+  it('undoes a kept candidate and returns it to candidates list', () => {
+    const candidate1: CandidateMemory = {
+      id: 'candidate-1',
+      memoryEventIds: ['event-1'],
+      title: 'Important Work',
+      summary: 'Research on React patterns',
+      theme: 'research',
+      reviewDate: '2026-04-14',
+      timeRange: {
+        startAt: '2026-04-14T10:00:00Z',
+        endAt: '2026-04-14T11:00:00Z',
+      },
+      reviewState: 'pending',
+    }
+
+    const candidate2: CandidateMemory = {
+      id: 'candidate-2',
+      memoryEventIds: ['event-2'],
+      title: 'Another Task',
+      summary: 'Different work',
+      theme: 'work',
+      reviewDate: '2026-04-14',
+      timeRange: {
+        startAt: '2026-04-14T12:00:00Z',
+        endAt: '2026-04-14T13:00:00Z',
+      },
+      reviewState: 'pending',
+    }
+
+    // Setup: load candidates
+    let state = mirrorBrainReducer(initialState, {
+      type: 'SET_CANDIDATES',
+      payload: [candidate1, candidate2],
+    })
+
+    expect(state.candidateMemories).toHaveLength(2)
+
+    // Action: keep candidate 1
+    const reviewedMemory: ReviewedMemory = {
+      id: 'reviewed:candidate-1',
+      candidateMemoryId: 'candidate-1',
+      candidateTitle: 'Important Work',
+      candidateSummary: 'Research on React patterns',
+      candidateTheme: 'research',
+      memoryEventIds: ['event-1'],
+      reviewDate: '2026-04-14',
+      decision: 'keep',
+      reviewedAt: '2026-04-15T10:00:00Z',
+    }
+
+    state = mirrorBrainReducer(state, {
+      type: 'ADD_REVIEWED_MEMORY',
+      payload: reviewedMemory,
+    })
+
+    // Verify: candidate is kept
+    expect(state.reviewedMemories).toHaveLength(1)
+    expect(state.reviewedMemories[0].decision).toBe('keep')
+
+    // Action: undo the keep
+    state = mirrorBrainReducer(state, {
+      type: 'REMOVE_REVIEWED_MEMORY',
+      payload: 'reviewed:candidate-1',
+    })
+
+    // Verify: reviewed memory is removed
+    expect(state.reviewedMemories).toHaveLength(0)
+
+    // Verify: candidate remains in candidates list (ready to be reviewed again)
+    expect(state.candidateMemories).toHaveLength(2)
+    expect(state.candidateMemories[0].id).toBe('candidate-1')
+    expect(state.candidateMemories[1].id).toBe('candidate-2')
+
+    // Note: In the real UI, the candidate would still be filtered out if keptCandidateIds
+    // includes it, but the state management test verifies the underlying state behavior
+  })
 }) 
