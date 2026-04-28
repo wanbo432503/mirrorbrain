@@ -120,10 +120,25 @@ export default function SelectedCandidate({
   viewingMode,
   keptCandidates,
   onUndoKeep,
+  knowledgeDraft,
+  skillDraft,
   onGenerateKnowledge,
   onGenerateSkill,
+  onRegenerateKnowledge,
+  onApproveKnowledge,
+  onSaveKnowledge,
+  onSaveSkill,
   isGeneratingKnowledge,
   isGeneratingSkill,
+  isRegeneratingKnowledge,
+  isApprovingKnowledge,
+  isSavingKnowledge,
+  isSavingSkill,
+  onKnowledgeTitleChange,
+  onKnowledgeSummaryChange,
+  onKnowledgeBodyChange,
+  onSkillApprovalStateChange,
+  onSkillRequiresConfirmationChange,
 }: SelectedCandidateProps) {
   // Kept list mode
   if (viewingMode === 'kept-list') {
@@ -177,6 +192,73 @@ export default function SelectedCandidate({
               onUndo={onUndoKeep}
             />
           ))}
+        </div>
+      </Card>
+    )
+  }
+
+  // Knowledge draft mode
+  if (viewingMode === 'knowledge-draft') {
+    // Loading state during generation
+    if (isGeneratingKnowledge) {
+      return (
+        <Card className="h-full">
+          <div className="text-center py-12">
+            <LoadingSpinner />
+            <p className="font-heading font-semibold text-base text-slate-600 mt-4">
+              Generating knowledge draft...
+            </p>
+          </div>
+        </Card>
+      )
+    }
+
+    // Draft editing interface
+    return (
+      <Card className="h-full overflow-y-auto max-h-[540px]">
+        <div className="space-y-4">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-heading font-bold text-base text-slate-900">
+              Knowledge Draft
+            </h3>
+            <div className="flex gap-2">
+              <Button
+                variant="ghost"
+                onClick={onRegenerateKnowledge}
+                loading={isRegeneratingKnowledge}
+                disabled={isRegeneratingKnowledge || isSavingKnowledge || isApprovingKnowledge}
+              >
+                {isRegeneratingKnowledge ? 'Regenerating...' : 'Regenerate'}
+              </Button>
+              <Button
+                variant="success"
+                onClick={onApproveKnowledge}
+                loading={isApprovingKnowledge}
+                disabled={isApprovingKnowledge || isSavingKnowledge || isRegeneratingKnowledge}
+              >
+                {isApprovingKnowledge ? 'Approving...' : 'Approve'}
+              </Button>
+              <Button
+                variant="primary"
+                onClick={onSaveKnowledge}
+                loading={isSavingKnowledge}
+                disabled={isSavingKnowledge || isRegeneratingKnowledge || isApprovingKnowledge}
+              >
+                {isSavingKnowledge ? 'Saving...' : 'Save'}
+              </Button>
+            </div>
+          </div>
+
+          {/* Edit Form */}
+          <TextArea
+            label="Draft Content"
+            value={knowledgeDraft?.body || ''}
+            onChange={(e) => onKnowledgeBodyChange(e.target.value)}
+            rows={20}
+            className="w-full font-body text-sm"
+            placeholder="Knowledge draft content will appear here..."
+          />
         </div>
       </Card>
     )
