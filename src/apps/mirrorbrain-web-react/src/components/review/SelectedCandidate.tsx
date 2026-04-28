@@ -264,6 +264,111 @@ export default function SelectedCandidate({
     )
   }
 
+  // Skill draft mode
+  if (viewingMode === 'skill-draft') {
+    // Loading state during generation
+    if (isGeneratingSkill) {
+      return (
+        <Card className="h-full">
+          <div className="text-center py-12">
+            <LoadingSpinner />
+            <p className="font-heading font-semibold text-base text-slate-600 mt-4">
+              Generating skill draft...
+            </p>
+          </div>
+        </Card>
+      )
+    }
+
+    // Draft editing interface
+    return (
+      <Card className="h-full overflow-y-auto max-h-[540px]">
+        <div className="space-y-4">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-heading font-bold text-base text-slate-900">
+              Skill Draft
+            </h3>
+            <div className="flex gap-2">
+              <Button
+                variant="ghost"
+                onClick={onRegenerateKnowledge}
+                disabled={isSavingSkill}
+              >
+                Regenerate
+              </Button>
+              <Button
+                variant="success"
+                onClick={onSaveSkill}
+                loading={isSavingSkill}
+                disabled={isSavingSkill}
+              >
+                {isSavingSkill ? 'Saving...' : 'Save Draft'}
+              </Button>
+            </div>
+          </div>
+
+          {/* Approval State toggle */}
+          <div className="space-y-2">
+            <p className="text-sm font-heading font-semibold text-slate-900 uppercase">
+              Approval State
+            </p>
+            <div className="flex border-b border-slate-200">
+              <button
+                onClick={() => onSkillApprovalStateChange('draft')}
+                className={`
+                  px-4 py-2 font-heading font-semibold text-xs uppercase tracking-wide
+                  cursor-pointer transition-colors duration-200
+                  focus:ring-2 focus:ring-teal-500 focus:ring-inset focus:outline-none
+                  border-b-2 -mb-px
+                  ${skillDraft?.approvalState === 'draft'
+                    ? 'border-yellow-500 text-yellow-700 bg-yellow-50/50'
+                    : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
+                  }
+                `}
+              >
+                Draft
+              </button>
+              <button
+                onClick={() => onSkillApprovalStateChange('approved')}
+                className={`
+                  px-4 py-2 font-heading font-semibold text-xs uppercase tracking-wide
+                  cursor-pointer transition-colors duration-200
+                  focus:ring-2 focus:ring-teal-500 focus:ring-inset focus:outline-none
+                  border-b-2 -mb-px
+                  ${skillDraft?.approvalState === 'approved'
+                    ? 'border-green-500 text-green-700 bg-green-50/50'
+                    : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
+                  }
+                `}
+              >
+                Approved
+              </button>
+            </div>
+          </div>
+
+          {/* Workflow Evidence display */}
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+            <p className="text-xs font-heading font-semibold text-slate-600 uppercase mb-2">
+              Workflow Evidence
+            </p>
+            <p className="font-body text-sm text-slate-700">
+              {skillDraft?.workflowEvidenceRefs?.length || 0} references attached
+            </p>
+          </div>
+
+          {/* Execution Safety checkbox */}
+          <Checkbox
+            label="Requires Confirmation"
+            description="Skill execution must be explicitly confirmed by user"
+            checked={skillDraft?.executionSafetyMetadata?.requiresConfirmation || true}
+            onChange={(e) => onSkillRequiresConfirmationChange(e.target.checked)}
+          />
+        </div>
+      </Card>
+    )
+  }
+
   // Detail mode (existing behavior)
   if (!candidate) {
     return (
