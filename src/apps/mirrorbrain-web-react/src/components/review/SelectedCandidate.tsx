@@ -155,18 +155,18 @@ export default function SelectedCandidate({
               <Button
                 variant="primary"
                 onClick={onGenerateKnowledge}
-                disabled={isGeneratingKnowledge || keptCandidates.length === 0}
+                disabled={keptCandidates.length === 0}
                 loading={isGeneratingKnowledge}
               >
-                {isGeneratingKnowledge ? 'Generating...' : 'Generate Knowledge'}
+                Generate Knowledge
               </Button>
               <Button
                 variant="primary"
                 onClick={onGenerateSkill}
-                disabled={isGeneratingSkill || keptCandidates.length === 0}
+                disabled={keptCandidates.length === 0}
                 loading={isGeneratingSkill}
               >
-                {isGeneratingSkill ? 'Generating...' : 'Generate Skill'}
+                Generate Skill
               </Button>
             </div>
           </div>
