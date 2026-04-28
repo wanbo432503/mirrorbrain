@@ -120,6 +120,10 @@ export default function SelectedCandidate({
   viewingMode,
   keptCandidates,
   onUndoKeep,
+  onGenerateKnowledge,
+  onGenerateSkill,
+  isGeneratingKnowledge,
+  isGeneratingSkill,
 }: SelectedCandidateProps) {
   // Kept list mode
   if (viewingMode === 'kept-list') {
@@ -141,10 +145,30 @@ export default function SelectedCandidate({
     return (
       <Card className="h-full overflow-y-auto max-h-[540px]">
         <div className="space-y-3">
-          <div className="mb-2">
-            <h3 className="font-heading font-bold text-xs text-slate-900 uppercase tracking-wide">
-              Kept Candidates ({keptCandidates.length})
-            </h3>
+          <div className="mb-2 flex items-center justify-between">
+            <div>
+              <h3 className="font-heading font-bold text-xs text-slate-900 uppercase tracking-wide">
+                Kept Candidates ({keptCandidates.length})
+              </h3>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="primary"
+                onClick={onGenerateKnowledge}
+                disabled={isGeneratingKnowledge || keptCandidates.length === 0}
+                loading={isGeneratingKnowledge}
+              >
+                {isGeneratingKnowledge ? 'Generating...' : 'Generate Knowledge'}
+              </Button>
+              <Button
+                variant="primary"
+                onClick={onGenerateSkill}
+                disabled={isGeneratingSkill || keptCandidates.length === 0}
+                loading={isGeneratingSkill}
+              >
+                {isGeneratingSkill ? 'Generating...' : 'Generate Skill'}
+              </Button>
+            </div>
           </div>
           {keptCandidates.map((reviewedMemory) => (
             <KeptCandidateCard
