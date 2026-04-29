@@ -91,6 +91,8 @@ export async function startMirrorBrainMvpFixture() {
       queryMemory: async () => ({ items: [] }),
       listKnowledge: async () => (knowledgeArtifact === null ? [] : [knowledgeArtifact]),
       listSkillDrafts: async () => (skillArtifact === null ? [] : [skillArtifact]),
+      undoCandidateReview: async () => undefined,
+      deleteCandidateMemory: async () => undefined,
       createDailyCandidateMemories: async (_reviewDate: string) => {
         candidateMemory = {
           id: `candidate:${memoryEvents[0]?.id ?? 'empty'}`,

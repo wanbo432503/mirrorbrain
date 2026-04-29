@@ -971,6 +971,13 @@ function isSkillDraftResourceEntry(entry: OpenVikingFsEntry): boolean {
   );
 }
 
+function isMemoryEventResourceEntry(entry: OpenVikingFsEntry): boolean {
+  return (
+    entry.name.startsWith(MIRRORBRAIN_MEMORY_EVENTS_PREFIX) ||
+    entry.name.startsWith('browser')
+  );
+}
+
 export async function listMirrorBrainMemoryEventsFromOpenViking(
   input: OpenVikingReadInput,
   fetchImpl: FetchLike = fetch,
@@ -1008,8 +1015,7 @@ export async function listMirrorBrainMemoryEventsFromOpenViking(
   return Promise.all(
     filterMirrorBrainResourceEntries(
       resourceEntries,
-      (entry) =>
-        entry.name.startsWith(MIRRORBRAIN_MEMORY_EVENTS_PREFIX),
+      isMemoryEventResourceEntry,
     ).map(async (entry) => {
       const contentUris = await resolveReadableContentUris(
         {

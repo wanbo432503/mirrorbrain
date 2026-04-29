@@ -153,7 +153,15 @@ describe('mirrorbrain service memory narratives', () => {
     expect(listMemoryEvents).toHaveBeenCalledTimes(1);
 
     if (resolveListMemoryEvents !== undefined) {
-      resolveListMemoryEvents(expectedMemoryEvents);
+      resolveListMemoryEvents({
+        items: expectedMemoryEvents,
+        pagination: {
+          total: expectedMemoryEvents.length,
+          page: 1,
+          pageSize: expectedMemoryEvents.length,
+          totalPages: 1,
+        },
+      });
     }
     await syncPromise;
   });

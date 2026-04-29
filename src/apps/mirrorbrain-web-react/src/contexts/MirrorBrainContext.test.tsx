@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from 'vitest'
 import { mirrorBrainReducer, initialState } from '../contexts/MirrorBrainContext'
 import type { ReviewedMemory, CandidateMemory } from '../types/index'

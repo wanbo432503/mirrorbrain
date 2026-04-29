@@ -6,6 +6,7 @@ import LoadingSpinner from '../common/LoadingSpinner'
 import { useMirrorBrain } from '../../contexts/MirrorBrainContext'
 import { createMirrorBrainBrowserApi, type MirrorBrainWebAppApi } from '../../api/client'
 import { useSyncOperations } from '../../hooks/useSyncOperations'
+import type { MemoryEvent } from '../../types/index'
 
 const MEMORY_PAGE_SIZE = 5
 
@@ -13,6 +14,18 @@ export function shouldLoadMemoryEvents(input: {
   hasLoadedMemoryEvents: boolean
 }) {
   return !input.hasLoadedMemoryEvents
+}
+
+export function getVisibleMemoryEvents(input: {
+  currentPage: number
+  pageSize: number
+  memoryEvents: MemoryEvent[]
+}): MemoryEvent[] {
+  const startIndex = (input.currentPage - 1) * input.pageSize
+
+  return [...input.memoryEvents]
+    .sort((left, right) => right.timestamp.localeCompare(left.timestamp))
+    .slice(startIndex, startIndex + input.pageSize)
 }
 
 export default function MemoryPanel() {

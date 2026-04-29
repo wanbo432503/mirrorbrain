@@ -173,12 +173,24 @@ describe('review to artifacts integration', () => {
     // Start HTTP server with service
     const server = await startMirrorBrainHttpServer({
       port: 0,
+      workspaceDir,
       service: {
         service: {
           status: 'running',
           config: getMirrorBrainConfig(),
         },
-        workspaceDir,
+        syncBrowserMemory: async () => ({
+          sourceKey: 'activitywatch-browser:test',
+          strategy: 'incremental' as const,
+          importedCount: 0,
+          lastSyncedAt: `${reviewDate}T00:00:00.000Z`,
+        }),
+        syncShellMemory: async () => ({
+          sourceKey: 'shell-history:test',
+          strategy: 'incremental' as const,
+          importedCount: 0,
+          lastSyncedAt: `${reviewDate}T00:00:00.000Z`,
+        }),
         listCandidateMemoriesByDate: async (date: string) => {
           if (date !== reviewDate) return [];
           // Load candidate files from workspace
@@ -196,6 +208,8 @@ describe('review to artifacts integration', () => {
           }
           return candidates;
         },
+        createDailyCandidateMemories: async () => [],
+        suggestCandidateReviews: async () => [],
         reviewCandidateMemory: async (candidate, review) => {
           return {
             id: `reviewed:${candidate.id}`,
@@ -211,6 +225,7 @@ describe('review to artifacts integration', () => {
             reviewedAt: review.reviewedAt,
           } as ReviewedMemory;
         },
+        undoCandidateReview: async () => undefined,
         generateKnowledgeFromReviewedMemories: async (reviewedMemories) => {
           knowledgeDraft = {
             id: `knowledge-draft:${reviewedMemories[0]?.id ?? 'empty'}`,
@@ -242,13 +257,13 @@ describe('review to artifacts integration', () => {
           // Publish the knowledge (mark as approved)
           const publishedArtifact: KnowledgeArtifact = {
             ...knowledgeDraft,
-            draftState: 'approved',
+            draftState: 'published',
           };
           return {
             publishedArtifact,
             assignedTopic: {
               topicKey: 'test-topic',
-              title: knowledgeDraft.title,
+              title: knowledgeDraft.title ?? 'Untitled Knowledge',
             },
           };
         },
@@ -281,6 +296,14 @@ describe('review to artifacts integration', () => {
         listMemoryEvents: async () => [],
         queryMemory: async () => ({ items: [] }),
         listSkillDrafts: async () => [],
+        generateSkillDraftFromReviewedMemories: async () => ({
+          id: 'skill-draft:test',
+          approvalState: 'draft' as const,
+          workflowEvidenceRefs: [],
+          executionSafetyMetadata: {
+            requiresConfirmation: true,
+          },
+        }),
       },
     });
 
@@ -387,7 +410,7 @@ describe('review to artifacts integration', () => {
       // Step 4: Approve knowledge
       const approveResult = await api.approveKnowledge(generatedDraft);
       expect(approveResult.publishedArtifact).toBeDefined();
-      expect(approveResult.publishedArtifact.draftState).toBe('approved');
+      expect(approveResult.publishedArtifact.draftState).toBe('published');
       expect(approveResult.assignedTopic).toBeDefined();
 
       // Step 5: Delete candidates referenced by approved knowledge

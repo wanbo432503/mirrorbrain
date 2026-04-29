@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { render, screen, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, afterEach } from 'vitest';
@@ -24,13 +25,13 @@ describe('KeptCandidateCard', () => {
   it('should render candidate title', () => {
     render(<KeptCandidateCard reviewedMemory={mockReviewedMemory} onUndo={() => {}} />);
 
-    expect(screen.getByText('Test Candidate')).toBeInTheDocument();
+    expect(screen.getByText('Test Candidate')).not.toBeNull();
   });
 
   it('should render kept badge', () => {
     render(<KeptCandidateCard reviewedMemory={mockReviewedMemory} onUndo={() => {}} />);
 
-    expect(screen.getByText('Kept')).toBeInTheDocument();
+    expect(screen.getByText('Kept')).not.toBeNull();
   });
 
   it('should call onUndo when undo button clicked', async () => {

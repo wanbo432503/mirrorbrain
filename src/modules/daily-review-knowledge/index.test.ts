@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { createKnowledgeDraft } from './index.js';
+import type { ReviewedMemory } from '../../shared/types/index.js';
 
 describe('daily review knowledge', () => {
   it('creates a knowledge draft from reviewed memory only', () => {
@@ -45,7 +46,7 @@ describe('daily review knowledge', () => {
   });
 
   it('uses sourceRefs to list primary sources in knowledge body', () => {
-    const reviewedMemory = {
+    const reviewedMemory: ReviewedMemory = {
       id: 'reviewed:candidate:test',
       candidateMemoryId: 'candidate:test',
       candidateTitle: 'GitHub issue review workflow',
@@ -100,7 +101,7 @@ describe('daily review knowledge', () => {
   });
 
   it('includes formation reasons to explain why the task matters', () => {
-    const reviewedMemory = {
+    const reviewedMemory: ReviewedMemory = {
       id: 'reviewed:candidate:test',
       candidateMemoryId: 'candidate:test',
       candidateTitle: 'API integration debugging',
@@ -128,7 +129,7 @@ describe('daily review knowledge', () => {
   });
 
   it('calculates time range from candidate when available', () => {
-    const reviewedMemory = {
+    const reviewedMemory: ReviewedMemory = {
       id: 'reviewed:candidate:test',
       candidateMemoryId: 'candidate:test',
       candidateTitle: 'Feature implementation',

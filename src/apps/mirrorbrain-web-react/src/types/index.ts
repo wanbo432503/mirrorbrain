@@ -107,6 +107,21 @@ export interface MemoryQueryResult {
   items: MemoryQueryItem[];
 }
 
+export type CandidateSourceRole =
+  | 'search'
+  | 'docs'
+  | 'chat'
+  | 'issue'
+  | 'pull-request'
+  | 'repository'
+  | 'debug'
+  | 'reference'
+  | 'shopping'
+  | 'entertainment'
+  | 'learning'
+  | 'reading'
+  | 'web';
+
 export interface CandidateMemory {
   id: string;
   memoryEventIds: string[];
@@ -116,7 +131,7 @@ export interface CandidateMemory {
     timestamp: string;
     title?: string;
     url?: string;
-    role?: 'search' | 'docs' | 'chat' | 'issue' | 'pull-request' | 'repository' | 'debug' | 'reference' | 'web';
+    role?: CandidateSourceRole;
     contribution?: 'primary' | 'supporting';
   }>;
   discardedSourceRefs?: Array<{
@@ -125,7 +140,7 @@ export interface CandidateMemory {
     timestamp: string;
     title?: string;
     url?: string;
-    role?: 'search' | 'docs' | 'chat' | 'issue' | 'pull-request' | 'repository' | 'debug' | 'reference' | 'web';
+    role?: CandidateSourceRole;
   }>;
   title: string;
   summary: string;
@@ -153,7 +168,7 @@ export interface ReviewedMemory {
     timestamp: string;
     title?: string;
     url?: string;
-    role?: 'search' | 'docs' | 'chat' | 'issue' | 'pull-request' | 'repository' | 'debug' | 'reference' | 'web';
+    role?: CandidateSourceRole;
     contribution?: 'primary' | 'supporting';
   }>;
   candidateFormationReasons?: string[];

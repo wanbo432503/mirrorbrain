@@ -431,9 +431,9 @@ describe('mirrorbrain service contract integration', () => {
     ).resolves.toEqual([
       {
         candidateMemoryId: candidate.id,
-        recommendation: 'review',
-        confidenceScore: 0.55,
-        keepScore: 46,
+        recommendation: 'discard',
+        confidenceScore: 0.74,
+        keepScore: 26,
         primarySourceCount: 1,
         supportingSourceCount: 0,
         evidenceSummary: 'Built from 1 primary page and 0 supporting pages.',

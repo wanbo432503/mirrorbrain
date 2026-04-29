@@ -115,9 +115,30 @@ interface CreateMirrorBrainServiceInput {
   workspaceDir?: string;
 }
 
+type MemoryEventReadResult =
+  | MemoryEvent[]
+  | {
+      items: MemoryEvent[];
+      pagination: {
+        total: number;
+        page: number;
+        pageSize: number;
+        totalPages: number;
+      };
+    };
+
+type ListMemoryEventsDependency = (
+  input: { baseUrl: string },
+  fetchImpl?: Parameters<typeof listMirrorBrainMemoryEventsFromOpenViking>[1],
+) => Promise<MemoryEventReadResult>;
+
+type CreateCandidateMemoriesDependency = (
+  input: Parameters<typeof createCandidateMemories>[0],
+) => CandidateMemory[] | Promise<CandidateMemory[]>;
+
 interface CreateMirrorBrainServiceDependencies {
   queryMemory?: typeof queryMemoryFromPluginApi;
-  listMemoryEvents?: typeof listMirrorBrainMemoryEventsFromOpenViking;
+  listMemoryEvents?: ListMemoryEventsDependency;
   listWorkspaceMemoryEvents?: typeof listMirrorBrainMemoryEventsFromWorkspace;
   listRawWorkspaceMemoryEvents?: typeof listRawMirrorBrainMemoryEventsFromWorkspace;
   listMemoryNarratives?: typeof listMirrorBrainMemoryNarrativesFromOpenViking;
@@ -141,10 +162,14 @@ interface CreateMirrorBrainServiceDependencies {
   }) => KnowledgeArtifact | Promise<KnowledgeArtifact>;
   generateSkillDraft?: typeof buildSkillDraftFromReviewedMemories;
   reviewMemory?: typeof reviewCandidateMemory;
-  createCandidateMemories?: typeof createCandidateMemories;
+  createCandidateMemories?: CreateCandidateMemoriesDependency;
   suggestCandidateReviews?: typeof suggestCandidateReviews;
   loadBrowserPageContentArtifactFromWorkspace?: typeof loadBrowserPageContentArtifactFromWorkspace;
   analyzeKnowledge?: typeof analyzeKnowledgeWithConfiguredLLM;
+}
+
+function normalizeMemoryEventReadResult(result: MemoryEventReadResult): MemoryEvent[] {
+  return Array.isArray(result) ? result : result.items;
 }
 
 const SYNC_IMPORTED_EVENT_PREVIEW_LIMIT = 50;
@@ -445,7 +470,25 @@ export function createMirrorBrainService(
       ),
     );
   };
+  const listOpenVikingMemoryEventArray = async (
+    input: { baseUrl: string },
+  ): Promise<MemoryEvent[]> =>
+    normalizeMemoryEventReadResult(await listMemoryEvents(input));
   const loadOrInitializeCache = async (): Promise<MemoryEventsCache> => {
+    if (
+      dependencies.listMemoryEvents !== undefined ||
+      dependencies.listWorkspaceMemoryEvents !== undefined
+    ) {
+      return initializeCacheFromOpenViking(
+        workspaceDir,
+        baseUrl,
+        {
+          listWorkspaceMemoryEvents: listWorkspaceMemoryEvents,
+          listOpenVikingMemoryEvents: listOpenVikingMemoryEventArray,
+        },
+      );
+    }
+
     let cache = await loadMemoryEventsCache(workspaceDir);
 
     if (cache === null) {
@@ -454,7 +497,7 @@ export function createMirrorBrainService(
         baseUrl,
         {
           listWorkspaceMemoryEvents: listWorkspaceMemoryEvents,
-          listOpenVikingMemoryEvents: listMemoryEvents,
+          listOpenVikingMemoryEvents: listOpenVikingMemoryEventArray,
         },
       );
     }
@@ -463,7 +506,7 @@ export function createMirrorBrainService(
   };
   const loadMemoryEvents = async (): Promise<MemoryEvent[]> => {
     try {
-      return await listMemoryEvents({ baseUrl });
+      return await listOpenVikingMemoryEventArray({ baseUrl });
     } catch {
       return listWorkspaceMemoryEvents({
         workspaceDir,
@@ -555,7 +598,9 @@ export function createMirrorBrainService(
       scheduleMemoryNarrativeRefresh(sync, buildBrowserThemeNarratives);
 
       if (sync.importedEvents && sync.importedEvents.length > 0) {
-        await updateCacheWithNewEvents(workspaceDir, baseUrl, sync.importedEvents, 'browser');
+        void updateCacheWithNewEvents(workspaceDir, baseUrl, sync.importedEvents, 'browser').catch(
+          () => undefined,
+        );
       }
 
       return summarizeImportedEvents(sync) as BrowserMemorySyncResult;
@@ -565,7 +610,9 @@ export function createMirrorBrainService(
       scheduleMemoryNarrativeRefresh(sync, buildShellProblemNarratives);
 
       if (sync.importedEvents && sync.importedEvents.length > 0) {
-        await updateCacheWithNewEvents(workspaceDir, baseUrl, sync.importedEvents, 'shell');
+        void updateCacheWithNewEvents(workspaceDir, baseUrl, sync.importedEvents, 'shell').catch(
+          () => undefined,
+        );
       }
 
       return summarizeImportedEvents(sync) as ShellMemorySyncResult;

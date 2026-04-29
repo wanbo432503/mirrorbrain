@@ -252,6 +252,22 @@ export default function SelectedCandidate({
 
           {/* Edit Form */}
           <TextArea
+            label="Draft Title"
+            value={knowledgeDraft?.title || ''}
+            onChange={(e) => onKnowledgeTitleChange(e.target.value)}
+            rows={2}
+            className="w-full font-body text-sm"
+            placeholder="Knowledge draft title..."
+          />
+          <TextArea
+            label="Draft Summary"
+            value={knowledgeDraft?.summary || ''}
+            onChange={(e) => onKnowledgeSummaryChange(e.target.value)}
+            rows={4}
+            className="w-full font-body text-sm"
+            placeholder="Knowledge draft summary..."
+          />
+          <TextArea
             label="Draft Content"
             value={knowledgeDraft?.body || ''}
             onChange={(e) => onKnowledgeBodyChange(e.target.value)}

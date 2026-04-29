@@ -4,7 +4,21 @@ import type {
   MemoryEvent,
   ReviewedMemory,
 } from '../../shared/types/index.js';
-import { generateTitleWithLLM } from '../../shared/llm-title-generation/http-fetch.js';
+
+type PageRole =
+  | 'search'
+  | 'docs'
+  | 'chat'
+  | 'issue'
+  | 'pull-request'
+  | 'repository'
+  | 'debug'
+  | 'reference'
+  | 'shopping'
+  | 'entertainment'
+  | 'learning'
+  | 'reading'
+  | 'web';
 
 interface CreateCandidateMemoriesInput {
   reviewDate: string;
@@ -42,7 +56,7 @@ interface EventDescriptor {
   host: string;
   url?: string;
   title?: string;
-  role: 'search' | 'docs' | 'chat' | 'issue' | 'pull-request' | 'repository' | 'debug' | 'reference' | 'web';
+  role: PageRole;
   tokens: string[];
   salientTokens: string[];
 }
@@ -147,9 +161,9 @@ const TOKEN_STOP_WORDS = new Set([
   // Numbers are filtered during token extraction instead
 ]);
 
-export async function createCandidateMemories(
+export function createCandidateMemories(
   input: CreateCandidateMemoriesInput,
-): Promise<CandidateMemory[]> {
+): CandidateMemory[] {
   const reviewTimeZone = input.reviewTimeZone;
   const dailyEvents = input.memoryEvents
     .filter((event) =>
@@ -166,36 +180,15 @@ export async function createCandidateMemories(
   const limitedGroups = limitCandidateGroups(groups, MAX_DAILY_CANDIDATES);
   const stableKeys = assignStableGroupKeys(limitedGroups);
 
-  return await Promise.all(
-    limitedGroups.map(async (group, index) => {
+  return limitedGroups.map((group, index) => {
       const sortedEvents = [...group.memoryEvents].sort((left, right) =>
         left.timestamp.localeCompare(right.timestamp),
       );
-
-      // Prepare LLM context
-      const urls = sortedEvents
-        .map(e => typeof e.content.url === 'string' ? e.content.url : undefined)
-        .filter((url): url is string => url !== undefined);
-
-      const titles = sortedEvents
-        .map(e => typeof e.content.title === 'string' ? e.content.title : undefined)
-        .filter((title): title is string => title !== undefined);
-
-      const pageContents = sortedEvents
-        .map(e => typeof e.content.pageText === 'string' ? e.content.pageText : undefined)
-        .filter((content): content is string => content !== undefined);
-
-      // Generate natural language title/summary using LLM
-      const llmOutput = await generateTitleWithLLM({
-        urls,
-        titles,
-        pageContents,
-        hosts: group.hosts,
-        timeRange: {
-          startAt: sortedEvents[0]?.timestamp ?? '',
-          endAt: sortedEvents[sortedEvents.length - 1]?.timestamp ?? '',
-        },
-      });
+      const title = createTaskTitle(sortedEvents, group.taskTokens, group.hosts);
+      const durationMinutes = getDurationMinutes(
+        sortedEvents[0]?.timestamp ?? '',
+        sortedEvents[sortedEvents.length - 1]?.timestamp ?? '',
+      );
 
       return {
         id: `candidate:${input.reviewDate}:${stableKeys[index]}`,
@@ -219,8 +212,13 @@ export async function createCandidateMemories(
         })),
         discardedSourceRefs:
           group.discardedSourceRefs.length > 0 ? [...group.discardedSourceRefs] : undefined,
-        title: llmOutput.title, // Use LLM-generated natural language title
-        summary: llmOutput.summary, // Use LLM-generated summary
+        title,
+        summary: createCandidateSummary({
+          title,
+          eventCount: sortedEvents.length,
+          hostCount: group.hosts.length,
+          durationMinutes,
+        }),
         theme: group.theme,
         formationReasons: [...group.formationReasons],
         compressedSourceCount: group.compressedSourceCount,
@@ -233,8 +231,7 @@ export async function createCandidateMemories(
         },
         reviewState: 'pending',
       };
-    }),
-  );
+    });
 }
 
 export function reviewCandidateMemory(
@@ -279,6 +276,10 @@ export function suggestCandidateReviews(
     const hasDebug = pageRoles.includes('debug');
     const hasSearch = pageRoles.includes('search');
     const hasReference = pageRoles.includes('reference');
+    const hasShopping = pageRoles.includes('shopping');
+    const hasEntertainment = pageRoles.includes('entertainment');
+    const hasLearning = pageRoles.includes('learning');
+    const hasReading = pageRoles.includes('reading');
 
     // Infer task type
     const taskType = inferTaskType({
@@ -289,6 +290,10 @@ export function suggestCandidateReviews(
       hasDebug,
       hasSearch,
       hasReference,
+      hasShopping,
+      hasEntertainment,
+      hasLearning,
+      hasReading,
       pageRoles,
       title: candidate.title,
     });
@@ -372,10 +377,10 @@ export function suggestCandidateReviews(
     }.`;
 
     // Recommendation thresholds (adjusted for new scoring algorithm)
-    // High-quality work: 70+ (keep)
+    // High-quality work: 55+ (keep)
     // Low-quality noise: <40 (discard)
-    // Moderate quality: 40-69 (review)
-    if (keepScore >= 70) {
+    // Moderate quality: 40-54 (review)
+    if (keepScore >= 55) {
       return {
         candidateMemoryId: candidate.id,
         recommendation: 'keep',
@@ -1500,7 +1505,7 @@ function getDurationMinutes(startAt: string, endAt: string): number {
 function inferPageRole(input: {
   url?: string;
   title?: string;
-}): 'search' | 'docs' | 'chat' | 'issue' | 'pull-request' | 'repository' | 'debug' | 'reference' | 'shopping' | 'entertainment' | 'learning' | 'reading' | 'web' {
+}): PageRole {
   const url = input.url ?? '';
   const title = (input.title ?? '').toLowerCase();
   const normalized = `${url.toLowerCase()} ${title}`;
@@ -1569,7 +1574,7 @@ function inferPageRole(input: {
 }
 
 function inferSourceContribution(
-  role: 'search' | 'docs' | 'chat' | 'issue' | 'pull-request' | 'repository' | 'debug' | 'reference' | 'shopping' | 'entertainment' | 'learning' | 'reading' | 'web',
+  role: PageRole,
 ): 'primary' | 'supporting' {
   if (role === 'search' || role === 'chat') {
     return 'supporting';

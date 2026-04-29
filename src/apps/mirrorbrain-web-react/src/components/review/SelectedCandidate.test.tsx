@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it, afterEach, vi } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -7,7 +8,7 @@ import SelectedCandidate, {
   getCandidateFormationReasons,
   splitCandidateSourcesByContribution,
 } from './SelectedCandidate'
-import type { CandidateMemory, ReviewedMemory, KnowledgeArtifact, SkillArtifact } from '../../types/index'
+import type { CandidateMemory, ReviewedMemory, KnowledgeArtifact } from '../../types/index'
 
 describe('SelectedCandidate helpers', () => {
   it('formats candidate duration from the candidate time range', () => {
@@ -158,8 +159,8 @@ describe('SelectedCandidate component rendering', () => {
       />
     )
 
-    expect(screen.getByText('Test Candidate')).toBeInTheDocument()
-    expect(screen.getByText('Test summary')).toBeInTheDocument()
+    expect(screen.getByText('Test Candidate')).not.toBeNull()
+    expect(screen.getByText('Test summary')).not.toBeNull()
   })
 
   it('should render kept list view when viewingMode is kept-list', () => {
@@ -191,8 +192,8 @@ describe('SelectedCandidate component rendering', () => {
       />
     )
 
-    expect(screen.getByText('Kept Candidate 1')).toBeInTheDocument()
-    expect(screen.getByText('Kept Candidate 2')).toBeInTheDocument()
+    expect(screen.getByText('Kept Candidate 1')).not.toBeNull()
+    expect(screen.getByText('Kept Candidate 2')).not.toBeNull()
     expect(screen.getAllByText('Kept')).toHaveLength(2)
   })
 
@@ -263,8 +264,8 @@ describe('SelectedCandidate component rendering', () => {
       />
     )
 
-    expect(screen.getByText('Generate Knowledge')).toBeInTheDocument()
-    expect(screen.getByText('Generate Skill')).toBeInTheDocument()
+    expect(screen.getByText('Generate Knowledge')).not.toBeNull()
+    expect(screen.getByText('Generate Skill')).not.toBeNull()
   })
 
   it('should call onGenerateKnowledge when Generate Knowledge button clicked', async () => {
@@ -333,7 +334,7 @@ describe('SelectedCandidate component rendering', () => {
       />
     )
 
-    expect(screen.getByText('Generating knowledge draft...')).toBeInTheDocument()
+    expect(screen.getByText('Generating knowledge draft...')).not.toBeNull()
   })
 
   it('should show draft editing interface in knowledge-draft mode', () => {
@@ -384,8 +385,8 @@ describe('SelectedCandidate component rendering', () => {
       />
     )
 
-    expect(screen.getByText('Knowledge Draft')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Regenerate' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Approve' })).toBeInTheDocument()
+    expect(screen.getByText('Knowledge Draft')).not.toBeNull()
+    expect(screen.getByRole('button', { name: 'Regenerate' })).not.toBeNull()
+    expect(screen.getByRole('button', { name: 'Approve' })).not.toBeNull()
   })
 })

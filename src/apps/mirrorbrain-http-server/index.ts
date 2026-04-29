@@ -29,15 +29,7 @@ interface MirrorBrainHttpService {
   listMemoryEvents(input?: {
     page?: number;
     pageSize?: number;
-  }): Promise<{
-    items: MemoryEvent[];
-    pagination: {
-      total: number;
-      page: number;
-      pageSize: number;
-      totalPages: number;
-    };
-  }>;
+  }): Promise<MemoryEvent[] | PaginatedMemoryEvents>;
   queryMemory?(input: MemoryQueryInput): Promise<MemoryQueryResult>;
   listKnowledge(): Promise<KnowledgeArtifact[]>;
   listKnowledgeTopics?(): Promise<
@@ -93,6 +85,17 @@ interface StartMirrorBrainHttpServerInput {
   host?: string;
   port?: number;
   staticDir?: string;
+  workspaceDir?: string;
+}
+
+interface PaginatedMemoryEvents {
+  items: MemoryEvent[];
+  pagination: {
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  };
 }
 
 interface MirrorBrainHttpServer {
@@ -573,6 +576,18 @@ export async function startMirrorBrainHttpServer(
       const page = request.query.page ?? 1;
       const pageSize = request.query.pageSize ?? 10;
       const result = await input.service.listMemoryEvents({ page, pageSize });
+      if (Array.isArray(result)) {
+        return {
+          items: result,
+          pagination: {
+            total: result.length,
+            page,
+            pageSize,
+            totalPages: Math.max(1, Math.ceil(result.length / pageSize)),
+          },
+        };
+      }
+
       return result;
     },
   );

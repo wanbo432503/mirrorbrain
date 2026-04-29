@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { describe, beforeEach, afterEach, it, expect, vi } from 'vitest';
 
-import type { MemoryEvent } from '../../../shared/types/index.js';
+import type { MemoryEvent } from '../../shared/types/index.js';
 import {
   loadMemoryEventsCache,
   saveMemoryEventsCache,
@@ -105,7 +105,7 @@ describe('memory-events-cache', () => {
 
       const cacheFilePath = join(tempWorkspace, 'mirrorbrain', 'cache', 'memory-events-cache.json');
       const content = await readFile(cacheFilePath, 'utf8');
-      const parsed = JSON.parse(content);
+      const parsed = JSON.parse(content) as MemoryEventsCache;
 
       expect(parsed.version).toBe(1);
       expect(parsed.total).toBe(1);
@@ -297,7 +297,7 @@ describe('memory-events-cache', () => {
       );
 
       expect(result.total).toBe(1);
-      expect(result.events[0].content.accessTimes.length).toBe(2);
+      expect((result.events[0].content as { accessTimes: string[] }).accessTimes.length).toBe(2);
     });
   });
 });

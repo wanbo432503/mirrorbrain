@@ -87,6 +87,7 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and a 
   - `SubtabNavigation.tsx` - History Topics / Draft Generation subtabs
   - `HistoryTable.tsx` - Reusable history table
   - `HistoryTopics.tsx` - History topics view (3 tables)
+  - `KnowledgeDetailModal.tsx` - Topic knowledge detail dialog
   - `CandidateContext.tsx` - Reviewed memory context
   - `DraftEditor.tsx` - Knowledge/Skill draft editor
 
