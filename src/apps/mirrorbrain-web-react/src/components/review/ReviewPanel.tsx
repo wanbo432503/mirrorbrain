@@ -192,6 +192,12 @@ export default function ReviewPanel() {
           try {
             await api.deleteCandidateMemory(candidateId)
             dispatch({ type: 'REMOVE_CANDIDATE', payload: candidateId })
+            // Also remove from keptCandidateIds to update filtered list
+            setKeptCandidateIds(prev => {
+              const next = new Set(prev)
+              next.delete(candidateId)
+              return next
+            })
           } catch (error) {
             deletionErrors.push({ candidateId, error: error as Error })
           }
