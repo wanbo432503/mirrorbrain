@@ -31,6 +31,12 @@ export function shouldAutoLoadDailyCandidates(input: {
   return !input.hasAutoLoaded && input.candidateCount === 0 && input.hasLoadedMemoryEvents
 }
 
+export function getCandidateIdsForReviewedMemorySources(sourceReviewedMemoryIds: string[]): string[] {
+  return sourceReviewedMemoryIds
+    .map(id => id.replace(/^reviewed:/, ''))
+    .filter(id => id.startsWith('candidate:'))
+}
+
 export default function ReviewPanel() {
   const { state, dispatch } = useMirrorBrain()
   const knowledgeDraft = state.knowledgeDraft
@@ -172,7 +178,7 @@ export default function ReviewPanel() {
   }
 
   const handleApproveKnowledge = async () => {
-    if (!knowledgeDraft?.id || !approveKnowledge) return
+    if (!knowledgeDraft?.id || !approveKnowledge || !api.deleteCandidateMemory) return
 
     setApprovalFeedback(null) // Clear previous approval feedback
     try {
@@ -182,9 +188,7 @@ export default function ReviewPanel() {
 
         // Extract candidate IDs from sourceReviewedMemoryIds
         const sourceReviewedIds = knowledgeDraft.sourceReviewedMemoryIds || []
-        const candidateIds = sourceReviewedIds
-          .map(id => id.replace(/^reviewed:/, 'candidate:'))
-          .filter(id => id.startsWith('candidate:')) // Validate conversion result
+        const candidateIds = getCandidateIdsForReviewedMemorySources(sourceReviewedIds)
 
         // Batch delete candidates
         const deletionErrors: Array<{ candidateId: string; error: Error }> = []

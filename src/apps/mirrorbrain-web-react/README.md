@@ -68,6 +68,7 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and a 
   - AI review suggestions (confidence/priority/rationale/keep score/supporting reasons)
   - Keep/Discard decisions
   - Reviewed memory display
+  - Knowledge approval removes the approved draft's source candidates from the review list and persisted candidate storage
   - Review requests now send the local timezone so the service can use the correct day boundary
 
 ### Phase 5: Artifacts Panel + Forms ✅ (Completed)

@@ -99,7 +99,7 @@ const handleApproveKnowledge = async () => {
       // 提取candidate IDs from sourceReviewedMemoryIds
       const sourceReviewedIds = knowledgeDraft.sourceReviewedMemoryIds || []
       const candidateIds = sourceReviewedIds
-        .map(id => id.replace(/^reviewed:/, 'candidate:'))
+        .map(id => id.replace(/^reviewed:/, ''))
         .filter(id => id.startsWith('candidate:')) // 验证转换结果
       
       // 批量删除candidates
@@ -366,7 +366,7 @@ if (candidateIds.length === 0) {
 **处理:**
 ```typescript
 const candidateIds = sourceReviewedIds
-  .map(id => id.replace(/^reviewed:/, 'candidate:'))
+  .map(id => id.replace(/^reviewed:/, ''))
   .filter(id => id.startsWith('candidate:')) // 验证转换结果
 ```
 **结果:** 异常ID被过滤，只删除合法candidate IDs  
@@ -412,7 +412,7 @@ const handleApproveSkill = async () => {
   // Extract from workflowEvidenceRefs
   const reviewedIds = skillDraft?.workflowEvidenceRefs || []
   const candidateIds = reviewedIds
-    .map(id => id.replace(/^reviewed:/, 'candidate:'))
+    .map(id => id.replace(/^reviewed:/, ''))
     .filter(id => id.startsWith('candidate:'))
   
   // Same deletion logic as knowledge
