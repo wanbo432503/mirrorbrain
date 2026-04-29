@@ -64,6 +64,7 @@ export interface MirrorBrainWebAppApi {
     artifact: KnowledgeArtifact
   ): Promise<KnowledgeArtifact>;
   saveSkillArtifact?(artifact: SkillArtifact): Promise<SkillArtifact>;
+  deleteCandidateMemory?(candidateMemoryId: string): Promise<void>;
 }
 
 export function createMirrorBrainBrowserApi(
@@ -276,6 +277,28 @@ export function createMirrorBrainBrowserApi(
       });
       const body = await readJson<{ artifact: SkillArtifact }>(response);
       return body.artifact;
+    },
+
+    async deleteCandidateMemory(candidateMemoryId: string) {
+      const response = await fetch(`${baseUrl}/candidate-memories/${candidateMemoryId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          // File already deleted, treat as success
+          return;
+        }
+
+        let errorMessage = 'Failed to delete candidate memory';
+        try {
+          const body = await response.json();
+          errorMessage = body.message || body.error || errorMessage;
+        } catch {
+          errorMessage += `: ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
+      }
     },
   };
 }

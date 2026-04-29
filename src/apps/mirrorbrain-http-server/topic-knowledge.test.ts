@@ -104,6 +104,8 @@ describe('mirrorbrain http server topic knowledge endpoints', () => {
       createDailyCandidateMemories: vi.fn(),
       suggestCandidateReviews: vi.fn(),
       reviewCandidateMemory: vi.fn(),
+      undoCandidateReview: vi.fn(),
+      deleteCandidateMemory: vi.fn(),
       generateKnowledgeFromReviewedMemories: vi.fn(),
       generateSkillDraftFromReviewedMemories: vi.fn(),
       publishKnowledge: vi.fn(),

@@ -45,7 +45,7 @@ export default function ReviewPanel() {
     reviewWindowDate,
     reviewWindowEventCount,
     selectedCandidateId,
-    feedback,
+    feedback: workflowFeedback,
     isCreatingCandidates,
     isReviewing,
     createDailyCandidates,
@@ -76,6 +76,7 @@ export default function ReviewPanel() {
   const [hasAutoLoaded, setHasAutoLoaded] = useState(false)
   const [keptCandidateIds, setKeptCandidateIds] = useState<Set<string>>(new Set())
   const [viewingMode, setViewingMode] = useState<'detail' | 'kept-list' | 'knowledge-draft' | 'skill-draft'>('detail')
+  const [approvalFeedback, setApprovalFeedback] = useState<{ kind: 'success' | 'error'; message: string } | null>(null)
 
   // Filter out kept candidates from main list
   const unreviewedCandidates = useMemo(() => {
@@ -147,6 +148,7 @@ export default function ReviewPanel() {
   }
 
   const handleGenerateKnowledge = async () => {
+    setApprovalFeedback(null) // Clear approval feedback when starting new operation
     try {
       const artifact = await generateKnowledge(keptCandidates)
       dispatch({ type: 'SET_KNOWLEDGE_DRAFT', payload: artifact })
@@ -158,6 +160,7 @@ export default function ReviewPanel() {
 
   const handleRegenerateKnowledge = async () => {
     if (!knowledgeDraft || !regenerateKnowledge) return
+    setApprovalFeedback(null) // Clear approval feedback when starting new operation
     try {
       const artifact = await regenerateKnowledge(knowledgeDraft, keptCandidates)
       if (artifact) {
@@ -170,14 +173,51 @@ export default function ReviewPanel() {
 
   const handleApproveKnowledge = async () => {
     if (!knowledgeDraft?.id || !approveKnowledge) return
+
+    setApprovalFeedback(null) // Clear previous approval feedback
     try {
       const result = await approveKnowledge(knowledgeDraft)
       if (result) {
+        // Knowledge approve succeeded - primary operation
+
+        // Extract candidate IDs from sourceReviewedMemoryIds
+        const sourceReviewedIds = knowledgeDraft.sourceReviewedMemoryIds || []
+        const candidateIds = sourceReviewedIds
+          .map(id => id.replace(/^reviewed:/, 'candidate:'))
+          .filter(id => id.startsWith('candidate:')) // Validate conversion result
+
+        // Batch delete candidates
+        const deletionErrors: Array<{ candidateId: string; error: Error }> = []
+        for (const candidateId of candidateIds) {
+          try {
+            await api.deleteCandidateMemory(candidateId)
+            dispatch({ type: 'REMOVE_CANDIDATE', payload: candidateId })
+          } catch (error) {
+            deletionErrors.push({ candidateId, error: error as Error })
+          }
+        }
+
+        // Show feedback
+        if (deletionErrors.length > 0) {
+          setApprovalFeedback({
+            kind: 'error',
+            message: `Knowledge approved, but ${deletionErrors.length} candidate deletion(s) failed`
+          })
+        } else {
+          setApprovalFeedback({
+            kind: 'success',
+            message: 'Knowledge approved and candidates deleted'
+          })
+        }
+
+        // Clear draft state
         dispatch({ type: 'SET_KNOWLEDGE_DRAFT', payload: null })
+        dispatch({ type: 'CLEAR_KEPT_REVIEWED_MEMORIES' })
         setViewingMode('kept-list')
       }
     } catch (error) {
-      // Error handled by useArtifacts
+      // Approve failed - no deletion attempt
+      setApprovalFeedback({ kind: 'error', message: 'Knowledge approval failed' })
     }
   }
 
@@ -215,6 +255,7 @@ export default function ReviewPanel() {
   }
 
   const handleGenerateSkill = async () => {
+    setApprovalFeedback(null) // Clear approval feedback when starting new operation
     try {
       const artifact = await generateSkill(keptCandidates)
       dispatch({ type: 'SET_SKILL_DRAFT', payload: artifact })
@@ -282,21 +323,24 @@ export default function ReviewPanel() {
 
   const selectedCandidate = getSelectedCandidate()
 
+  // Display approval feedback if present, otherwise workflow feedback
+  const displayFeedback = approvalFeedback || workflowFeedback
+
   return (
     <div>
       {/* Feedback Banner */}
-      {feedback && (
+      {displayFeedback && (
         <div
           className={`mb-3 p-3 rounded-lg border ${
-            feedback.kind === 'success'
+            displayFeedback.kind === 'success'
               ? 'bg-green-100 border-green-300 text-green-700'
-              : feedback.kind === 'error'
+              : displayFeedback.kind === 'error'
               ? 'bg-red-100 border-red-300 text-red-700'
               : 'bg-blue-100 border-blue-300 text-blue-700'
           }`}
           role="alert"
         >
-          <p className="font-body font-medium text-sm">{feedback.message}</p>
+          <p className="font-body font-medium text-sm">{displayFeedback.message}</p>
         </div>
       )}
 

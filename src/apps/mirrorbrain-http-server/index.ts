@@ -71,6 +71,7 @@ interface MirrorBrainHttpService {
     },
   ): Promise<ReviewedMemory>;
   undoCandidateReview(reviewedMemoryId: string): Promise<void>;
+  deleteCandidateMemory(candidateMemoryId: string): Promise<void>;
   generateKnowledgeFromReviewedMemories(
     reviewedMemories: ReviewedMemory[],
   ): Promise<KnowledgeArtifact>;
@@ -882,6 +883,42 @@ export async function startMirrorBrainHttpServer(
       };
     },
   );
+
+  app.delete<{ Params: { id: string } }>(
+    '/candidate-memories/:id',
+    {
+      schema: {
+        summary: 'Delete a candidate memory by ID',
+        params: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+          },
+          required: ['id'],
+        },
+        response: {
+          204: { type: 'null', description: 'Candidate memory deleted successfully' },
+          400: { type: 'object', properties: { message: { type: 'string' } } },
+          500: { type: 'object', properties: { message: { type: 'string' } } },
+        },
+      },
+    },
+    async (request, reply) => {
+      const candidateId = request.params.id
+
+      try {
+        await input.service.deleteCandidateMemory(candidateId)
+        reply.code(204).send()
+      } catch (error) {
+        if (error instanceof ValidationError) {
+          reply.code(400).send({ message: error.message })
+        } else {
+          console.error('Error deleting candidate memory:', error)
+          reply.code(500).send({ message: 'Internal server error' })
+        }
+      }
+    }
+  )
 
   app.post<{
     Body: {

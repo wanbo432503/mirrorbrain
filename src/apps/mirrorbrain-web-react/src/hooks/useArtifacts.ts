@@ -90,13 +90,8 @@ export function useArtifacts(api: MirrorBrainWebAppApi) {
         const updatedKnowledge = [...state.knowledgeArtifacts, publishedArtifact]
         dispatch({ type: 'LOAD_KNOWLEDGE', payload: updatedKnowledge })
 
-        // Clear kept reviewed memories from global state
-        dispatch({ type: 'CLEAR_KEPT_REVIEWED_MEMORIES' })
-
-        setFeedback({
-          kind: 'success',
-          message: `Knowledge published and assigned to topic: ${assignedTopic.title}`,
-        })
+        // Note: Candidate deletion and state clearing will be handled by ReviewPanel
+        // after this approve call succeeds
 
         return { publishedArtifact, assignedTopic }
       } catch (error) {

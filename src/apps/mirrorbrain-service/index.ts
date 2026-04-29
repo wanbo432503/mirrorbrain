@@ -365,6 +365,36 @@ export function createMirrorBrainService(
         throw error;
       }
     });
+  const deleteCandidateMemory = async (candidateMemoryId: string): Promise<void> => {
+    // Validate ID format to prevent path traversal
+    if (!candidateMemoryId.startsWith('candidate:') ||
+        candidateMemoryId.includes('..') ||
+        candidateMemoryId.includes('/') ||
+        candidateMemoryId.includes('\\')) {
+      throw new ValidationError(`Invalid candidate memory ID format: ${candidateMemoryId}`);
+    }
+
+    const candidateFilePath = join(
+      workspaceDir,
+      'mirrorbrain',
+      'candidate-memories',
+      `${candidateMemoryId}.json`,
+    );
+
+    console.log(`[deleteCandidateMemory] Deleting candidate memory file: ${candidateFilePath}`);
+
+    try {
+      await unlink(candidateFilePath);
+      console.log(`[deleteCandidateMemory] Successfully deleted: ${candidateMemoryId}`);
+    } catch (error) {
+      if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+        console.log(`[deleteCandidateMemory] File already deleted: ${candidateFilePath}`);
+        return;
+      }
+      console.error(`[deleteCandidateMemory] Error deleting file: ${candidateFilePath}`, error);
+      throw error;
+    }
+  };
   const buildBrowserThemeNarratives =
     dependencies.buildBrowserThemeNarratives ?? generateBrowserThemeNarratives;
   const buildShellProblemNarratives =
@@ -790,6 +820,7 @@ export function createMirrorBrainService(
     undoCandidateReview: async (reviewedMemoryId: string): Promise<void> => {
       await undoReviewedMemory(reviewedMemoryId, workspaceDir);
     },
+    deleteCandidateMemory,
     createDailyCandidateMemories: async (
       reviewDate: string,
       reviewTimeZone?: string,

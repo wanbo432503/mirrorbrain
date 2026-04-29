@@ -155,6 +155,8 @@ describe('mirrorbrain http server', () => {
       createDailyCandidateMemories: vi.fn(),
       suggestCandidateReviews: vi.fn(),
       reviewCandidateMemory: vi.fn(),
+      undoCandidateReview: vi.fn(),
+      deleteCandidateMemory: vi.fn(),
       generateKnowledgeFromReviewedMemories: vi.fn(),
       generateSkillDraftFromReviewedMemories: vi.fn(),
       publishKnowledge: vi.fn(),
@@ -302,6 +304,8 @@ describe('mirrorbrain http server', () => {
       createDailyCandidateMemories: vi.fn(),
       suggestCandidateReviews: vi.fn(),
       reviewCandidateMemory: vi.fn(),
+      undoCandidateReview: vi.fn(),
+      deleteCandidateMemory: vi.fn(),
       generateKnowledgeFromReviewedMemories: vi.fn(),
       generateSkillDraftFromReviewedMemories: vi.fn(),
       publishKnowledge,
@@ -442,6 +446,8 @@ describe('mirrorbrain http server', () => {
       createDailyCandidateMemories: vi.fn(),
       suggestCandidateReviews: vi.fn(),
       reviewCandidateMemory: vi.fn(),
+      undoCandidateReview: vi.fn(),
+      deleteCandidateMemory: vi.fn(),
       generateKnowledgeFromReviewedMemories: vi.fn(),
       generateSkillDraftFromReviewedMemories: vi.fn(),
       publishKnowledge: vi.fn(),
@@ -581,6 +587,8 @@ describe('mirrorbrain http server', () => {
         },
       }),
     );
+    const undoCandidateReview = vi.fn(async () => undefined);
+    const deleteCandidateMemory = vi.fn(async () => undefined);
     const service = {
       service: {
         status: 'running' as const,
@@ -614,6 +622,8 @@ describe('mirrorbrain http server', () => {
       createDailyCandidateMemories,
       suggestCandidateReviews,
       reviewCandidateMemory,
+      undoCandidateReview,
+      deleteCandidateMemory,
       generateKnowledgeFromReviewedMemories,
       generateSkillDraftFromReviewedMemories,
       publishKnowledge: vi.fn(),
@@ -852,6 +862,8 @@ describe('mirrorbrain http server', () => {
       createDailyCandidateMemories: vi.fn(),
       suggestCandidateReviews: vi.fn(),
       reviewCandidateMemory: vi.fn(),
+      undoCandidateReview: vi.fn(),
+      deleteCandidateMemory: vi.fn(),
       generateKnowledgeFromReviewedMemories: vi.fn(),
       regenerateKnowledgeDraft: vi.fn(),
       approveKnowledgeDraft,
@@ -932,6 +944,8 @@ describe('mirrorbrain http server', () => {
       createDailyCandidateMemories: vi.fn(),
       suggestCandidateReviews: vi.fn(),
       reviewCandidateMemory: vi.fn(),
+      undoCandidateReview: vi.fn(),
+      deleteCandidateMemory: vi.fn(),
       generateKnowledgeFromReviewedMemories: vi.fn(),
       generateSkillDraftFromReviewedMemories: vi.fn(),
       publishKnowledge: vi.fn(),
@@ -991,6 +1005,8 @@ describe('mirrorbrain http server', () => {
       createDailyCandidateMemories: vi.fn(),
       suggestCandidateReviews: vi.fn(),
       reviewCandidateMemory: vi.fn(),
+      undoCandidateReview: vi.fn(),
+      deleteCandidateMemory: vi.fn(),
       generateKnowledgeFromReviewedMemories: vi.fn(),
       generateSkillDraftFromReviewedMemories: vi.fn(),
       publishKnowledge: vi.fn(),
@@ -1060,6 +1076,8 @@ describe('mirrorbrain http server', () => {
       createDailyCandidateMemories: vi.fn(),
       suggestCandidateReviews: vi.fn(),
       reviewCandidateMemory: vi.fn(),
+      undoCandidateReview: vi.fn(),
+      deleteCandidateMemory: vi.fn(),
       generateKnowledgeFromReviewedMemories: vi.fn(),
       generateSkillDraftFromReviewedMemories: vi.fn(),
       publishKnowledge: vi.fn(),
@@ -1142,6 +1160,7 @@ describe('mirrorbrain http server', () => {
           // Ignore errors - operation is idempotent
         }
       }),
+      deleteCandidateMemory: vi.fn(),
       generateKnowledgeFromReviewedMemories: vi.fn(),
       generateSkillDraftFromReviewedMemories: vi.fn(),
       publishKnowledge: vi.fn(),
@@ -1195,6 +1214,7 @@ describe('mirrorbrain http server', () => {
           throw new ValidationError('Invalid reviewed memory ID format: must start with reviewed:candidate:');
         }
       }),
+      deleteCandidateMemory: vi.fn(),
       generateKnowledgeFromReviewedMemories: vi.fn(),
       generateSkillDraftFromReviewedMemories: vi.fn(),
       publishKnowledge: vi.fn(),
@@ -1250,6 +1270,7 @@ describe('mirrorbrain http server', () => {
         const filePath = join(reviewedDir, `${reviewedMemoryId}.json`);
         await rm(filePath, { force: true });
       }),
+      deleteCandidateMemory: vi.fn(),
       generateKnowledgeFromReviewedMemories: vi.fn(),
       generateSkillDraftFromReviewedMemories: vi.fn(),
       publishKnowledge: vi.fn(),
@@ -1266,6 +1287,206 @@ describe('mirrorbrain http server', () => {
 
     // Should succeed (idempotent operation)
     expect(response.status).toBe(204);
+
+    await rm(workspaceDir, { recursive: true, force: true });
+  });
+
+  it('DELETE /candidate-memories/:id should return 204 when candidate deleted successfully', async () => {
+    const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-test-'));
+
+    // Setup: create a candidate memory file
+    const candidateMemory: CandidateMemory = {
+      id: 'candidate:test-delete-1',
+      memoryEventIds: ['event-1'],
+      title: 'Test Candidate',
+      summary: 'Test summary',
+      theme: 'test',
+      reviewDate: '2026-04-28',
+      timeRange: {
+        startAt: '2026-04-28T08:00:00.000Z',
+        endAt: '2026-04-28T08:15:00.000Z',
+      },
+      sourceRefs: [{
+        id: 'event-1',
+        sourceType: 'activitywatch-browser',
+        timestamp: '2026-04-28T08:00:00.000Z',
+        title: 'Test Source',
+        url: 'https://example.com',
+      }],
+      reviewState: 'pending',
+    };
+
+    const candidateDir = join(workspaceDir, 'mirrorbrain', 'candidate-memories');
+    await mkdir(candidateDir, { recursive: true });
+    const filePath = join(candidateDir, `${candidateMemory.id}.json`);
+    await writeFile(filePath, JSON.stringify(candidateMemory, null, 2));
+
+    const deleteCandidateMemory = vi.fn(async (candidateMemoryId: string) => {
+      // Validate ID format
+      if (!candidateMemoryId.startsWith('candidate:')) {
+        throw new ValidationError('Invalid candidate memory ID format: must start with candidate:');
+      }
+      // Delete the file
+      const filePath = join(candidateDir, `${candidateMemoryId}.json`);
+      await rm(filePath, { force: true });
+    });
+
+    const service = {
+      service: {
+        status: 'running' as const,
+        config: getMirrorBrainConfig(),
+        stop: vi.fn(),
+      },
+      listMemoryEvents: vi.fn(async () => ({
+        items: [],
+        pagination: {
+          total: 0,
+          page: 1,
+          pageSize: 10,
+          totalPages: 1,
+        },
+      })),
+      queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
+      listKnowledge: vi.fn(async () => []),
+      listSkillDrafts: vi.fn(async () => []),
+      syncBrowserMemory: vi.fn(),
+      syncShellMemory: vi.fn(),
+      createDailyCandidateMemories: vi.fn(),
+      suggestCandidateReviews: vi.fn(),
+      reviewCandidateMemory: vi.fn(),
+      undoCandidateReview: vi.fn(),
+      deleteCandidateMemory,
+      generateKnowledgeFromReviewedMemories: vi.fn(),
+      generateSkillDraftFromReviewedMemories: vi.fn(),
+      publishKnowledge: vi.fn(),
+      publishSkillDraft: vi.fn(),
+    };
+
+    const server = await startMirrorBrainHttpServer({ service, workspaceDir, port: 0 });
+    servers.push(server);
+
+    // Delete the candidate memory
+    const response = await fetch(`${server.origin}/candidate-memories/${candidateMemory.id}`, {
+      method: 'DELETE',
+    });
+
+    expect(response.status).toBe(204);
+
+    // Verify file is deleted
+    await expect(access(filePath)).rejects.toThrow();
+
+    await rm(workspaceDir, { recursive: true, force: true });
+  });
+
+  it('DELETE /candidate-memories/:id should return 204 if candidate not found (idempotent)', async () => {
+    const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-test-'));
+
+    const deleteCandidateMemory = vi.fn(async (candidateMemoryId: string) => {
+      // Validate ID format
+      if (!candidateMemoryId.startsWith('candidate:')) {
+        throw new ValidationError('Invalid candidate memory ID format: must start with candidate:');
+      }
+      // Try to delete (file doesn't exist, but operation is idempotent)
+      const candidateDir = join(workspaceDir, 'mirrorbrain', 'candidate-memories');
+      const filePath = join(candidateDir, `${candidateMemoryId}.json`);
+      await rm(filePath, { force: true });
+    });
+
+    const service = {
+      service: {
+        status: 'running' as const,
+        config: getMirrorBrainConfig(),
+        stop: vi.fn(),
+      },
+      listMemoryEvents: vi.fn(async () => ({
+        items: [],
+        pagination: {
+          total: 0,
+          page: 1,
+          pageSize: 10,
+          totalPages: 1,
+        },
+      })),
+      queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
+      listKnowledge: vi.fn(async () => []),
+      listSkillDrafts: vi.fn(async () => []),
+      syncBrowserMemory: vi.fn(),
+      syncShellMemory: vi.fn(),
+      createDailyCandidateMemories: vi.fn(),
+      suggestCandidateReviews: vi.fn(),
+      reviewCandidateMemory: vi.fn(),
+      undoCandidateReview: vi.fn(),
+      deleteCandidateMemory,
+      generateKnowledgeFromReviewedMemories: vi.fn(),
+      generateSkillDraftFromReviewedMemories: vi.fn(),
+      publishKnowledge: vi.fn(),
+      publishSkillDraft: vi.fn(),
+    };
+
+    const server = await startMirrorBrainHttpServer({ service, workspaceDir, port: 0 });
+    servers.push(server);
+
+    // Delete non-existent candidate memory
+    const response = await fetch(`${server.origin}/candidate-memories/candidate:nonexistent`, {
+      method: 'DELETE',
+    });
+
+    // Should succeed (idempotent operation)
+    expect(response.status).toBe(204);
+
+    await rm(workspaceDir, { recursive: true, force: true });
+  });
+
+  it('DELETE /candidate-memories/:id should return 400 for invalid ID format', async () => {
+    const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-test-'));
+
+    const deleteCandidateMemory = vi.fn(async (candidateMemoryId: string) => {
+      if (!candidateMemoryId.startsWith('candidate:')) {
+        throw new ValidationError('Invalid candidate memory ID format: must start with candidate:');
+      }
+    });
+
+    const service = {
+      service: {
+        status: 'running' as const,
+        config: getMirrorBrainConfig(),
+        stop: vi.fn(),
+      },
+      listMemoryEvents: vi.fn(async () => ({
+        items: [],
+        pagination: {
+          total: 0,
+          page: 1,
+          pageSize: 10,
+          totalPages: 1,
+        },
+      })),
+      queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
+      listKnowledge: vi.fn(async () => []),
+      listSkillDrafts: vi.fn(async () => []),
+      syncBrowserMemory: vi.fn(),
+      syncShellMemory: vi.fn(),
+      createDailyCandidateMemories: vi.fn(),
+      suggestCandidateReviews: vi.fn(),
+      reviewCandidateMemory: vi.fn(),
+      undoCandidateReview: vi.fn(),
+      deleteCandidateMemory,
+      generateKnowledgeFromReviewedMemories: vi.fn(),
+      generateSkillDraftFromReviewedMemories: vi.fn(),
+      publishKnowledge: vi.fn(),
+      publishSkillDraft: vi.fn(),
+    };
+
+    const server = await startMirrorBrainHttpServer({ service, workspaceDir, port: 0 });
+    servers.push(server);
+
+    const response = await fetch(`${server.origin}/candidate-memories/invalid-id`, {
+      method: 'DELETE',
+    });
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.message).toContain('Invalid candidate memory ID format');
 
     await rm(workspaceDir, { recursive: true, force: true });
   });

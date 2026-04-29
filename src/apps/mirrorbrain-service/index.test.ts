@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
+import { access, mkdir, rm, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 
 import { getMirrorBrainConfig } from '../../shared/config/index.js';
 import type { BrowserPageContentArtifact } from '../../integrations/browser-page-content/index.js';
@@ -494,26 +496,8 @@ describe('mirrorbrain service', () => {
         workspaceDir: '/tmp/mirrorbrain-workspace',
       },
       {
-        listMemoryEvents: vi.fn(async () => {
-          throw new Error('fetch failed');
-        }),
-        listWorkspaceMemoryEvents: vi.fn(async () => [
-          {
-            id: 'browser:aw-event-1',
-            sourceType: 'activitywatch-browser',
-            sourceRef: 'aw-event-1',
-            timestamp: '2026-03-20T08:00:00.000Z',
-            authorizationScopeId: 'scope-browser',
-            content: {
-              url: 'https://example.com/tasks',
-              title: 'Example Tasks',
-            },
-            captureMetadata: {
-              upstreamSource: 'activitywatch',
-              checkpoint: '2026-03-20T08:00:00.000Z',
-            },
-          },
-        ]),
+        listMemoryEvents,
+        listWorkspaceMemoryEvents,
         listKnowledge: vi.fn(async () => []),
         listSkillDrafts: vi.fn(async () => []),
       },
@@ -1471,5 +1455,192 @@ describe('mirrorbrain service', () => {
       'start:candidate:2026-03-20:activitywatch-browser:github-com:example',
       'end:candidate:2026-03-20:activitywatch-browser:github-com:example',
     ]);
+  });
+
+  describe('deleteCandidateMemory', () => {
+    it('should delete existing candidate memory file', async () => {
+      const service = {
+        status: 'running' as const,
+        config: getMirrorBrainConfig(),
+        syncBrowserMemory: vi.fn(async () => ({
+          sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+          strategy: 'incremental' as const,
+          importedCount: 0,
+          lastSyncedAt: '2026-03-20T10:00:00.000Z',
+          importedEvents: [],
+        })),
+        syncShellMemory: vi.fn(async () => ({
+          sourceKey: 'shell-history:/tmp/.zsh_history',
+          strategy: 'incremental' as const,
+          importedCount: 0,
+          lastSyncedAt: '2026-03-20T10:00:00.000Z',
+          importedEvents: [],
+        })),
+        stop: vi.fn(),
+      };
+
+      const workspaceDir = '/tmp/mirrorbrain-test-workspace';
+      const candidateId = 'candidate:test-delete';
+      const candidateDir = join(workspaceDir, 'mirrorbrain', 'candidate-memories');
+      const filePath = join(candidateDir, `${candidateId}.json`);
+
+      // Create test candidate file
+      await mkdir(candidateDir, { recursive: true });
+      await writeFile(filePath, JSON.stringify({ id: candidateId }));
+
+      const api = createMirrorBrainService(
+        {
+          service,
+          workspaceDir,
+        },
+        {
+          listMemoryEvents: vi.fn(async () => ({
+            items: [],
+            pagination: { total: 0, page: 1, pageSize: 10, totalPages: 1 },
+          })),
+          listKnowledge: vi.fn(async () => []),
+          listSkillDrafts: vi.fn(async () => []),
+        },
+      );
+
+      // Delete candidate
+      await api.deleteCandidateMemory(candidateId);
+
+      // Verify file is deleted
+      await expect(access(filePath)).rejects.toThrow();
+
+      // Cleanup
+      await rm(workspaceDir, { recursive: true, force: true });
+    });
+
+    it('should succeed if file already deleted (idempotent)', async () => {
+      const service = {
+        status: 'running' as const,
+        config: getMirrorBrainConfig(),
+        syncBrowserMemory: vi.fn(async () => ({
+          sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+          strategy: 'incremental' as const,
+          importedCount: 0,
+          lastSyncedAt: '2026-03-20T10:00:00.000Z',
+          importedEvents: [],
+        })),
+        syncShellMemory: vi.fn(async () => ({
+          sourceKey: 'shell-history:/tmp/.zsh_history',
+          strategy: 'incremental' as const,
+          importedCount: 0,
+          lastSyncedAt: '2026-03-20T10:00:00.000Z',
+          importedEvents: [],
+        })),
+        stop: vi.fn(),
+      };
+
+      const workspaceDir = '/tmp/mirrorbrain-test-workspace';
+      const candidateId = 'candidate:non-existent';
+
+      const api = createMirrorBrainService(
+        {
+          service,
+          workspaceDir,
+        },
+        {
+          listMemoryEvents: vi.fn(async () => ({
+            items: [],
+            pagination: { total: 0, page: 1, pageSize: 10, totalPages: 1 },
+          })),
+          listKnowledge: vi.fn(async () => []),
+          listSkillDrafts: vi.fn(async () => []),
+        },
+      );
+
+      // Delete non-existent candidate - should succeed without error
+      await expect(api.deleteCandidateMemory(candidateId)).resolves.toBeUndefined();
+
+      // Cleanup
+      await rm(workspaceDir, { recursive: true, force: true });
+    });
+
+    it('should reject invalid candidate ID format', async () => {
+      const service = {
+        status: 'running' as const,
+        config: getMirrorBrainConfig(),
+        syncBrowserMemory: vi.fn(async () => ({
+          sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+          strategy: 'incremental' as const,
+          importedCount: 0,
+          lastSyncedAt: '2026-03-20T10:00:00.000Z',
+          importedEvents: [],
+        })),
+        syncShellMemory: vi.fn(async () => ({
+          sourceKey: 'shell-history:/tmp/.zsh_history',
+          strategy: 'incremental' as const,
+          importedCount: 0,
+          lastSyncedAt: '2026-03-20T10:00:00.000Z',
+          importedEvents: [],
+        })),
+        stop: vi.fn(),
+      };
+
+      const api = createMirrorBrainService(
+        {
+          service,
+        },
+        {
+          listMemoryEvents: vi.fn(async () => ({
+            items: [],
+            pagination: { total: 0, page: 1, pageSize: 10, totalPages: 1 },
+          })),
+          listKnowledge: vi.fn(async () => []),
+          listSkillDrafts: vi.fn(async () => []),
+        },
+      );
+
+      const invalidId = 'invalid-id-format';
+
+      await expect(api.deleteCandidateMemory(invalidId)).rejects.toThrow(
+        'Invalid candidate memory ID format: invalid-id-format',
+      );
+    });
+
+    it('should reject path traversal in candidate ID', async () => {
+      const service = {
+        status: 'running' as const,
+        config: getMirrorBrainConfig(),
+        syncBrowserMemory: vi.fn(async () => ({
+          sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+          strategy: 'incremental' as const,
+          importedCount: 0,
+          lastSyncedAt: '2026-03-20T10:00:00.000Z',
+          importedEvents: [],
+        })),
+        syncShellMemory: vi.fn(async () => ({
+          sourceKey: 'shell-history:/tmp/.zsh_history',
+          strategy: 'incremental' as const,
+          importedCount: 0,
+          lastSyncedAt: '2026-03-20T10:00:00.000Z',
+          importedEvents: [],
+        })),
+        stop: vi.fn(),
+      };
+
+      const api = createMirrorBrainService(
+        {
+          service,
+        },
+        {
+          listMemoryEvents: vi.fn(async () => ({
+            items: [],
+            pagination: { total: 0, page: 1, pageSize: 10, totalPages: 1 },
+          })),
+          listKnowledge: vi.fn(async () => []),
+          listSkillDrafts: vi.fn(async () => []),
+        },
+      );
+
+      const maliciousId = 'candidate:../secret-file';
+
+      await expect(api.deleteCandidateMemory(maliciousId)).rejects.toThrow(
+        'Invalid candidate memory ID format: candidate:../secret-file',
+      );
+    });
   });
 });
