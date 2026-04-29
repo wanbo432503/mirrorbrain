@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import Card from '../common/Card'
 import Button from '../common/Button'
 import TextArea from '../forms/TextArea'
@@ -134,12 +135,23 @@ export default function SelectedCandidate({
   isApprovingKnowledge,
   isSavingKnowledge,
   isSavingSkill,
-  onKnowledgeTitleChange,
-  onKnowledgeSummaryChange,
   onKnowledgeBodyChange,
   onSkillApprovalStateChange,
   onSkillRequiresConfirmationChange,
 }: SelectedCandidateProps) {
+  const [knowledgeRevisionRequest, setKnowledgeRevisionRequest] = useState('')
+
+  function handleImproveKnowledgeNote() {
+    const request = knowledgeRevisionRequest.trim()
+    if (request.length === 0) {
+      return
+    }
+
+    const currentBody = knowledgeDraft?.body ?? ''
+    onKnowledgeBodyChange(`${currentBody}\n\nRevision request:\n${request}`)
+    setKnowledgeRevisionRequest('')
+  }
+
   // Kept list mode
   if (viewingMode === 'kept-list') {
     if (keptCandidates.length === 0) {
@@ -250,31 +262,33 @@ export default function SelectedCandidate({
             </div>
           </div>
 
-          {/* Edit Form */}
           <TextArea
-            label="Draft Title"
-            value={knowledgeDraft?.title || ''}
-            onChange={(e) => onKnowledgeTitleChange(e.target.value)}
-            rows={2}
-            className="w-full font-body text-sm"
-            placeholder="Knowledge draft title..."
-          />
-          <TextArea
-            label="Draft Summary"
-            value={knowledgeDraft?.summary || ''}
-            onChange={(e) => onKnowledgeSummaryChange(e.target.value)}
-            rows={4}
-            className="w-full font-body text-sm"
-            placeholder="Knowledge draft summary..."
-          />
-          <TextArea
-            label="Draft Content"
+            id="generated-knowledge-note"
+            label="Generated Note"
             value={knowledgeDraft?.body || ''}
             onChange={(e) => onKnowledgeBodyChange(e.target.value)}
             rows={20}
             className="w-full font-body text-sm"
-            placeholder="Knowledge draft content will appear here..."
+            placeholder="Generated note content will appear here..."
           />
+          <div className="border-t border-slate-200 pt-4 space-y-3">
+            <TextArea
+              id="knowledge-revision-request"
+              label="Revision Request"
+              value={knowledgeRevisionRequest}
+              onChange={(e) => setKnowledgeRevisionRequest(e.target.value)}
+              rows={4}
+              className="w-full font-body text-sm"
+              placeholder="Describe how MirrorBrain should improve this note..."
+            />
+            <Button
+              variant="primary"
+              onClick={handleImproveKnowledgeNote}
+              disabled={knowledgeRevisionRequest.trim().length === 0}
+            >
+              Improve Note
+            </Button>
+          </div>
         </div>
       </Card>
     )

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, afterEach, vi } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { fireEvent, render, screen, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import SelectedCandidate, {
   formatCandidateDuration,
@@ -388,5 +388,68 @@ describe('SelectedCandidate component rendering', () => {
     expect(screen.getByText('Knowledge Draft')).not.toBeNull()
     expect(screen.getByRole('button', { name: 'Regenerate' })).not.toBeNull()
     expect(screen.getByRole('button', { name: 'Approve' })).not.toBeNull()
+  })
+
+  it('shows only the generated note body and lets users submit revision requests', () => {
+    const onKnowledgeBodyChange = vi.fn()
+    const mockKnowledgeDraft: KnowledgeArtifact = {
+      artifactType: 'daily-review-draft',
+      id: 'knowledge:test',
+      draftState: 'draft',
+      topicKey: null,
+      title: 'Hidden Knowledge Title',
+      summary: 'Hidden summary',
+      body: 'Final note body',
+      sourceReviewedMemoryIds: [],
+      derivedFromKnowledgeIds: [],
+      version: 1,
+      isCurrentBest: false,
+      supersedesKnowledgeId: null,
+      updatedAt: '2026-04-28T10:00:00Z',
+      reviewedAt: null,
+      recencyLabel: 'recent',
+      provenanceRefs: [],
+    }
+
+    render(
+      <SelectedCandidate
+        viewingMode="knowledge-draft"
+        knowledgeDraft={mockKnowledgeDraft}
+        skillDraft={null}
+        onGenerateKnowledge={() => {}}
+        onGenerateSkill={() => {}}
+        onRegenerateKnowledge={() => {}}
+        onApproveKnowledge={() => {}}
+        onSaveKnowledge={() => {}}
+        onSaveSkill={() => {}}
+        isGeneratingKnowledge={false}
+        isGeneratingSkill={false}
+        isRegeneratingKnowledge={false}
+        isApprovingKnowledge={false}
+        isSavingKnowledge={false}
+        isSavingSkill={false}
+        onUndoKeep={() => {}}
+        onKnowledgeTitleChange={() => {}}
+        onKnowledgeSummaryChange={() => {}}
+        onKnowledgeBodyChange={onKnowledgeBodyChange}
+        onSkillApprovalStateChange={() => {}}
+        onSkillRequiresConfirmationChange={() => {}}
+        candidate={undefined}
+        keptCandidates={[]}
+      />
+    )
+
+    expect(screen.queryByLabelText('Draft Title')).toBeNull()
+    expect(screen.queryByLabelText('Draft Summary')).toBeNull()
+    expect(screen.getByDisplayValue('Final note body')).not.toBeNull()
+
+    fireEvent.change(screen.getByLabelText('Revision Request'), {
+      target: { value: 'Make the action items clearer.' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Improve Note' }))
+
+    expect(onKnowledgeBodyChange).toHaveBeenCalledWith(
+      'Final note body\n\nRevision request:\nMake the action items clearer.'
+    )
   })
 })
