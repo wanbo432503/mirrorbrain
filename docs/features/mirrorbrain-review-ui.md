@@ -18,7 +18,7 @@ This UI is responsible for:
 - exposing knowledge and skill generation actions
 - exposing editable knowledge and skill draft forms in the artifacts tab
 - showing review-generated knowledge as the final note body instead of separate title and summary fields
-- collecting user revision requests below the generated note so the note body can be refined before save or approval
+- collecting user revision requests in a shorter fixed input block below the generated note so the note body can be refined before save or approval
 - organizing the artifacts tab into `history topics`, `generate knowledge`, and `generate skill` sub tabs
 - scoping artifact generation views to the candidate currently selected in the review tab
 - exposing explicit save actions for edited knowledge and skill drafts
@@ -52,7 +52,7 @@ This UI is not responsible for:
 10. The user opens the `history topics` sub tab to browse previously generated knowledge and skill artifacts in paged category tables.
 11. The user opens `generate knowledge` or `generate skill` to work against the candidate currently selected in the review tab.
 12. The user generates knowledge and skill drafts and edits them in-place through the artifacts tab.
-13. In the review tab, generated knowledge displays the note body directly and accepts a revision request that is appended to the editable note body for follow-up refinement.
+13. In the review tab, generated knowledge displays the note body directly in its own scrollable block and accepts a revision request in a separate non-scrollable input block.
 14. The user can save the edited draft artifact back through the local service API.
 15. The UI renders a visible status message after each action so the workflow is not silent.
 

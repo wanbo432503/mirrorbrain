@@ -452,4 +452,58 @@ describe('SelectedCandidate component rendering', () => {
       'Final note body\n\nRevision request:\nMake the action items clearer.'
     )
   })
+
+  it('separates the scrollable note display from a shorter non-scrollable revision input', () => {
+    const mockKnowledgeDraft: KnowledgeArtifact = {
+      artifactType: 'daily-review-draft',
+      id: 'knowledge:test',
+      draftState: 'draft',
+      topicKey: null,
+      body: 'Final note body',
+      sourceReviewedMemoryIds: [],
+      derivedFromKnowledgeIds: [],
+      version: 1,
+      isCurrentBest: false,
+      supersedesKnowledgeId: null,
+      updatedAt: '2026-04-28T10:00:00Z',
+      reviewedAt: null,
+      recencyLabel: 'recent',
+      provenanceRefs: [],
+    }
+
+    render(
+      <SelectedCandidate
+        viewingMode="knowledge-draft"
+        knowledgeDraft={mockKnowledgeDraft}
+        skillDraft={null}
+        onGenerateKnowledge={() => {}}
+        onGenerateSkill={() => {}}
+        onRegenerateKnowledge={() => {}}
+        onApproveKnowledge={() => {}}
+        onSaveKnowledge={() => {}}
+        onSaveSkill={() => {}}
+        isGeneratingKnowledge={false}
+        isGeneratingSkill={false}
+        isRegeneratingKnowledge={false}
+        isApprovingKnowledge={false}
+        isSavingKnowledge={false}
+        isSavingSkill={false}
+        onUndoKeep={() => {}}
+        onKnowledgeTitleChange={() => {}}
+        onKnowledgeSummaryChange={() => {}}
+        onKnowledgeBodyChange={() => {}}
+        onSkillApprovalStateChange={() => {}}
+        onSkillRequiresConfirmationChange={() => {}}
+        candidate={undefined}
+        keptCandidates={[]}
+      />
+    )
+
+    expect(screen.getByTestId('knowledge-note-display-block').className).toContain('overflow-y-auto')
+    expect(screen.getByTestId('knowledge-revision-input-block').className).toContain('shrink-0')
+    const revisionInput = screen.getByLabelText('Revision Request')
+    expect(revisionInput.getAttribute('rows')).toBe('2')
+    expect(revisionInput.className).toContain('resize-none')
+    expect(revisionInput.className).toContain('overflow-hidden')
+  })
 })

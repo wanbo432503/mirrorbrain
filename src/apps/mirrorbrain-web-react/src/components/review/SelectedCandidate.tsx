@@ -227,8 +227,8 @@ export default function SelectedCandidate({
 
     // Draft editing interface
     return (
-      <Card className="h-full overflow-y-auto max-h-[540px]">
-        <div className="space-y-4">
+      <Card className="h-full max-h-[540px]">
+        <div className="flex h-full min-h-[492px] flex-col gap-4">
           {/* Header */}
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-heading font-bold text-base text-slate-900">
@@ -262,23 +262,31 @@ export default function SelectedCandidate({
             </div>
           </div>
 
-          <TextArea
-            id="generated-knowledge-note"
-            label="Generated Note"
-            value={knowledgeDraft?.body || ''}
-            onChange={(e) => onKnowledgeBodyChange(e.target.value)}
-            rows={20}
-            className="w-full font-body text-sm"
-            placeholder="Generated note content will appear here..."
-          />
-          <div className="border-t border-slate-200 pt-4 space-y-3">
+          <div
+            data-testid="knowledge-note-display-block"
+            className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50 p-4"
+          >
+            <TextArea
+              id="generated-knowledge-note"
+              label="Generated Note"
+              value={knowledgeDraft?.body || ''}
+              onChange={(e) => onKnowledgeBodyChange(e.target.value)}
+              rows={18}
+              className="w-full min-h-[320px] border-transparent bg-white font-body text-sm"
+              placeholder="Generated note content will appear here..."
+            />
+          </div>
+          <div
+            data-testid="knowledge-revision-input-block"
+            className="shrink-0 border-t border-slate-200 pt-4 space-y-3"
+          >
             <TextArea
               id="knowledge-revision-request"
               label="Revision Request"
               value={knowledgeRevisionRequest}
               onChange={(e) => setKnowledgeRevisionRequest(e.target.value)}
-              rows={4}
-              className="w-full font-body text-sm"
+              rows={2}
+              className="w-full resize-none overflow-hidden font-body text-sm"
               placeholder="Describe how MirrorBrain should improve this note..."
             />
             <Button
