@@ -85,14 +85,17 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and a 
 - **Artifacts Components:**
   - `ArtifactsPanel.tsx` - Artifacts tab container
   - `SubtabNavigation.tsx` - History Topics / Draft Generation subtabs
-  - `HistoryTable.tsx` - Reusable history table
-  - `HistoryTopics.tsx` - History topics view (3 tables)
+  - `HistoryTable.tsx` - Legacy reusable history table
+  - `HistoryTopics.tsx` - Knowledge / Skill artifact timeline with single detail display and local edit conversation notes
   - `KnowledgeDetailModal.tsx` - Topic knowledge detail dialog
   - `CandidateContext.tsx` - Reviewed memory context
   - `DraftEditor.tsx` - Knowledge/Skill draft editor
 
 - **Features:**
-  - History topics display (3 paginated tables)
+  - Artifacts tab displays generated knowledge and generated skills under separate Knowledge / Skill subtabs
+  - Artifact lists are ordered newest first using artifact update or review timestamps
+  - Selecting a knowledge or skill shows its details in one shared right-side display
+  - The artifact detail display includes a local conversation area for recording requested edits against the selected artifact
   - Generate knowledge from reviewed memories
   - Generate skill from reviewed memories
   - Generated knowledge and skill drafts remain in shared app state across top-level tab switches

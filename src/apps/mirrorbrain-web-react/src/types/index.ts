@@ -224,4 +224,6 @@ export interface SkillArtifact {
   executionSafetyMetadata: {
     requiresConfirmation: boolean;
   };
+  updatedAt?: string;
+  reviewedAt?: string | null;
 }
