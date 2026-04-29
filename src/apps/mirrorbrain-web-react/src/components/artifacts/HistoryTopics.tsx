@@ -105,7 +105,7 @@ export default function HistoryTopics({
 
   return (
     <div className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
-      <Card className="max-h-[680px] overflow-y-auto">
+      <Card className="h-[680px] overflow-y-auto" data-testid="artifact-history-panel">
         <div className="space-y-4">
           <div role="tablist" aria-label="Artifact type" className="flex border-b border-slate-200">
             <button
@@ -181,10 +181,12 @@ export default function HistoryTopics({
         </div>
       </Card>
 
-      <Card className="min-h-[680px]">
+      <Card className="h-[680px]" data-testid="artifact-detail-panel">
         {selectedArtifact ? (
-          <div className="flex min-h-[620px] flex-col justify-between gap-6">
-            <ArtifactDetail artifact={selectedArtifact} notes={selectedNotes} />
+          <div className="flex h-full flex-col justify-between gap-6">
+            <div className="min-h-0 flex-1 overflow-y-auto pr-2">
+              <ArtifactDetail artifact={selectedArtifact} notes={selectedNotes} />
+            </div>
 
             <div className="border-t border-slate-200 pt-4 space-y-3">
               <TextArea

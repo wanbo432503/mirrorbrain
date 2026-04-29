@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import HistoryTopics from './HistoryTopics'
 import type { KnowledgeArtifact, SkillArtifact } from '../../types/index'
@@ -89,21 +89,32 @@ describe('HistoryTopics', () => {
     await user.click(screen.getByRole('button', { name: /Older knowledge/ }))
     expect(screen.getByText('Older body')).not.toBeNull()
 
-    await user.type(
-      screen.getByLabelText('Artifact Edit Message'),
-      'Add a note about provenance.'
-    )
-    await user.click(screen.getByRole('button', { name: 'Apply Message' }))
+    fireEvent.change(screen.getByLabelText('Artifact Edit Message'), {
+      target: { value: 'Add a note about provenance.' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Apply Message' }))
 
     expect(screen.getByText(/Add a note about provenance/)).not.toBeNull()
 
     await user.click(screen.getByRole('tab', { name: 'Skill' }))
-    await user.type(
-      screen.getByLabelText('Artifact Edit Message'),
-      'Clarify execution requires confirmation.'
-    )
-    await user.click(screen.getByRole('button', { name: 'Apply Message' }))
+    fireEvent.change(screen.getByLabelText('Artifact Edit Message'), {
+      target: { value: 'Clarify execution requires confirmation.' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Apply Message' }))
 
     expect(screen.getByText(/Clarify execution requires confirmation/)).not.toBeNull()
+  })
+
+  it('keeps the detail display the same height as the artifact history panel', () => {
+    render(
+      <HistoryTopics
+        knowledgeTopics={[]}
+        knowledgeArtifacts={[newerKnowledge]}
+        skillArtifacts={[newerSkill]}
+      />
+    )
+
+    expect(screen.getByTestId('artifact-history-panel').className).toContain('h-[680px]')
+    expect(screen.getByTestId('artifact-detail-panel').className).toContain('h-[680px]')
   })
 })

@@ -28,6 +28,8 @@ It does not synthesize new knowledge, execute skills, or persist conversational 
 
 Conversation messages are keyed by artifact category and id, so notes for one knowledge artifact do not leak into another knowledge artifact or skill artifact.
 
+The left timeline panel and right detail/edit panel share the same fixed height, with overflow scrolling inside each panel so the detail display and edit input stay visually aligned with the history list.
+
 ## Failure Modes And Constraints
 
 - Artifacts without timestamps sort after timestamped artifacts.
