@@ -294,16 +294,21 @@ export default function SelectedCandidate({
           >
             <div
               data-testid="knowledge-revision-input-row"
-              className="flex items-end gap-3"
+              className="flex w-full items-end gap-3"
             >
-              <Input
-                id="knowledge-revision-request"
-                label="Revision Request"
-                value={knowledgeRevisionRequest}
-                onChange={(e) => setKnowledgeRevisionRequest(e.target.value)}
-                className="h-10 flex-1"
-                placeholder="Describe how MirrorBrain should improve this note..."
-              />
+              <div
+                data-testid="knowledge-revision-input-field"
+                className="min-w-0 flex-1"
+              >
+                <Input
+                  id="knowledge-revision-request"
+                  label="Revision Request"
+                  value={knowledgeRevisionRequest}
+                  onChange={(e) => setKnowledgeRevisionRequest(e.target.value)}
+                  className="h-10 w-full"
+                  placeholder="Describe how MirrorBrain should improve this note..."
+                />
+              </div>
               <Button
                 variant="primary"
                 onClick={handleImproveKnowledgeNote}

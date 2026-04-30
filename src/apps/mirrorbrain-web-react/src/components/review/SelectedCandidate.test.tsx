@@ -500,6 +500,8 @@ describe('SelectedCandidate component rendering', () => {
     expect(screen.getByTestId('knowledge-note-display-block').className).toContain('overflow-hidden')
     expect(screen.getByTestId('knowledge-revision-input-block').className).toContain('shrink-0')
     expect(screen.getByTestId('knowledge-revision-input-row').className).toContain('flex')
+    expect(screen.getByTestId('knowledge-revision-input-row').className).toContain('w-full')
+    expect(screen.getByTestId('knowledge-revision-input-field').className).toContain('flex-1')
     const generatedNote = screen.getByLabelText('Generated Note')
     expect(generatedNote.className).toContain('overflow-y-auto')
     const revisionInput = screen.getByLabelText('Revision Request')
