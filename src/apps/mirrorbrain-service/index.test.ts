@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { access, mkdir, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { getMirrorBrainConfig } from '../../shared/config/index.js';
@@ -790,6 +792,111 @@ describe('mirrorbrain service', () => {
         },
       },
     });
+  });
+
+  it('falls back to workspace copies when OpenViking listings are empty', async () => {
+    const workspaceDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-service-'));
+    mkdirSync(join(workspaceDir, 'mirrorbrain', 'knowledge'), {
+      recursive: true,
+    });
+    mkdirSync(join(workspaceDir, 'mirrorbrain', 'skill-drafts'), {
+      recursive: true,
+    });
+
+    writeFileSync(
+      join(
+        workspaceDir,
+        'mirrorbrain',
+        'knowledge',
+        'knowledge-draft:workspace.md',
+      ),
+      [
+        '# knowledge-draft:workspace',
+        '',
+        '- artifactType: daily-review-draft',
+        '- draftState: draft',
+        '- topicKey: workspace-topic',
+        '- title: Workspace knowledge',
+        '- summary: Workspace summary',
+        '- version: 1',
+        '- isCurrentBest: false',
+        '- supersedesKnowledgeId: ',
+        '- updatedAt: 2026-04-29T10:00:00.000Z',
+        '- reviewedAt: 2026-04-29T09:00:00.000Z',
+        '- recencyLabel: 2026-04-29',
+        '',
+        '## Body',
+        'Workspace body',
+        '',
+        '## Source Reviewed Memories',
+        '- reviewed:workspace',
+        '',
+        '## Derived Knowledge Artifacts',
+        '',
+        '## Provenance Refs',
+        '- reviewed-memory:reviewed:workspace',
+      ].join('\n'),
+    );
+    writeFileSync(
+      join(
+        workspaceDir,
+        'mirrorbrain',
+        'skill-drafts',
+        'skill-draft:workspace.md',
+      ),
+      [
+        '# skill-draft:workspace',
+        '',
+        '- approvalState: draft',
+        '- requiresConfirmation: true',
+        '',
+        '## Workflow Evidence',
+        '- reviewed:workspace',
+      ].join('\n'),
+    );
+
+    const api = createMirrorBrainService(
+      {
+        service: {
+          status: 'running' as const,
+          config: getMirrorBrainConfig(),
+          syncBrowserMemory: vi.fn(async () => ({
+            sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+            strategy: 'incremental' as const,
+            importedCount: 0,
+            lastSyncedAt: '2026-04-29T10:00:00.000Z',
+          })),
+          syncShellMemory: vi.fn(async () => ({
+            sourceKey: 'shell-history:/tmp/.zsh_history',
+            strategy: 'incremental' as const,
+            importedCount: 0,
+            lastSyncedAt: '2026-04-29T10:00:00.000Z',
+          })),
+          stop: vi.fn(),
+        },
+        workspaceDir,
+      },
+      {
+        listKnowledge: vi.fn(async () => []),
+        listSkillDrafts: vi.fn(async () => []),
+      },
+    );
+
+    await expect(api.listKnowledge()).resolves.toEqual([
+      expect.objectContaining({
+        id: 'knowledge-draft:workspace',
+        title: 'Workspace knowledge',
+        body: 'Workspace body',
+        sourceReviewedMemoryIds: ['reviewed:workspace'],
+      }),
+    ]);
+    await expect(api.listSkillDrafts()).resolves.toEqual([
+      expect.objectContaining({
+        id: 'skill-draft:workspace',
+        approvalState: 'draft',
+        workflowEvidenceRefs: ['reviewed:workspace'],
+      }),
+    ]);
   });
 
   it('generates and publishes knowledge and skill artifacts from reviewed memories', async () => {

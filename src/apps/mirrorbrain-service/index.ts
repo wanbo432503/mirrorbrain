@@ -15,11 +15,13 @@ import {
   ingestReviewedMemoryToOpenViking,
   ingestSkillArtifactToOpenViking,
   listMirrorBrainMemoryEventsFromOpenViking,
+  listMirrorBrainKnowledgeArtifactsFromWorkspace,
   listMirrorBrainMemoryEventsFromWorkspace,
   listRawMirrorBrainMemoryEventsFromWorkspace,
   listMirrorBrainMemoryNarrativesFromOpenViking,
   listMirrorBrainCandidateMemoriesFromOpenViking,
   listMirrorBrainCandidateMemoriesFromWorkspace,
+  listMirrorBrainSkillArtifactsFromWorkspace,
   type OpenVikingMemoryEventWriter,
 } from '../../integrations/openviking-store/index.js';
 import {
@@ -170,6 +172,23 @@ interface CreateMirrorBrainServiceDependencies {
 
 function normalizeMemoryEventReadResult(result: MemoryEventReadResult): MemoryEvent[] {
   return Array.isArray(result) ? result : result.items;
+}
+
+function mergeArtifactsById<T extends { id: string }>(
+  primary: T[],
+  fallback: T[],
+): T[] {
+  const merged = new Map<string, T>();
+
+  for (const item of primary) {
+    merged.set(item.id, item);
+  }
+
+  for (const item of fallback) {
+    merged.set(item.id, item);
+  }
+
+  return [...merged.values()];
 }
 
 const SYNC_IMPORTED_EVENT_PREVIEW_LIMIT = 50;
@@ -459,6 +478,30 @@ export function createMirrorBrainService(
     dependencies.createCandidateMemories ?? createCandidateMemories;
   const analyzeCandidateReviews =
     dependencies.suggestCandidateReviews ?? suggestCandidateReviews;
+  const loadKnowledgeArtifacts = async (): Promise<KnowledgeArtifact[]> => {
+    const [openVikingKnowledge, workspaceKnowledge] = await Promise.all([
+      listKnowledge({
+        baseUrl,
+      }).catch(() => [] as KnowledgeArtifact[]),
+      listMirrorBrainKnowledgeArtifactsFromWorkspace({
+        workspaceDir,
+      }).catch(() => [] as KnowledgeArtifact[]),
+    ]);
+
+    return mergeArtifactsById(openVikingKnowledge, workspaceKnowledge);
+  };
+  const loadSkillArtifacts = async (): Promise<SkillArtifact[]> => {
+    const [openVikingSkills, workspaceSkills] = await Promise.all([
+      listSkillDrafts({
+        baseUrl,
+      }).catch(() => [] as SkillArtifact[]),
+      listMirrorBrainSkillArtifactsFromWorkspace({
+        workspaceDir,
+      }).catch(() => [] as SkillArtifact[]),
+    ]);
+
+    return mergeArtifactsById(openVikingSkills, workspaceSkills);
+  };
   const publishMemoryNarratives = async (artifacts: MemoryNarrative[]) => {
     await Promise.all(
       artifacts.map((artifact) =>
@@ -556,9 +599,7 @@ export function createMirrorBrainService(
     mergeCandidate: KnowledgeArtifact,
     mergedAt?: string,
   ): Promise<ReturnType<typeof mergeDailyReviewIntoTopicKnowledge>> => {
-    const knowledgeArtifacts = await listKnowledge({
-      baseUrl,
-    });
+    const knowledgeArtifacts = await loadKnowledgeArtifacts();
     const result = mergeTopicKnowledge({
       candidate: mergeCandidate,
       existingKnowledgeArtifacts: knowledgeArtifacts,
@@ -582,9 +623,7 @@ export function createMirrorBrainService(
     return result;
   };
   const listTopicKnowledgeArtifacts = async (): Promise<KnowledgeArtifact[]> => {
-    const knowledgeArtifacts = await listKnowledge({
-      baseUrl,
-    });
+    const knowledgeArtifacts = await loadKnowledgeArtifacts();
 
     return knowledgeArtifacts.filter(
       (artifact) => artifact.artifactType === 'topic-knowledge',
@@ -644,10 +683,7 @@ export function createMirrorBrainService(
         timeRange: input.timeRange,
         sourceTypes: input.sourceTypes,
       }),
-    listKnowledge: () =>
-      listKnowledge({
-        baseUrl,
-      }),
+    listKnowledge: loadKnowledgeArtifacts,
     listKnowledgeTopics: async () => {
       const topicKnowledgeArtifacts = await listTopicKnowledgeArtifacts();
       const currentBestByTopicKey = new Map<string, KnowledgeArtifact>();
@@ -704,9 +740,7 @@ export function createMirrorBrainService(
         .sort((left, right) => (right.version ?? 0) - (left.version ?? 0));
     },
     buildTopicKnowledgeCandidates: async (): Promise<KnowledgeArtifact[]> => {
-      const knowledgeArtifacts = await listKnowledge({
-        baseUrl,
-      });
+      const knowledgeArtifacts = await loadKnowledgeArtifacts();
 
       return buildTopicCandidates({
         knowledgeDrafts: knowledgeArtifacts,
@@ -726,10 +760,7 @@ export function createMirrorBrainService(
 
       return mergeTopicKnowledgeCandidate(mergeCandidate, mergedAt);
     },
-    listSkillDrafts: () =>
-      listSkillDrafts({
-        baseUrl,
-      }),
+    listSkillDrafts: loadSkillArtifacts,
     publishKnowledge: (artifact: Parameters<typeof ingestKnowledgeArtifactToOpenViking>[0]['artifact']) =>
       publishKnowledge({
         baseUrl,
@@ -801,9 +832,7 @@ export function createMirrorBrainService(
         );
       }
 
-      const knowledgeArtifacts = await listKnowledge({
-        baseUrl,
-      });
+      const knowledgeArtifacts = await loadKnowledgeArtifacts();
       const draft =
         knowledgeArtifacts.find((artifact) => artifact.id === draftId) ??
         draftSnapshot;

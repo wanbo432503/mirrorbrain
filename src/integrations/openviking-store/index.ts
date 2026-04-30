@@ -1170,6 +1170,35 @@ export async function listMirrorBrainKnowledgeArtifactsFromOpenViking(
   );
 }
 
+export async function listMirrorBrainKnowledgeArtifactsFromWorkspace(
+  input: WorkspaceMemoryReadInput,
+): Promise<KnowledgeArtifact[]> {
+  const knowledgeDir = join(input.workspaceDir, 'mirrorbrain', 'knowledge');
+  let files: string[];
+
+  try {
+    files = await readdir(knowledgeDir);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return [];
+    }
+
+    throw error;
+  }
+
+  const items = await Promise.all(
+    files
+      .filter((file) => file.endsWith('.md'))
+      .map(async (file) => {
+        const content = await readFile(join(knowledgeDir, file), 'utf8');
+
+        return parseKnowledgeArtifact(content);
+      }),
+  );
+
+  return deduplicateById(items);
+}
+
 export async function listMirrorBrainMemoryNarrativesFromOpenViking(
   input: OpenVikingReadInput,
   fetchImpl: FetchLike = fetch,
@@ -1416,4 +1445,33 @@ export async function listMirrorBrainSkillArtifactsFromOpenViking(
       items.filter((item): item is SkillArtifact => item !== null),
     ),
   );
+}
+
+export async function listMirrorBrainSkillArtifactsFromWorkspace(
+  input: WorkspaceMemoryReadInput,
+): Promise<SkillArtifact[]> {
+  const skillDraftsDir = join(input.workspaceDir, 'mirrorbrain', 'skill-drafts');
+  let files: string[];
+
+  try {
+    files = await readdir(skillDraftsDir);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return [];
+    }
+
+    throw error;
+  }
+
+  const items = await Promise.all(
+    files
+      .filter((file) => file.endsWith('.md'))
+      .map(async (file) => {
+        const content = await readFile(join(skillDraftsDir, file), 'utf8');
+
+        return parseSkillArtifact(content);
+      }),
+  );
+
+  return deduplicateById(items);
 }

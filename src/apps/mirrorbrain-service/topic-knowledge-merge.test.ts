@@ -1,4 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import { getMirrorBrainConfig } from '../../shared/config/index.js';
 import type { KnowledgeArtifact } from '../../shared/types/index.js';
@@ -30,6 +33,7 @@ const dailyReviewDraft: KnowledgeArtifact = {
 
 describe('mirrorbrain service topic knowledge merge', () => {
   it('builds topic merge candidates from daily-review drafts through the service contract', async () => {
+    const workspaceDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-service-'));
     const api = createMirrorBrainService(
       {
         service: {
@@ -39,6 +43,7 @@ describe('mirrorbrain service topic knowledge merge', () => {
           syncShellMemory: vi.fn(),
           stop: vi.fn(),
         },
+        workspaceDir,
       },
       {
         listKnowledge: vi.fn(async () => [dailyReviewDraft]),
@@ -84,6 +89,7 @@ describe('mirrorbrain service topic knowledge merge', () => {
       sourcePath: '/tmp/knowledge.md',
       rootUri: 'viking://resources/topic-knowledge',
     }));
+    const workspaceDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-service-'));
     const api = createMirrorBrainService(
       {
         service: {
@@ -93,7 +99,7 @@ describe('mirrorbrain service topic knowledge merge', () => {
           syncShellMemory: vi.fn(),
           stop: vi.fn(),
         },
-        workspaceDir: '/tmp/mirrorbrain-workspace',
+        workspaceDir,
       },
       {
         listKnowledge: vi.fn(async () => [existingCurrentBest]),
@@ -131,71 +137,79 @@ describe('mirrorbrain service topic knowledge merge', () => {
 
     expect(publishKnowledge).toHaveBeenCalledTimes(2);
   });
-});
 
-it('publishes the superseded topic artifact before the new current-best version on update', async () => {
-  const existingCurrentBest: KnowledgeArtifact = {
-    artifactType: 'topic-knowledge',
-    id: 'topic-knowledge:vitest-config:v1',
-    draftState: 'published',
-    topicKey: 'vitest-config',
-    title: 'Vitest Config',
-    summary: 'Earlier summary.',
-    body: 'Earlier body with enough detail.',
-    sourceReviewedMemoryIds: ['reviewed:candidate:older'],
-    derivedFromKnowledgeIds: ['knowledge-draft:older'],
-    version: 1,
-    isCurrentBest: true,
-    supersedesKnowledgeId: null,
-    updatedAt: '2026-03-20T10:00:00.000Z',
-    reviewedAt: '2026-03-20T10:00:00.000Z',
-    recencyLabel: '2026-03-20',
-    provenanceRefs: [
-      {
-        kind: 'reviewed-memory',
-        id: 'reviewed:candidate:older',
-      },
-    ],
-  };
-  const publishKnowledge = vi.fn(async () => ({
-    sourcePath: '/tmp/mirrorbrain/knowledge/topic.md',
-    rootUri: 'viking://resources/mirrorbrain/knowledge/topic.md',
-  }));
-
-  const api = createMirrorBrainService(
-    {
-      service: {
-        status: 'running' as const,
-        config: getMirrorBrainConfig(),
-        syncBrowserMemory: vi.fn(),
-        syncShellMemory: vi.fn(),
-        stop: vi.fn(),
-      },
-    },
-    {
-      listMemoryEvents: vi.fn(async () => ({ items: [], pagination: { total: 0, page: 1, pageSize: 10, totalPages: 1 } })),
-      listKnowledge: vi.fn(async () => [dailyReviewDraft, existingCurrentBest]),
-      listSkillDrafts: vi.fn(async () => []),
-      queryMemory: vi.fn(async () => ({ items: [] })),
-      publishKnowledge,
-    },
-  );
-
-  const [candidate] = await api.buildTopicKnowledgeCandidates();
-  const published = await api.mergeTopicKnowledgeCandidate(candidate, '2026-03-21T09:00:00.000Z');
-
-  expect(published.artifact.id).toBe('topic-knowledge:vitest-config:v2');
-  expect(publishKnowledge).toHaveBeenNthCalledWith(1, {
-    baseUrl: getMirrorBrainConfig().openViking.baseUrl,
-    workspaceDir: process.cwd(),
-    artifact: expect.objectContaining({
+  it('publishes the superseded topic artifact before the new current-best version on update', async () => {
+    const workspaceDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-service-'));
+    const existingCurrentBest: KnowledgeArtifact = {
+      artifactType: 'topic-knowledge',
       id: 'topic-knowledge:vitest-config:v1',
-      isCurrentBest: false,
-    }),
-  });
-  expect(publishKnowledge).toHaveBeenNthCalledWith(2, {
-    baseUrl: getMirrorBrainConfig().openViking.baseUrl,
-    workspaceDir: process.cwd(),
-    artifact: published.artifact,
+      draftState: 'published',
+      topicKey: 'vitest-config',
+      title: 'Vitest Config',
+      summary: 'Earlier summary.',
+      body: 'Earlier body with enough detail.',
+      sourceReviewedMemoryIds: ['reviewed:candidate:older'],
+      derivedFromKnowledgeIds: ['knowledge-draft:older'],
+      version: 1,
+      isCurrentBest: true,
+      supersedesKnowledgeId: null,
+      updatedAt: '2026-03-20T10:00:00.000Z',
+      reviewedAt: '2026-03-20T10:00:00.000Z',
+      recencyLabel: '2026-03-20',
+      provenanceRefs: [
+        {
+          kind: 'reviewed-memory',
+          id: 'reviewed:candidate:older',
+        },
+      ],
+    };
+    const publishKnowledge = vi.fn(async () => ({
+      sourcePath: '/tmp/mirrorbrain/knowledge/topic.md',
+      rootUri: 'viking://resources/mirrorbrain/knowledge/topic.md',
+    }));
+
+    const api = createMirrorBrainService(
+      {
+        service: {
+          status: 'running' as const,
+          config: getMirrorBrainConfig(),
+          syncBrowserMemory: vi.fn(),
+          syncShellMemory: vi.fn(),
+          stop: vi.fn(),
+        },
+        workspaceDir,
+      },
+      {
+        listMemoryEvents: vi.fn(async () => ({
+          items: [],
+          pagination: { total: 0, page: 1, pageSize: 10, totalPages: 1 },
+        })),
+        listKnowledge: vi.fn(async () => [dailyReviewDraft, existingCurrentBest]),
+        listSkillDrafts: vi.fn(async () => []),
+        queryMemory: vi.fn(async () => ({ items: [] })),
+        publishKnowledge,
+      },
+    );
+
+    const [candidate] = await api.buildTopicKnowledgeCandidates();
+    const published = await api.mergeTopicKnowledgeCandidate(
+      candidate,
+      '2026-03-21T09:00:00.000Z',
+    );
+
+    expect(published.artifact.id).toBe('topic-knowledge:vitest-config:v2');
+    expect(publishKnowledge).toHaveBeenNthCalledWith(1, {
+      baseUrl: getMirrorBrainConfig().openViking.baseUrl,
+      workspaceDir,
+      artifact: expect.objectContaining({
+        id: 'topic-knowledge:vitest-config:v1',
+        isCurrentBest: false,
+      }),
+    });
+    expect(publishKnowledge).toHaveBeenNthCalledWith(2, {
+      baseUrl: getMirrorBrainConfig().openViking.baseUrl,
+      workspaceDir,
+      artifact: published.artifact,
+    });
   });
 });
