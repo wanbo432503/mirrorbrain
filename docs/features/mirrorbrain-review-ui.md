@@ -16,12 +16,13 @@ This UI is responsible for:
 - showing multiple candidate streams instead of a single current candidate
 - showing AI review suggestions as advisory detail, not final state
 - exposing knowledge and skill generation actions
-- exposing editable knowledge and skill draft forms in the artifacts tab
+- exposing editable knowledge and skill draft forms in the review tab
+- persisting generated knowledge and skill drafts back through the artifact API so refresh reloads them
 - showing review-generated knowledge as the final note body instead of separate title and summary fields
 - collecting user revision requests in a shorter fixed input block below the generated note so the note body can be refined before save or approval
-- organizing the artifacts tab into `history topics`, `generate knowledge`, and `generate skill` sub tabs
+- organizing the artifacts tab into a single `history topics` sub tab with separate Knowledge and Skill timelines
 - scoping artifact generation views to the candidate currently selected in the review tab
-- exposing explicit save actions for edited knowledge and skill drafts
+- exposing explicit save actions for edited knowledge and skill drafts in the review tab
 - separating memory, review, and artifacts into distinct tabs instead of stacking all content on one page
 - placing sync, review, and artifact actions inside their corresponding tabs instead of a single global action bar
 - rendering candidate, suggestion, reviewed-memory, and artifact states with explicit field-level detail
@@ -49,9 +50,9 @@ This UI is not responsible for:
 7. The UI lists multiple candidate streams and lets the user pick one.
 8. The UI shows AI review suggestions for the selected candidate without auto-reviewing it.
 9. The user explicitly keeps or discards the selected candidate.
-10. The user opens the `history topics` sub tab to browse previously generated knowledge and skill artifacts in paged category tables.
-11. The user opens `generate knowledge` or `generate skill` to work against the candidate currently selected in the review tab.
-12. The user generates knowledge and skill drafts and edits them in-place through the artifacts tab.
+10. The user opens the `history topics` sub tab to browse previously generated knowledge and skill artifacts in separate timelines.
+11. The user generates knowledge or skill drafts from the candidate currently selected in the review tab.
+12. The generated drafts are immediately written back through the artifact API so the artifacts tab and the next page load can restore them.
 13. In the review tab, generated knowledge displays the note body directly in a self-scrolling note field and accepts a one-line revision request in a full-width input row with a send action on the right.
 14. The user can save the edited draft artifact back through the local service API.
 15. The UI renders a visible status message after each action so the workflow is not silent.
@@ -71,4 +72,5 @@ This UI is not responsible for:
 - AI suggestions are advisory placeholders in Phase 1
 - the default daily review window is currently the previous local day to make testing and morning review easier
 - artifact editing currently saves whole draft payloads rather than field-level patches
+- generated drafts are persisted automatically, but follow-up edits still rely on the explicit Save action
 - review-tab knowledge revision requests are captured into the editable note body; they are not a separate autonomous execution path

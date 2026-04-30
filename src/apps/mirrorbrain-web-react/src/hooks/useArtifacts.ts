@@ -8,6 +8,18 @@ interface ArtifactsFeedback {
   message: string
 }
 
+function upsertArtifactById<T extends { id: string }>(items: T[], item: T): T[] {
+  const existingIndex = items.findIndex((current) => current.id === item.id)
+
+  if (existingIndex === -1) {
+    return [...items, item]
+  }
+
+  const nextItems = [...items]
+  nextItems[existingIndex] = item
+  return nextItems
+}
+
 export function useArtifacts(api: MirrorBrainWebAppApi) {
   const { state, dispatch } = useMirrorBrain()
   const [feedback, setFeedback] = useState<ArtifactsFeedback | null>(null)
@@ -25,13 +37,24 @@ export function useArtifacts(api: MirrorBrainWebAppApi) {
 
       try {
         const artifact = await api.generateKnowledge(reviewedMemories)
+        const savedArtifact = api.saveKnowledgeArtifact
+          ? await api.saveKnowledgeArtifact(artifact)
+          : artifact
+
+        const updatedKnowledge = upsertArtifactById(
+          state.knowledgeArtifacts,
+          savedArtifact
+        )
+        dispatch({ type: 'LOAD_KNOWLEDGE', payload: updatedKnowledge })
 
         setFeedback({
           kind: 'success',
-          message: 'Knowledge artifact generated successfully',
+          message: api.saveKnowledgeArtifact
+            ? 'Knowledge artifact generated and saved successfully'
+            : 'Knowledge artifact generated successfully',
         })
 
-        return artifact
+        return savedArtifact
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to generate knowledge'
         setFeedback({ kind: 'error', message })
@@ -55,13 +78,24 @@ export function useArtifacts(api: MirrorBrainWebAppApi) {
 
       try {
         const artifact = await api.regenerateKnowledge(existingDraft, reviewedMemories)
+        const savedArtifact = api.saveKnowledgeArtifact
+          ? await api.saveKnowledgeArtifact(artifact)
+          : artifact
+
+        const updatedKnowledge = upsertArtifactById(
+          state.knowledgeArtifacts,
+          savedArtifact
+        )
+        dispatch({ type: 'LOAD_KNOWLEDGE', payload: updatedKnowledge })
 
         setFeedback({
           kind: 'success',
-          message: 'Knowledge artifact regenerated successfully',
+          message: api.saveKnowledgeArtifact
+            ? 'Knowledge artifact regenerated and saved successfully'
+            : 'Knowledge artifact regenerated successfully',
         })
 
-        return artifact
+        return savedArtifact
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to regenerate knowledge'
         setFeedback({ kind: 'error', message })
@@ -87,7 +121,10 @@ export function useArtifacts(api: MirrorBrainWebAppApi) {
         const { publishedArtifact, assignedTopic } = await api.approveKnowledge(draft)
 
         // Update knowledge artifacts list in global state
-        const updatedKnowledge = [...state.knowledgeArtifacts, publishedArtifact]
+        const updatedKnowledge = upsertArtifactById(
+          state.knowledgeArtifacts,
+          publishedArtifact
+        )
         dispatch({ type: 'LOAD_KNOWLEDGE', payload: updatedKnowledge })
 
         // Note: Candidate deletion and state clearing will be handled by ReviewPanel
@@ -112,13 +149,21 @@ export function useArtifacts(api: MirrorBrainWebAppApi) {
 
       try {
         const artifact = await api.generateSkill(reviewedMemories)
+        const savedArtifact = api.saveSkillArtifact
+          ? await api.saveSkillArtifact(artifact)
+          : artifact
+
+        const updatedSkills = upsertArtifactById(state.skillArtifacts, savedArtifact)
+        dispatch({ type: 'LOAD_SKILLS', payload: updatedSkills })
 
         setFeedback({
           kind: 'success',
-          message: 'Skill artifact generated successfully',
+          message: api.saveSkillArtifact
+            ? 'Skill artifact generated and saved successfully'
+            : 'Skill artifact generated successfully',
         })
 
-        return artifact
+        return savedArtifact
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to generate skill'
         setFeedback({ kind: 'error', message })
@@ -144,7 +189,10 @@ export function useArtifacts(api: MirrorBrainWebAppApi) {
         const savedArtifact = await api.saveKnowledgeArtifact(artifact)
 
         // Update knowledge artifacts list in global state
-        const updatedKnowledge = [...state.knowledgeArtifacts, savedArtifact]
+        const updatedKnowledge = upsertArtifactById(
+          state.knowledgeArtifacts,
+          savedArtifact
+        )
         dispatch({ type: 'LOAD_KNOWLEDGE', payload: updatedKnowledge })
 
         setFeedback({
@@ -178,7 +226,7 @@ export function useArtifacts(api: MirrorBrainWebAppApi) {
         const savedArtifact = await api.saveSkillArtifact(artifact)
 
         // Update skill artifacts list in global state
-        const updatedSkills = [...state.skillArtifacts, savedArtifact]
+        const updatedSkills = upsertArtifactById(state.skillArtifacts, savedArtifact)
         dispatch({ type: 'LOAD_SKILLS', payload: updatedSkills })
 
         setFeedback({

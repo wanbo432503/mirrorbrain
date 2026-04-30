@@ -14,7 +14,7 @@ The React artifacts UI is responsible for:
 - showing the selected artifact in a single right-side detail panel
 - capturing local conversation notes that describe requested edits for the selected artifact
 
-It does not synthesize new knowledge, execute skills, or persist conversational edits. Generation, approval, publication, and skill execution remain backend or review workflow responsibilities.
+It does not synthesize new knowledge, execute skills, or persist conversational edits. Generation, approval, publication, and skill execution remain backend or review workflow responsibilities. Generated knowledge and skill artifacts are written back through the artifact API by the review workflow before this tab reads them.
 
 ## Key Interfaces
 
@@ -25,6 +25,8 @@ It does not synthesize new knowledge, execute skills, or persist conversational 
 ## Data Flow
 
 `ArtifactsPanel` reads artifact arrays from `useArtifacts`. `HistoryTopics` sorts the active category newest first, defaults selection to the newest visible artifact, and updates the right-side detail panel when a list item is clicked.
+
+When the review workflow generates or regenerates knowledge or skill drafts, the hook persists the returned artifact through the save API and upserts the saved version into the shared artifact list. That keeps newly generated artifacts visible in the tab and reloadable after a page refresh.
 
 Conversation messages are keyed by artifact category and id, so notes for one knowledge artifact do not leak into another knowledge artifact or skill artifact.
 
@@ -37,6 +39,7 @@ The artifact edit message row uses a single-line full-width input with a send ac
 - Artifacts without timestamps sort after timestamped artifacts.
 - Empty knowledge or skill lists show an empty state instead of a blank detail panel.
 - Conversation notes are local UI state only. They are review/edit instructions, not published artifact mutations.
+- Generated artifacts are persisted; only in-progress edit notes can be lost if the browser closes before the user saves follow-up edits.
 - Skill detail display remains conservative because current skill artifacts only expose approval state, workflow evidence refs, and confirmation metadata.
 
 ## Test Strategy
