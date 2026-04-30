@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest'
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import HistoryTopics from './HistoryTopics'
 import type { KnowledgeArtifact, SkillArtifact } from '../../types/index'
@@ -136,7 +136,7 @@ describe('HistoryTopics', () => {
     expect(screen.getByRole('button', { name: 'Send' })).not.toBeNull()
   })
 
-  it('collapses draft and published copies of the same artifact lineage into one row', async () => {
+  it('keeps draft and published copies of the same artifact lineage visible in history', async () => {
     const user = userEvent.setup()
 
     const knowledgeDraft: KnowledgeArtifact = {
@@ -192,17 +192,14 @@ describe('HistoryTopics', () => {
       />
     )
 
-    expect(screen.getAllByTestId('artifact-list-item')).toHaveLength(1)
-    expect(within(screen.getByTestId('artifact-history-panel')).getByText('Shared lineage knowledge')).not.toBeNull()
-    expect(within(screen.getByTestId('artifact-detail-panel')).getByText('Published body')).not.toBeNull()
+    expect(screen.getAllByTestId('artifact-list-item')).toHaveLength(2)
+    expect(screen.getAllByTestId('artifact-list-item')[0].textContent).toContain('Shared lineage knowledge')
+    expect(screen.getAllByTestId('artifact-list-item')[0].textContent).toContain('Published summary')
+    expect(screen.getByText('Published body')).not.toBeNull()
 
     await user.click(screen.getByRole('tab', { name: 'Skill' }))
 
-    expect(screen.getAllByTestId('artifact-list-item')).toHaveLength(1)
-    expect(
-      within(screen.getByTestId('artifact-detail-panel')).getByText(
-        'skill-draft:shared-lineage:approved'
-      )
-    ).not.toBeNull()
+    expect(screen.getAllByTestId('artifact-list-item')).toHaveLength(2)
+    expect(screen.getAllByTestId('artifact-list-item')[0].textContent).toContain('skill-draft:shared-lineage:approved')
   })
 })

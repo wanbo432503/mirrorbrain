@@ -11,7 +11,7 @@ export function useMirrorBrainState(api: MirrorBrainWebAppApi) {
       try {
         const [health, memory, knowledge, topics, skills] = await Promise.all([
           api.getHealth(),
-          api.listMemory(),
+          api.listMemory(1, 5),
           api.listKnowledge(),
           api.listKnowledgeTopics(),
           api.listSkills(),

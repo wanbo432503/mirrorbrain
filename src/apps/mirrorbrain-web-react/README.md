@@ -95,7 +95,7 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and a 
   - Artifacts tab displays generated knowledge and generated skills under separate Knowledge / Skill subtabs
   - Artifact lists are ordered newest first using artifact update or review timestamps
   - The app loads persisted knowledge and skill artifacts on startup so the Artifacts tab restores after refresh
-  - Draft and published copies that share the same artifact lineage collapse into one visible row in the Artifacts timeline
+  - Draft and published copies are both shown in the Artifacts timeline so the full version history remains visible
   - Selecting a knowledge or skill shows its details in one shared right-side display
   - The artifact detail display includes a local conversation area for recording requested edits against the selected artifact
   - Generate knowledge from reviewed memories

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
 
@@ -125,11 +125,20 @@ describe('App', () => {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       })
-    }) as unknown as typeof fetch
+    })
 
-    vi.stubGlobal('fetch', fetchMock)
+    vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch)
 
     render(<App />)
+
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls.map((call) => String(call[0]))
+      ).toContain(`${window.location.origin}/memory?page=1&pageSize=5`)
+    })
+    expect(
+      fetchMock.mock.calls.map((call) => String(call[0]))
+    ).not.toContain(`${window.location.origin}/memory`)
 
     await user.click(screen.getByRole('tab', { name: /artifacts/i }))
 
