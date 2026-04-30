@@ -264,7 +264,7 @@ export default function SelectedCandidate({
 
           <div
             data-testid="knowledge-note-display-block"
-            className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50 p-4"
+            className="min-h-0 flex-1 rounded-lg border border-slate-200 bg-slate-50 p-4"
           >
             <TextArea
               id="generated-knowledge-note"

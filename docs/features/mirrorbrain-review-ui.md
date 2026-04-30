@@ -52,7 +52,7 @@ This UI is not responsible for:
 10. The user opens the `history topics` sub tab to browse previously generated knowledge and skill artifacts in paged category tables.
 11. The user opens `generate knowledge` or `generate skill` to work against the candidate currently selected in the review tab.
 12. The user generates knowledge and skill drafts and edits them in-place through the artifacts tab.
-13. In the review tab, generated knowledge displays the note body directly in its own scrollable block and accepts a revision request in a separate non-scrollable input block.
+13. In the review tab, generated knowledge displays the note body directly in a self-scrolling note field and accepts a revision request in a separate non-scrollable input block.
 14. The user can save the edited draft artifact back through the local service API.
 15. The UI renders a visible status message after each action so the workflow is not silent.
 

@@ -99,7 +99,7 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and a 
   - Generate knowledge from reviewed memories
   - Generate skill from reviewed memories
   - Generated knowledge and skill drafts remain in shared app state across top-level tab switches
-  - Review-generated knowledge displays the final note body directly, with a revision request input below it
+  - Review-generated knowledge displays the final note body directly in a single scrolling field, with a separate fixed revision request input below it
   - Draft editing (body-first note editing for knowledge)
   - Draft editing (approval state/confirmation for skill)
   - Save artifacts to API

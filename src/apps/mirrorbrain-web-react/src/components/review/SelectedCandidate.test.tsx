@@ -499,7 +499,7 @@ describe('SelectedCandidate component rendering', () => {
       />
     )
 
-    expect(screen.getByTestId('knowledge-note-display-block').className).toContain('overflow-y-auto')
+    expect(screen.getByTestId('knowledge-note-display-block').className).not.toContain('overflow-y-auto')
     expect(screen.getByTestId('knowledge-revision-input-block').className).toContain('shrink-0')
     const revisionInput = screen.getByLabelText('Revision Request')
     expect(revisionInput.getAttribute('rows')).toBe('2')
