@@ -30,6 +30,8 @@ Conversation messages are keyed by artifact category and id, so notes for one kn
 
 The left timeline panel and right detail/edit panel share the same fixed height, with overflow scrolling inside each panel so the detail display and edit input stay visually aligned with the history list.
 
+The artifact edit message row uses a single-line full-width input with a send action on the right, matching the review note revision row for consistent edit entry behavior.
+
 ## Failure Modes And Constraints
 
 - Artifacts without timestamps sort after timestamped artifacts.

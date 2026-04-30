@@ -92,7 +92,7 @@ describe('HistoryTopics', () => {
     fireEvent.change(screen.getByLabelText('Artifact Edit Message'), {
       target: { value: 'Add a note about provenance.' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Apply Message' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
 
     expect(screen.getByText(/Add a note about provenance/)).not.toBeNull()
 
@@ -100,7 +100,7 @@ describe('HistoryTopics', () => {
     fireEvent.change(screen.getByLabelText('Artifact Edit Message'), {
       target: { value: 'Clarify execution requires confirmation.' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Apply Message' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
 
     expect(screen.getByText(/Clarify execution requires confirmation/)).not.toBeNull()
   })
@@ -116,5 +116,23 @@ describe('HistoryTopics', () => {
 
     expect(screen.getByTestId('artifact-history-panel').className).toContain('h-[680px]')
     expect(screen.getByTestId('artifact-detail-panel').className).toContain('h-[680px]')
+  })
+
+  it('renders artifact edit message as a one-line full-width input row with send action', () => {
+    render(
+      <HistoryTopics
+        knowledgeTopics={[]}
+        knowledgeArtifacts={[newerKnowledge]}
+        skillArtifacts={[newerSkill]}
+      />
+    )
+
+    expect(screen.getByTestId('artifact-edit-message-row').className).toContain('flex')
+    expect(screen.getByTestId('artifact-edit-message-row').className).toContain('w-full')
+    expect(screen.getByTestId('artifact-edit-message-field').className).toContain('flex-1')
+
+    const editMessage = screen.getByLabelText('Artifact Edit Message')
+    expect(editMessage.tagName.toLowerCase()).toBe('input')
+    expect(screen.getByRole('button', { name: 'Send' })).not.toBeNull()
   })
 })

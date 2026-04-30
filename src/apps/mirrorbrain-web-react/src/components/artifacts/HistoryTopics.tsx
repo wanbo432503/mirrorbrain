@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Card from '../common/Card'
 import Button from '../common/Button'
 import EmptyState from '../common/EmptyState'
-import TextArea from '../forms/TextArea'
+import Input from '../forms/Input'
 import type { KnowledgeArtifact, SkillArtifact } from '../../types/index'
 
 interface HistoryTopicsProps {
@@ -188,22 +188,27 @@ export default function HistoryTopics({
               <ArtifactDetail artifact={selectedArtifact} notes={selectedNotes} />
             </div>
 
-            <div className="border-t border-slate-200 pt-4 space-y-3">
-              <TextArea
-                id="artifact-edit-message"
-                label="Artifact Edit Message"
-                value={editMessage}
-                onChange={(event) => setEditMessage(event.target.value)}
-                rows={4}
-                placeholder="Describe how this artifact should change..."
-              />
-              <Button
-                variant="primary"
-                onClick={handleApplyMessage}
-                disabled={editMessage.trim().length === 0}
-              >
-                Apply Message
-              </Button>
+            <div className="border-t border-slate-200 pt-4">
+              <div data-testid="artifact-edit-message-row" className="flex w-full items-end gap-3">
+                <div data-testid="artifact-edit-message-field" className="min-w-0 flex-1">
+                  <Input
+                    id="artifact-edit-message"
+                    label="Artifact Edit Message"
+                    value={editMessage}
+                    onChange={(event) => setEditMessage(event.target.value)}
+                    className="h-10 w-full"
+                    placeholder="Describe how this artifact should change..."
+                  />
+                </div>
+                <Button
+                  variant="primary"
+                  onClick={handleApplyMessage}
+                  disabled={editMessage.trim().length === 0}
+                  className="shrink-0"
+                >
+                  Send
+                </Button>
+              </div>
             </div>
           </div>
         ) : (
