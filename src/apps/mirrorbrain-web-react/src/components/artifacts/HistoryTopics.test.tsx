@@ -65,7 +65,7 @@ describe('HistoryTopics', () => {
     const knowledgeItems = screen.getAllByTestId('artifact-list-item')
     expect(knowledgeItems[0].textContent).toContain('Newer knowledge')
     expect(knowledgeItems[1].textContent).toContain('Older knowledge')
-    expect(screen.getByText('Newer body')).not.toBeNull()
+    expect(screen.queryByText('Newer body')).toBeNull()
 
     await user.click(screen.getByRole('tab', { name: 'Skill' }))
 
@@ -87,7 +87,7 @@ describe('HistoryTopics', () => {
     )
 
     await user.click(screen.getByRole('button', { name: /Older knowledge/ }))
-    expect(screen.getByText('Older body')).not.toBeNull()
+    expect(screen.queryByText('Older body')).toBeNull()
 
     fireEvent.change(screen.getByLabelText('Artifact Edit Message'), {
       target: { value: 'Add a note about provenance.' },
@@ -195,7 +195,7 @@ describe('HistoryTopics', () => {
     expect(screen.getAllByTestId('artifact-list-item')).toHaveLength(2)
     expect(screen.getAllByTestId('artifact-list-item')[0].textContent).toContain('Shared lineage knowledge')
     expect(screen.getAllByTestId('artifact-list-item')[0].textContent).toContain('Published summary')
-    expect(screen.getByText('Published body')).not.toBeNull()
+    expect(screen.queryByText('Published body')).toBeNull()
 
     await user.click(screen.getByRole('tab', { name: 'Skill' }))
 

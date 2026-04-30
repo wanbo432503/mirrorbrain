@@ -287,11 +287,6 @@ function ArtifactDetail({
           </Button>
         </div>
         <p className="font-body text-sm text-slate-700">{knowledge.summary ?? 'No summary'}</p>
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-          <p className="whitespace-pre-wrap font-body text-sm text-slate-800">
-            {knowledge.body ?? 'No body content'}
-          </p>
-        </div>
         <ArtifactMetadata
           items={[
             `State: ${knowledge.draftState}`,

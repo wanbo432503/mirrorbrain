@@ -19,7 +19,7 @@ It does not synthesize new knowledge, execute skills, or persist conversational 
 
 ## Key Interfaces
 
-- `KnowledgeArtifact`: rendered with title, summary, body, state, source count, and timestamps.
+- `KnowledgeArtifact`: rendered with title, summary, state, source count, and timestamps in the detail panel; the knowledge body is not shown there.
 - `SkillArtifact`: rendered with id, approval state, confirmation requirement, workflow evidence refs, and optional timestamps.
 - `HistoryTopics`: receives `knowledgeArtifacts` and `skillArtifacts` from `useArtifacts` and owns the local subtab, selection, and conversation-note state.
 
