@@ -1490,4 +1490,62 @@ describe('mirrorbrain http server', () => {
 
     await rm(workspaceDir, { recursive: true, force: true });
   });
+
+  it('DELETE /knowledge/:id and /skills/:id should forward artifact deletion to the service', async () => {
+    const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-test-'));
+    const deleteKnowledgeArtifact = vi.fn(async () => undefined);
+    const deleteSkillArtifact = vi.fn(async () => undefined);
+
+    const service = {
+      service: {
+        status: 'running' as const,
+        config: getMirrorBrainConfig(),
+        stop: vi.fn(),
+      },
+      listMemoryEvents: vi.fn(async () => ({
+        items: [],
+        pagination: {
+          total: 0,
+          page: 1,
+          pageSize: 10,
+          totalPages: 1,
+        },
+      })),
+      queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
+      listKnowledge: vi.fn(async () => []),
+      listSkillDrafts: vi.fn(async () => []),
+      syncBrowserMemory: vi.fn(),
+      syncShellMemory: vi.fn(),
+      createDailyCandidateMemories: vi.fn(),
+      suggestCandidateReviews: vi.fn(),
+      reviewCandidateMemory: vi.fn(),
+      undoCandidateReview: vi.fn(),
+      deleteCandidateMemory: vi.fn(),
+      deleteKnowledgeArtifact,
+      deleteSkillArtifact,
+      generateKnowledgeFromReviewedMemories: vi.fn(),
+      generateSkillDraftFromReviewedMemories: vi.fn(),
+      publishKnowledge: vi.fn(),
+      publishSkillDraft: vi.fn(),
+    };
+
+    const server = await startMirrorBrainHttpServer({ service, workspaceDir, port: 0 });
+    servers.push(server);
+
+    const knowledgeResponse = await fetch(
+      `${server.origin}/knowledge/knowledge-draft:delete-me`,
+      { method: 'DELETE' },
+    );
+    const skillResponse = await fetch(
+      `${server.origin}/skills/skill-draft:delete-me`,
+      { method: 'DELETE' },
+    );
+
+    expect(knowledgeResponse.status).toBe(204);
+    expect(skillResponse.status).toBe(204);
+    expect(deleteKnowledgeArtifact).toHaveBeenCalledWith('knowledge-draft:delete-me');
+    expect(deleteSkillArtifact).toHaveBeenCalledWith('skill-draft:delete-me');
+
+    await rm(workspaceDir, { recursive: true, force: true });
+  });
 });

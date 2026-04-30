@@ -19,6 +19,7 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 - exposes daily candidate-memory generation and review suggestion operations
 - exposes explicit candidate review decisions as service-level operations
 - publishes knowledge and skill artifacts through explicit OpenViking-backed service methods
+- deletes persisted knowledge and skill artifacts through workspace-backed tombstones so removed ids stay hidden even if OpenViking still lists older copies
 - generates source-content-aware knowledge drafts from reviewed memories before publishing them
 - exposes topic-merge helper methods that turn daily-review drafts into topic merge candidates and publish topic knowledge artifacts
 - exposes read-oriented topic knowledge helpers for listing current-best topics, reading one current-best topic, and reading topic history
@@ -52,6 +53,8 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 19. For reviewed-memory knowledge generation APIs, resolve captured page text from reviewed memory events before creating the draft, then publish the resulting artifact.
 20. Approve a knowledge draft by loading the persisted draft by id and passing it through the existing topic-knowledge merge workflow.
 21. If the draft is not yet visible in the persisted knowledge list, approve can use the caller-provided draft snapshot after verifying its id matches `draftId`; this preserves the visible UI draft, source reviewed-memory ids, and provenance refs during publish.
+22. When a knowledge or skill artifact is deleted, remove the workspace copy and record a service-level tombstone under `mirrorbrain/deleted-artifacts/` so later reads suppress both workspace and OpenViking copies of that id.
+23. When a deleted artifact id is published again later, clear its tombstone before persisting the fresh artifact so it becomes visible again.
 
 ## Operational Note
 
@@ -73,6 +76,7 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
 - unit and integration tests verify candidate review suggestions stay suggestion-only
 - unit and integration tests verify explicit keep and discard review decisions publish reviewed memory artifacts through the service contract
 - unit and integration tests verify the service forwards explicit knowledge and skill publishing calls to OpenViking ingestion with runtime configuration
+- unit tests verify deleting persisted knowledge and skill artifacts removes workspace copies and suppresses later reads through tombstones
 - unit and integration tests verify reviewed memories can be turned into publishable Phase 3-ready knowledge artifacts through the service contract, including captured page text in the generated body
 - unit tests verify knowledge draft approval publishes through the topic merge workflow instead of reading unstored JSON files
 - unit tests verify knowledge draft approval can publish the caller draft snapshot when the persisted lookup has not caught up
@@ -88,6 +92,7 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
 - stored browser and shell narratives are rebuilt after explicit service sync operations, but the rebuild now happens in the background and may lag slightly behind the returned sync summary
 - background browser polling still relies on the raw-event retrieval fallback until a later narrative-refresh hook is added there
 - generation remains caller-driven; the service exposes explicit methods but does not schedule daily review or skill extraction automatically
+- artifact deletion currently relies on service-owned tombstones rather than a documented OpenViking hard-delete API, so upstream OpenViking resources may still exist even though MirrorBrain no longer surfaces them
 - candidate generation is heuristic and bounded to at most 10 tasks per review window
 - AI review suggestions are heuristic placeholders in Phase 1
 - retrieval methods still lack pagination and advanced ranking

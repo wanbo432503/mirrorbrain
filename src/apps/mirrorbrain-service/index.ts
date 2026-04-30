@@ -1,4 +1,4 @@
-import { unlink } from 'node:fs/promises';
+import { mkdir, readdir, unlink, writeFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { getMirrorBrainConfig } from '../../shared/config/index.js';
@@ -189,6 +189,33 @@ function mergeArtifactsById<T extends { id: string }>(
   }
 
   return [...merged.values()];
+}
+
+type DeletedArtifactKind = 'knowledge' | 'skills';
+
+function isUnsafeArtifactId(artifactId: string): boolean {
+  return (
+    artifactId.includes('..') ||
+    artifactId.includes('/') ||
+    artifactId.includes('\\')
+  );
+}
+
+function validateKnowledgeArtifactId(artifactId: string): void {
+  const validPrefix =
+    artifactId.startsWith('knowledge-draft:') ||
+    artifactId.startsWith('topic-knowledge:') ||
+    artifactId.startsWith('topic-merge-candidate:');
+
+  if (!validPrefix || isUnsafeArtifactId(artifactId)) {
+    throw new ValidationError(`Invalid knowledge artifact ID format: ${artifactId}`);
+  }
+}
+
+function validateSkillArtifactId(artifactId: string): void {
+  if (!artifactId.startsWith('skill-draft:') || isUnsafeArtifactId(artifactId)) {
+    throw new ValidationError(`Invalid skill artifact ID format: ${artifactId}`);
+  }
 }
 
 const SYNC_IMPORTED_EVENT_PREVIEW_LIMIT = 50;
@@ -439,6 +466,16 @@ export function createMirrorBrainService(
       throw error;
     }
   };
+  const deleteKnowledgeArtifact = async (artifactId: string): Promise<void> => {
+    validateKnowledgeArtifactId(artifactId);
+    await deleteWorkspaceArtifactFile('knowledge', artifactId);
+    await recordDeletedArtifact('knowledge', artifactId);
+  };
+  const deleteSkillArtifact = async (artifactId: string): Promise<void> => {
+    validateSkillArtifactId(artifactId);
+    await deleteWorkspaceArtifactFile('skill-drafts', artifactId);
+    await recordDeletedArtifact('skills', artifactId);
+  };
   const buildBrowserThemeNarratives =
     dependencies.buildBrowserThemeNarratives ?? generateBrowserThemeNarratives;
   const buildShellProblemNarratives =
@@ -478,29 +515,127 @@ export function createMirrorBrainService(
     dependencies.createCandidateMemories ?? createCandidateMemories;
   const analyzeCandidateReviews =
     dependencies.suggestCandidateReviews ?? suggestCandidateReviews;
+  const getDeletedArtifactFilePath = (
+    kind: DeletedArtifactKind,
+    artifactId: string,
+  ): string =>
+    join(
+      workspaceDir,
+      'mirrorbrain',
+      'deleted-artifacts',
+      kind,
+      `${encodeURIComponent(artifactId)}.json`,
+    );
+  const loadDeletedArtifactIds = async (
+    kind: DeletedArtifactKind,
+  ): Promise<Set<string>> => {
+    const deletedArtifactsDir = join(
+      workspaceDir,
+      'mirrorbrain',
+      'deleted-artifacts',
+      kind,
+    );
+    let files: string[];
+
+    try {
+      files = await readdir(deletedArtifactsDir);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return new Set();
+      }
+
+      throw error;
+    }
+
+    return new Set(
+      files
+        .filter((file) => file.endsWith('.json'))
+        .map((file) => decodeURIComponent(file.replace(/\.json$/u, ''))),
+    );
+  };
+  const recordDeletedArtifact = async (
+    kind: DeletedArtifactKind,
+    artifactId: string,
+  ): Promise<void> => {
+    const deletedArtifactPath = getDeletedArtifactFilePath(kind, artifactId);
+    const deletedArtifactsDir = join(
+      workspaceDir,
+      'mirrorbrain',
+      'deleted-artifacts',
+      kind,
+    );
+
+    await mkdir(deletedArtifactsDir, { recursive: true });
+    await writeFile(
+      deletedArtifactPath,
+      JSON.stringify(
+        {
+          artifactId,
+          deletedAt: new Date().toISOString(),
+        },
+        null,
+        2,
+      ),
+    );
+  };
+  const clearDeletedArtifact = async (
+    kind: DeletedArtifactKind,
+    artifactId: string,
+  ): Promise<void> => {
+    await rm(getDeletedArtifactFilePath(kind, artifactId), { force: true });
+  };
+  const deleteWorkspaceArtifactFile = async (
+    directoryName: 'knowledge' | 'skill-drafts',
+    artifactId: string,
+  ): Promise<void> => {
+    const artifactFilePath = join(
+      workspaceDir,
+      'mirrorbrain',
+      directoryName,
+      `${artifactId}.md`,
+    );
+
+    try {
+      await unlink(artifactFilePath);
+    } catch (error) {
+      if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+        return;
+      }
+
+      throw error;
+    }
+  };
   const loadKnowledgeArtifacts = async (): Promise<KnowledgeArtifact[]> => {
-    const [openVikingKnowledge, workspaceKnowledge] = await Promise.all([
+    const [openVikingKnowledge, workspaceKnowledge, deletedKnowledgeIds] = await Promise.all([
       listKnowledge({
         baseUrl,
       }).catch(() => [] as KnowledgeArtifact[]),
       listMirrorBrainKnowledgeArtifactsFromWorkspace({
         workspaceDir,
       }).catch(() => [] as KnowledgeArtifact[]),
+      loadDeletedArtifactIds('knowledge'),
     ]);
 
-    return mergeArtifactsById(openVikingKnowledge, workspaceKnowledge);
+    return mergeArtifactsById(
+      openVikingKnowledge.filter((artifact) => !deletedKnowledgeIds.has(artifact.id)),
+      workspaceKnowledge.filter((artifact) => !deletedKnowledgeIds.has(artifact.id)),
+    );
   };
   const loadSkillArtifacts = async (): Promise<SkillArtifact[]> => {
-    const [openVikingSkills, workspaceSkills] = await Promise.all([
+    const [openVikingSkills, workspaceSkills, deletedSkillIds] = await Promise.all([
       listSkillDrafts({
         baseUrl,
       }).catch(() => [] as SkillArtifact[]),
       listMirrorBrainSkillArtifactsFromWorkspace({
         workspaceDir,
       }).catch(() => [] as SkillArtifact[]),
+      loadDeletedArtifactIds('skills'),
     ]);
 
-    return mergeArtifactsById(openVikingSkills, workspaceSkills);
+    return mergeArtifactsById(
+      openVikingSkills.filter((artifact) => !deletedSkillIds.has(artifact.id)),
+      workspaceSkills.filter((artifact) => !deletedSkillIds.has(artifact.id)),
+    );
   };
   const publishMemoryNarratives = async (artifacts: MemoryNarrative[]) => {
     await Promise.all(
@@ -762,17 +897,23 @@ export function createMirrorBrainService(
     },
     listSkillDrafts: loadSkillArtifacts,
     publishKnowledge: (artifact: Parameters<typeof ingestKnowledgeArtifactToOpenViking>[0]['artifact']) =>
-      publishKnowledge({
-        baseUrl,
-        workspaceDir,
-        artifact,
-      }),
+      clearDeletedArtifact('knowledge', artifact.id).then(() =>
+        publishKnowledge({
+          baseUrl,
+          workspaceDir,
+          artifact,
+        }),
+      ),
     publishSkillDraft: (artifact: Parameters<typeof ingestSkillArtifactToOpenViking>[0]['artifact']) =>
-      publishSkill({
-        baseUrl,
-        workspaceDir,
-        artifact,
-      }),
+      clearDeletedArtifact('skills', artifact.id).then(() =>
+        publishSkill({
+          baseUrl,
+          workspaceDir,
+          artifact,
+        }),
+      ),
+    deleteKnowledgeArtifact,
+    deleteSkillArtifact,
     generateKnowledgeFromReviewedMemories: async (
       reviewedMemories: ReviewedMemory[],
     ): Promise<KnowledgeArtifact> => {
@@ -780,6 +921,7 @@ export function createMirrorBrainService(
         reviewedMemories,
       });
 
+      await clearDeletedArtifact('knowledge', artifact.id);
       await publishKnowledge({
         baseUrl,
         workspaceDir,
@@ -793,6 +935,7 @@ export function createMirrorBrainService(
     ): Promise<SkillArtifact> => {
       const artifact = generateSkillDraft(reviewedMemories);
 
+      await clearDeletedArtifact('skills', artifact.id);
       await publishSkill({
         baseUrl,
         workspaceDir,
@@ -811,6 +954,7 @@ export function createMirrorBrainService(
         existingDraft,
       });
 
+      await clearDeletedArtifact('knowledge', artifact.id);
       await publishKnowledge({
         baseUrl,
         workspaceDir,

@@ -64,6 +64,8 @@ export interface MirrorBrainWebAppApi {
     artifact: KnowledgeArtifact
   ): Promise<KnowledgeArtifact>;
   saveSkillArtifact?(artifact: SkillArtifact): Promise<SkillArtifact>;
+  deleteKnowledgeArtifact?(artifactId: string): Promise<void>;
+  deleteSkillArtifact?(artifactId: string): Promise<void>;
   deleteCandidateMemory?(candidateMemoryId: string): Promise<void>;
 }
 
@@ -257,6 +259,48 @@ export function createMirrorBrainBrowserApi(
       });
       const body = await readJson<{ artifact: SkillArtifact }>(response);
       return body.artifact;
+    },
+
+    async deleteKnowledgeArtifact(artifactId: string) {
+      const response = await fetch(`${baseUrl}/knowledge/${artifactId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        let errorMessage = 'Failed to delete knowledge artifact';
+
+        try {
+          const body = await response.json();
+          if (body.message || body.error) {
+            errorMessage = body.message || body.error;
+          }
+        } catch {
+          errorMessage += `: ${response.statusText}`;
+        }
+
+        throw new Error(errorMessage);
+      }
+    },
+
+    async deleteSkillArtifact(artifactId: string) {
+      const response = await fetch(`${baseUrl}/skills/${artifactId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        let errorMessage = 'Failed to delete skill artifact';
+
+        try {
+          const body = await response.json();
+          if (body.message || body.error) {
+            errorMessage = body.message || body.error;
+          }
+        } catch {
+          errorMessage += `: ${response.statusText}`;
+        }
+
+        throw new Error(errorMessage);
+      }
     },
 
     async saveKnowledgeArtifact(artifact: KnowledgeArtifact) {

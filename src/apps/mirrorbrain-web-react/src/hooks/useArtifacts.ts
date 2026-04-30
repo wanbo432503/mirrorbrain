@@ -29,6 +29,8 @@ export function useArtifacts(api: MirrorBrainWebAppApi) {
   const [isGeneratingSkill, setIsGeneratingSkill] = useState(false)
   const [isSavingKnowledge, setIsSavingKnowledge] = useState(false)
   const [isSavingSkill, setIsSavingSkill] = useState(false)
+  const [isDeletingKnowledge, setIsDeletingKnowledge] = useState(false)
+  const [isDeletingSkill, setIsDeletingSkill] = useState(false)
 
   const generateKnowledge = useCallback(
     async (reviewedMemories: ReviewedMemory[]) => {
@@ -246,6 +248,70 @@ export function useArtifacts(api: MirrorBrainWebAppApi) {
     [api, state.skillArtifacts, dispatch]
   )
 
+  const deleteKnowledgeArtifact = useCallback(
+    async (artifactId: string) => {
+      if (!api.deleteKnowledgeArtifact) {
+        setFeedback({ kind: 'error', message: 'Delete knowledge API not available' })
+        return
+      }
+
+      setIsDeletingKnowledge(true)
+      setFeedback(null)
+
+      try {
+        await api.deleteKnowledgeArtifact(artifactId)
+        dispatch({
+          type: 'LOAD_KNOWLEDGE',
+          payload: state.knowledgeArtifacts.filter((artifact) => artifact.id !== artifactId),
+        })
+        setFeedback({
+          kind: 'success',
+          message: 'Knowledge artifact deleted successfully',
+        })
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Failed to delete knowledge artifact'
+        setFeedback({ kind: 'error', message })
+        throw error
+      } finally {
+        setIsDeletingKnowledge(false)
+      }
+    },
+    [api, dispatch, state.knowledgeArtifacts]
+  )
+
+  const deleteSkillArtifact = useCallback(
+    async (artifactId: string) => {
+      if (!api.deleteSkillArtifact) {
+        setFeedback({ kind: 'error', message: 'Delete skill API not available' })
+        return
+      }
+
+      setIsDeletingSkill(true)
+      setFeedback(null)
+
+      try {
+        await api.deleteSkillArtifact(artifactId)
+        dispatch({
+          type: 'LOAD_SKILLS',
+          payload: state.skillArtifacts.filter((artifact) => artifact.id !== artifactId),
+        })
+        setFeedback({
+          kind: 'success',
+          message: 'Skill artifact deleted successfully',
+        })
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Failed to delete skill artifact'
+        setFeedback({ kind: 'error', message })
+        throw error
+      } finally {
+        setIsDeletingSkill(false)
+      }
+    },
+    [api, dispatch, state.skillArtifacts]
+  )
+
   const dismissFeedback = useCallback(() => {
     setFeedback(null)
   }, [])
@@ -261,12 +327,16 @@ export function useArtifacts(api: MirrorBrainWebAppApi) {
     isGeneratingSkill,
     isSavingKnowledge,
     isSavingSkill,
+    isDeletingKnowledge,
+    isDeletingSkill,
     generateKnowledge,
     regenerateKnowledge,
     approveKnowledge,
     generateSkill,
     saveKnowledgeArtifact,
     saveSkillArtifact,
+    deleteKnowledgeArtifact,
+    deleteSkillArtifact,
     dismissFeedback,
   }
 }

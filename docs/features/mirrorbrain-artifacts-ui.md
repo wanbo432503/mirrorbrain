@@ -13,6 +13,7 @@ The React artifacts UI is responsible for:
 - ordering each list newest first by `updatedAt`, then `reviewedAt`
 - showing the selected artifact in a single right-side detail panel
 - capturing local conversation notes that describe requested edits for the selected artifact
+- exposing explicit delete actions for persisted knowledge and skill artifacts
 
 It does not synthesize new knowledge, execute skills, or persist conversational edits. Generation, approval, publication, and skill execution remain backend or review workflow responsibilities. Generated knowledge and skill artifacts are written back through the artifact API by the review workflow before this tab reads them.
 
@@ -28,6 +29,8 @@ It does not synthesize new knowledge, execute skills, or persist conversational 
 
 When the review workflow generates or regenerates knowledge or skill drafts, the hook persists the returned artifact through the save API and upserts the saved version into the shared artifact list. That keeps newly generated artifacts visible in the tab and reloadable after a page refresh.
 
+When the user deletes a knowledge or skill artifact from the detail panel, the hook calls the artifact delete API and removes the deleted id from the shared artifact list immediately so the active timeline and detail view both advance without a manual refresh.
+
 Conversation messages are keyed by artifact category and id, so notes for one knowledge artifact do not leak into another knowledge artifact or skill artifact.
 
 The left timeline panel and right detail/edit panel share the same fixed height, with overflow scrolling inside each panel so the detail display and edit input stay visually aligned with the history list.
@@ -40,9 +43,10 @@ The artifact edit message row uses a single-line full-width input with a send ac
 - Empty knowledge or skill lists show an empty state instead of a blank detail panel.
 - Conversation notes are local UI state only. They are review/edit instructions, not published artifact mutations.
 - Generated artifacts are persisted; only in-progress edit notes can be lost if the browser closes before the user saves follow-up edits.
+- Delete actions remove the artifact from the persisted artifact list; local conversation notes tied to that artifact id are also effectively orphaned because the artifact is no longer selectable.
 - Skill detail display remains conservative because current skill artifacts only expose approval state, workflow evidence refs, and confirmation metadata.
 
 ## Test Strategy
 
-- `HistoryTopics.test.tsx` covers Knowledge / Skill subtab rendering, newest-first ordering, artifact selection, detail display, and local conversation-note behavior.
+- `HistoryTopics.test.tsx` covers Knowledge / Skill subtab rendering, newest-first ordering, artifact selection, detail display, delete actions, and local conversation-note behavior.
 - Broader verification uses the root Vitest suite, root TypeScript check, and the Vite app production build.

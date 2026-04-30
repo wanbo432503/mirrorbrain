@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { KnowledgeArtifact } from '../types/index';
+import type { KnowledgeArtifact, SkillArtifact } from '../types/index';
 import { createMirrorBrainBrowserApi } from './client';
 
 const knowledgeDraft: KnowledgeArtifact = {
@@ -25,6 +25,16 @@ const knowledgeDraft: KnowledgeArtifact = {
       id: 'reviewed:candidate:browser:vitest',
     },
   ],
+};
+
+const skillDraft: SkillArtifact = {
+  id: 'skill-draft:reviewed:candidate:browser:vitest',
+  approvalState: 'draft',
+  workflowEvidenceRefs: ['reviewed:candidate:browser:vitest'],
+  executionSafetyMetadata: {
+    requiresConfirmation: true,
+  },
+  updatedAt: '2026-04-21T12:00:00.000Z',
 };
 
 describe('createMirrorBrainBrowserApi', () => {
@@ -80,6 +90,36 @@ describe('createMirrorBrainBrowserApi', () => {
           draftId: knowledgeDraft.id,
           draft: knowledgeDraft,
         }),
+      }),
+    );
+  });
+
+  it('sends delete requests for persisted knowledge and skill artifacts', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 204,
+      json: async () => ({}),
+      text: async () => '',
+    })) as unknown as typeof fetch;
+    vi.stubGlobal('fetch', fetchMock);
+
+    const api = createMirrorBrainBrowserApi('http://localhost:3000');
+
+    await api.deleteKnowledgeArtifact?.(knowledgeDraft.id);
+    await api.deleteSkillArtifact?.(skillDraft.id);
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      `http://localhost:3000/knowledge/${knowledgeDraft.id}`,
+      expect.objectContaining({
+        method: 'DELETE',
+      }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      `http://localhost:3000/skills/${skillDraft.id}`,
+      expect.objectContaining({
+        method: 'DELETE',
       }),
     );
   });

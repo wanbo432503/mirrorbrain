@@ -10,6 +10,10 @@ export default function ArtifactsPanel() {
     skillArtifacts,
     knowledgeTopics,
     feedback,
+    isDeletingKnowledge,
+    isDeletingSkill,
+    deleteKnowledgeArtifact,
+    deleteSkillArtifact,
   } = useArtifacts(api)
 
   return (
@@ -35,6 +39,10 @@ export default function ArtifactsPanel() {
         knowledgeTopics={knowledgeTopics}
         knowledgeArtifacts={knowledgeArtifacts}
         skillArtifacts={skillArtifacts}
+        onDeleteKnowledgeArtifact={deleteKnowledgeArtifact}
+        onDeleteSkillArtifact={deleteSkillArtifact}
+        isDeletingKnowledgeArtifact={isDeletingKnowledge}
+        isDeletingSkillArtifact={isDeletingSkill}
       />
     </div>
   )

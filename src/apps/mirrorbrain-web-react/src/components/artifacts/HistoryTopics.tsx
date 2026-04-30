@@ -16,6 +16,10 @@ interface HistoryTopicsProps {
   }>
   knowledgeArtifacts: KnowledgeArtifact[]
   skillArtifacts: SkillArtifact[]
+  onDeleteKnowledgeArtifact?: (artifactId: string) => Promise<void> | void
+  onDeleteSkillArtifact?: (artifactId: string) => Promise<void> | void
+  isDeletingKnowledgeArtifact?: boolean
+  isDeletingSkillArtifact?: boolean
 }
 
 type ArtifactSubtab = 'knowledge' | 'skill'
@@ -52,6 +56,10 @@ export function sortSkillArtifactsByNewest(artifacts: SkillArtifact[]): SkillArt
 export default function HistoryTopics({
   knowledgeArtifacts,
   skillArtifacts,
+  onDeleteKnowledgeArtifact,
+  onDeleteSkillArtifact,
+  isDeletingKnowledgeArtifact = false,
+  isDeletingSkillArtifact = false,
 }: HistoryTopicsProps) {
   const [activeSubtab, setActiveSubtab] = useState<ArtifactSubtab>('knowledge')
   const [selectedArtifactId, setSelectedArtifactId] = useState<string | null>(null)
@@ -102,6 +110,26 @@ export default function HistoryTopics({
     }))
     setEditMessage('')
   }
+
+  async function handleDeleteSelectedArtifact() {
+    if (!selectedArtifact) {
+      return
+    }
+
+    if (selectedArtifact.kind === 'knowledge') {
+      await onDeleteKnowledgeArtifact?.(selectedArtifact.artifact.id)
+      return
+    }
+
+    await onDeleteSkillArtifact?.(selectedArtifact.artifact.id)
+  }
+
+  const deleteButtonLabel =
+    selectedArtifact?.kind === 'knowledge' ? 'Delete Knowledge' : 'Delete Skill'
+  const isDeletingSelectedArtifact =
+    selectedArtifact?.kind === 'knowledge'
+      ? isDeletingKnowledgeArtifact
+      : isDeletingSkillArtifact
 
   return (
     <div className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
@@ -185,7 +213,13 @@ export default function HistoryTopics({
         {selectedArtifact ? (
           <div className="flex h-full flex-col justify-between gap-6">
             <div className="min-h-0 flex-1 overflow-y-auto pr-2">
-              <ArtifactDetail artifact={selectedArtifact} notes={selectedNotes} />
+              <ArtifactDetail
+                artifact={selectedArtifact}
+                notes={selectedNotes}
+                onDelete={handleDeleteSelectedArtifact}
+                deleteButtonLabel={deleteButtonLabel}
+                isDeleting={isDeletingSelectedArtifact}
+              />
             </div>
 
             <div className="border-t border-slate-200 pt-4">
@@ -225,21 +259,32 @@ export default function HistoryTopics({
 function ArtifactDetail({
   artifact,
   notes,
+  onDelete,
+  deleteButtonLabel,
+  isDeleting,
 }: {
   artifact: SelectedArtifact
   notes: string[]
+  onDelete: () => Promise<void>
+  deleteButtonLabel: string
+  isDeleting: boolean
 }) {
   if (artifact.kind === 'knowledge') {
     const knowledge = artifact.artifact
     return (
       <div className="space-y-4">
-        <div>
-          <p className="font-heading text-xs font-semibold uppercase text-slate-500">
-            Knowledge Detail
-          </p>
-          <h3 className="font-heading text-xl font-bold text-slate-900 mt-1">
-            {knowledge.title ?? 'Untitled Knowledge'}
-          </h3>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="font-heading text-xs font-semibold uppercase text-slate-500">
+              Knowledge Detail
+            </p>
+            <h3 className="font-heading text-xl font-bold text-slate-900 mt-1">
+              {knowledge.title ?? 'Untitled Knowledge'}
+            </h3>
+          </div>
+          <Button variant="ghost" onClick={() => void onDelete()} loading={isDeleting}>
+            {deleteButtonLabel}
+          </Button>
         </div>
         <p className="font-body text-sm text-slate-700">{knowledge.summary ?? 'No summary'}</p>
         <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
@@ -262,11 +307,16 @@ function ArtifactDetail({
   const skill = artifact.artifact
   return (
     <div className="space-y-4">
-      <div>
-        <p className="font-heading text-xs font-semibold uppercase text-slate-500">
-          Skill Detail
-        </p>
-        <h3 className="font-heading text-xl font-bold text-slate-900 mt-1">{skill.id}</h3>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="font-heading text-xs font-semibold uppercase text-slate-500">
+            Skill Detail
+          </p>
+          <h3 className="font-heading text-xl font-bold text-slate-900 mt-1">{skill.id}</h3>
+        </div>
+        <Button variant="ghost" onClick={() => void onDelete()} loading={isDeleting}>
+          {deleteButtonLabel}
+        </Button>
       </div>
       <ArtifactMetadata
         items={[

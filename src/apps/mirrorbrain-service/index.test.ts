@@ -899,6 +899,122 @@ describe('mirrorbrain service', () => {
     ]);
   });
 
+  it('deletes persisted knowledge and skill artifacts and filters them from later reads', async () => {
+    const workspaceDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-service-'));
+    mkdirSync(join(workspaceDir, 'mirrorbrain', 'knowledge'), {
+      recursive: true,
+    });
+    mkdirSync(join(workspaceDir, 'mirrorbrain', 'skill-drafts'), {
+      recursive: true,
+    });
+
+    const knowledgeArtifact = {
+      id: 'knowledge-draft:workspace-delete',
+      draftState: 'draft' as const,
+      artifactType: 'daily-review-draft' as const,
+      title: 'Workspace knowledge',
+      summary: 'Workspace summary',
+      body: 'Workspace body',
+      sourceReviewedMemoryIds: ['reviewed:workspace'],
+      derivedFromKnowledgeIds: [],
+      version: 1,
+      isCurrentBest: false,
+      supersedesKnowledgeId: null,
+      updatedAt: '2026-04-29T10:00:00.000Z',
+      reviewedAt: '2026-04-29T09:00:00.000Z',
+      recencyLabel: '2026-04-29',
+      provenanceRefs: [{ kind: 'reviewed-memory' as const, id: 'reviewed:workspace' }],
+    };
+    const skillArtifact = {
+      id: 'skill-draft:workspace-delete',
+      approvalState: 'draft' as const,
+      workflowEvidenceRefs: ['reviewed:workspace'],
+      executionSafetyMetadata: { requiresConfirmation: true },
+      updatedAt: '2026-04-29T10:00:00.000Z',
+    };
+
+    writeFileSync(
+      join(workspaceDir, 'mirrorbrain', 'knowledge', `${knowledgeArtifact.id}.md`),
+      [
+        `# ${knowledgeArtifact.id}`,
+        '',
+        '- artifactType: daily-review-draft',
+        '- draftState: draft',
+        '- topicKey: ',
+        `- title: ${knowledgeArtifact.title}`,
+        `- summary: ${knowledgeArtifact.summary}`,
+        '- version: 1',
+        '- isCurrentBest: false',
+        '- supersedesKnowledgeId: ',
+        `- updatedAt: ${knowledgeArtifact.updatedAt}`,
+        `- reviewedAt: ${knowledgeArtifact.reviewedAt}`,
+        '- recencyLabel: 2026-04-29',
+        '',
+        '## Body',
+        knowledgeArtifact.body,
+        '',
+        '## Source Reviewed Memories',
+        '- reviewed:workspace',
+        '',
+        '## Derived Knowledge Artifacts',
+        '',
+        '## Provenance Refs',
+        '- reviewed-memory:reviewed:workspace',
+      ].join('\n'),
+    );
+    writeFileSync(
+      join(workspaceDir, 'mirrorbrain', 'skill-drafts', `${skillArtifact.id}.md`),
+      [
+        `# ${skillArtifact.id}`,
+        '',
+        '- approvalState: draft',
+        '- requiresConfirmation: true',
+        '',
+        '## Workflow Evidence',
+        '- reviewed:workspace',
+      ].join('\n'),
+    );
+
+    const api = createMirrorBrainService(
+      {
+        service: {
+          status: 'running' as const,
+          config: getMirrorBrainConfig(),
+          syncBrowserMemory: vi.fn(async () => ({
+            sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+            strategy: 'incremental' as const,
+            importedCount: 0,
+            lastSyncedAt: '2026-04-29T10:00:00.000Z',
+          })),
+          syncShellMemory: vi.fn(async () => ({
+            sourceKey: 'shell-history:/tmp/.zsh_history',
+            strategy: 'incremental' as const,
+            importedCount: 0,
+            lastSyncedAt: '2026-04-29T10:00:00.000Z',
+          })),
+          stop: vi.fn(),
+        },
+        workspaceDir,
+      },
+      {
+        listKnowledge: vi.fn(async () => [knowledgeArtifact]),
+        listSkillDrafts: vi.fn(async () => [skillArtifact]),
+      },
+    );
+
+    await api.deleteKnowledgeArtifact(knowledgeArtifact.id);
+    await api.deleteSkillArtifact(skillArtifact.id);
+
+    await expect(
+      access(join(workspaceDir, 'mirrorbrain', 'knowledge', `${knowledgeArtifact.id}.md`)),
+    ).rejects.toThrow();
+    await expect(
+      access(join(workspaceDir, 'mirrorbrain', 'skill-drafts', `${skillArtifact.id}.md`)),
+    ).rejects.toThrow();
+    await expect(api.listKnowledge()).resolves.toEqual([]);
+    await expect(api.listSkillDrafts()).resolves.toEqual([]);
+  });
+
   it('generates and publishes knowledge and skill artifacts from reviewed memories', async () => {
     const service = {
       status: 'running' as const,

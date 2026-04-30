@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import HistoryTopics from './HistoryTopics'
@@ -201,5 +201,28 @@ describe('HistoryTopics', () => {
 
     expect(screen.getAllByTestId('artifact-list-item')).toHaveLength(2)
     expect(screen.getAllByTestId('artifact-list-item')[0].textContent).toContain('skill-draft:shared-lineage:approved')
+  })
+
+  it('shows delete actions for generated knowledge and skills and forwards the selected id', async () => {
+    const user = userEvent.setup()
+    const deleteKnowledge = vi.fn(async () => undefined)
+    const deleteSkill = vi.fn(async () => undefined)
+
+    render(
+      <HistoryTopics
+        knowledgeTopics={[]}
+        knowledgeArtifacts={[newerKnowledge]}
+        skillArtifacts={[newerSkill]}
+        onDeleteKnowledgeArtifact={deleteKnowledge}
+        onDeleteSkillArtifact={deleteSkill}
+      />
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Delete Knowledge' }))
+    expect(deleteKnowledge).toHaveBeenCalledWith('knowledge-new')
+
+    await user.click(screen.getByRole('tab', { name: 'Skill' }))
+    await user.click(screen.getByRole('button', { name: 'Delete Skill' }))
+    expect(deleteSkill).toHaveBeenCalledWith('skill-new')
   })
 })

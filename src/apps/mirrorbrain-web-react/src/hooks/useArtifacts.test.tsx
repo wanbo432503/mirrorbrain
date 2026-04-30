@@ -333,4 +333,88 @@ describe('useArtifacts', () => {
 
     expect(result.current.skillArtifacts).toEqual([existingSkill, savedArtifact])
   })
+
+  it('deletes persisted knowledge and removes it from shared state', async () => {
+    const existingKnowledge: KnowledgeArtifact = {
+      id: 'knowledge-existing',
+      draftState: 'draft',
+      artifactType: 'daily-review-draft',
+      title: 'Existing knowledge',
+      summary: 'Existing summary',
+      body: 'Existing body',
+      sourceReviewedMemoryIds: ['reviewed-existing'],
+      derivedFromKnowledgeIds: [],
+      version: 1,
+      isCurrentBest: false,
+      supersedesKnowledgeId: null,
+      updatedAt: '2026-04-28T10:00:00.000Z',
+      reviewedAt: '2026-04-28T09:00:00.000Z',
+      recencyLabel: '2026-04-28',
+      provenanceRefs: [{ kind: 'reviewed-memory', id: 'reviewed-existing' }],
+    }
+
+    const api: MirrorBrainWebAppApi = {
+      getHealth: vi.fn(),
+      listMemory: vi.fn(),
+      listKnowledge: vi.fn(),
+      listKnowledgeTopics: vi.fn(),
+      listSkills: vi.fn(),
+      syncBrowser: vi.fn(),
+      syncShell: vi.fn(),
+      createDailyCandidates: vi.fn(),
+      suggestCandidateReviews: vi.fn(),
+      reviewCandidateMemory: vi.fn(),
+      undoCandidateReview: vi.fn(),
+      generateKnowledge: vi.fn(),
+      generateSkill: vi.fn(),
+      deleteKnowledgeArtifact: vi.fn(async () => undefined),
+    } as unknown as MirrorBrainWebAppApi
+
+    const wrapper = createWrapper({ knowledgeArtifacts: [existingKnowledge] })
+    const { result } = renderHook(() => useArtifacts(api), { wrapper })
+
+    await act(async () => {
+      await result.current.deleteKnowledgeArtifact(existingKnowledge.id)
+    })
+
+    expect(api.deleteKnowledgeArtifact).toHaveBeenCalledWith(existingKnowledge.id)
+    expect(result.current.knowledgeArtifacts).toEqual([])
+  })
+
+  it('deletes persisted skill and removes it from shared state', async () => {
+    const existingSkill: SkillArtifact = {
+      id: 'skill-existing',
+      approvalState: 'draft',
+      workflowEvidenceRefs: ['reviewed-existing'],
+      executionSafetyMetadata: { requiresConfirmation: true },
+      updatedAt: '2026-04-28T10:00:00.000Z',
+    }
+
+    const api: MirrorBrainWebAppApi = {
+      getHealth: vi.fn(),
+      listMemory: vi.fn(),
+      listKnowledge: vi.fn(),
+      listKnowledgeTopics: vi.fn(),
+      listSkills: vi.fn(),
+      syncBrowser: vi.fn(),
+      syncShell: vi.fn(),
+      createDailyCandidates: vi.fn(),
+      suggestCandidateReviews: vi.fn(),
+      reviewCandidateMemory: vi.fn(),
+      undoCandidateReview: vi.fn(),
+      generateKnowledge: vi.fn(),
+      generateSkill: vi.fn(),
+      deleteSkillArtifact: vi.fn(async () => undefined),
+    } as unknown as MirrorBrainWebAppApi
+
+    const wrapper = createWrapper({ skillArtifacts: [existingSkill] })
+    const { result } = renderHook(() => useArtifacts(api), { wrapper })
+
+    await act(async () => {
+      await result.current.deleteSkillArtifact(existingSkill.id)
+    })
+
+    expect(api.deleteSkillArtifact).toHaveBeenCalledWith(existingSkill.id)
+    expect(result.current.skillArtifacts).toEqual([])
+  })
 })

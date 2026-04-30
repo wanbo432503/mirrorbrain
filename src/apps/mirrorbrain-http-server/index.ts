@@ -48,6 +48,8 @@ interface MirrorBrainHttpService {
   listSkillDrafts(): Promise<SkillArtifact[]>;
   publishKnowledge?(artifact: KnowledgeArtifact): Promise<unknown>;
   publishSkillDraft?(artifact: SkillArtifact): Promise<unknown>;
+  deleteKnowledgeArtifact?(artifactId: string): Promise<void>;
+  deleteSkillArtifact?(artifactId: string): Promise<void>;
   createDailyCandidateMemories(
     reviewDate: string,
     reviewTimeZone?: string,
@@ -777,6 +779,62 @@ export async function startMirrorBrainHttpServer(
       return {
         artifact: request.body.artifact,
       };
+    },
+  );
+
+  app.delete<{
+    Params: {
+      artifactId: string;
+    };
+  }>(
+    '/knowledge/:artifactId',
+    {
+      schema: {
+        summary: 'Delete a persisted knowledge artifact',
+        response: {
+          204: { type: 'null' },
+        },
+      },
+    },
+    async (request, reply) => {
+      if (input.service.deleteKnowledgeArtifact === undefined) {
+        reply.code(501);
+        return {
+          message: 'Knowledge deletion is not available.',
+        };
+      }
+
+      await input.service.deleteKnowledgeArtifact(request.params.artifactId);
+      reply.code(204);
+      return null;
+    },
+  );
+
+  app.delete<{
+    Params: {
+      artifactId: string;
+    };
+  }>(
+    '/skills/:artifactId',
+    {
+      schema: {
+        summary: 'Delete a persisted skill artifact',
+        response: {
+          204: { type: 'null' },
+        },
+      },
+    },
+    async (request, reply) => {
+      if (input.service.deleteSkillArtifact === undefined) {
+        reply.code(501);
+        return {
+          message: 'Skill deletion is not available.',
+        };
+      }
+
+      await input.service.deleteSkillArtifact(request.params.artifactId);
+      reply.code(204);
+      return null;
     },
   );
 
