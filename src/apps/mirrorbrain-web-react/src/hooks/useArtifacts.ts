@@ -63,7 +63,7 @@ export function useArtifacts(api: MirrorBrainWebAppApi) {
         setIsGeneratingKnowledge(false)
       }
     },
-    [api]
+    [api, state.knowledgeArtifacts, dispatch]
   )
 
   const regenerateKnowledge = useCallback(
@@ -104,7 +104,7 @@ export function useArtifacts(api: MirrorBrainWebAppApi) {
         setIsRegeneratingKnowledge(false)
       }
     },
-    [api]
+    [api, state.knowledgeArtifacts, dispatch]
   )
 
   const approveKnowledge = useCallback(
@@ -172,7 +172,7 @@ export function useArtifacts(api: MirrorBrainWebAppApi) {
         setIsGeneratingSkill(false)
       }
     },
-    [api]
+    [api, state.skillArtifacts, dispatch]
   )
 
   const saveKnowledgeArtifact = useCallback(

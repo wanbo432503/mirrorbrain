@@ -1,18 +1,67 @@
 // @vitest-environment jsdom
-import { renderHook, act } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { useEffect, useRef } from 'react'
+import { cleanup, renderHook, act } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { MirrorBrainProvider } from '../contexts/MirrorBrainContext'
+import { useMirrorBrain } from '../contexts/MirrorBrainContext'
 import { useArtifacts } from './useArtifacts'
 import type { MirrorBrainWebAppApi } from '../api/client'
 import type { KnowledgeArtifact, ReviewedMemory, SkillArtifact } from '../types/index'
 
-function createWrapper() {
+function SeedState({
+  knowledgeArtifacts = [],
+  skillArtifacts = [],
+  children,
+}: {
+  knowledgeArtifacts?: KnowledgeArtifact[]
+  skillArtifacts?: SkillArtifact[]
+  children: React.ReactNode
+}) {
+  const { dispatch } = useMirrorBrain()
+  const hasSeeded = useRef(false)
+
+  useEffect(() => {
+    if (hasSeeded.current) {
+      return
+    }
+
+    hasSeeded.current = true
+
+    if (knowledgeArtifacts.length > 0) {
+      dispatch({ type: 'LOAD_KNOWLEDGE', payload: knowledgeArtifacts })
+    }
+
+    if (skillArtifacts.length > 0) {
+      dispatch({ type: 'LOAD_SKILLS', payload: skillArtifacts })
+    }
+  }, [dispatch, knowledgeArtifacts, skillArtifacts])
+
+  return <>{children}</>
+}
+
+function createWrapper(options: {
+  knowledgeArtifacts?: KnowledgeArtifact[]
+  skillArtifacts?: SkillArtifact[]
+} = {}) {
   return function Wrapper({ children }: { children: React.ReactNode }) {
-    return <MirrorBrainProvider>{children}</MirrorBrainProvider>
+    return (
+      <MirrorBrainProvider>
+        <SeedState
+          knowledgeArtifacts={options.knowledgeArtifacts}
+          skillArtifacts={options.skillArtifacts}
+        >
+          {children}
+        </SeedState>
+      </MirrorBrainProvider>
+    )
   }
 }
 
 describe('useArtifacts', () => {
+  afterEach(() => {
+    cleanup()
+  })
+
   it('persists generated knowledge and stores the saved artifact in shared state', async () => {
     const reviewedMemories: ReviewedMemory[] = [
       {
@@ -141,5 +190,147 @@ describe('useArtifacts', () => {
     expect(api.saveSkillArtifact).toHaveBeenCalledWith(generatedArtifact)
     expect(returnedArtifact).toEqual(savedArtifact)
     expect(result.current.skillArtifacts).toEqual([savedArtifact])
+  })
+
+  it('keeps already loaded knowledge artifacts when generating a new one', async () => {
+    const existingKnowledge: KnowledgeArtifact = {
+      id: 'knowledge-existing',
+      draftState: 'draft',
+      artifactType: 'daily-review-draft',
+      title: 'Existing knowledge',
+      summary: 'Existing summary',
+      body: 'Existing body',
+      sourceReviewedMemoryIds: ['reviewed-existing'],
+      derivedFromKnowledgeIds: [],
+      version: 1,
+      isCurrentBest: false,
+      supersedesKnowledgeId: null,
+      updatedAt: '2026-04-28T10:00:00.000Z',
+      reviewedAt: '2026-04-28T09:00:00.000Z',
+      recencyLabel: '2026-04-28',
+      provenanceRefs: [{ kind: 'reviewed-memory', id: 'reviewed-existing' }],
+    }
+    const generatedArtifact: KnowledgeArtifact = {
+      id: 'knowledge-new',
+      draftState: 'draft',
+      artifactType: 'daily-review-draft',
+      title: 'New knowledge',
+      summary: 'New summary',
+      body: 'New body',
+      sourceReviewedMemoryIds: ['reviewed-new'],
+      derivedFromKnowledgeIds: [],
+      version: 1,
+      isCurrentBest: false,
+      supersedesKnowledgeId: null,
+      updatedAt: '2026-04-29T10:00:00.000Z',
+      reviewedAt: '2026-04-29T09:00:00.000Z',
+      recencyLabel: '2026-04-29',
+      provenanceRefs: [{ kind: 'reviewed-memory', id: 'reviewed-new' }],
+    }
+    const savedArtifact: KnowledgeArtifact = {
+      ...generatedArtifact,
+      updatedAt: '2026-04-29T10:05:00.000Z',
+    }
+    const reviewedMemories: ReviewedMemory[] = [
+      {
+        id: 'reviewed-new',
+        candidateMemoryId: 'candidate-new',
+        candidateTitle: 'Candidate title',
+        candidateSummary: 'Candidate summary',
+        candidateTheme: 'theme',
+        memoryEventIds: ['event-new'],
+        reviewDate: '2026-04-29',
+        decision: 'keep',
+        reviewedAt: '2026-04-29T10:00:00.000Z',
+      },
+    ]
+
+    const api: MirrorBrainWebAppApi = {
+      getHealth: vi.fn(),
+      listMemory: vi.fn(),
+      listKnowledge: vi.fn(),
+      listKnowledgeTopics: vi.fn(),
+      listSkills: vi.fn(),
+      syncBrowser: vi.fn(),
+      syncShell: vi.fn(),
+      createDailyCandidates: vi.fn(),
+      suggestCandidateReviews: vi.fn(),
+      reviewCandidateMemory: vi.fn(),
+      undoCandidateReview: vi.fn(),
+      generateKnowledge: vi.fn(async () => generatedArtifact),
+      generateSkill: vi.fn(),
+      saveKnowledgeArtifact: vi.fn(async () => savedArtifact),
+      saveSkillArtifact: vi.fn(),
+    } as unknown as MirrorBrainWebAppApi
+
+    const wrapper = createWrapper({ knowledgeArtifacts: [existingKnowledge] })
+    const { result } = renderHook(() => useArtifacts(api), { wrapper })
+
+    await act(async () => {
+      await result.current.generateKnowledge(reviewedMemories)
+    })
+
+    expect(result.current.knowledgeArtifacts).toEqual([existingKnowledge, savedArtifact])
+  })
+
+  it('keeps already loaded skill artifacts when generating a new one', async () => {
+    const existingSkill: SkillArtifact = {
+      id: 'skill-existing',
+      approvalState: 'draft',
+      workflowEvidenceRefs: ['reviewed-existing'],
+      executionSafetyMetadata: { requiresConfirmation: true },
+      updatedAt: '2026-04-28T10:00:00.000Z',
+    }
+    const generatedArtifact: SkillArtifact = {
+      id: 'skill-new',
+      approvalState: 'draft',
+      workflowEvidenceRefs: ['reviewed-new'],
+      executionSafetyMetadata: { requiresConfirmation: true },
+      updatedAt: '2026-04-29T10:00:00.000Z',
+    }
+    const savedArtifact: SkillArtifact = {
+      ...generatedArtifact,
+      updatedAt: '2026-04-29T10:05:00.000Z',
+    }
+    const reviewedMemories: ReviewedMemory[] = [
+      {
+        id: 'reviewed-new',
+        candidateMemoryId: 'candidate-new',
+        candidateTitle: 'Candidate title',
+        candidateSummary: 'Candidate summary',
+        candidateTheme: 'theme',
+        memoryEventIds: ['event-new'],
+        reviewDate: '2026-04-29',
+        decision: 'keep',
+        reviewedAt: '2026-04-29T10:00:00.000Z',
+      },
+    ]
+
+    const api: MirrorBrainWebAppApi = {
+      getHealth: vi.fn(),
+      listMemory: vi.fn(),
+      listKnowledge: vi.fn(),
+      listKnowledgeTopics: vi.fn(),
+      listSkills: vi.fn(),
+      syncBrowser: vi.fn(),
+      syncShell: vi.fn(),
+      createDailyCandidates: vi.fn(),
+      suggestCandidateReviews: vi.fn(),
+      reviewCandidateMemory: vi.fn(),
+      undoCandidateReview: vi.fn(),
+      generateKnowledge: vi.fn(),
+      generateSkill: vi.fn(async () => generatedArtifact),
+      saveKnowledgeArtifact: vi.fn(),
+      saveSkillArtifact: vi.fn(async () => savedArtifact),
+    } as unknown as MirrorBrainWebAppApi
+
+    const wrapper = createWrapper({ skillArtifacts: [existingSkill] })
+    const { result } = renderHook(() => useArtifacts(api), { wrapper })
+
+    await act(async () => {
+      await result.current.generateSkill(reviewedMemories)
+    })
+
+    expect(result.current.skillArtifacts).toEqual([existingSkill, savedArtifact])
   })
 })

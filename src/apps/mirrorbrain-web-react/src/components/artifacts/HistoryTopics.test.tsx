@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import HistoryTopics from './HistoryTopics'
 import type { KnowledgeArtifact, SkillArtifact } from '../../types/index'
@@ -134,5 +134,75 @@ describe('HistoryTopics', () => {
     const editMessage = screen.getByLabelText('Artifact Edit Message')
     expect(editMessage.tagName.toLowerCase()).toBe('input')
     expect(screen.getByRole('button', { name: 'Send' })).not.toBeNull()
+  })
+
+  it('collapses draft and published copies of the same artifact lineage into one row', async () => {
+    const user = userEvent.setup()
+
+    const knowledgeDraft: KnowledgeArtifact = {
+      id: 'knowledge-draft:shared-lineage',
+      draftState: 'draft',
+      artifactType: 'daily-review-draft',
+      title: 'Shared lineage knowledge',
+      summary: 'Draft summary',
+      body: 'Draft body',
+      sourceReviewedMemoryIds: ['reviewed:shared-1'],
+      derivedFromKnowledgeIds: [],
+      version: 1,
+      isCurrentBest: false,
+      supersedesKnowledgeId: null,
+      updatedAt: '2026-04-28T10:00:00.000Z',
+      reviewedAt: '2026-04-28T09:00:00.000Z',
+      recencyLabel: '2026-04-28',
+      provenanceRefs: [{ kind: 'reviewed-memory', id: 'reviewed:shared-1' }],
+    }
+    const publishedKnowledge: KnowledgeArtifact = {
+      ...knowledgeDraft,
+      id: 'topic-knowledge:shared-lineage:v1',
+      draftState: 'published',
+      artifactType: 'topic-knowledge',
+      title: 'Shared lineage knowledge',
+      summary: 'Published summary',
+      body: 'Published body',
+      isCurrentBest: true,
+      updatedAt: '2026-04-29T10:00:00.000Z',
+      reviewedAt: '2026-04-29T09:00:00.000Z',
+      recencyLabel: '2026-04-29',
+      supersedesKnowledgeId: null,
+    }
+    const skillDraft: SkillArtifact = {
+      id: 'skill-draft:shared-lineage',
+      approvalState: 'draft',
+      workflowEvidenceRefs: ['reviewed:shared-2'],
+      executionSafetyMetadata: { requiresConfirmation: true },
+      updatedAt: '2026-04-28T10:00:00.000Z',
+    }
+    const publishedSkill: SkillArtifact = {
+      ...skillDraft,
+      id: 'skill-draft:shared-lineage:approved',
+      approvalState: 'approved',
+      updatedAt: '2026-04-29T10:00:00.000Z',
+    }
+
+    render(
+      <HistoryTopics
+        knowledgeTopics={[]}
+        knowledgeArtifacts={[knowledgeDraft, publishedKnowledge]}
+        skillArtifacts={[skillDraft, publishedSkill]}
+      />
+    )
+
+    expect(screen.getAllByTestId('artifact-list-item')).toHaveLength(1)
+    expect(within(screen.getByTestId('artifact-history-panel')).getByText('Shared lineage knowledge')).not.toBeNull()
+    expect(within(screen.getByTestId('artifact-detail-panel')).getByText('Published body')).not.toBeNull()
+
+    await user.click(screen.getByRole('tab', { name: 'Skill' }))
+
+    expect(screen.getAllByTestId('artifact-list-item')).toHaveLength(1)
+    expect(
+      within(screen.getByTestId('artifact-detail-panel')).getByText(
+        'skill-draft:shared-lineage:approved'
+      )
+    ).not.toBeNull()
   })
 })

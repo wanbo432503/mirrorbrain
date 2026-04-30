@@ -35,6 +35,31 @@ function getSkillTimelineTimestamp(artifact: SkillArtifact): number {
   return Number.isFinite(value) ? value : 0
 }
 
+function dedupeByLineage<T>(
+  items: T[],
+  getLineageKey: (item: T) => string
+): T[] {
+  const seen = new Set<string>()
+  const result: T[] = []
+
+  for (const item of items) {
+    const lineageKey = getLineageKey(item)
+
+    if (seen.has(lineageKey)) {
+      continue
+    }
+
+    seen.add(lineageKey)
+    result.push(item)
+  }
+
+  return result
+}
+
+function getStableLineageKey(values: string[]): string {
+  return [...values].sort().join('|')
+}
+
 export function sortKnowledgeArtifactsByNewest(
   artifacts: KnowledgeArtifact[]
 ): KnowledgeArtifact[] {
@@ -59,11 +84,25 @@ export default function HistoryTopics({
   const [conversationNotes, setConversationNotes] = useState<Record<string, string[]>>({})
 
   const sortedKnowledge = useMemo(
-    () => sortKnowledgeArtifactsByNewest(knowledgeArtifacts),
+    () =>
+      dedupeByLineage(
+        sortKnowledgeArtifactsByNewest(knowledgeArtifacts),
+        (artifact) =>
+          artifact.sourceReviewedMemoryIds.length > 0
+            ? getStableLineageKey(artifact.sourceReviewedMemoryIds)
+            : artifact.id
+      ),
     [knowledgeArtifacts]
   )
   const sortedSkills = useMemo(
-    () => sortSkillArtifactsByNewest(skillArtifacts),
+    () =>
+      dedupeByLineage(
+        sortSkillArtifactsByNewest(skillArtifacts),
+        (artifact) =>
+          artifact.workflowEvidenceRefs.length > 0
+            ? getStableLineageKey(artifact.workflowEvidenceRefs)
+            : artifact.id
+      ),
     [skillArtifacts]
   )
 
