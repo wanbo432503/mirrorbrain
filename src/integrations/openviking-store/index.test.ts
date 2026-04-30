@@ -15,6 +15,7 @@ import {
   listMirrorBrainMemoryEventsFromWorkspace,
   listMirrorBrainCandidateMemoriesFromOpenViking,
   ingestSkillArtifactToOpenViking,
+  listMirrorBrainKnowledgeArtifactsFromWorkspace,
   listMirrorBrainKnowledgeArtifactsFromOpenViking,
   listMirrorBrainMemoryEventsFromOpenViking,
   listMirrorBrainReviewedMemoriesFromOpenViking,
@@ -1506,6 +1507,65 @@ describe('openviking store adapter', () => {
           },
         ],
       },
+    ]);
+  });
+
+  it('preserves multiline knowledge bodies when reading stored workspace markdown', async () => {
+    const workspaceDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-openviking-'));
+    const body = [
+      '# Example Com / tasks',
+      '',
+      '## 核心结论',
+      '- First point',
+      '',
+      '## 背景与证据',
+      '- Second point',
+      '',
+      '## 可复用知识',
+      '- Third point',
+    ].join('\n');
+
+    mkdirSync(join(workspaceDir, 'mirrorbrain', 'knowledge'), { recursive: true });
+    writeFileSync(
+      join(workspaceDir, 'mirrorbrain', 'knowledge', 'knowledge-draft:workspace.md'),
+      [
+        '# knowledge-draft:workspace',
+        '',
+        '- artifactType: daily-review-draft',
+        '- draftState: draft',
+        '- topicKey: example-com-tasks',
+        '- title: Example Com / tasks',
+        '- summary: Workspace summary',
+        '- version: 1',
+        '- isCurrentBest: false',
+        '- supersedesKnowledgeId: ',
+        '- updatedAt: 2026-03-20T10:00:00.000Z',
+        '- reviewedAt: 2026-03-20T10:00:00.000Z',
+        '- recencyLabel: 2026-03-20',
+        '',
+        '## Body',
+        body,
+        '',
+        '## Source Reviewed Memories',
+        '- reviewed:candidate:browser:aw-event-1',
+        '',
+        '## Derived Knowledge Artifacts',
+        '',
+        '## Provenance Refs',
+        '- reviewed-memory:reviewed:candidate:browser:aw-event-1',
+      ].join('\n')
+    );
+
+    const result = await listMirrorBrainKnowledgeArtifactsFromWorkspace({
+      workspaceDir,
+    });
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        id: 'knowledge-draft:workspace',
+        title: 'Example Com / tasks',
+        body,
+      }),
     ]);
   });
 

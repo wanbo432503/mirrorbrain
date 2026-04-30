@@ -41,8 +41,9 @@ This component is the storage adapter that maps MirrorBrain artifacts into OpenV
 7. Retrieval uses `GET /api/v1/fs/ls` at `viking://resources/`, filters by the MirrorBrain namespace prefixes, resolves directory-backed resources to their inner files, and then loads content with `GET /api/v1/content/read`.
 8. Memory retrieval also tolerates legacy flat browser resources such as `browser503`, deduplicates by `MemoryEvent.id` when both legacy and prefixed resources contain the same event, and compresses browser display rows by URL so repeated visits are shown as one memory item with merged `accessTimes` and the most recent visible timestamp.
 9. Some OpenViking resources may be exposed as multiple sibling content fragments such as `browser1368_1.md` and `browser1368_2.md`; retrieval concatenates these fragments in file-name order before parsing the artifact.
-10. Browser page-content artifacts are written as local markdown files under `mirrorbrain/browser-page-content/` and imported non-blockingly so raw memory-event sync does not stall on downstream indexing.
-11. The same adapter can also read historical `MemoryEvent` JSON files directly from the local workspace cache under `mirrorbrain/memory-events/` when the caller needs a non-OpenViking fallback.
+10. Knowledge artifacts are reloaded from stored markdown by treating the serialized `## Body` block as opaque markdown until the explicit metadata sections begin, so nested headings inside the body survive a refresh.
+11. Browser page-content artifacts are written as local markdown files under `mirrorbrain/browser-page-content/` and imported non-blockingly so raw memory-event sync does not stall on downstream indexing.
+12. The same adapter can also read historical `MemoryEvent` JSON files directly from the local workspace cache under `mirrorbrain/memory-events/` when the caller needs a non-OpenViking fallback.
 
 ## Operational Note
 

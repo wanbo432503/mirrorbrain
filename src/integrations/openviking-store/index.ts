@@ -649,16 +649,22 @@ async function resolveReadableContentUris(
 
 function parseKnowledgeArtifact(markdown: string): KnowledgeArtifact {
   const lines = markdown.split('\n');
-  const getSectionLines = (sectionTitle: string): string[] => {
+  const getSectionLines = (
+    sectionTitle: string,
+    endMarkers: string[] = [],
+  ): string[] => {
     const sectionIndex = lines.findIndex((line) => line.trim() === sectionTitle);
 
     if (sectionIndex === -1) {
       return [];
     }
 
-    const nextSectionIndex = lines.findIndex(
-      (line, index) => index > sectionIndex && line.startsWith('## '),
-    );
+    const nextSectionIndex =
+      endMarkers.length > 0
+        ? lines.findIndex(
+            (line, index) => index > sectionIndex && endMarkers.includes(line.trim()),
+          )
+        : lines.findIndex((line, index) => index > sectionIndex && line.startsWith('## '));
 
     return lines.slice(
       sectionIndex + 1,
@@ -727,7 +733,11 @@ function parseKnowledgeArtifact(markdown: string): KnowledgeArtifact {
     .filter((line) => line.startsWith('- '))
     .map((line) => line.replace(/^- /, '').trim())
     .filter((line) => line.length > 0);
-  const body = getSectionLines('## Body').join('\n').trim();
+  const body = getSectionLines('## Body', [
+    '## Source Reviewed Memories',
+    '## Derived Knowledge Artifacts',
+    '## Provenance Refs',
+  ]).join('\n').trim();
   const provenanceRefs = getSectionLines('## Provenance Refs')
     .filter((line) => line.startsWith('- '))
     .map((line) => line.replace(/^- /, '').trim())
