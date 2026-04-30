@@ -446,11 +446,9 @@ describe('SelectedCandidate component rendering', () => {
     fireEvent.change(screen.getByLabelText('Revision Request'), {
       target: { value: 'Make the action items clearer.' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Improve Note' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
 
-    expect(onKnowledgeBodyChange).toHaveBeenCalledWith(
-      'Final note body\n\nRevision request:\nMake the action items clearer.'
-    )
+    expect(onKnowledgeBodyChange).toHaveBeenCalledWith('Final note body\n\nRevision request:\nMake the action items clearer.')
   })
 
   it('separates the scrollable note display from a shorter non-scrollable revision input', () => {
@@ -499,11 +497,13 @@ describe('SelectedCandidate component rendering', () => {
       />
     )
 
-    expect(screen.getByTestId('knowledge-note-display-block').className).not.toContain('overflow-y-auto')
+    expect(screen.getByTestId('knowledge-note-display-block').className).toContain('overflow-hidden')
     expect(screen.getByTestId('knowledge-revision-input-block').className).toContain('shrink-0')
+    expect(screen.getByTestId('knowledge-revision-input-row').className).toContain('flex')
+    const generatedNote = screen.getByLabelText('Generated Note')
+    expect(generatedNote.className).toContain('overflow-y-auto')
     const revisionInput = screen.getByLabelText('Revision Request')
-    expect(revisionInput.getAttribute('rows')).toBe('2')
-    expect(revisionInput.className).toContain('resize-none')
-    expect(revisionInput.className).toContain('overflow-hidden')
+    expect(revisionInput.tagName.toLowerCase()).toBe('input')
+    expect(screen.getByRole('button', { name: 'Send' })).not.toBeNull()
   })
 })

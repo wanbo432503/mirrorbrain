@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import Card from '../common/Card'
 import Button from '../common/Button'
-import TextArea from '../forms/TextArea'
+import Input from '../forms/Input'
 import Checkbox from '../forms/Checkbox'
 import LoadingSpinner from '../common/LoadingSpinner'
 import KeptCandidateCard from './KeptCandidateCard'
@@ -264,38 +264,55 @@ export default function SelectedCandidate({
 
           <div
             data-testid="knowledge-note-display-block"
-            className="min-h-0 flex-1 rounded-lg border border-slate-200 bg-slate-50 p-4"
+            className="min-h-0 flex-1 overflow-hidden rounded-lg border border-slate-200 bg-slate-50 p-4"
           >
-            <TextArea
-              id="generated-knowledge-note"
-              label="Generated Note"
-              value={knowledgeDraft?.body || ''}
-              onChange={(e) => onKnowledgeBodyChange(e.target.value)}
-              rows={18}
-              className="w-full min-h-[320px] border-transparent bg-white font-body text-sm"
-              placeholder="Generated note content will appear here..."
-            />
+            <div className="flex h-full min-h-0 flex-col gap-2">
+              <label
+                htmlFor="generated-knowledge-note"
+                className="block text-sm font-heading font-semibold text-slate-900 uppercase tracking-wide"
+              >
+                Generated Note
+              </label>
+              <textarea
+                id="generated-knowledge-note"
+                value={knowledgeDraft?.body || ''}
+                onChange={(e) => onKnowledgeBodyChange(e.target.value)}
+                className="
+                  min-h-0 flex-1 w-full resize-none overflow-y-auto
+                  rounded-lg border border-slate-200 bg-white px-4 py-3
+                  font-body text-sm text-slate-900
+                  focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none
+                  transition-colors duration-200 hover:border-slate-300
+                "
+                placeholder="Generated note content will appear here..."
+              />
+            </div>
           </div>
           <div
             data-testid="knowledge-revision-input-block"
-            className="shrink-0 border-t border-slate-200 pt-4 space-y-3"
+            className="shrink-0 border-t border-slate-200 pt-4"
           >
-            <TextArea
-              id="knowledge-revision-request"
-              label="Revision Request"
-              value={knowledgeRevisionRequest}
-              onChange={(e) => setKnowledgeRevisionRequest(e.target.value)}
-              rows={2}
-              className="w-full resize-none overflow-hidden font-body text-sm"
-              placeholder="Describe how MirrorBrain should improve this note..."
-            />
-            <Button
-              variant="primary"
-              onClick={handleImproveKnowledgeNote}
-              disabled={knowledgeRevisionRequest.trim().length === 0}
+            <div
+              data-testid="knowledge-revision-input-row"
+              className="flex items-end gap-3"
             >
-              Improve Note
-            </Button>
+              <Input
+                id="knowledge-revision-request"
+                label="Revision Request"
+                value={knowledgeRevisionRequest}
+                onChange={(e) => setKnowledgeRevisionRequest(e.target.value)}
+                className="h-10 flex-1"
+                placeholder="Describe how MirrorBrain should improve this note..."
+              />
+              <Button
+                variant="primary"
+                onClick={handleImproveKnowledgeNote}
+                disabled={knowledgeRevisionRequest.trim().length === 0}
+                className="shrink-0"
+              >
+                Send
+              </Button>
+            </div>
           </div>
         </div>
       </Card>
