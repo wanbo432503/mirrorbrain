@@ -19,15 +19,17 @@ It does not synthesize new knowledge, execute skills, or persist conversational 
 
 ## Key Interfaces
 
-- `KnowledgeArtifact`: rendered with title, summary, state, source count, and timestamps in the detail panel; the knowledge body is not shown there.
+- `KnowledgeArtifact`: rendered with title, summary, body, lifecycle metadata, topic/version metadata, source refs, derived refs, and provenance refs in the detail panel.
 - `SkillArtifact`: rendered with id, approval state, confirmation requirement, workflow evidence refs, and optional timestamps.
 - `HistoryTopics`: receives `knowledgeArtifacts` and `skillArtifacts` from `useArtifacts` and owns the local subtab, selection, and conversation-note state.
 
 ## Data Flow
 
-`ArtifactsPanel` reads artifact arrays from `useArtifacts`. `HistoryTopics` sorts the active category newest first, defaults selection to the newest visible artifact, and updates the right-side detail panel when a list item is clicked.
+`ArtifactsPanel` reads artifact arrays from `useArtifacts`. `HistoryTopics` sorts the active category newest first, hides a draft knowledge artifact when a published artifact explicitly derives from that draft id, defaults selection to the newest visible artifact, and updates the right-side detail panel when a list item is clicked.
 
 When the review workflow generates or regenerates knowledge or skill drafts, the hook persists the returned artifact through the save API and upserts the saved version into the shared artifact list. That keeps newly generated artifacts visible in the tab and reloadable after a page refresh.
+
+When the review workflow approves a knowledge draft, the hook replaces the approved draft in shared state with the returned published topic artifact. This prevents the Artifacts tab from showing two left-list entries for a single approval while preserving the published artifact's provenance and `derivedFromKnowledgeIds` links.
 
 When the user deletes a knowledge or skill artifact from the detail panel, the hook calls the artifact delete API and removes the deleted id from the shared artifact list immediately so the active timeline and detail view both advance without a manual refresh.
 
@@ -48,5 +50,5 @@ The artifact edit message row uses a single-line full-width input with a send ac
 
 ## Test Strategy
 
-- `HistoryTopics.test.tsx` covers Knowledge / Skill subtab rendering, newest-first ordering, artifact selection, detail display, delete actions, and local conversation-note behavior.
+- `HistoryTopics.test.tsx` covers Knowledge / Skill subtab rendering, newest-first ordering, approval-lineage draft suppression, artifact selection, full knowledge detail display, delete actions, and local conversation-note behavior.
 - Broader verification uses the root Vitest suite, root TypeScript check, and the Vite app production build.

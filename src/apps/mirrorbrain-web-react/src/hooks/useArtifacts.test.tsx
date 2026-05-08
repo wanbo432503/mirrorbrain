@@ -417,4 +417,74 @@ describe('useArtifacts', () => {
     expect(api.deleteSkillArtifact).toHaveBeenCalledWith(existingSkill.id)
     expect(result.current.skillArtifacts).toEqual([])
   })
+
+  it('replaces the approved knowledge draft with the published artifact in shared state', async () => {
+    const draft: KnowledgeArtifact = {
+      id: 'knowledge-draft:shared-lineage',
+      draftState: 'draft',
+      artifactType: 'daily-review-draft',
+      title: 'Shared lineage knowledge',
+      summary: 'Draft summary',
+      body: 'Draft body',
+      sourceReviewedMemoryIds: ['reviewed-shared'],
+      derivedFromKnowledgeIds: [],
+      version: 1,
+      isCurrentBest: false,
+      supersedesKnowledgeId: null,
+      updatedAt: '2026-04-28T10:00:00.000Z',
+      reviewedAt: '2026-04-28T09:00:00.000Z',
+      recencyLabel: '2026-04-28',
+      provenanceRefs: [{ kind: 'reviewed-memory', id: 'reviewed-shared' }],
+    }
+    const otherDraft: KnowledgeArtifact = {
+      ...draft,
+      id: 'knowledge-draft:other',
+      title: 'Other draft',
+      sourceReviewedMemoryIds: ['reviewed-other'],
+      provenanceRefs: [{ kind: 'reviewed-memory', id: 'reviewed-other' }],
+    }
+    const publishedArtifact: KnowledgeArtifact = {
+      ...draft,
+      id: 'topic-knowledge:shared-lineage:v1',
+      draftState: 'published',
+      artifactType: 'topic-knowledge',
+      title: 'Shared lineage knowledge',
+      summary: 'Published summary',
+      body: 'Published body',
+      isCurrentBest: true,
+      updatedAt: '2026-04-29T10:00:00.000Z',
+      reviewedAt: '2026-04-29T09:00:00.000Z',
+      recencyLabel: '2026-04-29',
+    }
+
+    const api: MirrorBrainWebAppApi = {
+      getHealth: vi.fn(),
+      listMemory: vi.fn(),
+      listKnowledge: vi.fn(),
+      listKnowledgeTopics: vi.fn(),
+      listSkills: vi.fn(),
+      syncBrowser: vi.fn(),
+      syncShell: vi.fn(),
+      createDailyCandidates: vi.fn(),
+      suggestCandidateReviews: vi.fn(),
+      reviewCandidateMemory: vi.fn(),
+      undoCandidateReview: vi.fn(),
+      generateKnowledge: vi.fn(),
+      generateSkill: vi.fn(),
+      approveKnowledge: vi.fn(async () => ({
+        publishedArtifact,
+        assignedTopic: { topicKey: 'shared-lineage', title: 'Shared lineage knowledge' },
+      })),
+    } as unknown as MirrorBrainWebAppApi
+
+    const wrapper = createWrapper({ knowledgeArtifacts: [draft, otherDraft] })
+    const { result } = renderHook(() => useArtifacts(api), { wrapper })
+
+    await act(async () => {
+      await result.current.approveKnowledge(draft)
+    })
+
+    expect(api.approveKnowledge).toHaveBeenCalledWith(draft)
+    expect(result.current.knowledgeArtifacts).toEqual([otherDraft, publishedArtifact])
+  })
 })

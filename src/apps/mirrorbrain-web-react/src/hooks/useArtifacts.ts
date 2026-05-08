@@ -20,6 +20,17 @@ function upsertArtifactById<T extends { id: string }>(items: T[], item: T): T[] 
   return nextItems
 }
 
+function replaceApprovedKnowledgeDraft(
+  items: KnowledgeArtifact[],
+  draft: KnowledgeArtifact,
+  publishedArtifact: KnowledgeArtifact
+): KnowledgeArtifact[] {
+  return upsertArtifactById(
+    items.filter((artifact) => artifact.id !== draft.id),
+    publishedArtifact
+  )
+}
+
 export function useArtifacts(api: MirrorBrainWebAppApi) {
   const { state, dispatch } = useMirrorBrain()
   const [feedback, setFeedback] = useState<ArtifactsFeedback | null>(null)
@@ -122,9 +133,9 @@ export function useArtifacts(api: MirrorBrainWebAppApi) {
       try {
         const { publishedArtifact, assignedTopic } = await api.approveKnowledge(draft)
 
-        // Update knowledge artifacts list in global state
-        const updatedKnowledge = upsertArtifactById(
+        const updatedKnowledge = replaceApprovedKnowledgeDraft(
           state.knowledgeArtifacts,
+          draft,
           publishedArtifact
         )
         dispatch({ type: 'LOAD_KNOWLEDGE', payload: updatedKnowledge })

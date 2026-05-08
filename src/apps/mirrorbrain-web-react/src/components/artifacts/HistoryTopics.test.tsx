@@ -65,7 +65,7 @@ describe('HistoryTopics', () => {
     const knowledgeItems = screen.getAllByTestId('artifact-list-item')
     expect(knowledgeItems[0].textContent).toContain('Newer knowledge')
     expect(knowledgeItems[1].textContent).toContain('Older knowledge')
-    expect(screen.queryByText('Newer body')).toBeNull()
+    expect(screen.getByText('Newer body')).not.toBeNull()
 
     await user.click(screen.getByRole('tab', { name: 'Skill' }))
 
@@ -76,8 +76,6 @@ describe('HistoryTopics', () => {
   })
 
   it('updates the single detail display and supports conversational local edits', async () => {
-    const user = userEvent.setup()
-
     render(
       <HistoryTopics
         knowledgeTopics={[]}
@@ -86,8 +84,8 @@ describe('HistoryTopics', () => {
       />
     )
 
-    await user.click(screen.getByRole('button', { name: /Older knowledge/ }))
-    expect(screen.queryByText('Older body')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /Older knowledge/ }))
+    expect(screen.getByText('Older body')).not.toBeNull()
 
     fireEvent.change(screen.getByLabelText('Artifact Edit Message'), {
       target: { value: 'Add a note about provenance.' },
@@ -96,7 +94,7 @@ describe('HistoryTopics', () => {
 
     expect(screen.getByText(/Add a note about provenance/)).not.toBeNull()
 
-    await user.click(screen.getByRole('tab', { name: 'Skill' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Skill' }))
     fireEvent.change(screen.getByLabelText('Artifact Edit Message'), {
       target: { value: 'Clarify execution requires confirmation.' },
     })
@@ -136,7 +134,7 @@ describe('HistoryTopics', () => {
     expect(screen.getByRole('button', { name: 'Send' })).not.toBeNull()
   })
 
-  it('keeps draft and published copies of the same artifact lineage visible in history', async () => {
+  it('shows only the published knowledge item for an approved draft lineage and renders all knowledge fields', async () => {
     const user = userEvent.setup()
 
     const knowledgeDraft: KnowledgeArtifact = {
@@ -161,6 +159,7 @@ describe('HistoryTopics', () => {
       id: 'topic-knowledge:shared-lineage:v1',
       draftState: 'published',
       artifactType: 'topic-knowledge',
+      topicKey: 'shared-lineage',
       title: 'Shared lineage knowledge',
       summary: 'Published summary',
       body: 'Published body',
@@ -169,6 +168,7 @@ describe('HistoryTopics', () => {
       reviewedAt: '2026-04-29T09:00:00.000Z',
       recencyLabel: '2026-04-29',
       supersedesKnowledgeId: null,
+      derivedFromKnowledgeIds: ['knowledge-draft:shared-lineage'],
     }
     const skillDraft: SkillArtifact = {
       id: 'skill-draft:shared-lineage',
@@ -192,10 +192,15 @@ describe('HistoryTopics', () => {
       />
     )
 
-    expect(screen.getAllByTestId('artifact-list-item')).toHaveLength(2)
+    expect(screen.getAllByTestId('artifact-list-item')).toHaveLength(1)
     expect(screen.getAllByTestId('artifact-list-item')[0].textContent).toContain('Shared lineage knowledge')
     expect(screen.getAllByTestId('artifact-list-item')[0].textContent).toContain('Published summary')
-    expect(screen.queryByText('Published body')).toBeNull()
+    expect(screen.getByText('Published body')).not.toBeNull()
+    expect(screen.getByText('Topic: shared-lineage')).not.toBeNull()
+    expect(screen.getByText('Version: 1')).not.toBeNull()
+    expect(screen.getByText('Current best: yes')).not.toBeNull()
+    expect(screen.getByText('Recency: 2026-04-29')).not.toBeNull()
+    expect(screen.getByText('reviewed:shared-1')).not.toBeNull()
 
     await user.click(screen.getByRole('tab', { name: 'Skill' }))
 

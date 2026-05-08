@@ -42,9 +42,20 @@ function getSkillTimelineTimestamp(artifact: SkillArtifact): number {
 export function sortKnowledgeArtifactsByNewest(
   artifacts: KnowledgeArtifact[]
 ): KnowledgeArtifact[] {
-  return [...artifacts].sort(
-    (left, right) => getKnowledgeTimelineTimestamp(right) - getKnowledgeTimelineTimestamp(left)
+  const publishedSourceDraftIds = new Set(
+    artifacts
+      .filter((artifact) => artifact.draftState === 'published')
+      .flatMap((artifact) => artifact.derivedFromKnowledgeIds ?? [])
   )
+
+  return artifacts
+    .filter(
+      (artifact) =>
+        artifact.draftState !== 'draft' || !publishedSourceDraftIds.has(artifact.id)
+    )
+    .sort(
+      (left, right) => getKnowledgeTimelineTimestamp(right) - getKnowledgeTimelineTimestamp(left)
+    )
 }
 
 export function sortSkillArtifactsByNewest(artifacts: SkillArtifact[]): SkillArtifact[] {
@@ -286,13 +297,42 @@ function ArtifactDetail({
             {deleteButtonLabel}
           </Button>
         </div>
-        <p className="font-body text-sm text-slate-700">{knowledge.summary ?? 'No summary'}</p>
+        <KnowledgeField label="Summary" value={knowledge.summary ?? 'No summary'} />
+        <KnowledgeField label="Body" value={knowledge.body ?? 'No body'} preserveWhitespace />
         <ArtifactMetadata
           items={[
+            `Id: ${knowledge.id}`,
+            knowledge.artifactType ? `Type: ${knowledge.artifactType}` : null,
             `State: ${knowledge.draftState}`,
+            knowledge.topicKey ? `Topic: ${knowledge.topicKey}` : null,
+            knowledge.version !== undefined ? `Version: ${knowledge.version}` : null,
+            knowledge.isCurrentBest !== undefined
+              ? `Current best: ${knowledge.isCurrentBest ? 'yes' : 'no'}`
+              : null,
+            knowledge.supersedesKnowledgeId
+              ? `Supersedes: ${knowledge.supersedesKnowledgeId}`
+              : null,
             `Sources: ${knowledge.sourceReviewedMemoryIds.length}`,
+            `Derived: ${knowledge.derivedFromKnowledgeIds?.length ?? 0}`,
             knowledge.updatedAt ? `Updated: ${knowledge.updatedAt}` : null,
+            knowledge.reviewedAt ? `Reviewed: ${knowledge.reviewedAt}` : null,
+            knowledge.recencyLabel ? `Recency: ${knowledge.recencyLabel}` : null,
           ]}
+        />
+        <KnowledgeRefs
+          label="Reviewed Memory Sources"
+          refs={knowledge.sourceReviewedMemoryIds}
+          emptyMessage="No reviewed memory sources attached."
+        />
+        <KnowledgeRefs
+          label="Derived Knowledge"
+          refs={knowledge.derivedFromKnowledgeIds ?? []}
+          emptyMessage="No derived knowledge refs attached."
+        />
+        <KnowledgeRefs
+          label="Provenance"
+          refs={(knowledge.provenanceRefs ?? []).map((ref) => `${ref.kind}: ${ref.id}`)}
+          emptyMessage="No provenance refs attached."
         />
         <ConversationNotes notes={notes} />
       </div>
@@ -339,6 +379,63 @@ function ArtifactDetail({
         </div>
       </div>
       <ConversationNotes notes={notes} />
+    </div>
+  )
+}
+
+function KnowledgeField({
+  label,
+  value,
+  preserveWhitespace = false,
+}: {
+  label: string
+  value: string
+  preserveWhitespace?: boolean
+}) {
+  return (
+    <div>
+      <p className="font-heading text-xs font-semibold uppercase text-slate-500 mb-2">
+        {label}
+      </p>
+      <p
+        className={`rounded-lg bg-slate-50 p-3 font-body text-sm text-slate-700 ${
+          preserveWhitespace ? 'whitespace-pre-wrap' : ''
+        }`}
+      >
+        {value}
+      </p>
+    </div>
+  )
+}
+
+function KnowledgeRefs({
+  label,
+  refs,
+  emptyMessage,
+}: {
+  label: string
+  refs: string[]
+  emptyMessage: string
+}) {
+  return (
+    <div>
+      <p className="font-heading text-xs font-semibold uppercase text-slate-500 mb-2">
+        {label}
+      </p>
+      <div className="space-y-2">
+        {refs.length === 0 ? (
+          <p className="font-body text-sm text-slate-500">{emptyMessage}</p>
+        ) : (
+          refs.map((ref) => (
+            <p
+              key={ref}
+              className="rounded-md bg-slate-100 px-3 py-2 font-body text-sm text-slate-700"
+            >
+              {ref}
+            </p>
+          ))
+        )}
+      </div>
     </div>
   )
 }

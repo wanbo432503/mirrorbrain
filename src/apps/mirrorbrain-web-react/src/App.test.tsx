@@ -145,6 +145,6 @@ describe('App', () => {
     const detailPanel = screen.getByTestId('artifact-detail-panel')
     expect(within(detailPanel).getByText('Refresh knowledge')).not.toBeNull()
     expect(within(detailPanel).getByText('Reloaded from backend')).not.toBeNull()
-    expect(within(detailPanel).queryByText('Reloaded knowledge body')).toBeNull()
+    expect(within(detailPanel).getByText('Reloaded knowledge body')).not.toBeNull()
   })
 })
