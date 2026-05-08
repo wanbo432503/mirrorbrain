@@ -7,6 +7,10 @@ import {
   listMirrorBrainMemoryEventsFromOpenViking,
   listMirrorBrainMemoryEventsFromWorkspace,
 } from '../../integrations/openviking-store/index.js';
+import {
+  evaluateMemoryEventsForIngestion,
+  type ScoredMemoryEvent,
+} from './memory-event-evaluator.js';
 
 export interface MemoryEventsCache {
   version: number;
@@ -17,10 +21,22 @@ export interface MemoryEventsCache {
     browser?: {
       lastSyncedAt: string;
       importedCount: number;
+      evaluationStats?: {
+        total: number;
+        basicFiltered: number;
+        dedupRemoved: number;
+        finalKept: number;
+      };
     };
     shell?: {
       lastSyncedAt: string;
       importedCount: number;
+      evaluationStats?: {
+        total: number;
+        basicFiltered: number;
+        dedupRemoved: number;
+        finalKept: number;
+      };
     };
   };
 }
@@ -206,8 +222,21 @@ function mergeMemoryEventsForDisplay(
 function mergeNewEventsToCache(
   cachedEvents: MemoryEvent[],
   newEvents: MemoryEvent[],
-): MemoryEvent[] {
-  const deduplicatedById = deduplicateById([...cachedEvents, ...newEvents]);
+): {
+  mergedEvents: MemoryEvent[];
+  evaluationStats: {
+    total: number;
+    basicFiltered: number;
+    dedupRemoved: number;
+    finalKept: number;
+  };
+} {
+  // Evaluate new events BEFORE merging (OpenWiki-style first-stage assessment)
+  const { scoredEvents, stats } = evaluateMemoryEventsForIngestion(newEvents);
+
+  // Only merge events that passed evaluation
+  const evaluatedEvents = scoredEvents.map((s) => s.event);
+  const deduplicatedById = deduplicateById([...cachedEvents, ...evaluatedEvents]);
   const latestBySignature = new Map<string, MemoryEvent>();
 
   for (const event of deduplicatedById) {
@@ -225,9 +254,12 @@ function mergeNewEventsToCache(
     );
   }
 
-  return [...latestBySignature.values()].sort((left, right) =>
-    right.timestamp.localeCompare(left.timestamp),
-  );
+  return {
+    mergedEvents: [...latestBySignature.values()].sort((left, right) =>
+      right.timestamp.localeCompare(left.timestamp),
+    ),
+    evaluationStats: stats,
+  };
 }
 
 export async function updateCacheWithNewEvents(
@@ -243,7 +275,7 @@ export async function updateCacheWithNewEvents(
     return cache;
   }
 
-  const mergedEvents = mergeNewEventsToCache(cache.events, newEvents);
+  const { mergedEvents, evaluationStats } = mergeNewEventsToCache(cache.events, newEvents);
 
   cache.events = mergedEvents;
   cache.total = mergedEvents.length;
@@ -251,7 +283,12 @@ export async function updateCacheWithNewEvents(
   cache.lastSyncSummary[sourceType] = {
     lastSyncedAt: new Date().toISOString(),
     importedCount: newEvents.length,
+    evaluationStats,
   };
+
+  console.log(
+    `[memory-events-cache] ${sourceType} sync: ${newEvents.length} new → ${evaluationStats.finalKept} kept (filtered ${evaluationStats.basicFiltered}, deduped ${evaluationStats.dedupRemoved})`,
+  );
 
   await saveMemoryEventsCache(workspaceDir, cache);
   return cache;
