@@ -9,14 +9,14 @@ import { useArtifacts } from '../../hooks/useArtifacts'
 import { useMirrorBrain } from '../../contexts/MirrorBrainContext'
 
 export function getDefaultReviewDate(now: Date = new Date()): string {
-  const yesterday = new Date(now)
-  yesterday.setDate(yesterday.getDate() - 1)
+  // Use today's date instead of yesterday for easier debugging
+  const today = new Date(now)
 
   return new Intl.DateTimeFormat('en-CA', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).format(yesterday)
+  }).format(today)
 }
 
 export function getLocalTimeZone(): string {
