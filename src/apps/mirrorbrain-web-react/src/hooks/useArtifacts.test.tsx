@@ -132,6 +132,74 @@ describe('useArtifacts', () => {
     expect(result.current.knowledgeArtifacts).toEqual([savedArtifact])
   })
 
+  it('keeps generated knowledge available when the follow-up save fails', async () => {
+    const reviewedMemories: ReviewedMemory[] = [
+      {
+        id: 'reviewed-save-failed',
+        candidateMemoryId: 'candidate-save-failed',
+        candidateTitle: 'Candidate title',
+        candidateSummary: 'Candidate summary',
+        candidateTheme: 'theme',
+        memoryEventIds: ['event-save-failed'],
+        reviewDate: '2026-05-10',
+        decision: 'keep',
+        reviewedAt: '2026-05-10T10:00:00.000Z',
+      },
+    ]
+
+    const generatedArtifact: KnowledgeArtifact = {
+      id: 'knowledge-draft:reviewed-save-failed',
+      draftState: 'draft',
+      artifactType: 'daily-review-draft',
+      title: 'Generated title',
+      summary: 'Generated summary',
+      body: 'Generated body',
+      sourceReviewedMemoryIds: ['reviewed-save-failed'],
+      derivedFromKnowledgeIds: [],
+      version: 1,
+      isCurrentBest: false,
+      supersedesKnowledgeId: null,
+      updatedAt: '2026-05-10T10:00:00.000Z',
+      reviewedAt: '2026-05-10T09:00:00.000Z',
+      recencyLabel: '2026-05-10',
+      provenanceRefs: [{ kind: 'reviewed-memory', id: 'reviewed-save-failed' }],
+    }
+
+    const api: MirrorBrainWebAppApi = {
+      getHealth: vi.fn(),
+      listMemory: vi.fn(),
+      listKnowledge: vi.fn(),
+      listKnowledgeTopics: vi.fn(),
+      listSkills: vi.fn(),
+      syncBrowser: vi.fn(),
+      syncShell: vi.fn(),
+      createDailyCandidates: vi.fn(),
+      suggestCandidateReviews: vi.fn(),
+      reviewCandidateMemory: vi.fn(),
+      undoCandidateReview: vi.fn(),
+      generateKnowledge: vi.fn(async () => generatedArtifact),
+      generateSkill: vi.fn(),
+      saveKnowledgeArtifact: vi.fn(async () => {
+        throw new Error('OpenViking save failed')
+      }),
+      saveSkillArtifact: vi.fn(),
+    } as unknown as MirrorBrainWebAppApi
+
+    const wrapper = createWrapper()
+    const { result } = renderHook(() => useArtifacts(api), { wrapper })
+
+    let returnedArtifact: KnowledgeArtifact | null = null
+
+    await act(async () => {
+      returnedArtifact = await result.current.generateKnowledge(reviewedMemories)
+    })
+
+    expect(api.generateKnowledge).toHaveBeenCalledWith(reviewedMemories)
+    expect(api.saveKnowledgeArtifact).toHaveBeenCalledWith(generatedArtifact)
+    expect(returnedArtifact).toEqual(generatedArtifact)
+    expect(result.current.knowledgeArtifacts).toEqual([generatedArtifact])
+  })
+
   it('persists generated skill and stores the saved artifact in shared state', async () => {
     const reviewedMemories: ReviewedMemory[] = [
       {

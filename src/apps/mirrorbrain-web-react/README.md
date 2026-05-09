@@ -194,8 +194,8 @@ All 15 API methods preserved from original implementation:
 7. `reviewCandidateMemory()` - Keep/Discard candidate
 8. `listKnowledge()` - Knowledge artifacts
 9. `listKnowledgeTopics()` - Knowledge topics
-10. `generateKnowledge()` - Generate knowledge
-11. `saveKnowledgeArtifact()` - Save knowledge draft
+10. `generateKnowledge()` - Generate knowledge and immediately expose the generated draft in shared artifact state
+11. `saveKnowledgeArtifact()` - Save edited knowledge draft; follow-up save failures must not hide a draft that generation already returned
 12. `listSkills()` - Skill artifacts
 13. `generateSkill()` - Generate skill
 14. `saveSkillArtifact()` - Save skill draft

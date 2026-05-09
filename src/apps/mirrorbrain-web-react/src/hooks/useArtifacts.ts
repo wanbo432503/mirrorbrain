@@ -50,12 +50,39 @@ export function useArtifacts(api: MirrorBrainWebAppApi) {
 
       try {
         const artifact = await api.generateKnowledge(reviewedMemories)
-        const savedArtifact = api.saveKnowledgeArtifact
-          ? await api.saveKnowledgeArtifact(artifact)
-          : artifact
+        const generatedKnowledge = upsertArtifactById(
+          state.knowledgeArtifacts,
+          artifact
+        )
+        dispatch({ type: 'LOAD_KNOWLEDGE', payload: generatedKnowledge })
+
+        if (!api.saveKnowledgeArtifact) {
+          setFeedback({
+            kind: 'success',
+            message: 'Knowledge artifact generated successfully',
+          })
+
+          return artifact
+        }
+
+        let savedArtifact: KnowledgeArtifact
+        try {
+          savedArtifact = await api.saveKnowledgeArtifact(artifact)
+        } catch (saveError) {
+          const message =
+            saveError instanceof Error
+              ? saveError.message
+              : 'Failed to save generated knowledge'
+          setFeedback({
+            kind: 'error',
+            message: `Knowledge artifact generated, but saving failed: ${message}`,
+          })
+
+          return artifact
+        }
 
         const updatedKnowledge = upsertArtifactById(
-          state.knowledgeArtifacts,
+          generatedKnowledge,
           savedArtifact
         )
         dispatch({ type: 'LOAD_KNOWLEDGE', payload: updatedKnowledge })
