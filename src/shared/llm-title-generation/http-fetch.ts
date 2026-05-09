@@ -26,11 +26,33 @@ interface TitleGenerationOutput {
 
 let cachedConfig: LLMConfig | null = null;
 
+function readRequiredEnvConfig(env: NodeJS.ProcessEnv): LLMConfig | null {
+  const apiBase = env.MIRRORBRAIN_LLM_API_BASE?.trim();
+  const apiKey = env.MIRRORBRAIN_LLM_API_KEY?.trim();
+  const model = env.MIRRORBRAIN_LLM_MODEL?.trim();
+
+  if (!apiBase || !apiKey || !model) {
+    return null;
+  }
+
+  return {
+    apiBase,
+    apiKey,
+    model,
+  };
+}
+
 /**
- * Load LLM config from ~/.openviking/ov.conf
+ * Load LLM config from MirrorBrain env first, then ~/.openviking/ov.conf.
  */
 export async function loadLLMConfig(): Promise<LLMConfig> {
   if (cachedConfig) return cachedConfig;
+
+  const envConfig = readRequiredEnvConfig(process.env);
+  if (envConfig !== null) {
+    cachedConfig = envConfig;
+    return cachedConfig;
+  }
 
   const configPath = join(homedir(), '.openviking', 'ov.conf');
   const configContent = await readFile(configPath, 'utf-8');

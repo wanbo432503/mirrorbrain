@@ -157,7 +157,7 @@ describe('knowledge-generation-llm', () => {
     ).resolves.toBe('vitest');
   });
 
-  it('generates a structured draft grounded in source page content from all reviewed memories', async () => {
+  it('generates a degraded scaffold without raw source excerpts when no LLM analyzer is available', async () => {
     const artifact = await generateKnowledgeFromReviewedMemories(
       [
         reviewedMemory(),
@@ -208,10 +208,13 @@ describe('knowledge-generation-llm', () => {
       updatedAt: '2026-04-21T12:00:00.000Z',
     });
     expect(artifact.summary).toContain('2 reviewed memories');
-    expect(artifact.body).toContain('## Source Synthesis');
-    expect(artifact.body).toContain('install Vitest');
-    expect(artifact.body).toContain('Playwright UI mode');
+    expect(artifact.body).toContain('## Generation Status');
+    expect(artifact.body).toContain('LLM synthesis was unavailable');
+    expect(artifact.body).not.toContain('## Source Synthesis');
+    expect(artifact.body).not.toContain('install Vitest');
+    expect(artifact.body).not.toContain('Playwright UI mode');
     expect(artifact.body).toContain('## Provenance');
+    expect(artifact.compilationMetadata?.generationMethod).toBe('legacy');
   });
 
   it('uses an LLM synthesis prompt instead of dumping noisy web page text into the note body', async () => {
@@ -302,12 +305,69 @@ describe('knowledge-generation-llm', () => {
 
     expect(synthesisPrompt).toBeDefined();
     expect(synthesisPrompt).toContain('Do not paste raw page text');
+    expect(synthesisPrompt).toContain('topic-oriented wiki page');
+    expect(synthesisPrompt).toContain('Do not write an activity recap');
     expect(synthesisPrompt).toContain('Evidence from login pages');
     expect(synthesisPrompt).not.toContain('sid=secret');
     expect(artifact.body).toContain('## 核心结论');
     expect(artifact.body).toContain('登录页噪音不能当作邮件内容');
     expect(artifact.body).not.toContain('扫码登录');
     expect(artifact.body).not.toContain('登录iframe');
+  });
+
+  it('marks LLM synthesis failures as degraded drafts without dumping raw source excerpts', async () => {
+    const artifact = await generateKnowledgeFromReviewedMemories(
+      [
+        reviewedMemory({
+          id: 'reviewed:candidate:karpathy-llm-wiki',
+          candidateTitle: 'Work on Karpathy Llm Wiki',
+          candidateSummary: 'Reviewed LLM wiki references and related projects.',
+          candidateTheme: 'karpathy llm wiki',
+          memoryEventIds: ['event:google-search', 'event:llm-wiki-compiler'],
+          candidateSourceRefs: [
+            {
+              id: 'event:google-search',
+              sourceType: 'activitywatch-browser',
+              timestamp: '2026-05-10T09:00:00.000Z',
+              title: 'Google Search',
+              url: 'https://www.google.com/search?q=karpathy+llm+wiki',
+              contribution: 'supporting',
+            },
+          ],
+        }),
+      ],
+      {
+        now: () => '2026-05-10T10:00:00.000Z',
+        analyzeWithLLM: vi.fn(async () => {
+          throw new Error('LLM provider unavailable');
+        }),
+        retrievePageContent: async (eventId) => ({
+          content:
+            eventId === 'event:google-search'
+              ? 'Google Search\nPlease click here if you are not redirected within a few seconds.'
+              : 'GitHub - atomicstrata/llm-wiki-compiler\nRaw sources in, interlinked wiki out.\nnpm install -g llm-wiki-compiler',
+          source: 'captured-page-text',
+          url:
+            eventId === 'event:google-search'
+              ? 'https://www.google.com/search?q=karpathy+llm+wiki'
+              : 'https://github.com/atomicstrata/llm-wiki-compiler',
+          title: eventId,
+        }),
+      },
+    );
+
+    expect(artifact.body).toContain('## Generation Status');
+    expect(artifact.body).toContain('LLM synthesis was unavailable');
+    expect(artifact.title).toBe('Karpathy Llm Wiki');
+    expect(artifact.body).not.toContain('## Source Synthesis');
+    expect(artifact.body).not.toContain('Google Search');
+    expect(artifact.body).not.toContain('google.com/search');
+    expect(artifact.body).not.toContain('Please click here');
+    expect(artifact.body).not.toContain('npm install -g llm-wiki-compiler');
+    expect(artifact.compilationMetadata).toMatchObject({
+      generationMethod: 'legacy',
+      executeStageCompletedAt: '2026-05-10T10:00:00.000Z',
+    });
   });
 
   it('cleans source excerpts before prompt construction', () => {

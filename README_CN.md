@@ -89,7 +89,7 @@ Phase 3 之后最明确的事情是：
 pip install openviking --upgrade --force-reinstall
 ```
 
-创建 `~/.openviking/ov.conf`：
+创建 `~/.openviking/ov.conf`。模型配置可以复用下文 MirrorBrain `.env` 中的值：
 
 ```json
 {
@@ -102,19 +102,19 @@ pip install openviking --upgrade --force-reinstall
   },
   "embedding": {
     "dense": {
-      "api_base": "http://<your-model-endpoint>/v1",
-      "api_key": "<your-api-key>",
+      "api_base": "<MIRRORBRAIN_EMBEDDING_API_BASE>",
+      "api_key": "<MIRRORBRAIN_EMBEDDING_API_KEY>",
       "provider": "openai",
       "dimension": 1024,
-      "model": "<your-embedding-model>"
+      "model": "<MIRRORBRAIN_EMBEDDING_MODEL>"
     },
     "max_concurrent": 10
   },
   "vlm": {
-    "api_base": "http://<your-model-endpoint>/v1",
-    "api_key": "<your-api-key>",
+    "api_base": "<MIRRORBRAIN_LLM_API_BASE>",
+    "api_key": "<MIRRORBRAIN_LLM_API_KEY>",
     "provider": "openai",
-    "model": "<your-vlm-model>",
+    "model": "<MIRRORBRAIN_LLM_MODEL>",
     "max_concurrent": 32
   }
 }
@@ -143,7 +143,16 @@ MIRRORBRAIN_ACTIVITYWATCH_BASE_URL=http://127.0.0.1:5600
 MIRRORBRAIN_OPENVIKING_BASE_URL=http://127.0.0.1:1933
 MIRRORBRAIN_WORKSPACE_DIR=/path_to_workspace/mirrorbrain-workspace
 MIRRORBRAIN_SHELL_HISTORY_PATH=/path_to_workspace/.zsh_history
+MIRRORBRAIN_LLM_API_BASE=http://127.0.0.1:8000/v1
+MIRRORBRAIN_LLM_API_KEY=replace-with-your-llm-api-key
+MIRRORBRAIN_LLM_MODEL=replace-with-your-llm-model
+MIRRORBRAIN_EMBEDDING_API_BASE=http://127.0.0.1:8000/v1
+MIRRORBRAIN_EMBEDDING_API_KEY=replace-with-your-embedding-api-key
+MIRRORBRAIN_EMBEDDING_MODEL=replace-with-your-embedding-model
+MIRRORBRAIN_EMBEDDING_DIMENSION=1024
 ```
+
+MirrorBrain 会直接读取 `MIRRORBRAIN_LLM_*` 用于标题和 knowledge 生成。Embedding 仍由 OpenViking 通过 `~/.openviking/ov.conf` 使用，所以请保持 `.env` 和 `ov.conf` 中的 embedding 配置一致。
 
 ### 5. 启动 MirrorBrain
 

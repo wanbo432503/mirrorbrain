@@ -43,6 +43,11 @@ interface BuildKnowledgeSynthesisPromptInput {
   retrievedContent: ContentRetrievalResult[];
 }
 
+interface KnowledgeBodySynthesisResult {
+  body: string;
+  usedDegradedFallback: boolean;
+}
+
 const NOISY_LINE_PATTERNS = [
   /扫码登录/u,
   /账号登录/u,
@@ -76,6 +81,12 @@ const LOGIN_PAGE_PATTERNS = [
   /浏览器不支持或禁止了网页脚本/u,
 ];
 
+const SEARCH_UTILITY_SOURCE_PATTERNS = [
+  /google\.com\/search/iu,
+  /^Google Search$/iu,
+  /Please click here if you are not redirected/iu,
+];
+
 function slugifyTopicKey(value: string): string {
   return value
     .toLowerCase()
@@ -94,6 +105,27 @@ function safeUrl(value: string | undefined): string | undefined {
   } catch {
     return value.split('?')[0]?.split('&sid=')[0];
   }
+}
+
+function toKnowledgeTitle(value: string): string {
+  return value
+    .split(/[\s_-]+/u)
+    .filter((part) => part.length > 0)
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1).toLowerCase()}`)
+    .join(' ');
+}
+
+function resolveKnowledgeTitle(memory: ReviewedMemory | undefined): string {
+  if (memory === undefined) {
+    return 'Knowledge Draft';
+  }
+
+  if (/^Work on\s+/iu.test(memory.candidateTitle)) {
+    const topic = memory.candidateTheme?.trim() || memory.candidateTitle.replace(/^Work on\s+/iu, '');
+    return toKnowledgeTitle(topic);
+  }
+
+  return memory.candidateTitle;
 }
 
 function getEventUrl(event: MemoryEvent | null): string | undefined {
@@ -232,6 +264,15 @@ function isNoisyLine(line: string): boolean {
   );
 }
 
+function isSearchUtilitySource(input: {
+  url?: string;
+  title?: string;
+  content?: string;
+}): boolean {
+  const haystack = `${input.url ?? ''}\n${input.title ?? ''}\n${input.content ?? ''}`;
+  return SEARCH_UTILITY_SOURCE_PATTERNS.some((pattern) => pattern.test(haystack));
+}
+
 function cleanSourceExcerpt(content: string): string {
   const seen = new Set<string>();
   const lines = content
@@ -264,6 +305,7 @@ function formatPromptSources(
   }
 
   return retrievedContent
+    .filter((item) => !isSearchUtilitySource(item))
     .map((item, index) => {
       const excerpt = cleanSourceExcerpt(item.content);
       const evidenceWarning = looksLikeLoginPage(item)
@@ -304,7 +346,7 @@ export function buildKnowledgeSynthesisPrompt(
   return [
     'You are the MirrorBrain knowledge draft writer.',
     '',
-    'Task: transform reviewed work memories into a concise, human-readable knowledge note. Do not paste raw page text. Do not create a browsing transcript. Do not copy navigation chrome, login forms, legal text, repeated boilerplate, iframes, counters, or account/session tokens.',
+    'Task: transform reviewed work memories into a durable, topic-oriented wiki page. Do not write an activity recap. Do not paste raw page text. Do not create a browsing transcript. Do not copy navigation chrome, login forms, legal text, repeated boilerplate, iframes, counters, or account/session tokens.',
     '',
     'Evidence policy:',
     '- Use reviewed memory title and summary as the primary intent signal.',
@@ -404,14 +446,17 @@ function formatSources(
   retrievedContent: ContentRetrievalResult[],
 ): string {
   const sourceLines = reviewedMemories.flatMap((memory) =>
-    (memory.candidateSourceRefs ?? []).map((source) => {
-      const title = source.title ?? source.id;
-      const url = source.url ? ` (${safeUrl(source.url)})` : '';
-      return `- ${title}${url}`;
-    }),
+    (memory.candidateSourceRefs ?? [])
+      .filter((source) => !isSearchUtilitySource(source))
+      .map((source) => {
+        const title = source.title ?? source.id;
+        const url = source.url ? ` (${safeUrl(source.url)})` : '';
+        return `- ${title}${url}`;
+      }),
   );
   const retrievedLines = retrievedContent
     .filter((item) => item.url !== undefined)
+    .filter((item) => !isSearchUtilitySource(item))
     .map((item) => `- ${item.title ?? item.url} (${safeUrl(item.url)})`);
 
   return Array.from(new Set([...sourceLines, ...retrievedLines])).join('\n');
@@ -422,28 +467,24 @@ function buildKnowledgeBody(input: {
   reviewedMemories: ReviewedMemory[];
   retrievedContent: ContentRetrievalResult[];
 }): string {
-  const sourceText = input.retrievedContent
-    .map((item) => cleanSourceExcerpt(item.content))
-    .filter((content) => content.length > 0)
-    .join('\n\n');
   const memorySummary = input.reviewedMemories
     .map((memory) => `- ${memory.candidateTitle}: ${memory.candidateSummary}`)
     .join('\n');
   const sources = formatSources(input.reviewedMemories, input.retrievedContent);
 
   return [
-    `# ${input.reviewedMemories[0]?.candidateTitle ?? 'Knowledge Draft'}`,
+    `# ${resolveKnowledgeTitle(input.reviewedMemories[0])}`,
     '',
     `Note type: ${input.noteType}`,
+    '',
+    '## Generation Status',
+    'LLM synthesis was unavailable. This is a degraded review scaffold, not a compiled knowledge page. Regenerate after configuring a working LLM before publishing.',
     '',
     '## Review Context',
     memorySummary,
     '',
-    '## Source Synthesis',
-    sourceText.length > 0 ? sourceText : 'No captured page content was available.',
-    '',
-    '## What This Means',
-    `This draft consolidates ${input.reviewedMemories.length} reviewed memories. Sources that only contain login or mailbox shell UI should be treated as weak evidence until real message content is available.`,
+    '## Next Step',
+    'Configure a working MirrorBrain LLM model and regenerate this draft so the source material can be synthesized instead of copied.',
     '',
     '## Provenance',
     sources.length > 0 ? sources : 'See reviewed memory references.',
@@ -492,21 +533,27 @@ async function synthesizeKnowledgeBody(input: {
   reviewedMemories: ReviewedMemory[];
   retrievedContent: ContentRetrievalResult[];
   analyzeWithLLM?: (prompt: string) => Promise<string>;
-}): Promise<string> {
+}): Promise<KnowledgeBodySynthesisResult> {
   const prompt = buildKnowledgeSynthesisPrompt(input);
 
   if (input.analyzeWithLLM !== undefined) {
     try {
       const body = (await input.analyzeWithLLM(prompt)).trim();
       if (body.length > 0) {
-        return body;
+        return {
+          body,
+          usedDegradedFallback: false,
+        };
       }
     } catch {
       // Fall back to a conservative structured note when synthesis fails.
     }
   }
 
-  return buildKnowledgeBody(input);
+  return {
+    body: buildKnowledgeBody(input),
+    usedDegradedFallback: true,
+  };
 }
 
 export async function generateKnowledgeFromReviewedMemories(
@@ -549,6 +596,12 @@ export async function generateKnowledgeFromReviewedMemories(
   );
   const firstMemory = reviewedMemories[0]!;
   const now = options.now?.() ?? new Date().toISOString();
+  const synthesizedBody = await synthesizeKnowledgeBody({
+    noteType,
+    reviewedMemories,
+    retrievedContent,
+    analyzeWithLLM: options.analyzeWithLLM,
+  });
 
   return {
     artifactType: 'daily-review-draft',
@@ -557,16 +610,11 @@ export async function generateKnowledgeFromReviewedMemories(
       : `knowledge-draft:${firstMemory.id}`,
     draftState: 'draft',
     topicKey: topicKey.length > 0 ? topicKey : null,
-    title: firstMemory.candidateTitle,
+    title: resolveKnowledgeTitle(firstMemory),
     summary: `${reviewedMemories.length} reviewed ${
       reviewedMemories.length === 1 ? 'memory' : 'memories'
     } synthesized into ${noteType} knowledge.`,
-    body: await synthesizeKnowledgeBody({
-      noteType,
-      reviewedMemories,
-      retrievedContent,
-      analyzeWithLLM: options.analyzeWithLLM,
-    }),
+    body: synthesizedBody.body,
     sourceReviewedMemoryIds: reviewedMemories.map((memory) => memory.id),
     derivedFromKnowledgeIds: options.existingDraft ? [options.existingDraft.id] : [],
     version: (options.existingDraft?.version ?? 0) + 1,
@@ -579,5 +627,14 @@ export async function generateKnowledgeFromReviewedMemories(
       kind: 'reviewed-memory',
       id: memory.id,
     })),
+    compilationMetadata: synthesizedBody.usedDegradedFallback
+      ? {
+          discoveryInsights: [
+            'LLM synthesis unavailable; generated degraded scaffold without source excerpt synthesis.',
+          ],
+          generationMethod: 'legacy',
+          executeStageCompletedAt: now,
+        }
+      : undefined,
   };
 }

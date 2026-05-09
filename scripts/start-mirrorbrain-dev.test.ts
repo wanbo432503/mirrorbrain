@@ -14,6 +14,18 @@ import {
 } from './start-mirrorbrain-dev.js';
 
 describe('start mirrorbrain dev runtime', () => {
+  it('documents model configuration in the example environment file', () => {
+    const envExample = readFileSync(join(process.cwd(), '.env.example'), 'utf8');
+
+    expect(envExample).toContain('MIRRORBRAIN_LLM_API_BASE=');
+    expect(envExample).toContain('MIRRORBRAIN_LLM_API_KEY=');
+    expect(envExample).toContain('MIRRORBRAIN_LLM_MODEL=');
+    expect(envExample).toContain('MIRRORBRAIN_EMBEDDING_API_BASE=');
+    expect(envExample).toContain('MIRRORBRAIN_EMBEDDING_API_KEY=');
+    expect(envExample).toContain('MIRRORBRAIN_EMBEDDING_MODEL=');
+    expect(envExample).toContain('MIRRORBRAIN_EMBEDDING_DIMENSION=');
+  });
+
   it('parses environment overrides and sensible defaults for the local MVP runtime', () => {
     expect(
       getMirrorBrainDevConfig({

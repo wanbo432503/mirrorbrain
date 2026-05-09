@@ -44,6 +44,8 @@ It is not responsible for:
 
 - startup reports grouped issues for config, ActivityWatch, OpenViking, and runtime startup before exiting
 - startup expects the local environment variables in `.env` to be present even when some runtime defaults exist in code
+- `MIRRORBRAIN_LLM_API_BASE`, `MIRRORBRAIN_LLM_API_KEY`, and `MIRRORBRAIN_LLM_MODEL` configure the OpenAI-compatible chat model used by MirrorBrain title and knowledge generation
+- `MIRRORBRAIN_EMBEDDING_API_BASE`, `MIRRORBRAIN_EMBEDDING_API_KEY`, `MIRRORBRAIN_EMBEDDING_MODEL`, and `MIRRORBRAIN_EMBEDDING_DIMENSION` document the embedding model that OpenViking should use for MirrorBrain resource indexing
 - shell history remains opt-in and is only wired when `MIRRORBRAIN_SHELL_HISTORY_PATH` is explicitly configured
 - the runtime assumes a local, single-user environment
 - this startup flow is intended for the MVP and is not yet hardened for production
