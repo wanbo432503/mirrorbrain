@@ -275,4 +275,65 @@ describe('mirrorbrain service knowledge generation', () => {
       }),
     );
   });
+
+  it('returns the generated artifact when refreshing existing related knowledge fails', async () => {
+    const existingArtifact: KnowledgeArtifact = {
+      id: 'knowledge-draft:reviewed:candidate:browser:vitest-old',
+      artifactType: 'daily-review-draft',
+      draftState: 'draft',
+      topicKey: 'vitest-testing',
+      title: 'Vitest testing setup',
+      summary: 'Notes about Vitest configuration.',
+      body: 'Vitest setup notes.',
+      sourceReviewedMemoryIds: ['reviewed:candidate:browser:vitest-old'],
+      tags: ['vitest'],
+    };
+    const generatedArtifact: KnowledgeArtifact = {
+      id: 'knowledge-draft:reviewed:candidate:browser:vitest-new',
+      artifactType: 'daily-review-draft',
+      draftState: 'draft',
+      topicKey: 'vitest-testing',
+      title: 'Vitest debugging workflow',
+      summary: 'More notes about Vitest tests.',
+      body: 'Vitest debug workflow.',
+      sourceReviewedMemoryIds: ['reviewed:candidate:browser:vitest'],
+      tags: ['vitest'],
+    };
+    const publishKnowledge = vi.fn(async (input: { artifact: KnowledgeArtifact }) => {
+      if (input.artifact.id === existingArtifact.id) {
+        throw new Error('OpenViking existing relation publish failed');
+      }
+
+      return {
+        sourcePath: '/tmp/mirrorbrain/knowledge.md',
+        rootUri: 'viking://resources/mirrorbrain/knowledge.md',
+      };
+    });
+    const api = createMirrorBrainService(
+      {
+        service: runtimeService,
+        workspaceDir: '/tmp/mirrorbrain-workspace',
+      },
+      {
+        listKnowledge: vi.fn(async () => [existingArtifact]),
+        generateKnowledge: vi.fn(async () => generatedArtifact),
+        publishKnowledge,
+      },
+    );
+
+    await expect(
+      api.generateKnowledgeFromReviewedMemories([reviewedMemory]),
+    ).resolves.toMatchObject({
+      id: generatedArtifact.id,
+      relatedKnowledgeIds: [existingArtifact.id],
+    });
+    expect(publishKnowledge).toHaveBeenCalledWith(
+      expect.objectContaining({
+        artifact: expect.objectContaining({
+          id: generatedArtifact.id,
+          relatedKnowledgeIds: [existingArtifact.id],
+        }),
+      }),
+    );
+  });
 });

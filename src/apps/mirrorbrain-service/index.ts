@@ -716,8 +716,15 @@ export function createMirrorBrainService(
       ...relatedArtifacts.filter((artifact) => !updatedIdSet.has(artifact.id)),
     ];
 
+    const criticalArtifacts = publishOrder.filter((artifact) =>
+      updatedIdSet.has(artifact.id),
+    );
+    const relationOnlyArtifacts = publishOrder.filter(
+      (artifact) => !updatedIdSet.has(artifact.id),
+    );
+
     await Promise.all(
-      publishOrder.map((artifact) =>
+      criticalArtifacts.map((artifact) =>
         publishKnowledge({
           baseUrl,
           workspaceDir,
@@ -725,6 +732,21 @@ export function createMirrorBrainService(
         }),
       ),
     );
+    void Promise.all(
+      relationOnlyArtifacts.map((artifact) =>
+        publishKnowledge({
+          baseUrl,
+          workspaceDir,
+          artifact,
+        }),
+      ),
+    ).catch((error) => {
+      console.error(
+        `[knowledge-relations] Failed to refresh related knowledge artifacts: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    });
 
     return relatedArtifacts.filter((artifact) =>
       updatedArtifacts.some((updated) => updated.id === artifact.id),
