@@ -45,7 +45,7 @@ Location: `/src/modules/knowledge-relation-network/`
 TF-IDF weighted cosine similarity system for knowledge relationships:
 
 **TF-IDF Calculator**
-- IDF formula: `ln((N+1)/(df+1))` - rare tags get higher weight
+- IDF formula: `ln((N+1)/(df+1)) + 1` - rare tags get higher weight while shared tags still contribute when only a few artifacts exist
 - TF: tag count in single artifact
 - TF-IDF vector: TF * IDF
 
@@ -57,6 +57,8 @@ TF-IDF weighted cosine similarity system for knowledge relationships:
 - TOP_K constraint: 5 neighbors (prevents super-nodes)
 - Threshold: 0.3 similarity (filters weak edges)
 - Symmetric relations stored in `relatedKnowledgeIds`
+- MirrorBrain service refreshes relations after knowledge generation, manual publishing, regeneration, and topic merges by loading existing knowledge, deriving relation tags from `tags` or title/summary/body, rebuilding the graph, and republishing affected artifacts.
+- Relation refresh is local tag/TF-IDF based; it does not use the configured embedding model yet.
 
 Files:
 - `tfidf-calculator.ts` - IDF weighting and vector building

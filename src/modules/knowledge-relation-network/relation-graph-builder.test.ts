@@ -141,5 +141,17 @@ describe('relation-graph-builder', () => {
 
       expect(k1Related).toContain('k2');
     });
+
+    it('relates two artifacts that share their only topic tag', () => {
+      const artifacts = [
+        createArtifact({ id: 'k1', tags: ['vitest'] }),
+        createArtifact({ id: 'k2', tags: ['vitest'] }),
+      ];
+
+      const graph = buildKnowledgeRelationGraph(artifacts);
+
+      expect(graph.get('k1')).toContain('k2');
+      expect(graph.get('k2')).toContain('k1');
+    });
   });
 });

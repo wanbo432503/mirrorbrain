@@ -32,15 +32,15 @@ describe('tfidf-calculator', () => {
       const idfWeights = calculateIDFWeights(vocabulary, artifacts);
 
       // Total artifacts N = 3
-      // 'react': df = 2, IDF = ln((3+1)/(2+1)) = ln(4/3) ≈ 0.288
-      // 'hooks': df = 1, IDF = ln((3+1)/(1+1)) = ln(4/2) = ln(2) ≈ 0.693
-      // 'api': df = 2, IDF = ln((3+1)/(2+1)) = ln(4/3) ≈ 0.288
-      // 'authentication': df = 1, IDF = ln((3+1)/(1+1)) = ln(4/2) ≈ 0.693
+      // 'react': df = 2, IDF = ln((3+1)/(2+1)) + 1 ≈ 1.288
+      // 'hooks': df = 1, IDF = ln((3+1)/(1+1)) + 1 ≈ 1.693
+      // 'api': df = 2, IDF = ln((3+1)/(2+1)) + 1 ≈ 1.288
+      // 'authentication': df = 1, IDF = ln((3+1)/(1+1)) + 1 ≈ 1.693
 
-      expect(idfWeights.get('react')).toBeCloseTo(Math.log((3 + 1) / (2 + 1)));
-      expect(idfWeights.get('hooks')).toBeCloseTo(Math.log((3 + 1) / (1 + 1)));
-      expect(idfWeights.get('api')).toBeCloseTo(Math.log((3 + 1) / (2 + 1)));
-      expect(idfWeights.get('authentication')).toBeCloseTo(Math.log((3 + 1) / (1 + 1)));
+      expect(idfWeights.get('react')).toBeCloseTo(Math.log((3 + 1) / (2 + 1)) + 1);
+      expect(idfWeights.get('hooks')).toBeCloseTo(Math.log((3 + 1) / (1 + 1)) + 1);
+      expect(idfWeights.get('api')).toBeCloseTo(Math.log((3 + 1) / (2 + 1)) + 1);
+      expect(idfWeights.get('authentication')).toBeCloseTo(Math.log((3 + 1) / (1 + 1)) + 1);
     });
 
     it('gives higher weight to rare tags', () => {
@@ -81,9 +81,9 @@ describe('tfidf-calculator', () => {
 
       const idfWeights = calculateIDFWeights(vocabulary, artifacts);
 
-      // All tags have df = 0, IDF = ln((2+1)/(0+1)) = ln(3) ≈ 1.099
-      expect(idfWeights.get('react')).toBeCloseTo(Math.log((2 + 1) / (0 + 1)));
-      expect(idfWeights.get('hooks')).toBeCloseTo(Math.log((2 + 1) / (0 + 1)));
+      // All tags have df = 0, IDF = ln((2+1)/(0+1)) + 1 ≈ 2.099
+      expect(idfWeights.get('react')).toBeCloseTo(Math.log((2 + 1) / (0 + 1)) + 1);
+      expect(idfWeights.get('hooks')).toBeCloseTo(Math.log((2 + 1) / (0 + 1)) + 1);
     });
   });
 

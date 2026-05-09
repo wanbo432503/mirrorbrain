@@ -35,7 +35,7 @@ export function calculateIDFWeights(
   // Calculate IDF weight for each tag
   for (const tag of vocabulary) {
     const df = documentFrequency.get(tag) ?? 0;
-    const idf = Math.log((N + 1) / (df + 1));
+    const idf = Math.log((N + 1) / (df + 1)) + 1;
     idfWeights.set(tag, idf);
   }
 
