@@ -120,6 +120,16 @@ describe('knowledge-generation-llm', () => {
     );
   });
 
+  it('falls back to heuristic note classification when LLM analysis fails', async () => {
+    await expect(
+      classifyNoteType('Step 1: Install. Step 2: Configure.', {
+        analyzeWithLLM: vi.fn(async () => {
+          throw new Error('fetch failed');
+        }),
+      }),
+    ).resolves.toBe('tutorial');
+  });
+
   it('extracts a stable topic theme from related URLs', async () => {
     await expect(
       extractThemeFromUrls([
@@ -127,6 +137,23 @@ describe('knowledge-generation-llm', () => {
         'https://vitest.dev/guide/',
         'https://github.com/vitest-dev/vitest',
       ]),
+    ).resolves.toBe('vitest');
+  });
+
+  it('falls back to URL keywords when LLM theme extraction fails', async () => {
+    await expect(
+      extractThemeFromUrls(
+        [
+          'https://vitest.dev/config/',
+          'https://vitest.dev/guide/',
+          'https://github.com/vitest-dev/vitest',
+        ],
+        {
+          analyzeWithLLM: vi.fn(async () => {
+            throw new Error('fetch failed');
+          }),
+        },
+      ),
     ).resolves.toBe('vitest');
   });
 

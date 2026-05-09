@@ -185,25 +185,29 @@ export async function classifyNoteType(
   deps: Pick<KnowledgeGenerationDependencies, 'analyzeWithLLM'> = {},
 ): Promise<NoteType> {
   if (deps.analyzeWithLLM !== undefined) {
-    const response = await deps.analyzeWithLLM(
-      [
-        'Classify this reviewed work note as one of:',
-        'workflow, tutorial, insight-report, development-record.',
-        'Return only the category.',
-        content,
-      ].join('\n\n'),
-    );
-    const normalized = response.toLowerCase();
-    const validTypes: NoteType[] = [
-      'workflow',
-      'tutorial',
-      'insight-report',
-      'development-record',
-    ];
-    return (
-      validTypes.find((type) => normalized.includes(type)) ??
-      'development-record'
-    );
+    try {
+      const response = await deps.analyzeWithLLM(
+        [
+          'Classify this reviewed work note as one of:',
+          'workflow, tutorial, insight-report, development-record.',
+          'Return only the category.',
+          content,
+        ].join('\n\n'),
+      );
+      const normalized = response.toLowerCase();
+      const validTypes: NoteType[] = [
+        'workflow',
+        'tutorial',
+        'insight-report',
+        'development-record',
+      ];
+      return (
+        validTypes.find((type) => normalized.includes(type)) ??
+        'development-record'
+      );
+    } catch {
+      // Fall back to local classification so knowledge generation still works offline.
+    }
   }
 
   if (/\b(step\s*\d+|how to|guide|setup|install|configure)\b/iu.test(content)) {
@@ -351,11 +355,15 @@ export async function extractThemeFromUrls(
   deps: Pick<KnowledgeGenerationDependencies, 'analyzeWithLLM'> = {},
 ): Promise<string> {
   if (deps.analyzeWithLLM !== undefined) {
-    const response = await deps.analyzeWithLLM(
-      `Extract a concise 1-3 word topic from these URLs:\n${urls.join('\n')}`,
-    );
-    const theme = slugifyTopicKey(response.trim());
-    return theme.length > 0 ? theme : 'general-work';
+    try {
+      const response = await deps.analyzeWithLLM(
+        `Extract a concise 1-3 word topic from these URLs:\n${urls.join('\n')}`,
+      );
+      const theme = slugifyTopicKey(response.trim());
+      return theme.length > 0 ? theme : 'general-work';
+    } catch {
+      // Fall back to URL keywords so transient LLM fetch errors do not block drafts.
+    }
   }
 
   const counts = new Map<string, number>();

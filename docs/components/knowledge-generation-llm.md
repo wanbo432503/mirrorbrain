@@ -32,7 +32,7 @@ Dependencies are injectable so tests can supply memory events, artifact loaders,
 3. Retrieved text is cleaned and reduced to useful excerpts.
 4. Retrieved text is classified.
 5. The service injects the configured LLM analyzer and the module asks it to write a structured knowledge note.
-6. If LLM synthesis is unavailable, the module falls back to a conservative structured note using cleaned excerpts only.
+6. If LLM classification, theme extraction, or synthesis is unavailable, the module falls back to local heuristics and a conservative structured note using cleaned excerpts only.
 7. The service persists the draft and later approves it through the existing topic merge workflow.
 
 ## Prompt Policy
@@ -51,11 +51,12 @@ The synthesis prompt tells the model:
 
 - Empty reviewed memory input throws before artifact creation.
 - Missing page text is represented explicitly in the draft body instead of silently fabricating content.
+- LLM provider fetch failures must not block draft creation; note classification falls back to content heuristics, topic extraction falls back to URL keywords, and body synthesis falls back to the local structured template.
 - Mailbox/login-shell pages are marked as weak evidence; boilerplate from those pages must not appear in the draft body.
 - Source URLs in prompts and provenance are stripped of query strings so session ids are not copied into generated knowledge.
 - Missing approval draft ids are handled in the service layer and reported as request errors.
 
 ## Test Strategy
 
-- Unit tests cover retrieval priority, fallback artifact loading, note classification, theme extraction, multi-memory generation, LLM prompt construction, and mailbox-login noise removal.
+- Unit tests cover retrieval priority, fallback artifact loading, note classification, LLM failure fallback, theme extraction, multi-memory generation, LLM prompt construction, and mailbox-login noise removal.
 - Service tests cover source-content generation and approval through topic publishing.
