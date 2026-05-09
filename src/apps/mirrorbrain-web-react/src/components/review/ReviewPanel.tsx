@@ -132,7 +132,7 @@ export default function ReviewPanel() {
   const handleKeepCandidate = async (candidateId: string) => {
     try {
       selectCandidate(candidateId)
-      await reviewCandidateMemory('keep')
+      await reviewCandidateMemory('keep', candidateId)
 
       // Add to kept set
       setKeptCandidateIds(prev => new Set([...prev, candidateId]))
@@ -147,7 +147,7 @@ export default function ReviewPanel() {
   const handleDiscardCandidate = async (candidateId: string) => {
     try {
       selectCandidate(candidateId)
-      await reviewCandidateMemory('discard')
+      await reviewCandidateMemory('discard', candidateId)
     } catch (error) {
       // Error already handled by useReviewWorkflow
     }

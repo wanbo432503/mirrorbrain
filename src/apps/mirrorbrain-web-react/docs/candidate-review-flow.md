@@ -26,15 +26,17 @@ This document describes the implementation of the candidate review workflow that
 
 **Keep Button Flow**:
 1. User clicks "Keep" button on candidate card
-2. `reviewCandidateMemory('keep')` called in useReviewWorkflow
+2. `reviewCandidateMemory('keep', candidateId)` called in useReviewWorkflow
 3. Backend creates `ReviewedMemory` with `decision='keep'` and persists it
 4. Frontend dispatches `ADD_REVIEWED_MEMORY` action to add to global state
 5. Candidate remains in candidates list (for reference)
-6. Reviewed memory becomes available in ArtifactsPanel
+6. Reviewed memory becomes available in the Review tab kept-candidates list for knowledge and skill draft generation
+
+The explicit `candidateId` argument is required because the Review tab selects the card and reviews it in the same user action. The review write must not depend on React's selected-candidate state being flushed first.
 
 **Discard Button Flow**:
 1. User clicks "Discard" button on candidate card
-2. `reviewCandidateMemory('discard')` called in useReviewWorkflow
+2. `reviewCandidateMemory('discard', candidateId)` called in useReviewWorkflow
 3. Backend creates `ReviewedMemory` with `decision='discard'` and persists it
 4. Frontend dispatches:
    - `ADD_REVIEWED_MEMORY` action (records discard decision)

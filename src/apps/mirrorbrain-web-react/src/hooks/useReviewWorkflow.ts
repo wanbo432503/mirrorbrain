@@ -98,13 +98,15 @@ export function useReviewWorkflow(api: MirrorBrainWebAppApi) {
   }, [])
 
   const reviewCandidateMemory = useCallback(
-    async (decision: 'keep' | 'discard') => {
-      if (!selectedCandidateId) {
+    async (decision: 'keep' | 'discard', candidateIdOverride?: string) => {
+      const candidateId = candidateIdOverride ?? selectedCandidateId
+
+      if (!candidateId) {
         setFeedback({ kind: 'error', message: 'No candidate selected' })
         return
       }
 
-      const candidate = state.candidateMemories.find((c) => c.id === selectedCandidateId)
+      const candidate = state.candidateMemories.find((c) => c.id === candidateId)
       if (!candidate) {
         setFeedback({ kind: 'error', message: 'Candidate not found' })
         return

@@ -2,7 +2,7 @@ import type { ReviewedMemory, KnowledgeArtifact } from '../../shared/types/index
 import type { DiscoveryResult } from './discovery-stage.js';
 import { extractTags } from './tag-extraction.js';
 
-interface ExecuteResult {
+export interface ExecuteResult {
   id: string;
   title: string;
   summary: string;

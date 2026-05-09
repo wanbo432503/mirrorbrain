@@ -1,7 +1,7 @@
 import type { ReviewedMemory } from '../../shared/types/index.js';
 import { extractTags } from './tag-extraction.js';
 
-interface DiscoveryResult {
+export interface DiscoveryResult {
   primaryTopic: string | undefined;
   supportingThemes: string[];
   tags: string[];

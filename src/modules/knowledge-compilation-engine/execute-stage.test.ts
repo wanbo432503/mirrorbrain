@@ -257,7 +257,7 @@ describe('execute-stage', () => {
         tags: ['react', 'hooks', 'react', 'hooks', 'state'],
       });
 
-      const memories = [];
+      const memories: ReviewedMemory[] = [];
 
       const result = runExecuteStage(discovery, memories);
 
