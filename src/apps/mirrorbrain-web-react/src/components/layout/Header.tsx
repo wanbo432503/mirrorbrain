@@ -1,12 +1,12 @@
 export default function Header() {
   return (
-    <header className="mb-3">
-      <h1 className="font-heading font-ultra text-hero tracking-tight text-slate-900 mb-1">
+    <header className="bg-surface-black h-11 flex items-center justify-between px-lg mb-0">
+      <h1 className="text-display-lg text-bodyOnDark font-semibold tracking-tight">
         MirrorBrain
       </h1>
-      <p className="font-body text-sm text-slate-600 font-medium tracking-wide">
-        Personal Memory & Knowledge System
-      </p>
+      <nav className="flex items-center gap-xs">
+        <span className="text-nav-link text-bodyOnDark">Personal Memory & Knowledge</span>
+      </nav>
     </header>
   )
 }
