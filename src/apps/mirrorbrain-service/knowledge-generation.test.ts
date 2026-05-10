@@ -1,4 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import { getMirrorBrainConfig } from '../../shared/config/index.js';
 import type { KnowledgeArtifact, MemoryEvent, ReviewedMemory } from '../../shared/types/index.js';
@@ -128,7 +131,7 @@ describe('mirrorbrain service knowledge generation', () => {
     const api = createMirrorBrainService(
       {
         service: runtimeService,
-        workspaceDir: '/tmp/mirrorbrain-workspace',
+        workspaceDir: mkdtempSync(join(tmpdir(), 'mirrorbrain-approval-existing-')),
       },
       {
         listKnowledge: vi.fn(async () => [draft]),
@@ -153,6 +156,105 @@ describe('mirrorbrain service knowledge generation', () => {
         artifact: result.publishedArtifact,
       }),
     );
+  });
+
+  it('removes the source draft from knowledge listings after approval', async () => {
+    const draft: KnowledgeArtifact = {
+      id: 'knowledge-draft:reviewed:candidate:browser:vitest',
+      artifactType: 'daily-review-draft',
+      draftState: 'draft',
+      topicKey: 'vitest-testing',
+      title: 'Vitest setup and debugging',
+      summary: '1 reviewed memory synthesized into tutorial knowledge.',
+      body: '## Source Synthesis\nStep 1: install Vitest and configure projects.',
+      sourceReviewedMemoryIds: ['reviewed:candidate:browser:vitest'],
+      derivedFromKnowledgeIds: [],
+      version: 1,
+      isCurrentBest: false,
+      supersedesKnowledgeId: null,
+      updatedAt: '2026-04-21T12:00:00.000Z',
+      reviewedAt: '2026-04-21T10:00:00.000Z',
+      recencyLabel: '2026-04-21',
+      provenanceRefs: [
+        {
+          kind: 'reviewed-memory',
+          id: 'reviewed:candidate:browser:vitest',
+        },
+      ],
+    };
+    const persistedArtifacts: KnowledgeArtifact[] = [draft];
+    const publishKnowledge = vi.fn(async (input: { artifact: KnowledgeArtifact }) => {
+      const existingIndex = persistedArtifacts.findIndex(
+        (artifact) => artifact.id === input.artifact.id,
+      );
+      if (existingIndex === -1) {
+        persistedArtifacts.push(input.artifact);
+      } else {
+        persistedArtifacts[existingIndex] = input.artifact;
+      }
+
+      return {
+        sourcePath: '/tmp/mirrorbrain/knowledge.md',
+        rootUri: 'viking://resources/mirrorbrain/knowledge.md',
+      };
+    });
+    const api = createMirrorBrainService(
+      {
+        service: runtimeService,
+        workspaceDir: mkdtempSync(join(tmpdir(), 'mirrorbrain-approval-cleanup-')),
+      },
+      {
+        listKnowledge: vi.fn(async () => persistedArtifacts),
+        publishKnowledge,
+      },
+    );
+
+    const result = await api.approveKnowledgeDraft(draft.id);
+
+    await expect(api.listKnowledge()).resolves.toEqual([result.publishedArtifact]);
+  });
+
+  it('deletes the source draft when deleting a published knowledge artifact', async () => {
+    const draft: KnowledgeArtifact = {
+      id: 'knowledge-draft:reviewed:candidate:browser:vitest',
+      artifactType: 'daily-review-draft',
+      draftState: 'draft',
+      topicKey: 'vitest-testing',
+      title: 'Vitest setup and debugging',
+      summary: '1 reviewed memory synthesized into tutorial knowledge.',
+      body: '## Source Synthesis\nStep 1: install Vitest and configure projects.',
+      sourceReviewedMemoryIds: ['reviewed:candidate:browser:vitest'],
+      derivedFromKnowledgeIds: [],
+      version: 1,
+      isCurrentBest: false,
+      supersedesKnowledgeId: null,
+      updatedAt: '2026-04-21T12:00:00.000Z',
+      reviewedAt: '2026-04-21T10:00:00.000Z',
+      recencyLabel: '2026-04-21',
+    };
+    const published: KnowledgeArtifact = {
+      ...draft,
+      id: 'topic-knowledge:vitest-testing:v1',
+      artifactType: 'topic-knowledge',
+      draftState: 'published',
+      derivedFromKnowledgeIds: [draft.id],
+      isCurrentBest: true,
+      updatedAt: '2026-04-21T13:00:00.000Z',
+    };
+    const persistedArtifacts: KnowledgeArtifact[] = [draft, published];
+    const api = createMirrorBrainService(
+      {
+        service: runtimeService,
+        workspaceDir: mkdtempSync(join(tmpdir(), 'mirrorbrain-published-delete-')),
+      },
+      {
+        listKnowledge: vi.fn(async () => persistedArtifacts),
+      },
+    );
+
+    await api.deleteKnowledgeArtifact(published.id);
+
+    await expect(api.listKnowledge()).resolves.toEqual([]);
   });
 
   it('approves the caller draft snapshot when the persisted draft lookup has not caught up', async () => {

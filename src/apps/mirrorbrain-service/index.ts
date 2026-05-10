@@ -468,10 +468,24 @@ export function createMirrorBrainService(
       throw error;
     }
   };
-  const deleteKnowledgeArtifact = async (artifactId: string): Promise<void> => {
+  const deleteKnowledgeArtifactById = async (artifactId: string): Promise<void> => {
     validateKnowledgeArtifactId(artifactId);
     await deleteWorkspaceArtifactFile('knowledge', artifactId);
     await recordDeletedArtifact('knowledge', artifactId);
+  };
+  const deleteKnowledgeArtifact = async (artifactId: string): Promise<void> => {
+    const knowledgeArtifacts = await loadKnowledgeArtifacts();
+    const artifact = knowledgeArtifacts.find((item) => item.id === artifactId);
+    const sourceDraftIds =
+      artifact?.draftState === 'published'
+        ? artifact.derivedFromKnowledgeIds?.filter((id) => id.startsWith('knowledge-draft:')) ?? []
+        : [];
+
+    await Promise.all(
+      Array.from(new Set([artifactId, ...sourceDraftIds])).map((id) =>
+        deleteKnowledgeArtifactById(id),
+      ),
+    );
   };
   const deleteSkillArtifact = async (artifactId: string): Promise<void> => {
     validateSkillArtifactId(artifactId);
@@ -1091,6 +1105,11 @@ export function createMirrorBrainService(
       const publishedArtifact = result.artifact;
       const topicKey = publishedArtifact.topicKey ?? draft.topicKey ?? 'untitled-topic';
       const title = publishedArtifact.title ?? draft.title ?? 'Untitled Knowledge';
+      await Promise.all(
+        (publishedArtifact.derivedFromKnowledgeIds ?? [])
+          .filter((id) => id.startsWith('knowledge-draft:'))
+          .map((id) => deleteKnowledgeArtifactById(id)),
+      );
 
       return {
         publishedArtifact,

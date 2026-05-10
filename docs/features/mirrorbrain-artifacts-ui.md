@@ -9,6 +9,7 @@ The Artifacts tab presents generated MirrorBrain outputs after review. It keeps 
 The React artifacts UI is responsible for:
 
 - listing already generated knowledge artifacts and skill artifacts
+- listing only published knowledge artifacts; draft knowledge remains part of the review workflow and is not shown in artifact history
 - keeping knowledge and skill lists in separate subtabs
 - ordering each list newest first by `updatedAt`, then `reviewedAt`
 - showing the selected artifact in a single right-side detail panel
@@ -25,13 +26,13 @@ It does not synthesize new knowledge, execute skills, or persist conversational 
 
 ## Data Flow
 
-`ArtifactsPanel` reads artifact arrays from `useArtifacts`. `HistoryTopics` sorts the active category newest first, hides a draft knowledge artifact when a published artifact explicitly derives from that draft id, defaults selection to the newest visible artifact, and updates the right-side detail panel when a list item is clicked.
+`ArtifactsPanel` reads artifact arrays from `useArtifacts`. `HistoryTopics` filters knowledge to `draftState: published`, sorts the active category newest first, defaults selection to the newest visible artifact, and updates the right-side detail panel when a list item is clicked.
 
 When the review workflow generates or regenerates knowledge or skill drafts, the hook persists the returned artifact through the save API and upserts the saved version into the shared artifact list. That keeps newly generated artifacts visible in the tab and reloadable after a page refresh.
 
-When the review workflow approves a knowledge draft, the hook replaces the approved draft in shared state with the returned published topic artifact. This prevents the Artifacts tab from showing two left-list entries for a single approval while preserving the published artifact's provenance and `derivedFromKnowledgeIds` links.
+When the review workflow approves a knowledge draft, the backend publishes the topic artifact and tombstones the source draft so future artifact reloads keep only the published knowledge. The hook replaces the approved draft in shared state with the returned published topic artifact while preserving provenance and `derivedFromKnowledgeIds` links.
 
-When the user deletes a knowledge or skill artifact from the detail panel, the hook calls the artifact delete API and removes the deleted id from the shared artifact list immediately so the active timeline and detail view both advance without a manual refresh.
+When the user deletes a published knowledge artifact from the detail panel, the backend also tombstones any source draft ids recorded in `derivedFromKnowledgeIds`. The hook removes the deleted id from the shared artifact list immediately so the active timeline and detail view both advance without a manual refresh.
 
 Conversation messages are keyed by artifact category and id, so notes for one knowledge artifact do not leak into another knowledge artifact or skill artifact.
 
@@ -45,10 +46,10 @@ The artifact edit message row uses a single-line full-width input with a send ac
 - Empty knowledge or skill lists show an empty state instead of a blank detail panel.
 - Conversation notes are local UI state only. They are review/edit instructions, not published artifact mutations.
 - Generated artifacts are persisted; only in-progress edit notes can be lost if the browser closes before the user saves follow-up edits.
-- Delete actions remove the artifact from the persisted artifact list; local conversation notes tied to that artifact id are also effectively orphaned because the artifact is no longer selectable.
+- Delete actions remove the artifact from the persisted artifact list; deleting published knowledge also prevents its source draft from reappearing as a separate timeline item. Local conversation notes tied to that artifact id are effectively orphaned because the artifact is no longer selectable.
 - Skill detail display remains conservative because current skill artifacts only expose approval state, workflow evidence refs, and confirmation metadata.
 
 ## Test Strategy
 
-- `HistoryTopics.test.tsx` covers Knowledge / Skill subtab rendering, newest-first ordering, approval-lineage draft suppression, artifact selection, full knowledge detail display, delete actions, and local conversation-note behavior.
+- `HistoryTopics.test.tsx` covers Knowledge / Skill subtab rendering, newest-first ordering, published-only knowledge filtering, artifact selection, full knowledge detail display, delete actions, and local conversation-note behavior.
 - Broader verification uses the root Vitest suite, root TypeScript check, and the Vite app production build.

@@ -42,17 +42,8 @@ function getSkillTimelineTimestamp(artifact: SkillArtifact): number {
 export function sortKnowledgeArtifactsByNewest(
   artifacts: KnowledgeArtifact[]
 ): KnowledgeArtifact[] {
-  const publishedSourceDraftIds = new Set(
-    artifacts
-      .filter((artifact) => artifact.draftState === 'published')
-      .flatMap((artifact) => artifact.derivedFromKnowledgeIds ?? [])
-  )
-
   return artifacts
-    .filter(
-      (artifact) =>
-        artifact.draftState !== 'draft' || !publishedSourceDraftIds.has(artifact.id)
-    )
+    .filter((artifact) => artifact.draftState === 'published')
     .sort(
       (left, right) => getKnowledgeTimelineTimestamp(right) - getKnowledgeTimelineTimestamp(left)
     )

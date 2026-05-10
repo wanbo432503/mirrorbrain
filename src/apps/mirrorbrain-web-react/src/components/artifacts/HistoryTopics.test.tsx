@@ -208,6 +208,52 @@ describe('HistoryTopics', () => {
     expect(screen.getAllByTestId('artifact-list-item')[0].textContent).toContain('skill-draft:shared-lineage:approved')
   })
 
+  it('does not reveal draft knowledge when its published artifact is removed from the list', () => {
+    const knowledgeDraft: KnowledgeArtifact = {
+      id: 'knowledge-draft:shared-lineage',
+      draftState: 'draft',
+      artifactType: 'daily-review-draft',
+      title: 'Shared lineage knowledge',
+      summary: 'Draft summary',
+      body: 'Draft body',
+      sourceReviewedMemoryIds: ['reviewed:shared-1'],
+      derivedFromKnowledgeIds: [],
+      updatedAt: '2026-04-28T10:00:00.000Z',
+    }
+    const publishedKnowledge: KnowledgeArtifact = {
+      ...knowledgeDraft,
+      id: 'topic-knowledge:shared-lineage:v1',
+      draftState: 'published',
+      artifactType: 'topic-knowledge',
+      summary: 'Published summary',
+      body: 'Published body',
+      derivedFromKnowledgeIds: ['knowledge-draft:shared-lineage'],
+      updatedAt: '2026-04-29T10:00:00.000Z',
+    }
+
+    const { rerender } = render(
+      <HistoryTopics
+        knowledgeTopics={[]}
+        knowledgeArtifacts={[knowledgeDraft, publishedKnowledge]}
+        skillArtifacts={[]}
+      />
+    )
+
+    expect(screen.getAllByTestId('artifact-list-item')).toHaveLength(1)
+    expect(screen.getByText('Published body')).not.toBeNull()
+
+    rerender(
+      <HistoryTopics
+        knowledgeTopics={[]}
+        knowledgeArtifacts={[knowledgeDraft]}
+        skillArtifacts={[]}
+      />
+    )
+
+    expect(screen.queryByTestId('artifact-list-item')).toBeNull()
+    expect(screen.getByText('No knowledge yet')).not.toBeNull()
+  })
+
   it('shows delete actions for generated knowledge and skills and forwards the selected id', async () => {
     const user = userEvent.setup()
     const deleteKnowledge = vi.fn(async () => undefined)
