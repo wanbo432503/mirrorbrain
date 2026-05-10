@@ -36,15 +36,15 @@ describe('App', () => {
         )
       }
 
-      if (url.includes('/memory?page=1&pageSize=5')) {
+      if (url.includes('/memory?page=1&pageSize=10')) {
         return new Response(
           JSON.stringify({
             items: [],
             pagination: {
-              total: 0,
+              total: 25,
               page: 1,
-              pageSize: 5,
-              totalPages: 0,
+              pageSize: 10,
+              totalPages: 3,
             },
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } }
@@ -145,7 +145,7 @@ describe('App', () => {
     await waitFor(() => {
       expect(
         fetchMock.mock.calls.map((call) => String(call[0]))
-      ).toContain(`${window.location.origin}/memory?page=1&pageSize=5`)
+      ).toContain(`${window.location.origin}/memory?page=1&pageSize=10`)
     })
 
     fireEvent.click(screen.getByRole('tab', { name: /review/i }))
@@ -174,7 +174,7 @@ describe('App', () => {
     await waitFor(() => {
       expect(
         fetchMock.mock.calls.map((call) => String(call[0]))
-      ).toContain(`${window.location.origin}/memory?page=1&pageSize=5`)
+      ).toContain(`${window.location.origin}/memory?page=1&pageSize=10`)
     })
     expect(
       fetchMock.mock.calls.map((call) => String(call[0]))
@@ -196,7 +196,7 @@ describe('App', () => {
     await waitFor(() => {
       expect(
         fetchMock.mock.calls.map((call) => String(call[0]))
-      ).toContain(`${window.location.origin}/memory?page=1&pageSize=5`)
+      ).toContain(`${window.location.origin}/memory?page=1&pageSize=10`)
     })
 
     const mainClassName = screen.getByRole('main').className
@@ -212,5 +212,14 @@ describe('App', () => {
     expect(memoryPanelClassName).toContain('min-h-0')
     expect(memoryPanelClassName).toContain('flex-1')
     expect(memoryPanelClassName).toContain('flex-col')
+
+    const scrollRegionClassName = screen.getByTestId('memory-list-scroll-region').className
+    expect(scrollRegionClassName).toContain('min-h-0')
+    expect(scrollRegionClassName).toContain('flex-1')
+    expect(scrollRegionClassName).toContain('overflow-y-auto')
+
+    const paginationFooterClassName = screen.getByTestId('memory-pagination-footer').className
+    expect(paginationFooterClassName).toContain('shrink-0')
+    expect(paginationFooterClassName).toContain('border-t')
   })
 })

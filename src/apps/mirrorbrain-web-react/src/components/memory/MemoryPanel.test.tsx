@@ -1,9 +1,13 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest'
 
-import { getVisibleMemoryEvents, shouldLoadMemoryEvents } from './MemoryPanel'
+import { MEMORY_PAGE_SIZE, getVisibleMemoryEvents, shouldLoadMemoryEvents } from './MemoryPanel'
 
 describe('MemoryPanel', () => {
+  it('requests ten URL records by default for each memory page', () => {
+    expect(MEMORY_PAGE_SIZE).toBe(10)
+  })
+
   it('loads memory only before the first successful memory fetch', () => {
     expect(
       shouldLoadMemoryEvents({

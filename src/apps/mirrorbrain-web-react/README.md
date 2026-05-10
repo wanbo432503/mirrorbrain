@@ -43,9 +43,10 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and an
 - **Features:**
   - Load memory events from API once per app session and reuse global state across tab switches
   - Memory list displays newest events first
+  - Memory tab requests 10 URL records per page by default
   - Memory content scrolls inside the active tab area instead of expanding the full page height
   - Browser/Shell sync operations
-  - Pagination (5 events per page) with First / Previous / Next / Last controls
+  - Pagination footer stays anchored at the bottom of the Memory tab with First / Previous / Next / Last controls
   - Error handling + loading states
   - Feedback banners (success/error)
 

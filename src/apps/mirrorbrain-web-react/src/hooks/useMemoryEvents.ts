@@ -1,7 +1,6 @@
 import { useMirrorBrain } from '../contexts/MirrorBrainContext'
 import type { MirrorBrainWebAppApi } from '../api/client'
-
-const MEMORY_PAGE_SIZE = 5
+import { MEMORY_PAGE_SIZE } from '../components/memory/memory-page-config'
 
 export function useMemoryEvents(api: MirrorBrainWebAppApi) {
   const { state, dispatch } = useMirrorBrain()

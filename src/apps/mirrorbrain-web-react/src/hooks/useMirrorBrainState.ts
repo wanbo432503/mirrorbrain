@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useMirrorBrain } from '../contexts/MirrorBrainContext'
 import type { MirrorBrainWebAppApi } from '../api/client'
+import { MEMORY_PAGE_SIZE } from '../components/memory/memory-page-config'
 
 export function useMirrorBrainState(api: MirrorBrainWebAppApi) {
   const { state, dispatch } = useMirrorBrain()
@@ -11,7 +12,7 @@ export function useMirrorBrainState(api: MirrorBrainWebAppApi) {
       try {
         const [health, memory, knowledge, topics, skills] = await Promise.all([
           api.getHealth(),
-          api.listMemory(1, 5),
+          api.listMemory(1, MEMORY_PAGE_SIZE),
           api.listKnowledge(),
           api.listKnowledgeTopics(),
           api.listSkills(),

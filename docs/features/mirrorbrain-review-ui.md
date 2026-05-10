@@ -10,7 +10,8 @@ This UI is responsible for:
 
 - showing local service status
 - showing imported memory through a dedicated tab with paging, newest-first ordering, and explicit source/name/timestamp presentation
-- showing five memory records per page with first, previous, next, and last navigation controls
+- showing ten memory URL records per page by default, with the record list scrolling internally when it exceeds the visible tab height
+- keeping first, previous, next, and last memory pagination controls anchored at the bottom of the Memory tab
 - showing review-window source volume as unique URLs instead of raw ActivityWatch event rows, so background tab sampling does not inflate the review metrics
 - exposing daily candidate generation and explicit review actions
 - presenting the review flow as a clearer workbench with candidate streams, focused evidence, and decision guidance
@@ -46,21 +47,22 @@ This UI is not responsible for:
 
 1. The UI loads health, memory, knowledge, and skill data from the local service API.
 2. The user browses memory through the paged memory tab.
-3. The user can jump directly to the first or last memory page when the imported list is long.
-4. The user triggers browser sync when needed.
-5. The user generates daily candidates for the previous local day from the review tab.
-6. The UI shows the active review window and the number of unique source URLs before or after candidate generation.
-7. The UI lists multiple candidate streams and lets the user pick one.
-8. The UI shows AI review suggestions for the selected candidate without auto-reviewing it.
-9. The user explicitly keeps or discards the selected candidate.
-10. The user opens the `history topics` sub tab to browse previously generated knowledge and skill artifacts in separate timelines.
-11. The user generates knowledge or skill drafts from the candidate currently selected in the review tab.
-12. The generated drafts are immediately written back through the artifact API so the artifacts tab and the next page load can restore them.
-13. After the review tab has been opened, switching to another tab hides rather than unmounts the review workbench, preserving kept candidates, draft state, and in-flight generation status.
-14. The app shell, tab panel, and review workbench form a continuous flex height chain so the active tab fills the screen while long content scrolls inside the relevant list or detail panel.
-15. In the review tab, generated knowledge displays the note body directly in a self-scrolling note field and accepts a one-line revision request in a full-width input row with a send action on the right.
-16. The user can save the edited draft artifact back through the local service API.
-17. The UI renders a visible status message after each action so the workflow is not silent.
+3. The user sees up to ten memory URL records in the Memory tab list; overflow stays inside the list's scroll area.
+4. The user can jump directly to the first or last memory page when the imported list is long, while the pagination controls remain at the bottom of the tab.
+5. The user triggers browser sync when needed.
+6. The user generates daily candidates for the previous local day from the review tab.
+7. The UI shows the active review window and the number of unique source URLs before or after candidate generation.
+8. The UI lists multiple candidate streams and lets the user pick one.
+9. The UI shows AI review suggestions for the selected candidate without auto-reviewing it.
+10. The user explicitly keeps or discards the selected candidate.
+11. The user opens the `history topics` sub tab to browse previously generated knowledge and skill artifacts in separate timelines.
+12. The user generates knowledge or skill drafts from the candidate currently selected in the review tab.
+13. The generated drafts are immediately written back through the artifact API so the artifacts tab and the next page load can restore them.
+14. After the review tab has been opened, switching to another tab hides rather than unmounts the review workbench, preserving kept candidates, draft state, and in-flight generation status.
+15. The app shell, tab panel, and review workbench form a continuous flex height chain so the active tab fills the screen while long content scrolls inside the relevant list or detail panel.
+16. In the review tab, generated knowledge displays the note body directly in a self-scrolling note field and accepts a one-line revision request in a full-width input row with a send action on the right.
+17. The user can save the edited draft artifact back through the local service API.
+18. The UI renders a visible status message after each action so the workflow is not silent.
 
 ## Test Strategy
 

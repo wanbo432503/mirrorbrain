@@ -7,8 +7,9 @@ import { useMirrorBrain } from '../../contexts/MirrorBrainContext'
 import { createMirrorBrainBrowserApi, type MirrorBrainWebAppApi } from '../../api/client'
 import { useSyncOperations } from '../../hooks/useSyncOperations'
 import type { MemoryEvent } from '../../types/index'
+import { MEMORY_PAGE_SIZE } from './memory-page-config'
 
-const MEMORY_PAGE_SIZE = 5
+export { MEMORY_PAGE_SIZE } from './memory-page-config'
 
 export function shouldLoadMemoryEvents(input: {
   hasLoadedMemoryEvents: boolean
@@ -154,13 +155,21 @@ export default function MemoryPanel() {
       )}
 
       {/* Memory List */}
-      <div className="min-h-0 flex-1 overflow-y-auto pr-2">
+      <div
+        data-testid="memory-list-scroll-region"
+        className="min-h-0 flex-1 overflow-y-auto pr-2"
+      >
         <MemoryList events={state.memoryEvents} />
       </div>
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={goToPage} />
+        <div
+          data-testid="memory-pagination-footer"
+          className="shrink-0 border-t border-hairline bg-canvas-parchment pt-3"
+        >
+          <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={goToPage} />
+        </div>
       )}
     </div>
   )
