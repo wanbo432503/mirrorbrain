@@ -115,17 +115,128 @@ function toKnowledgeTitle(value: string): string {
     .join(' ');
 }
 
+function containsChinese(value: string): boolean {
+  return /[\p{Script=Han}]/u.test(value);
+}
+
+function normalizeTitleText(value: string): string {
+  return value
+    .replace(/^#+\s*/u, '')
+    .replace(/^["'“”‘’]+|["'“”‘’]+$/gu, '')
+    .replace(/\s+/gu, ' ')
+    .trim();
+}
+
+function isCodeLikeTitle(value: string): boolean {
+  const normalized = normalizeTitleText(value);
+  if (normalized.length === 0) {
+    return true;
+  }
+
+  const chunks = normalized
+    .split(/[\/|,，、\s]+/u)
+    .map((chunk) => chunk.trim())
+    .filter((chunk) => chunk.length > 0);
+
+  if (chunks.length > 0 && chunks.every((chunk) => /^[a-f0-9]{4,}$/iu.test(chunk))) {
+    return true;
+  }
+
+  return /^[a-f0-9-]{8,}$/iu.test(normalized);
+}
+
+function extractMarkdownH1(body: string): string | undefined {
+  const heading = body
+    .split('\n')
+    .map((line) => line.trim())
+    .find((line) => /^#\s+\S/u.test(line));
+
+  if (heading === undefined) {
+    return undefined;
+  }
+
+  const title = normalizeTitleText(heading);
+  return title.length > 0 ? title : undefined;
+}
+
+function isUsableChineseTitle(value: string | undefined): boolean {
+  return (
+    value !== undefined &&
+    containsChinese(value) &&
+    !isCodeLikeTitle(value) &&
+    normalizeTitleText(value).length >= 6
+  );
+}
+
+function firstChineseClause(value: string | undefined): string | undefined {
+  if (value === undefined || !containsChinese(value)) {
+    return undefined;
+  }
+
+  const [clause] = value
+    .split(/[。！？；\n]/u)
+    .map((part) => normalizeTitleText(part))
+    .filter((part) => part.length >= 6);
+
+  if (clause === undefined) {
+    return undefined;
+  }
+
+  return clause.length > 32 ? clause.slice(0, 32) : clause;
+}
+
 function resolveKnowledgeTitle(memory: ReviewedMemory | undefined): string {
   if (memory === undefined) {
-    return 'Knowledge Draft';
+    return '知识总结';
   }
 
-  if (/^Work on\s+/iu.test(memory.candidateTitle)) {
-    const topic = memory.candidateTheme?.trim() || memory.candidateTitle.replace(/^Work on\s+/iu, '');
-    return toKnowledgeTitle(topic);
+  const candidateTitle: string = memory.candidateTitle;
+
+  if (isUsableChineseTitle(candidateTitle)) {
+    return normalizeTitleText(candidateTitle);
   }
 
-  return memory.candidateTitle;
+  const summaryTitle = firstChineseClause(memory.candidateSummary);
+  if (summaryTitle !== undefined) {
+    return summaryTitle;
+  }
+
+  if (/^Work on\s+/iu.test(candidateTitle)) {
+    const titleTopic = candidateTitle.replace(/^Work on\s+/iu, '');
+    const topic = memory.candidateTheme?.trim() || titleTopic;
+    return `关于 ${toKnowledgeTitle(topic)} 的知识总结`;
+  }
+
+  if (!isCodeLikeTitle(candidateTitle)) {
+    return `关于 ${toKnowledgeTitle(candidateTitle)} 的知识总结`;
+  }
+
+  const theme = memory.candidateTheme?.trim();
+  if (theme !== undefined && theme.length > 0 && !isCodeLikeTitle(theme)) {
+    return `关于 ${toKnowledgeTitle(theme)} 的知识总结`;
+  }
+
+  return '工作知识总结';
+}
+
+function resolveArtifactTitle(input: {
+  synthesizedBody: string;
+  reviewedMemories: ReviewedMemory[];
+}): string {
+  const bodyTitle = extractMarkdownH1(input.synthesizedBody);
+  if (bodyTitle !== undefined && isUsableChineseTitle(bodyTitle)) {
+    return normalizeTitleText(bodyTitle);
+  }
+
+  return resolveKnowledgeTitle(input.reviewedMemories[0]);
+}
+
+function replaceMarkdownH1(body: string, title: string): string {
+  if (/^#\s+\S/mu.test(body)) {
+    return body.replace(/^#\s+.+$/mu, `# ${title}`);
+  }
+
+  return `# ${title}\n\n${body}`;
 }
 
 function getEventUrl(event: MemoryEvent | null): string | undefined {
@@ -355,8 +466,8 @@ export function buildKnowledgeSynthesisPrompt(
     '- Preserve provenance using source labels like [S1], [S2].',
     '- Never include secrets, session ids, raw query tokens, or login URLs with sensitive parameters.',
     '',
-    'Output format: markdown only, in the same language as the reviewed memory when clear. Use these sections:',
-    '# <knowledge title>',
+    'Output format: markdown only, primarily Chinese. The first line must be a complete Chinese H1 title that describes the topic. Do not use ids, hashes, URL fragments, random short codes, or broken English as the title. Use these sections:',
+    '# <完整中文知识标题>',
     '## 核心结论',
     '## 背景与证据',
     '## 可复用知识',
@@ -466,6 +577,7 @@ function buildKnowledgeBody(input: {
   noteType: NoteType;
   reviewedMemories: ReviewedMemory[];
   retrievedContent: ContentRetrievalResult[];
+  title: string;
 }): string {
   const memorySummary = input.reviewedMemories
     .map((memory) => `- ${memory.candidateTitle}: ${memory.candidateSummary}`)
@@ -473,7 +585,7 @@ function buildKnowledgeBody(input: {
   const sources = formatSources(input.reviewedMemories, input.retrievedContent);
 
   return [
-    `# ${resolveKnowledgeTitle(input.reviewedMemories[0])}`,
+    `# ${input.title}`,
     '',
     `Note type: ${input.noteType}`,
     '',
@@ -533,6 +645,7 @@ async function synthesizeKnowledgeBody(input: {
   reviewedMemories: ReviewedMemory[];
   retrievedContent: ContentRetrievalResult[];
   analyzeWithLLM?: (prompt: string) => Promise<string>;
+  fallbackTitle: string;
 }): Promise<KnowledgeBodySynthesisResult> {
   const prompt = buildKnowledgeSynthesisPrompt(input);
 
@@ -551,7 +664,10 @@ async function synthesizeKnowledgeBody(input: {
   }
 
   return {
-    body: buildKnowledgeBody(input),
+    body: buildKnowledgeBody({
+      ...input,
+      title: input.fallbackTitle,
+    }),
     usedDegradedFallback: true,
   };
 }
@@ -596,11 +712,17 @@ export async function generateKnowledgeFromReviewedMemories(
   );
   const firstMemory = reviewedMemories[0]!;
   const now = options.now?.() ?? new Date().toISOString();
+  const fallbackTitle = resolveKnowledgeTitle(firstMemory);
   const synthesizedBody = await synthesizeKnowledgeBody({
     noteType,
     reviewedMemories,
     retrievedContent,
     analyzeWithLLM: options.analyzeWithLLM,
+    fallbackTitle,
+  });
+  const title = resolveArtifactTitle({
+    synthesizedBody: synthesizedBody.body,
+    reviewedMemories,
   });
 
   return {
@@ -610,11 +732,11 @@ export async function generateKnowledgeFromReviewedMemories(
       : `knowledge-draft:${firstMemory.id}`,
     draftState: 'draft',
     topicKey: topicKey.length > 0 ? topicKey : null,
-    title: resolveKnowledgeTitle(firstMemory),
+    title,
     summary: `${reviewedMemories.length} reviewed ${
       reviewedMemories.length === 1 ? 'memory' : 'memories'
     } synthesized into ${noteType} knowledge.`,
-    body: synthesizedBody.body,
+    body: replaceMarkdownH1(synthesizedBody.body, title),
     sourceReviewedMemoryIds: reviewedMemories.map((memory) => memory.id),
     derivedFromKnowledgeIds: options.existingDraft ? [options.existingDraft.id] : [],
     version: (options.existingDraft?.version ?? 0) + 1,

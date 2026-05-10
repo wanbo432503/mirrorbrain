@@ -200,7 +200,7 @@ describe('knowledge-generation-llm', () => {
       artifactType: 'daily-review-draft',
       draftState: 'draft',
       topicKey: 'testing',
-      title: 'Vitest setup and debugging',
+      title: '关于 Vitest Setup And Debugging 的知识总结',
       sourceReviewedMemoryIds: [
         'reviewed:candidate:browser:vitest',
         'reviewed:candidate:browser:playwright',
@@ -315,6 +315,77 @@ describe('knowledge-generation-llm', () => {
     expect(artifact.body).not.toContain('登录iframe');
   });
 
+  it('uses a complete Chinese H1 from LLM synthesis as the artifact title', async () => {
+    const analyzeWithLLM = vi.fn(async (prompt: string) => {
+      if (prompt.includes('Classify this reviewed work note')) {
+        return 'development-record';
+      }
+      if (prompt.includes('Extract a concise')) {
+        return 'mirrorbrain-knowledge-generation';
+      }
+
+      return [
+        '# 修复 MirrorBrain 知识生成流程的标题与状态问题',
+        '',
+        '## 核心结论',
+        '本次工作修复了知识生成状态丢失，并要求知识标题保持可读。',
+        '',
+        '## 背景与证据',
+        '候选记忆标题只是短码，不能作为最终知识标题。',
+      ].join('\n');
+    });
+
+    const artifact = await generateKnowledgeFromReviewedMemories(
+      [
+        reviewedMemory({
+          id: 'reviewed:candidate:short-code-title',
+          candidateTitle: '69ff5be8 / 83eb / B247',
+          candidateSummary: '排查 MirrorBrain 知识生成流程，并修复标题与状态呈现问题。',
+          candidateTheme: 'mirrorbrain knowledge generation',
+          memoryEventIds: ['event:short-code-title'],
+        }),
+      ],
+      {
+        now: () => '2026-05-10T10:00:00.000Z',
+        analyzeWithLLM,
+        retrievePageContent: async () => ({
+          content: 'The generated knowledge title should not use short ids.',
+          source: 'captured-page-text',
+          url: 'https://example.com/69ff5be8/83eb/B247',
+          title: '69ff5be8 / 83eb / B247',
+        }),
+      },
+    );
+
+    expect(artifact.title).toBe('修复 MirrorBrain 知识生成流程的标题与状态问题');
+  });
+
+  it('falls back to a complete Chinese title instead of hash-like or English candidate titles', async () => {
+    const artifact = await generateKnowledgeFromReviewedMemories(
+      [
+        reviewedMemory({
+          id: 'reviewed:candidate:karpathy-llm-wiki',
+          candidateTitle: 'Work on Karpathy Llm Wiki',
+          candidateSummary: 'Reviewed LLM wiki references and related projects.',
+          candidateTheme: 'karpathy llm wiki',
+          memoryEventIds: ['event:llm-wiki-compiler'],
+        }),
+      ],
+      {
+        now: () => '2026-05-10T10:00:00.000Z',
+        retrievePageContent: async () => ({
+          content: 'GitHub - atomicstrata/llm-wiki-compiler. Raw sources in, interlinked wiki out.',
+          source: 'captured-page-text',
+          url: 'https://github.com/atomicstrata/llm-wiki-compiler',
+          title: 'llm-wiki-compiler',
+        }),
+      },
+    );
+
+    expect(artifact.title).toBe('关于 Karpathy Llm Wiki 的知识总结');
+    expect(artifact.body).toContain('# 关于 Karpathy Llm Wiki 的知识总结');
+  });
+
   it('marks LLM synthesis failures as degraded drafts without dumping raw source excerpts', async () => {
     const artifact = await generateKnowledgeFromReviewedMemories(
       [
@@ -358,7 +429,7 @@ describe('knowledge-generation-llm', () => {
 
     expect(artifact.body).toContain('## Generation Status');
     expect(artifact.body).toContain('LLM synthesis was unavailable');
-    expect(artifact.title).toBe('Karpathy Llm Wiki');
+    expect(artifact.title).toBe('关于 Karpathy Llm Wiki 的知识总结');
     expect(artifact.body).not.toContain('## Source Synthesis');
     expect(artifact.body).not.toContain('Google Search');
     expect(artifact.body).not.toContain('google.com/search');
