@@ -144,8 +144,8 @@ export default function HistoryTopics({
               onClick={() => setActiveSubtab('knowledge')}
               className={`px-4 py-2 font-heading text-xs font-semibold uppercase tracking-wide border-b-2 -mb-px ${
                 activeSubtab === 'knowledge'
-                  ? 'border-teal-600 text-teal-700'
-                  : 'border-transparent text-slate-600 hover:text-slate-900'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-inkMuted-80 hover:text-ink'
               }`}
             >
               Knowledge
@@ -156,8 +156,8 @@ export default function HistoryTopics({
               onClick={() => setActiveSubtab('skill')}
               className={`px-4 py-2 font-heading text-xs font-semibold uppercase tracking-wide border-b-2 -mb-px ${
                 activeSubtab === 'skill'
-                  ? 'border-teal-600 text-teal-700'
-                  : 'border-transparent text-slate-600 hover:text-slate-900'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-inkMuted-80 hover:text-ink'
               }`}
             >
               Skill
@@ -192,14 +192,14 @@ export default function HistoryTopics({
                     onClick={() => setSelectedArtifactId(item.id)}
                     className={`w-full rounded-lg border p-3 text-left transition-colors ${
                       selected
-                        ? 'border-teal-500 bg-teal-50'
+                        ? 'border-primary bg-canvas'
                         : 'border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-white'
                     }`}
                   >
-                    <p className="font-body text-sm font-semibold text-slate-900">{title}</p>
+                    <p className="font-body text-sm font-semibold text-ink">{title}</p>
                     <p className="font-body text-sm text-slate-700 mt-1">{summary}</p>
                     {timestamp && (
-                      <p className="font-heading text-[11px] font-semibold uppercase text-slate-500 mt-2">
+                      <p className="font-heading text-[11px] font-semibold uppercase text-inkMuted-48 mt-2">
                         {timestamp}
                       </p>
                     )}
@@ -277,10 +277,10 @@ function ArtifactDetail({
       <div className="space-y-4">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="font-heading text-xs font-semibold uppercase text-slate-500">
+            <p className="font-heading text-xs font-semibold uppercase text-inkMuted-48">
               Knowledge Detail
             </p>
-            <h3 className="font-heading text-xl font-bold text-slate-900 mt-1">
+            <h3 className="font-heading text-xl font-bold text-ink mt-1">
               {knowledge.title ?? 'Untitled Knowledge'}
             </h3>
           </div>
@@ -335,10 +335,10 @@ function ArtifactDetail({
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="font-heading text-xs font-semibold uppercase text-slate-500">
+          <p className="font-heading text-xs font-semibold uppercase text-inkMuted-48">
             Skill Detail
           </p>
-          <h3 className="font-heading text-xl font-bold text-slate-900 mt-1">{skill.id}</h3>
+          <h3 className="font-heading text-xl font-bold text-ink mt-1">{skill.id}</h3>
         </div>
         <Button variant="ghost" onClick={() => void onDelete()} loading={isDeleting}>
           {deleteButtonLabel}
@@ -354,12 +354,12 @@ function ArtifactDetail({
         ]}
       />
       <div>
-        <p className="font-heading text-xs font-semibold uppercase text-slate-500 mb-2">
+        <p className="font-heading text-xs font-semibold uppercase text-inkMuted-48 mb-2">
           Workflow Evidence
         </p>
         <div className="space-y-2">
           {skill.workflowEvidenceRefs.length === 0 ? (
-            <p className="font-body text-sm text-slate-500">No evidence refs attached.</p>
+            <p className="font-body text-sm text-inkMuted-48">No evidence refs attached.</p>
           ) : (
             skill.workflowEvidenceRefs.map((ref) => (
               <p key={ref} className="rounded-md bg-slate-100 px-3 py-2 font-body text-sm text-slate-700">
@@ -385,7 +385,7 @@ function KnowledgeField({
 }) {
   return (
     <div>
-      <p className="font-heading text-xs font-semibold uppercase text-slate-500 mb-2">
+      <p className="font-heading text-xs font-semibold uppercase text-inkMuted-48 mb-2">
         {label}
       </p>
       <p
@@ -410,12 +410,12 @@ function KnowledgeRefs({
 }) {
   return (
     <div>
-      <p className="font-heading text-xs font-semibold uppercase text-slate-500 mb-2">
+      <p className="font-heading text-xs font-semibold uppercase text-inkMuted-48 mb-2">
         {label}
       </p>
       <div className="space-y-2">
         {refs.length === 0 ? (
-          <p className="font-body text-sm text-slate-500">{emptyMessage}</p>
+          <p className="font-body text-sm text-inkMuted-48">{emptyMessage}</p>
         ) : (
           refs.map((ref) => (
             <p
@@ -437,7 +437,7 @@ function ArtifactMetadata({ items }: { items: Array<string | null> }) {
       {items.filter(Boolean).map((item) => (
         <span
           key={item}
-          className="rounded-md bg-slate-100 px-2 py-1 font-heading text-[11px] font-semibold uppercase text-slate-600"
+          className="rounded-md bg-slate-100 px-2 py-1 font-heading text-[11px] font-semibold uppercase text-inkMuted-80"
         >
           {item}
         </span>
@@ -453,13 +453,13 @@ function ConversationNotes({ notes }: { notes: string[] }) {
 
   return (
     <div className="space-y-2">
-      <p className="font-heading text-xs font-semibold uppercase text-slate-500">
+      <p className="font-heading text-xs font-semibold uppercase text-inkMuted-48">
         Conversation Updates
       </p>
       {notes.map((note, index) => (
         <p
           key={`${note}-${index}`}
-          className="rounded-lg border border-teal-100 bg-teal-50 p-3 font-body text-sm text-slate-800"
+          className="rounded-lg border border-dividerSoft bg-canvas p-3 font-body text-sm text-ink"
         >
           {note}
         </p>
