@@ -64,6 +64,7 @@ import {
   generateKnowledgeFromReviewedMemories as generateKnowledgeWithSourceContent,
 } from '../../modules/knowledge-generation-llm/index.js';
 import { buildKnowledgeRelationGraph } from '../../modules/knowledge-relation-network/index.js';
+import { buildKnowledgeGraphSnapshot } from '../../modules/knowledge-graph/index.js';
 import { extractTags } from '../../modules/knowledge-compilation-engine/index.js';
 import { buildSkillDraftFromReviewedMemories } from '../../workflows/skill-draft-builder/index.js';
 import {
@@ -81,6 +82,7 @@ import type {
   ReviewedMemory,
   SkillArtifact,
 } from '../../shared/types/index.js';
+import type { KnowledgeGraphSnapshot } from '../../modules/knowledge-graph/index.js';
 
 interface StartMirrorBrainServiceInput {
   config?: ReturnType<typeof getMirrorBrainConfig>;
@@ -992,6 +994,15 @@ export function createMirrorBrainService(
       return topicKnowledgeArtifacts
         .filter((artifact) => artifact.topicKey === topicKey)
         .sort((left, right) => (right.version ?? 0) - (left.version ?? 0));
+    },
+    getKnowledgeGraph: async (): Promise<KnowledgeGraphSnapshot> => {
+      const knowledgeArtifacts = await loadKnowledgeArtifacts();
+
+      return buildKnowledgeGraphSnapshot(knowledgeArtifacts, {
+        includeSimilarityRelations: true,
+        similarityThreshold: 0.3,
+        topKSimilar: 5,
+      });
     },
     buildTopicKnowledgeCandidates: async (): Promise<KnowledgeArtifact[]> => {
       const knowledgeArtifacts = await loadKnowledgeArtifacts();

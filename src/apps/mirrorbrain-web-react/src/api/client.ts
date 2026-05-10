@@ -6,6 +6,7 @@ import type {
   CandidateReviewSuggestion,
   ReviewedMemory,
   BrowserSyncSummary,
+  KnowledgeGraphSnapshot,
 } from '../types/index';
 
 export interface PaginatedMemoryEvents {
@@ -67,6 +68,7 @@ export interface MirrorBrainWebAppApi {
   deleteKnowledgeArtifact?(artifactId: string): Promise<void>;
   deleteSkillArtifact?(artifactId: string): Promise<void>;
   deleteCandidateMemory?(candidateMemoryId: string): Promise<void>;
+  getKnowledgeGraph?(): Promise<KnowledgeGraphSnapshot>;
 }
 
 export function createMirrorBrainBrowserApi(
@@ -343,6 +345,12 @@ export function createMirrorBrainBrowserApi(
         }
         throw new Error(errorMessage);
       }
+    },
+
+    async getKnowledgeGraph() {
+      const response = await fetch(`${baseUrl}/knowledge/graph`);
+      const body = await readJson<{ graph: KnowledgeGraphSnapshot }>(response);
+      return body.graph;
     },
   };
 }

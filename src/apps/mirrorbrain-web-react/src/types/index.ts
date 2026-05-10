@@ -235,3 +235,51 @@ export interface SkillArtifact {
   updatedAt?: string;
   reviewedAt?: string | null;
 }
+
+/**
+ * Knowledge Graph Types
+ *
+ * Types for the knowledge relation graph visualization.
+ */
+
+export type KnowledgeGraphNodeType = 'topic' | 'knowledge-artifact';
+export type KnowledgeGraphEdgeType = 'CONTAINS' | 'REFERENCES' | 'SIMILAR';
+
+export interface KnowledgeGraphNode {
+  id: string;
+  type: KnowledgeGraphNodeType;
+  label: string;
+  topicKey: string;
+  properties: {
+    artifactId?: string;
+    title?: string;
+    summary?: string;
+    version?: number;
+    isCurrentBest?: boolean;
+    updatedAt?: string;
+    tags?: string[];
+  };
+}
+
+export interface KnowledgeGraphEdge {
+  id: string;
+  type: KnowledgeGraphEdgeType;
+  source: string;
+  target: string;
+  label: string;
+  properties: {
+    similarity?: number;
+  };
+}
+
+export interface KnowledgeGraphSnapshot {
+  generatedAt: string;
+  stats: {
+    topics: number;
+    knowledgeArtifacts: number;
+    wikilinkReferences: number;
+    similarityRelations: number;
+  };
+  nodes: KnowledgeGraphNode[];
+  edges: KnowledgeGraphEdge[];
+}

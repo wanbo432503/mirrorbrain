@@ -18,6 +18,7 @@ import type {
   ReviewedMemory,
   SkillArtifact,
 } from '../../shared/types/index.js';
+import type { KnowledgeGraphSnapshot } from '../../modules/knowledge-graph/index.js';
 
 interface MirrorBrainHttpService {
   service: {
@@ -44,6 +45,7 @@ interface MirrorBrainHttpService {
   >;
   getKnowledgeTopic?(topicKey: string): Promise<KnowledgeArtifact | null>;
   listKnowledgeHistory?(topicKey: string): Promise<KnowledgeArtifact[]>;
+  getKnowledgeGraph?(): Promise<KnowledgeGraphSnapshot>;
   listCandidateMemoriesByDate?(reviewDate: string): Promise<CandidateMemory[]>;
   listSkillDrafts(): Promise<SkillArtifact[]>;
   publishKnowledge?(artifact: KnowledgeArtifact): Promise<unknown>;
@@ -392,6 +394,70 @@ const knowledgeTopicSummarySchema = {
   ],
 } as const;
 
+const knowledgeGraphNodeSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    type: { type: 'string', enum: ['topic', 'knowledge-artifact'] },
+    label: { type: 'string' },
+    topicKey: { type: 'string' },
+    properties: {
+      type: 'object',
+      additionalProperties: true,
+    },
+  },
+  required: ['id', 'type', 'label', 'topicKey', 'properties'],
+} as const;
+
+const knowledgeGraphEdgeSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    type: { type: 'string', enum: ['CONTAINS', 'REFERENCES', 'SIMILAR'] },
+    source: { type: 'string' },
+    target: { type: 'string' },
+    label: { type: 'string' },
+    properties: {
+      type: 'object',
+      additionalProperties: true,
+    },
+  },
+  required: ['id', 'type', 'source', 'target', 'label', 'properties'],
+} as const;
+
+const knowledgeGraphStatsSchema = {
+  type: 'object',
+  properties: {
+    topics: { type: 'number' },
+    knowledgeArtifacts: { type: 'number' },
+    wikilinkReferences: { type: 'number' },
+    similarityRelations: { type: 'number' },
+  },
+  required: [
+    'topics',
+    'knowledgeArtifacts',
+    'wikilinkReferences',
+    'similarityRelations',
+  ],
+} as const;
+
+const knowledgeGraphSnapshotSchema = {
+  type: 'object',
+  properties: {
+    generatedAt: { type: 'string' },
+    stats: knowledgeGraphStatsSchema,
+    nodes: {
+      type: 'array',
+      items: knowledgeGraphNodeSchema,
+    },
+    edges: {
+      type: 'array',
+      items: knowledgeGraphEdgeSchema,
+    },
+  },
+  required: ['generatedAt', 'stats', 'nodes', 'edges'],
+} as const;
+
 const skillArtifactSchema = {
   type: 'object',
   properties: {
@@ -705,6 +771,35 @@ export async function startMirrorBrainHttpServer(
         ? await input.service.listKnowledgeHistory(request.params.topicKey)
         : [],
     }),
+  );
+
+  app.get(
+    '/knowledge/graph',
+    {
+      schema: {
+        summary: 'Get knowledge graph snapshot with wikilink references and similarity relations',
+        response: {
+          200: createArtifactResponseSchema('graph', knowledgeGraphSnapshotSchema),
+        },
+      },
+    },
+    async () => {
+      const graph = input.service.getKnowledgeGraph
+        ? await input.service.getKnowledgeGraph()
+        : {
+            generatedAt: new Date().toISOString(),
+            stats: {
+              topics: 0,
+              knowledgeArtifacts: 0,
+              wikilinkReferences: 0,
+              similarityRelations: 0,
+            },
+            nodes: [],
+            edges: [],
+          };
+
+      return { graph };
+    },
   );
 
   app.get(
