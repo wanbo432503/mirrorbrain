@@ -1528,7 +1528,7 @@ describe('mirrorbrain service', () => {
     expect(candidatesForDate[1]?.reviewDate).toBe('2026-04-12');
   });
 
-  it('returns existing candidates instead of generating new ones when candidates already exist for the review date', async () => {
+  it('returns existing candidates after sync when no new browser events were imported for the review date', async () => {
     const service = {
       status: 'running' as const,
       config: getMirrorBrainConfig(),
@@ -1588,13 +1588,150 @@ describe('mirrorbrain service', () => {
 
     const result = await api.createDailyCandidateMemories('2026-04-12', 'Asia/Shanghai');
 
-    // Should return existing candidates
     expect(result).toEqual(existingCandidates);
+    expect(service.syncBrowserMemory).toHaveBeenCalledTimes(1);
 
-    // Should NOT call sync or generation methods
-    expect(service.syncBrowserMemory).not.toHaveBeenCalled();
     expect(listRawWorkspaceMemoryEvents).not.toHaveBeenCalled();
     expect(createCandidateMemories).not.toHaveBeenCalled();
+  });
+
+  it('regenerates existing daily candidates after browser sync imports newer events', async () => {
+    const service = {
+      status: 'running' as const,
+      config: getMirrorBrainConfig(),
+      syncBrowserMemory: vi.fn(async () => ({
+        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+        strategy: 'incremental' as const,
+        importedCount: 1,
+        lastSyncedAt: '2026-05-10T12:05:00.000Z',
+        importedEvents: [
+          {
+            id: 'browser:late-event',
+            sourceType: 'activitywatch-browser',
+            sourceRef: 'late-event',
+            timestamp: '2026-05-10T12:05:00.000Z',
+            authorizationScopeId: 'scope-browser',
+            content: {
+              url: 'https://example.com/new-url',
+              title: 'New URL after existing candidates',
+            },
+            captureMetadata: {
+              upstreamSource: 'activitywatch',
+              checkpoint: '2026-05-10T12:05:00.000Z',
+            },
+          },
+        ],
+      })),
+      syncShellMemory: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-05-10T12:05:00.000Z',
+      })),
+      stop: vi.fn(),
+    };
+
+    const existingCandidate = createCandidateMemoryFixture({
+      id: 'candidate:2026-05-10:activitywatch-browser:example-com:old-task',
+      memoryEventIds: ['browser:old-event'],
+      reviewDate: '2026-05-10',
+    });
+    existingCandidate.timeRange = {
+      startAt: '2026-05-09T16:00:00.000Z',
+      endAt: '2026-05-10T08:05:00.000Z',
+    };
+
+    const memoryEvents: MemoryEvent[] = [
+      {
+        id: 'browser:old-event',
+        sourceType: 'activitywatch-browser',
+        sourceRef: 'old-event',
+        timestamp: '2026-05-10T08:05:00.000Z',
+        authorizationScopeId: 'scope-browser',
+        content: {
+          url: 'https://example.com/old-url',
+          title: 'Old URL',
+        },
+        captureMetadata: {
+          upstreamSource: 'activitywatch',
+          checkpoint: '2026-05-10T08:05:00.000Z',
+        },
+      },
+      {
+        id: 'browser:late-event',
+        sourceType: 'activitywatch-browser',
+        sourceRef: 'late-event',
+        timestamp: '2026-05-10T12:05:00.000Z',
+        authorizationScopeId: 'scope-browser',
+        content: {
+          url: 'https://example.com/new-url',
+          title: 'New URL after existing candidates',
+        },
+        captureMetadata: {
+          upstreamSource: 'activitywatch',
+          checkpoint: '2026-05-10T12:05:00.000Z',
+        },
+      },
+    ];
+    const regeneratedCandidates = [
+      createCandidateMemoryFixture({
+        id: 'candidate:2026-05-10:activitywatch-browser:example-com:new-task',
+        memoryEventIds: ['browser:old-event', 'browser:late-event'],
+        reviewDate: '2026-05-10',
+      }),
+    ];
+    regeneratedCandidates[0].timeRange = {
+      startAt: '2026-05-10T08:05:00.000Z',
+      endAt: '2026-05-10T12:05:00.000Z',
+    };
+
+    const listCandidateMemories = vi.fn(async () => [existingCandidate]);
+    const listRawWorkspaceMemoryEvents = vi.fn(async () => memoryEvents);
+    const createCandidateMemories = vi.fn(() => regeneratedCandidates);
+    const publishCandidateMemory = vi.fn(async () => ({
+      sourcePath: '/tmp/candidate.json',
+      rootUri: 'viking://resources/candidate',
+    }));
+
+    const api = createMirrorBrainService(
+      {
+        service,
+        workspaceDir: '/tmp/mirrorbrain-workspace',
+      },
+      {
+        listMemoryEvents: vi.fn(async () => ({
+          items: [],
+          pagination: {
+            total: 0,
+            page: 1,
+            pageSize: 10,
+            totalPages: 1,
+          },
+        })),
+        listCandidateMemories,
+        listRawWorkspaceMemoryEvents,
+        createCandidateMemories,
+        publishCandidateMemory,
+        listKnowledge: vi.fn(async () => []),
+        listSkillDrafts: vi.fn(async () => []),
+      },
+    );
+
+    const result = await api.createDailyCandidateMemories('2026-05-10', 'Asia/Shanghai');
+
+    expect(result).toEqual(regeneratedCandidates);
+    expect(service.syncBrowserMemory).toHaveBeenCalledTimes(1);
+    expect(listRawWorkspaceMemoryEvents).toHaveBeenCalledTimes(1);
+    expect(createCandidateMemories).toHaveBeenCalledWith({
+      reviewDate: '2026-05-10',
+      reviewTimeZone: 'Asia/Shanghai',
+      memoryEvents,
+    });
+    expect(publishCandidateMemory).toHaveBeenCalledWith(
+      expect.objectContaining({
+        artifact: regeneratedCandidates[0],
+      }),
+    );
   });
 
   it('returns candidate review suggestions without publishing review artifacts', async () => {

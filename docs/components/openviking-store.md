@@ -44,6 +44,7 @@ This component is the storage adapter that maps MirrorBrain artifacts into OpenV
 10. Knowledge artifacts are reloaded from stored markdown by treating the serialized `## Body` block as opaque markdown until the explicit metadata sections begin, so nested headings inside the body survive a refresh.
 11. Browser page-content artifacts are written as local markdown files under `mirrorbrain/browser-page-content/` and imported non-blockingly so raw memory-event sync does not stall on downstream indexing.
 12. The same adapter can also read historical `MemoryEvent` JSON files directly from the local workspace cache under `mirrorbrain/memory-events/` when the caller needs a non-OpenViking fallback.
+13. The UI memory-event cache under `mirrorbrain/cache/memory-events-cache.json` is treated as rebuildable; missing, structurally invalid, empty, or corrupt cache files are ignored so the service can reinitialize from workspace/OpenViking sources.
 
 ## Operational Note
 
@@ -59,6 +60,7 @@ For local setup and startup expectations around OpenViking, see the repository [
 - unit tests verify transient OpenViking point-lock failures are retried for resource imports
 - unit tests verify HTTP-based listing and content reads for memory, memory-narrative, candidate, reviewed, knowledge, and skill retrieval
 - unit tests verify local workspace-backed memory-event reads
+- unit tests verify missing or corrupt memory-event display caches are treated as cache misses
 - unit tests verify legacy resource compatibility, browser duplicate suppression, and duplicate-id suppression during memory reads
 - unit tests verify multi-part OpenViking resource fragments are recombined before parsing
 
@@ -68,6 +70,7 @@ For local setup and startup expectations around OpenViking, see the repository [
 - MirrorBrain classification is currently encoded into flat resource names rather than guaranteed nested directories inside OpenViking
 - retrieval depends on OpenViking exposing imported resources through `fs/ls` and readable child files through `content/read`
 - callers that use the workspace fallback read only the locally cached `mirrorbrain/memory-events/*.json` files and do not depend on OpenViking availability for that path
+- the memory-event display cache is an optimization only; deleting or truncating it should not delete raw memory events
 - memory-event sync completion now means MirrorBrain has handed imported events to OpenViking, not that every event has finished OpenViking-side indexing
 - browser page-content imports are queued non-blockingly, so vector retrieval may lag behind raw memory-event visibility until OpenViking finishes downstream indexing
 - repeated or long-lived OpenViking lock contention still fails after the bounded retry budget is exhausted

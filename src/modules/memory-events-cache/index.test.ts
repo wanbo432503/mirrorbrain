@@ -69,6 +69,15 @@ describe('memory-events-cache', () => {
       expect(result).toBeNull();
     });
 
+    it('should return null when cache file is empty or corrupt', async () => {
+      const cacheDir = join(tempWorkspace, 'mirrorbrain', 'cache');
+      await mkdir(cacheDir, { recursive: true });
+      await writeFile(join(cacheDir, 'memory-events-cache.json'), '');
+
+      const result = await loadMemoryEventsCache(tempWorkspace);
+      expect(result).toBeNull();
+    });
+
     it('should return cache when file exists with valid structure', async () => {
       const cache: MemoryEventsCache = {
         version: 1,

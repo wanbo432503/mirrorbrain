@@ -57,7 +57,13 @@ export async function loadMemoryEventsCache(
 
   try {
     const content = await readFile(cacheFilePath, 'utf8');
-    const parsed = JSON.parse(content) as unknown;
+    let parsed: unknown;
+
+    try {
+      parsed = JSON.parse(content) as unknown;
+    } catch {
+      return null;
+    }
 
     if (
       typeof parsed === 'object' &&

@@ -1167,19 +1167,22 @@ export function createMirrorBrainService(
       reviewDate: string,
       reviewTimeZone?: string,
     ): Promise<CandidateMemory[]> => {
-      // Query existing candidates first
       const existingCandidates = await loadCandidateMemories();
       const candidatesForDate = existingCandidates.filter(
         (candidate) => candidate.reviewDate === reviewDate,
       );
+      const sync = await input.service.syncBrowserMemory();
+      scheduleMemoryNarrativeRefresh(sync, buildBrowserThemeNarratives);
 
-      // If candidates already exist, return them directly
-      if (candidatesForDate.length > 0) {
-        return candidatesForDate;
+      if (sync.importedEvents && sync.importedEvents.length > 0) {
+        void updateCacheWithNewEvents(workspaceDir, baseUrl, sync.importedEvents, 'browser').catch(
+          () => undefined,
+        );
       }
 
-      // Otherwise, generate new candidates
-      await input.service.syncBrowserMemory();
+      if (candidatesForDate.length > 0 && sync.importedCount === 0) {
+        return candidatesForDate;
+      }
 
       const memoryEvents = await listRawWorkspaceMemoryEvents({
         workspaceDir,
