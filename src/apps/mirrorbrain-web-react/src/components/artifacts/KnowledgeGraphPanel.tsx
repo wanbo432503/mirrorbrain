@@ -41,6 +41,12 @@ export interface KnowledgeGraphPanelProps {
   /** Minimum similarity threshold for SIMILAR edges */
   minSimilarity?: number;
 
+  /** Knowledge artifact id to place at the center of the rendered graph */
+  focusArtifactId?: string;
+
+  /** Display label for the centered knowledge artifact */
+  focusArtifactTitle?: string;
+
   /** Custom className for styling */
   className?: string;
 }
@@ -77,12 +83,40 @@ function filterEdges(
  * To be replaced with Cytoscape.js or similar visualization library.
  */
 export function KnowledgeGraphPanel(props: KnowledgeGraphPanelProps): React.ReactElement {
-  const { graph, onTopicClick, onArtifactClick, className } = props;
+  const { graph, onTopicClick, onArtifactClick, className, focusArtifactId, focusArtifactTitle } =
+    props;
 
   const filteredEdges = filterEdges(graph.edges, props);
+  const focusNode = focusArtifactId
+    ? graph.nodes.find(
+        (node) =>
+          node.type === 'knowledge-artifact' && node.properties.artifactId === focusArtifactId,
+      )
+    : null;
+  const focusNodeIds = new Set<string>();
 
-  const topicNodes = graph.nodes.filter((n) => n.type === 'topic');
-  const artifactNodes = graph.nodes.filter((n) => n.type === 'knowledge-artifact');
+  if (focusNode) {
+    focusNodeIds.add(focusNode.id);
+    filteredEdges.forEach((edge) => {
+      if (edge.source === focusNode.id) {
+        focusNodeIds.add(edge.target);
+      }
+      if (edge.target === focusNode.id) {
+        focusNodeIds.add(edge.source);
+      }
+    });
+  }
+
+  const visibleNodes = focusNode
+    ? graph.nodes.filter((node) => focusNodeIds.has(node.id))
+    : graph.nodes;
+  const visibleEdges = focusNode
+    ? filteredEdges.filter((edge) => focusNodeIds.has(edge.source) && focusNodeIds.has(edge.target))
+    : filteredEdges;
+
+  const topicNodes = visibleNodes.filter((n) => n.type === 'topic');
+  const artifactNodes = visibleNodes.filter((n) => n.type === 'knowledge-artifact');
+  const isFocused = Boolean(focusNode);
 
   const handleNodeClick = (node: KnowledgeGraphNode) => {
     if (node.type === 'topic' && onTopicClick) {
@@ -97,6 +131,20 @@ export function KnowledgeGraphPanel(props: KnowledgeGraphPanelProps): React.Reac
 
   return (
     <div className={className ?? 'knowledge-graph-panel'}>
+      <div className="mb-4">
+        <p className="font-heading text-xs font-semibold uppercase text-inkMuted-48">
+          Knowledge Graph
+        </p>
+        <h3 className="mt-1 font-heading text-xl font-bold text-ink">
+          {isFocused ? 'Focused Knowledge Graph' : 'Global Knowledge Graph'}
+        </h3>
+        <p className="mt-1 font-body text-sm text-inkMuted-80">
+          {isFocused
+            ? `Centered on ${focusArtifactTitle ?? focusNode?.label ?? focusArtifactId}`
+            : 'All approved knowledge artifacts and their relations.'}
+        </p>
+      </div>
+
       {/* Stats Header */}
       <div className="graph-stats flex gap-4 text-sm text-inkMuted-80 mb-4">
         <span className="px-2 py-1 bg-slate-100 rounded">
@@ -106,11 +154,11 @@ export function KnowledgeGraphPanel(props: KnowledgeGraphPanelProps): React.Reac
           Artifacts: {graph.stats.knowledgeArtifacts}
         </span>
         <span className="px-2 py-1 bg-dividerSoft rounded">
-          References: {filteredEdges.filter((e) => e.type === 'REFERENCES').length}
+          References: {visibleEdges.filter((e) => e.type === 'REFERENCES').length}
         </span>
         {props.showSimilarityEdges !== false && (
           <span className="px-2 py-1 bg-blue-100 rounded">
-            Similar: {filteredEdges.filter((e) => e.type === 'SIMILAR').length}
+            Similar: {visibleEdges.filter((e) => e.type === 'SIMILAR').length}
           </span>
         )}
       </div>
@@ -125,30 +173,44 @@ export function KnowledgeGraphPanel(props: KnowledgeGraphPanelProps): React.Reac
           Topics (click to view)
         </div>
         <div className="flex flex-wrap gap-2 mb-4">
-          {topicNodes.map((node) => (
-            <button
-              key={node.id}
-              onClick={() => handleNodeClick(node)}
-              className="px-3 py-1 bg-primary text-white rounded hover:bg-primary transition-colors text-sm"
-            >
-              {node.label}
-            </button>
-          ))}
+          {topicNodes.length === 0 ? (
+            <p className="font-body text-sm text-inkMuted-48">No topic nodes in this view.</p>
+          ) : (
+            topicNodes.map((node) => (
+              <button
+                key={node.id}
+                onClick={() => handleNodeClick(node)}
+                className="px-3 py-1 bg-primary text-white rounded hover:bg-primary transition-colors text-sm"
+              >
+                {node.label}
+              </button>
+            ))
+          )}
         </div>
 
         <div className="text-xs uppercase tracking-wide text-inkMuted-48 mb-2">
           Artifacts
         </div>
         <div className="flex flex-wrap gap-2">
-          {artifactNodes.map((node) => (
-            <button
-              key={node.id}
-              onClick={() => handleNodeClick(node)}
-              className="px-3 py-1 bg-hairline text-slate-700 rounded hover:bg-slate-300 transition-colors text-sm"
-            >
-              {node.label}
-            </button>
-          ))}
+          {artifactNodes.length === 0 ? (
+            <p className="font-body text-sm text-inkMuted-48">
+              No knowledge artifact nodes in this view.
+            </p>
+          ) : (
+            artifactNodes.map((node) => (
+              <button
+                key={node.id}
+                onClick={() => handleNodeClick(node)}
+                className={`px-3 py-1 rounded transition-colors text-sm ${
+                  node.id === focusNode?.id
+                    ? 'bg-primary text-white'
+                    : 'bg-hairline text-slate-700 hover:bg-slate-300'
+                }`}
+              >
+                {node.label}
+              </button>
+            ))
+          )}
         </div>
 
         {/* Note about visualization */}

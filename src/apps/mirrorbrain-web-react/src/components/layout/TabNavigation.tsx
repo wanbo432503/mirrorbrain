@@ -1,13 +1,13 @@
 import { KeyboardEvent } from 'react'
 
-type TabType = 'memory' | 'review' | 'artifacts'
+type TabType = 'memory' | 'review' | 'knowledge' | 'skill'
 
 interface TabNavigationProps {
   activeTab: TabType
   onTabChange: (tab: TabType) => void
 }
 
-const TABS: TabType[] = ['memory', 'review', 'artifacts']
+const TABS: TabType[] = ['memory', 'review', 'knowledge', 'skill']
 
 export default function TabNavigation({ activeTab, onTabChange }: TabNavigationProps) {
   const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {

@@ -13,7 +13,7 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and an
 
 ### Phase 2: Core Components ✅ (Completed)
 - **Layout Components:**
-  - `TabNavigation.tsx` - Memory/Review/Artifacts tabs with keyboard navigation
+  - `TabNavigation.tsx` - Memory/Review/Knowledge/Skill tabs with keyboard navigation
   - `FeedbackBanner.tsx` - Success/Error/Info messages with auto-dismiss
   - `Header.tsx` - App brand row aligned to the main content container with a light/dark theme toggle
 
@@ -75,7 +75,7 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and an
   - Review requests now send the local timezone so the service can use the correct day boundary
   - Candidate lists, selected candidate details, and draft editors stretch to available viewport height and scroll internally
 
-### Phase 5: Artifacts Panel + Forms ✅ (Completed)
+### Phase 5: Knowledge / Skill Panels + Forms ✅ (Completed)
 - **Artifacts Hooks:**
   - `useArtifacts.ts` - Artifact operations (generate/save)
   - `useKnowledgeDraft.ts` - Knowledge draft management
@@ -86,28 +86,37 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and an
   - `TextArea.tsx` - Multi-line text input
   - `Checkbox.tsx` - Checkbox input
 
-- **Artifacts Components:**
-  - `ArtifactsPanel.tsx` - Artifacts tab container
+- **Knowledge / Skill Components:**
+  - `KnowledgeTabPanel.tsx` - Knowledge tab container and graph loading
+  - `KnowledgePanel.tsx` - Approved knowledge list, List/Graph subtabs, detail display, and local edit conversation notes
+  - `SkillTabPanel.tsx` - Skill tab container
+  - `SkillPanel.tsx` - Skill artifact timeline, detail display, and local edit conversation notes
+  - `ArtifactsPanel.tsx` - Legacy combined artifacts tab container kept for compatibility while the top-level tab split settles
   - `SubtabNavigation.tsx` - History Topics / Draft Generation subtabs
   - `HistoryTable.tsx` - Legacy reusable history table
-  - `HistoryTopics.tsx` - Knowledge / Skill artifact timeline with single detail display and local edit conversation notes
+  - `HistoryTopics.tsx` - Legacy combined Knowledge / Skill artifact timeline
+  - `KnowledgeGraphPanel.tsx` - Placeholder knowledge graph renderer supporting global and selected-artifact-focused views
   - `KnowledgeDetailModal.tsx` - Topic knowledge detail dialog
   - `CandidateContext.tsx` - Reviewed memory context
   - `DraftEditor.tsx` - Knowledge/Skill draft editor
 
   - **Features:**
-  - Artifacts tab displays generated knowledge and generated skills under separate Knowledge / Skill subtabs
+  - Top-level Knowledge and Skill tabs replace the former combined Artifacts tab
+  - Knowledge tab displays approved knowledge under stable left-side List / Graph subtabs
+  - Knowledge List mode defaults the detail panel to the newest approved knowledge item and updates on item selection
+  - Knowledge Graph mode defaults the right panel to the global knowledge graph and switches to a selected-artifact-centered graph when a knowledge item is clicked
+  - Skill tab displays generated skills in a separate timeline and detail panel
   - Artifact lists are ordered newest first using artifact update or review timestamps
-  - The app loads persisted knowledge and skill artifacts on startup so the Artifacts tab restores after refresh
-  - Approved knowledge drafts are replaced by their published topic artifact in the Artifacts timeline, while older published topic versions remain available as history
-  - Selecting a knowledge or skill shows its details in one shared right-side display
+  - The app loads persisted knowledge and skill artifacts on startup so the Knowledge and Skill tabs restore after refresh
+  - Approved knowledge drafts are replaced by their published topic artifact in the Knowledge timeline, while older published topic versions remain available as history
+  - Selecting a knowledge or skill shows its details in the corresponding right-side display
   - Knowledge details show the artifact body, lifecycle metadata, topic/version metadata, source refs, derived refs, and provenance refs
   - The artifact detail display includes a local conversation area for recording requested edits against the selected artifact
   - Generate knowledge from reviewed memories
   - Generate skill from reviewed memories
   - Generated knowledge and skill drafts remain in shared app state across top-level tab switches and are written back through the artifact API so refresh restores them; the service reads back from merged OpenViking and workspace copies so newly generated artifacts are not lost if OpenViking is briefly behind
   - Review-generated knowledge displays the final note body directly in a single scrolling field, with a separate full-width one-line revision request input and send action below it
-  - Artifact edit message uses the same single-line full-width input + send row pattern in the artifacts detail panel
+  - Artifact edit message uses the same single-line full-width input + send row pattern in the knowledge and skill detail panels
   - Artifact history and detail panels stretch to the available tab height and scroll internally instead of using fixed pixel heights
   - Draft editing (body-first note editing for knowledge)
   - Draft editing (approval state/confirmation for skill)
@@ -233,9 +242,10 @@ pnpm dev
    - Review AI suggestions (confidence/priority/rationale)
    - Click "Keep Candidate" or "Discard Candidate"
 
-3. **Artifacts Tab:**
-   - Click "Artifacts" tab
-   - Browse "History Topics" subtab (Knowledge / Skill timelines)
+3. **Knowledge / Skill Tabs:**
+   - Click the "Knowledge" tab to browse approved knowledge in List mode or switch to Graph mode
+   - In Knowledge Graph mode, leave the list unselected for the global graph or click a knowledge item for a centered graph
+   - Click the "Skill" tab to browse generated skills separately
    - Select an artifact to inspect its detail panel and local edit conversation notes
    - Keep generating knowledge and skill from the Review tab, where drafts are written back through the artifact API so they survive refresh
 
@@ -259,7 +269,7 @@ pnpm dev
 | 2. Core Components | Week 2-3 | ✅ Completed |
 | 3. Memory Panel | Week 3-4 | ✅ Completed |
 | 4. Review Panel | Week 4-5 | ✅ Completed |
-| 5. Artifacts Panel | Week 5-6 | ✅ Completed |
+| 5. Knowledge / Skill Panels | Week 5-6 | ✅ Completed |
 | 6. Testing | Week 6-7 | ⏳ Next |
 | 7. Deployment | Week 7 | ⏳ Pending |
 
@@ -276,7 +286,7 @@ pnpm dev
 - Form Components: 3 files
 - Memory Components: 4 files
 - Review Components: 7 files
-- Artifacts Components: 8 files
+- Knowledge / Skill Components: 12 files
 - Hooks: 10 files
 - Context: 1 file
 - Types/API: 2 files

@@ -1,32 +1,42 @@
-# MirrorBrain Artifacts UI
+# MirrorBrain Knowledge And Skill UI
 
 ## Summary
 
-The Artifacts tab presents generated MirrorBrain outputs after review. It keeps the knowledge and skill artifact categories separate while sharing one detail surface for inspection and local edit discussion.
+The former Artifacts tab is split into top-level Knowledge and Skill tabs. Knowledge focuses on published knowledge recall and graph exploration. Skill focuses on generated skill artifacts and keeps execution-related metadata separate from ordinary knowledge browsing.
 
 ## Responsibility Boundary
 
 The React artifacts UI is responsible for:
 
-- listing already generated knowledge artifacts and skill artifacts
+- exposing generated knowledge and generated skill artifacts as separate top-level tabs
 - listing only published knowledge artifacts; draft knowledge remains part of the review workflow and is not shown in artifact history
-- keeping knowledge and skill lists in separate subtabs
 - ordering each list newest first by `updatedAt`, then `reviewedAt`
-- showing the selected artifact in a single right-side detail panel
+- keeping the Knowledge tab left item list stable across its `List` and `Graph` subtabs
+- showing the newest approved knowledge detail by default in Knowledge `List` mode
+- showing the global knowledge graph by default in Knowledge `Graph` mode, then a focused graph centered on the selected knowledge artifact after item selection
+- showing the selected skill artifact in a right-side detail panel
 - capturing local conversation notes that describe requested edits for the selected artifact
 - exposing explicit delete actions for persisted knowledge and skill artifacts
 
-It does not synthesize new knowledge, execute skills, or persist conversational edits. Generation, approval, publication, and skill execution remain backend or review workflow responsibilities. Generated knowledge and skill artifacts are written back through the artifact API by the review workflow before this tab reads them.
+It does not synthesize new knowledge, execute skills, or persist conversational edits. Generation, approval, publication, and skill execution remain backend or review workflow responsibilities. Generated knowledge and skill artifacts are written back through the artifact API by the review workflow before these tabs read them.
 
 ## Key Interfaces
 
 - `KnowledgeArtifact`: rendered with title, summary, body, lifecycle metadata, topic/version metadata, source refs, derived refs, and provenance refs in the detail panel.
+- `KnowledgeGraphSnapshot`: rendered in the Knowledge `Graph` mode as either the global relation view or a selected-artifact-centered view.
 - `SkillArtifact`: rendered with id, approval state, confirmation requirement, workflow evidence refs, and optional timestamps.
-- `HistoryTopics`: receives `knowledgeArtifacts` and `skillArtifacts` from `useArtifacts` and owns the local subtab, selection, and conversation-note state.
+- `KnowledgeTabPanel`: loads knowledge artifacts through `useArtifacts`, fetches the knowledge graph from `/knowledge/graph`, and renders `KnowledgePanel`.
+- `KnowledgePanel`: owns Knowledge `List` / `Graph` subtab state, knowledge selection, and local conversation-note state.
+- `SkillTabPanel`: loads skill artifacts through `useArtifacts` and renders `SkillPanel`.
+- `SkillPanel`: owns skill selection and local conversation-note state.
 
 ## Data Flow
 
-`ArtifactsPanel` reads artifact arrays from `useArtifacts`. `HistoryTopics` filters knowledge to `draftState: published`, sorts the active category newest first, defaults selection to the newest visible artifact, and updates the right-side detail panel when a list item is clicked.
+`KnowledgeTabPanel` and `SkillTabPanel` each read the relevant artifact arrays from `useArtifacts`. `KnowledgePanel` filters knowledge to `draftState: published`, sorts the list newest first, and keeps that left list unchanged when the user switches between `List` and `Graph` modes.
+
+In Knowledge `List` mode, the right detail panel defaults to the newest approved knowledge artifact and changes when another knowledge item is clicked. In Knowledge `Graph` mode, the right panel defaults to the global knowledge graph. Clicking a knowledge item in graph mode passes that artifact id into `KnowledgeGraphPanel`, which narrows the displayed placeholder graph to the centered artifact and directly related nodes and edges.
+
+`SkillPanel` sorts skill artifacts newest first, defaults selection to the newest visible skill, and updates the right-side detail panel when a skill item is clicked.
 
 When the review workflow generates or regenerates knowledge or skill drafts, the hook persists the returned artifact through the save API and upserts the saved version into the shared artifact list. That keeps newly generated artifacts visible in the tab and reloadable after a page refresh.
 
@@ -44,6 +54,7 @@ The artifact edit message row uses a single-line full-width input with a send ac
 
 - Artifacts without timestamps sort after timestamped artifacts.
 - Empty knowledge or skill lists show an empty state instead of a blank detail panel.
+- The current knowledge graph UI is still a placeholder node-list renderer. Commit `6b281c2bcc9de1c5acdd89237be8d65cb70a0823` correctly introduced the graph API and frontend data path, but its panel was not a complete graph visualization and did not define the Knowledge tab split or global-vs-focused UI behavior.
 - Conversation notes are local UI state only. They are review/edit instructions, not published artifact mutations.
 - Generated artifacts are persisted; only in-progress edit notes can be lost if the browser closes before the user saves follow-up edits.
 - Delete actions remove the artifact from the persisted artifact list; deleting published knowledge also prevents its source draft from reappearing as a separate timeline item. Local conversation notes tied to that artifact id are effectively orphaned because the artifact is no longer selectable.
@@ -51,5 +62,7 @@ The artifact edit message row uses a single-line full-width input with a send ac
 
 ## Test Strategy
 
-- `HistoryTopics.test.tsx` covers Knowledge / Skill subtab rendering, newest-first ordering, published-only knowledge filtering, artifact selection, full knowledge detail display, delete actions, and local conversation-note behavior.
+- `KnowledgePanel.test.tsx` covers approved-only knowledge list rendering, newest-first ordering, default detail selection, stable left list across List/Graph modes, global graph default, and focused graph switching.
+- `SkillPanel.test.tsx` covers newest-first skill rendering and default detail selection.
+- `HistoryTopics.test.tsx` remains as legacy coverage for the previous combined artifact history component until that component is removed.
 - Broader verification uses the root Vitest suite, root TypeScript check, and the Vite app production build.

@@ -88,6 +88,36 @@ describe('App', () => {
         })
       }
 
+      if (url.endsWith('/knowledge/graph')) {
+        return new Response(
+          JSON.stringify({
+            graph: {
+              generatedAt: '2026-04-29T10:00:00.000Z',
+              stats: {
+                topics: 1,
+                knowledgeArtifacts: 1,
+                wikilinkReferences: 0,
+                similarityRelations: 0,
+              },
+              nodes: [
+                {
+                  id: 'knowledge-artifact:topic-knowledge:refresh-test:v1',
+                  type: 'knowledge-artifact',
+                  label: 'Refresh knowledge',
+                  topicKey: 'refresh-test',
+                  properties: {
+                    artifactId: 'topic-knowledge:refresh-test:v1',
+                    title: 'Refresh knowledge',
+                  },
+                },
+              ],
+              edges: [],
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      }
+
       if (url.endsWith('/skills')) {
         return new Response(
           JSON.stringify({
@@ -139,7 +169,7 @@ describe('App', () => {
     return fetchMock
   }
 
-  it('keeps a visited review tab mounted when switching to artifacts', async () => {
+  it('keeps a visited review tab mounted when switching to knowledge', async () => {
     const fetchMock = stubInitialAppFetch()
 
     render(<App />)
@@ -159,14 +189,14 @@ describe('App', () => {
       return panel as HTMLElement
     })
 
-    fireEvent.click(screen.getByRole('tab', { name: /artifacts/i }))
+    fireEvent.click(screen.getByRole('tab', { name: /knowledge/i }))
 
     expect(document.getElementById('review-panel')).toBe(reviewPanel)
     expect(reviewPanel.hidden).toBe(true)
     expect(reviewPanel.textContent).toContain('Candidates')
   }, 15_000)
 
-  it('loads persisted knowledge and skill data on refresh', async () => {
+  it('loads persisted knowledge data on refresh', async () => {
     const user = userEvent.setup()
 
     const fetchMock = stubInitialAppFetch()
@@ -182,12 +212,28 @@ describe('App', () => {
       fetchMock.mock.calls.map((call) => String(call[0]))
     ).not.toContain(`${window.location.origin}/memory`)
 
-    await user.click(screen.getByRole('tab', { name: /artifacts/i }))
+    await user.click(screen.getByRole('tab', { name: /knowledge/i }))
 
-    const detailPanel = screen.getByTestId('artifact-detail-panel')
+    const detailPanel = screen.getByTestId('knowledge-detail-panel')
     expect(within(detailPanel).getByText('Refresh knowledge')).not.toBeNull()
     expect(within(detailPanel).getByText('Reloaded from backend')).not.toBeNull()
     expect(within(detailPanel).getByText('Reloaded knowledge body')).not.toBeNull()
+  })
+
+  it('splits artifacts into top-level knowledge and skill tabs', async () => {
+    const fetchMock = stubInitialAppFetch()
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls.map((call) => String(call[0]))
+      ).toContain(`${window.location.origin}/memory?page=1&pageSize=10`)
+    })
+
+    expect(screen.queryByRole('tab', { name: /artifacts/i })).toBeNull()
+    expect(screen.getByRole('tab', { name: /knowledge/i })).not.toBeNull()
+    expect(screen.getByRole('tab', { name: /skill/i })).not.toBeNull()
   })
 
   it('creates a continuous flex height chain for tab panels', async () => {

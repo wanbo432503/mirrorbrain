@@ -4,17 +4,18 @@ import TabNavigation from './components/layout/TabNavigation'
 import FeedbackBanner from './components/layout/FeedbackBanner'
 import MemoryPanel from './components/memory/MemoryPanel'
 import ReviewPanel from './components/review/ReviewPanel'
-import ArtifactsPanel from './components/artifacts/ArtifactsPanel'
+import KnowledgeTabPanel from './components/artifacts/KnowledgeTabPanel'
+import SkillTabPanel from './components/artifacts/SkillTabPanel'
 import { createMirrorBrainBrowserApi } from './api/client'
 import { MirrorBrainProvider } from './contexts/MirrorBrainContext'
 import { useMirrorBrainState } from './hooks/useMirrorBrainState'
 
-type TabType = 'memory' | 'review' | 'artifacts'
+type TabType = 'memory' | 'review' | 'knowledge' | 'skill'
 type FeedbackKind = 'success' | 'error' | 'info'
 type VisitedTabs = Record<TabType, boolean>
 type ThemeMode = 'light' | 'dark'
 
-const TABS: TabType[] = ['memory', 'review', 'artifacts']
+const TABS: TabType[] = ['memory', 'review', 'knowledge', 'skill']
 
 interface Feedback {
   kind: FeedbackKind
@@ -71,7 +72,8 @@ function AppContent({
   const [visitedTabs, setVisitedTabs] = useState<VisitedTabs>({
     memory: true,
     review: false,
-    artifacts: false,
+    knowledge: false,
+    skill: false,
   })
 
   useMirrorBrainState(api)
@@ -110,7 +112,8 @@ function AppContent({
           >
             {shouldRenderPanel && tab === 'memory' && <MemoryPanel />}
             {shouldRenderPanel && tab === 'review' && <ReviewPanel />}
-            {shouldRenderPanel && tab === 'artifacts' && <ArtifactsPanel />}
+            {shouldRenderPanel && tab === 'knowledge' && <KnowledgeTabPanel />}
+            {shouldRenderPanel && tab === 'skill' && <SkillTabPanel />}
           </div>
         )
       })}

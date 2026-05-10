@@ -22,13 +22,13 @@ This UI is responsible for:
 - persisting generated knowledge and skill drafts back through the artifact API so refresh reloads them
 - showing review-generated knowledge as the final note body instead of separate title and summary fields
 - collecting user revision requests in a shorter fixed input block below the generated note so the note body can be refined before save or approval
-- organizing the artifacts tab into a single `history topics` sub tab with separate Knowledge and Skill timelines
+- exposing generated outputs through separate top-level Knowledge and Skill tabs
 - scoping artifact generation views to the candidate currently selected in the review tab
-- preserving the review tab workflow state after the user has visited it, so switching to memory or artifacts does not cancel in-flight knowledge generation or clear kept candidates
+- preserving the review tab workflow state after the user has visited it, so switching to memory, knowledge, or skill does not cancel in-flight knowledge generation or clear kept candidates
 - stretching the active tab workbench to the available viewport height, with candidate lists, selected candidate details, and draft editors scrolling inside their own panels instead of relying on fixed pixel heights
 - aligning the MirrorBrain brand header to the same left boundary as the tab content and exposing an explicit light/dark theme toggle
 - exposing explicit save actions for edited knowledge and skill drafts in the review tab
-- separating memory, review, and artifacts into distinct tabs instead of stacking all content on one page
+- separating memory, review, knowledge, and skill into distinct tabs instead of stacking all content on one page
 - placing sync, review, and artifact actions inside their corresponding tabs instead of a single global action bar
 - rendering candidate, suggestion, reviewed-memory, and artifact states with explicit field-level detail
 - showing visible action feedback for success and prerequisite errors
@@ -56,9 +56,9 @@ This UI is not responsible for:
 8. The UI lists multiple candidate streams and lets the user pick one.
 9. The UI shows AI review suggestions for the selected candidate without auto-reviewing it.
 10. The user explicitly keeps or discards the selected candidate.
-11. The user opens the `history topics` sub tab to browse previously generated knowledge and skill artifacts in separate timelines.
+11. The user opens the Knowledge or Skill tab to browse previously generated outputs in separate top-level timelines.
 12. The user generates knowledge or skill drafts from the candidate currently selected in the review tab.
-13. The generated drafts are immediately written back through the artifact API so the artifacts tab and the next page load can restore them.
+13. The generated drafts are immediately written back through the artifact API so the Knowledge or Skill tab and the next page load can restore them.
 14. After the review tab has been opened, switching to another tab hides rather than unmounts the review workbench, preserving kept candidates, draft state, and in-flight generation status.
 15. The app shell, tab panel, and review workbench form a continuous flex height chain so the active tab fills the screen while long content scrolls inside the relevant list or detail panel.
 16. The app header uses the same max-width and horizontal padding as the tab content, so the MirrorBrain title and Personal Memory & Knowledge descriptor align with the Memory tab's left edge.
