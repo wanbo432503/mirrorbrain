@@ -1,0 +1,5 @@
+{"type":"server-started","port":53457,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:53457","screen_dir":"/Users/wanbo/Workspace/mirrorbrain/.superpowers/brainstorm/31729-1778386346/content","state_dir":"/Users/wanbo/Workspace/mirrorbrain/.superpowers/brainstorm/31729-1778386346/state"}
+{"type":"screen-added","file":"/Users/wanbo/Workspace/mirrorbrain/.superpowers/brainstorm/31729-1778386346/content/target-design.html"}
+{"type":"screen-added","file":"/Users/wanbo/Workspace/mirrorbrain/.superpowers/brainstorm/31729-1778386346/content/waiting.html"}
+{"type":"screen-added","file":"/Users/wanbo/Workspace/mirrorbrain/.superpowers/brainstorm/31729-1778386346/content/waiting-final.html"}
+{"type":"server-stopped","reason":"idle timeout"}
