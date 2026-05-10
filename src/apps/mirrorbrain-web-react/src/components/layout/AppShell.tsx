@@ -6,9 +6,9 @@ interface AppShellProps {
 
 export default function AppShell({ children }: AppShellProps) {
   return (
-    <div className="max-w-7xl mx-auto px-4 py-3 h-screen overflow-hidden flex flex-col">
+    <div className="bg-canvas-parchment min-h-screen">
       <Header />
-      <main className="flex-1 overflow-auto">
+      <main className="max-w-7xl mx-auto px-lg py-md flex-1">
         {children}
       </main>
     </div>
