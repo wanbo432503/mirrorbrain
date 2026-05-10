@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import AppShell from './components/layout/AppShell'
 import TabNavigation from './components/layout/TabNavigation'
 import FeedbackBanner from './components/layout/FeedbackBanner'
@@ -11,6 +11,9 @@ import { useMirrorBrainState } from './hooks/useMirrorBrainState'
 
 type TabType = 'memory' | 'review' | 'artifacts'
 type FeedbackKind = 'success' | 'error' | 'info'
+type VisitedTabs = Record<TabType, boolean>
+
+const TABS: TabType[] = ['memory', 'review', 'artifacts']
 
 interface Feedback {
   kind: FeedbackKind
@@ -48,8 +51,26 @@ function AppContent({
     () => createMirrorBrainBrowserApi(window.location.origin),
     []
   )
+  const [visitedTabs, setVisitedTabs] = useState<VisitedTabs>({
+    memory: true,
+    review: false,
+    artifacts: false,
+  })
 
   useMirrorBrainState(api)
+
+  useEffect(() => {
+    setVisitedTabs((previous) => {
+      if (previous[activeTab]) {
+        return previous
+      }
+
+      return {
+        ...previous,
+        [activeTab]: true,
+      }
+    })
+  }, [activeTab])
 
   return (
     <AppShell>
@@ -57,11 +78,24 @@ function AppContent({
 
       <TabNavigation activeTab={activeTab} onTabChange={onTabChange} />
 
-      <div role="tabpanel" id={`${activeTab}-panel`} aria-labelledby={`${activeTab}-tab`}>
-        {activeTab === 'memory' && <MemoryPanel />}
-        {activeTab === 'review' && <ReviewPanel />}
-        {activeTab === 'artifacts' && <ArtifactsPanel />}
-      </div>
+      {TABS.map((tab) => {
+        const isActive = activeTab === tab
+        const shouldRenderPanel = visitedTabs[tab] || isActive
+
+        return (
+          <div
+            key={tab}
+            role="tabpanel"
+            id={`${tab}-panel`}
+            aria-labelledby={`${tab}-tab`}
+            hidden={!isActive}
+          >
+            {shouldRenderPanel && tab === 'memory' && <MemoryPanel />}
+            {shouldRenderPanel && tab === 'review' && <ReviewPanel />}
+            {shouldRenderPanel && tab === 'artifacts' && <ArtifactsPanel />}
+          </div>
+        )
+      })}
     </AppShell>
   )
 }

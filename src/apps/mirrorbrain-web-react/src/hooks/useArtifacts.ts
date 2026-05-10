@@ -89,9 +89,7 @@ export function useArtifacts(api: MirrorBrainWebAppApi) {
 
         setFeedback({
           kind: 'success',
-          message: api.saveKnowledgeArtifact
-            ? 'Knowledge artifact generated and saved successfully'
-            : 'Knowledge artifact generated successfully',
+          message: 'Knowledge artifact generated and saved successfully',
         })
 
         return savedArtifact

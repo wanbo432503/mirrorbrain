@@ -22,6 +22,7 @@ This UI is responsible for:
 - collecting user revision requests in a shorter fixed input block below the generated note so the note body can be refined before save or approval
 - organizing the artifacts tab into a single `history topics` sub tab with separate Knowledge and Skill timelines
 - scoping artifact generation views to the candidate currently selected in the review tab
+- preserving the review tab workflow state after the user has visited it, so switching to memory or artifacts does not cancel in-flight knowledge generation or clear kept candidates
 - exposing explicit save actions for edited knowledge and skill drafts in the review tab
 - separating memory, review, and artifacts into distinct tabs instead of stacking all content on one page
 - placing sync, review, and artifact actions inside their corresponding tabs instead of a single global action bar
@@ -53,13 +54,15 @@ This UI is not responsible for:
 10. The user opens the `history topics` sub tab to browse previously generated knowledge and skill artifacts in separate timelines.
 11. The user generates knowledge or skill drafts from the candidate currently selected in the review tab.
 12. The generated drafts are immediately written back through the artifact API so the artifacts tab and the next page load can restore them.
-13. In the review tab, generated knowledge displays the note body directly in a self-scrolling note field and accepts a one-line revision request in a full-width input row with a send action on the right.
-14. The user can save the edited draft artifact back through the local service API.
-15. The UI renders a visible status message after each action so the workflow is not silent.
+13. After the review tab has been opened, switching to another tab hides rather than unmounts the review workbench, preserving kept candidates, draft state, and in-flight generation status.
+14. In the review tab, generated knowledge displays the note body directly in a self-scrolling note field and accepts a one-line revision request in a full-width input row with a send action on the right.
+15. The user can save the edited draft artifact back through the local service API.
+16. The UI renders a visible status message after each action so the workflow is not silent.
 
 ## Test Strategy
 
 - controller and rendering coverage in `src/apps/mirrorbrain-web/main.test.ts`
+- React tab lifecycle coverage in `src/apps/mirrorbrain-web-react/src/App.test.tsx`
 - end-to-end verification in `tests/e2e/mirrorbrain-phase1-mvp.spec.ts`
 
 ## Known Risks Or Limitations

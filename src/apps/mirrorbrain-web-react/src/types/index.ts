@@ -215,6 +215,14 @@ export interface KnowledgeArtifact {
     kind: 'reviewed-memory' | 'knowledge-artifact';
     id: string;
   }>;
+  tags?: string[];
+  relatedKnowledgeIds?: string[];
+  compilationMetadata?: {
+    discoveryInsights: string[];
+    generationMethod: 'two-stage-compilation' | 'legacy';
+    discoveryStageCompletedAt?: string;
+    executeStageCompletedAt?: string;
+  };
 }
 
 export interface SkillArtifact {

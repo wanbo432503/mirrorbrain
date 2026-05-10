@@ -20,7 +20,6 @@ interface KnowledgeMarkdownRendererProps {
  */
 export function KnowledgeMarkdownRenderer({
   body,
-  knowledgeId,
   onWikiLinkClick,
 }: KnowledgeMarkdownRendererProps): React.ReactElement {
   const [hoverCard, setHoverCard] = useState<{

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
 
@@ -10,9 +10,7 @@ afterEach(() => {
 })
 
 describe('App', () => {
-  it('loads persisted knowledge and skill data on refresh', async () => {
-    const user = userEvent.setup()
-
+  function stubInitialAppFetch() {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
 
@@ -112,6 +110,13 @@ describe('App', () => {
         })
       }
 
+      if (url.endsWith('/candidate-reviews/suggestions')) {
+        return new Response(JSON.stringify({ suggestions: [] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+
       if (url.includes('/candidate-memories?')) {
         return new Response(
           JSON.stringify({
@@ -128,6 +133,41 @@ describe('App', () => {
     })
 
     vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch)
+
+    return fetchMock
+  }
+
+  it('keeps a visited review tab mounted when switching to artifacts', async () => {
+    const fetchMock = stubInitialAppFetch()
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls.map((call) => String(call[0]))
+      ).toContain(`${window.location.origin}/memory?page=1&pageSize=5`)
+    })
+
+    fireEvent.click(screen.getByRole('tab', { name: /review/i }))
+
+    const reviewPanel = await waitFor(() => {
+      const panel = document.getElementById('review-panel')
+      expect(panel).not.toBeNull()
+      expect(panel?.textContent).toContain('Candidates')
+      return panel as HTMLElement
+    })
+
+    fireEvent.click(screen.getByRole('tab', { name: /artifacts/i }))
+
+    expect(document.getElementById('review-panel')).toBe(reviewPanel)
+    expect(reviewPanel.hidden).toBe(true)
+    expect(reviewPanel.textContent).toContain('Candidates')
+  }, 15_000)
+
+  it('loads persisted knowledge and skill data on refresh', async () => {
+    const user = userEvent.setup()
+
+    const fetchMock = stubInitialAppFetch()
 
     render(<App />)
 
