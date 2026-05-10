@@ -11,6 +11,7 @@ This UI is responsible for:
 - showing local service status
 - showing imported memory through a dedicated tab with paging, newest-first ordering, and explicit source/name/timestamp presentation
 - showing five memory records per page with first, previous, next, and last navigation controls
+- showing review-window source volume as unique URLs instead of raw ActivityWatch event rows, so background tab sampling does not inflate the review metrics
 - exposing daily candidate generation and explicit review actions
 - presenting the review flow as a clearer workbench with candidate streams, focused evidence, and decision guidance
 - showing multiple candidate streams instead of a single current candidate
@@ -47,7 +48,7 @@ This UI is not responsible for:
 3. The user can jump directly to the first or last memory page when the imported list is long.
 4. The user triggers browser sync when needed.
 5. The user generates daily candidates for the previous local day from the review tab.
-6. The UI shows the active review window and the number of matched memory events before or after candidate generation.
+6. The UI shows the active review window and the number of unique source URLs before or after candidate generation.
 7. The UI lists multiple candidate streams and lets the user pick one.
 8. The UI shows AI review suggestions for the selected candidate without auto-reviewing it.
 9. The user explicitly keeps or discards the selected candidate.
@@ -77,3 +78,4 @@ This UI is not responsible for:
 - artifact editing currently saves whole draft payloads rather than field-level patches
 - generated drafts are persisted automatically, but follow-up edits still rely on the explicit Save action
 - review-tab knowledge revision requests are captured into the editable note body; they are not a separate autonomous execution path
+- the review-window URL count falls back to raw event ids for non-browser candidates that do not carry source URLs

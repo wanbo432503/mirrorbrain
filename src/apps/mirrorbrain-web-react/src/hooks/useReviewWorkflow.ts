@@ -1,11 +1,30 @@
 import { useState, useCallback } from 'react'
 import { useMirrorBrain } from '../contexts/MirrorBrainContext'
 import type { MirrorBrainWebAppApi } from '../api/client'
-import type { CandidateReviewSuggestion, ReviewedMemory } from '../types/index'
+import type { CandidateMemory, CandidateReviewSuggestion, ReviewedMemory } from '../types/index'
 
 interface ReviewFeedback {
   kind: 'success' | 'error' | 'info'
   message: string
+}
+
+export function countCandidateReviewSources(candidates: CandidateMemory[]): number {
+  const urls = new Set<string>()
+
+  for (const candidate of candidates) {
+    for (const source of candidate.sourceRefs ?? []) {
+      const url = source.url?.trim()
+      if (url && url.length > 0) {
+        urls.add(url)
+      }
+    }
+  }
+
+  if (urls.size > 0) {
+    return urls.size
+  }
+
+  return new Set(candidates.flatMap((candidate) => candidate.memoryEventIds)).size
 }
 
 export function useReviewWorkflow(api: MirrorBrainWebAppApi) {
@@ -39,10 +58,7 @@ export function useReviewWorkflow(api: MirrorBrainWebAppApi) {
               type: 'SET_REVIEW_WINDOW',
               payload: {
                 date: reviewDate,
-                eventCount: existingCandidates.reduce(
-                  (count, candidate) => count + candidate.memoryEventIds.length,
-                  0
-                ),
+                eventCount: countCandidateReviewSources(existingCandidates),
               },
             })
 
@@ -68,10 +84,7 @@ export function useReviewWorkflow(api: MirrorBrainWebAppApi) {
           type: 'SET_REVIEW_WINDOW',
           payload: {
             date: reviewDate,
-            eventCount: candidates.reduce(
-              (count, candidate) => count + candidate.memoryEventIds.length,
-              0
-            ),
+            eventCount: countCandidateReviewSources(candidates),
           },
         })
 

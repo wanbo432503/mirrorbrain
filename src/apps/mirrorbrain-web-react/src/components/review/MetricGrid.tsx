@@ -28,9 +28,9 @@ export default function MetricGrid({
         description={reviewWindowDate ? 'Selected date' : 'Select a date to review'}
       />
       <MetricTile
-        label="Events"
+        label="URLs"
         value={reviewWindowEventCount}
-        description="Total events in window"
+        description="Unique URLs in window"
       />
       <MetricTile
         label="Candidates"
