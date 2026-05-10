@@ -236,7 +236,7 @@ export default function SelectedCandidate({
             </h3>
             <div className="flex gap-2">
               <Button
-                variant="ghost"
+                variant="secondary"
                 onClick={onRegenerateKnowledge}
                 loading={isRegeneratingKnowledge}
                 disabled={isRegeneratingKnowledge || isSavingKnowledge || isApprovingKnowledge}
@@ -244,7 +244,7 @@ export default function SelectedCandidate({
                 {isRegeneratingKnowledge ? 'Regenerating...' : 'Regenerate'}
               </Button>
               <Button
-                variant="success"
+                variant="primary"
                 onClick={onApproveKnowledge}
                 loading={isApprovingKnowledge}
                 disabled={isApprovingKnowledge || isSavingKnowledge || isRegeneratingKnowledge}
@@ -351,14 +351,14 @@ export default function SelectedCandidate({
             </h3>
             <div className="flex gap-2">
               <Button
-                variant="ghost"
+                variant="secondary"
                 onClick={onRegenerateKnowledge}
                 disabled={isSavingSkill}
               >
                 Regenerate
               </Button>
               <Button
-                variant="success"
+                variant="primary"
                 onClick={onSaveSkill}
                 loading={isSavingSkill}
                 disabled={isSavingSkill}

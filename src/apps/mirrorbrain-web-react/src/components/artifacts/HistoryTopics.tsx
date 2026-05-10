@@ -284,7 +284,7 @@ function ArtifactDetail({
               {knowledge.title ?? 'Untitled Knowledge'}
             </h3>
           </div>
-          <Button variant="ghost" onClick={() => void onDelete()} loading={isDeleting}>
+          <Button variant="secondary" onClick={() => void onDelete()} loading={isDeleting}>
             {deleteButtonLabel}
           </Button>
         </div>
@@ -340,7 +340,7 @@ function ArtifactDetail({
           </p>
           <h3 className="font-heading text-xl font-bold text-ink mt-1">{skill.id}</h3>
         </div>
-        <Button variant="ghost" onClick={() => void onDelete()} loading={isDeleting}>
+        <Button variant="secondary" onClick={() => void onDelete()} loading={isDeleting}>
           {deleteButtonLabel}
         </Button>
       </div>
