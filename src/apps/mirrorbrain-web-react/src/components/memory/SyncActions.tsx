@@ -24,7 +24,7 @@ export default function SyncActions({
         {isSyncingBrowser ? 'Syncing...' : 'Sync Browser'}
       </Button>
       <Button
-        variant="default"
+        variant="primary"
         onClick={onSyncShell}
         loading={isSyncingShell}
         disabled={isSyncingBrowser || isSyncingShell}
