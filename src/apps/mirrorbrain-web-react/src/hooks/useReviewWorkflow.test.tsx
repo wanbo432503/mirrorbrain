@@ -107,10 +107,9 @@ describe('useReviewWorkflow', () => {
       listKnowledge: vi.fn(),
       listKnowledgeTopics: vi.fn(),
       listSkills: vi.fn(),
-      listCandidateMemoriesByDate: vi.fn(async () => candidates),
       syncBrowser: vi.fn(),
       syncShell: vi.fn(),
-      createDailyCandidates: vi.fn(),
+      createDailyCandidates: vi.fn(async () => candidates),
       suggestCandidateReviews: vi.fn(async () => []),
       reviewCandidateMemory: vi.fn(),
       undoCandidateReview: vi.fn(),
@@ -127,6 +126,64 @@ describe('useReviewWorkflow', () => {
     })
 
     expect(result.current.reviewWindowEventCount).toBe(2)
+  })
+
+  it('uses the create endpoint so existing daily candidates can be refreshed after sync', async () => {
+    const staleCandidate: CandidateMemory = {
+      ...candidate,
+      id: 'candidate:stale',
+      memoryEventIds: ['event-old'],
+      sourceRefs: [
+        {
+          id: 'event-old',
+          sourceType: 'activitywatch-browser',
+          timestamp: '2026-05-10T08:05:00.000Z',
+          url: 'https://example.com/old',
+        },
+      ],
+    }
+    const refreshedCandidate: CandidateMemory = {
+      ...candidate,
+      id: 'candidate:refreshed',
+      memoryEventIds: ['event-new'],
+      sourceRefs: [
+        {
+          id: 'event-new',
+          sourceType: 'activitywatch-browser',
+          timestamp: '2026-05-10T12:05:00.000Z',
+          url: 'https://example.com/new',
+        },
+      ],
+    }
+    const api: MirrorBrainWebAppApi = {
+      getHealth: vi.fn(),
+      listMemory: vi.fn(),
+      listKnowledge: vi.fn(),
+      listKnowledgeTopics: vi.fn(),
+      listSkills: vi.fn(),
+      listCandidateMemoriesByDate: vi.fn(async () => [staleCandidate]),
+      syncBrowser: vi.fn(),
+      syncShell: vi.fn(),
+      createDailyCandidates: vi.fn(async () => [refreshedCandidate]),
+      suggestCandidateReviews: vi.fn(async () => []),
+      reviewCandidateMemory: vi.fn(),
+      undoCandidateReview: vi.fn(),
+      generateKnowledge: vi.fn(),
+      generateSkill: vi.fn(),
+    } as unknown as MirrorBrainWebAppApi
+
+    const { result } = renderHook(() => useReviewWorkflow(api), {
+      wrapper: createWrapper(),
+    })
+
+    await act(async () => {
+      await result.current.createDailyCandidates('2026-05-10', 'Asia/Shanghai')
+    })
+
+    expect(api.listCandidateMemoriesByDate).not.toHaveBeenCalled()
+    expect(api.createDailyCandidates).toHaveBeenCalledWith('2026-05-10', 'Asia/Shanghai')
+    expect(result.current.candidates).toEqual([refreshedCandidate])
+    expect(result.current.reviewWindowEventCount).toBe(1)
   })
 
   it('reviews a candidate when selection and keep happen in the same user action', async () => {

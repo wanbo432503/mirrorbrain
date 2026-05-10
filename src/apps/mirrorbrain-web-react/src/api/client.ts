@@ -162,7 +162,7 @@ export function createMirrorBrainBrowserApi(
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ reviewDate, reviewTimeZone }),
       });
-      const body = (await response.json()) as { candidates: CandidateMemory[] };
+      const body = await readJson<{ candidates: CandidateMemory[] }>(response);
       return body.candidates;
     },
 

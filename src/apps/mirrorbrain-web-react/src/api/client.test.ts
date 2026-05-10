@@ -60,6 +60,25 @@ describe('createMirrorBrainBrowserApi', () => {
     );
   });
 
+  it('throws server errors from daily candidate creation instead of returning undefined candidates', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: false,
+      status: 500,
+      json: async () => ({
+        message: 'No memory events found for review date 2026-05-10.',
+      }),
+    })) as unknown as typeof fetch;
+    vi.stubGlobal('fetch', fetchMock);
+
+    const api = createMirrorBrainBrowserApi('http://localhost:3000');
+
+    await expect(
+      api.createDailyCandidates('2026-05-10', 'Asia/Shanghai'),
+    ).rejects.toThrow(
+      'No memory events found for review date 2026-05-10.',
+    );
+  });
+
   it('sends the current knowledge draft snapshot when approving a draft', async () => {
     const fetchMock = vi.fn(async () => ({
       ok: true,

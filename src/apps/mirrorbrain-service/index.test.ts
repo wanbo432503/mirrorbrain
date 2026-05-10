@@ -1734,6 +1734,155 @@ describe('mirrorbrain service', () => {
     );
   });
 
+  it('excludes memory events already used by published knowledge from regenerated candidates', async () => {
+    const service = {
+      status: 'running' as const,
+      config: getMirrorBrainConfig(),
+      syncBrowserMemory: vi.fn(async () => ({
+        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+        strategy: 'incremental' as const,
+        importedCount: 1,
+        lastSyncedAt: '2026-05-10T12:05:00.000Z',
+        importedEvents: [
+          {
+            id: 'browser:new-event',
+            sourceType: 'activitywatch-browser',
+            sourceRef: 'new-event',
+            timestamp: '2026-05-10T12:05:00.000Z',
+            authorizationScopeId: 'scope-browser',
+            content: {
+              url: 'https://example.com/new-url',
+              title: 'New URL',
+            },
+            captureMetadata: {
+              upstreamSource: 'activitywatch',
+              checkpoint: '2026-05-10T12:05:00.000Z',
+            },
+          },
+        ],
+      })),
+      syncShellMemory: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-05-10T12:05:00.000Z',
+      })),
+      stop: vi.fn(),
+    };
+    const memoryEvents: MemoryEvent[] = [
+      {
+        id: 'browser:consumed-event',
+        sourceType: 'activitywatch-browser',
+        sourceRef: 'consumed-event',
+        timestamp: '2026-05-10T08:05:00.000Z',
+        authorizationScopeId: 'scope-browser',
+        content: {
+          url: 'https://example.com/already-used',
+          title: 'Already used',
+        },
+        captureMetadata: {
+          upstreamSource: 'activitywatch',
+          checkpoint: '2026-05-10T08:05:00.000Z',
+        },
+      },
+      {
+        id: 'browser:new-event',
+        sourceType: 'activitywatch-browser',
+        sourceRef: 'new-event',
+        timestamp: '2026-05-10T12:05:00.000Z',
+        authorizationScopeId: 'scope-browser',
+        content: {
+          url: 'https://example.com/new-url',
+          title: 'New URL',
+        },
+        captureMetadata: {
+          upstreamSource: 'activitywatch',
+          checkpoint: '2026-05-10T12:05:00.000Z',
+        },
+      },
+      {
+        id: 'browser:revisited-consumed-url',
+        sourceType: 'activitywatch-browser',
+        sourceRef: 'revisited-consumed-url',
+        timestamp: '2026-05-10T12:10:00.000Z',
+        authorizationScopeId: 'scope-browser',
+        content: {
+          url: 'https://example.com/already-used',
+          title: 'Already used revisited',
+        },
+        captureMetadata: {
+          upstreamSource: 'activitywatch',
+          checkpoint: '2026-05-10T12:10:00.000Z',
+        },
+      },
+    ];
+    const publishedKnowledge = {
+      id: 'topic-knowledge:used:v1',
+      artifactType: 'topic-knowledge' as const,
+      draftState: 'published' as const,
+      sourceReviewedMemoryIds: ['reviewed:candidate:used'],
+    };
+    const reviewedMemory = {
+      id: 'reviewed:candidate:used',
+      candidateMemoryId: 'candidate:used',
+      candidateTitle: 'Already used candidate',
+      candidateSummary: 'Already used summary',
+      candidateTheme: 'used',
+      memoryEventIds: ['browser:consumed-event'],
+      candidateSourceRefs: [
+        {
+          id: 'browser:consumed-event',
+          sourceType: 'activitywatch-browser',
+          timestamp: '2026-05-10T08:05:00.000Z',
+          url: 'https://example.com/already-used',
+        },
+      ],
+      reviewDate: '2026-05-10',
+      decision: 'keep' as const,
+      reviewedAt: '2026-05-10T09:00:00.000Z',
+    };
+    const createCandidateMemories = vi.fn(() => [
+      createCandidateMemoryFixture({
+        id: 'candidate:2026-05-10:activitywatch-browser:example-com:new-url',
+        memoryEventIds: ['browser:new-event'],
+        reviewDate: '2026-05-10',
+      }),
+    ]);
+
+    const api = createMirrorBrainService(
+      {
+        service,
+        workspaceDir: '/tmp/mirrorbrain-workspace',
+      },
+      {
+        listCandidateMemories: vi.fn(async () => [
+          createCandidateMemoryFixture({
+            id: 'candidate:2026-05-10:activitywatch-browser:example-com:old',
+            memoryEventIds: ['browser:consumed-event'],
+            reviewDate: '2026-05-10',
+          }),
+        ]),
+        listRawWorkspaceMemoryEvents: vi.fn(async () => memoryEvents),
+        listKnowledge: vi.fn(async () => [publishedKnowledge]),
+        listReviewedMemories: vi.fn(async () => [reviewedMemory]),
+        createCandidateMemories,
+        publishCandidateMemory: vi.fn(async () => ({
+          sourcePath: '/tmp/candidate.json',
+          rootUri: 'viking://resources/candidate',
+        })),
+        listSkillDrafts: vi.fn(async () => []),
+      },
+    );
+
+    await api.createDailyCandidateMemories('2026-05-10', 'Asia/Shanghai');
+
+    expect(createCandidateMemories).toHaveBeenCalledWith({
+      reviewDate: '2026-05-10',
+      reviewTimeZone: 'Asia/Shanghai',
+      memoryEvents: [memoryEvents[1]],
+    });
+  });
+
   it('returns candidate review suggestions without publishing review artifacts', async () => {
     const service = {
       status: 'running' as const,
@@ -1878,6 +2027,8 @@ describe('mirrorbrain service', () => {
       {
         listCandidateMemories: vi.fn(async () => []),
         listRawWorkspaceMemoryEvents: vi.fn(async () => memoryEvents),
+        listKnowledge: vi.fn(async () => []),
+        listReviewedMemories: vi.fn(async () => []),
         createCandidateMemories,
         publishCandidateMemory,
         loadBrowserPageContentArtifactFromWorkspace: vi.fn(async () => null),

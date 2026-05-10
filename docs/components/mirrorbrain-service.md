@@ -44,19 +44,20 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 10. Before daily candidate generation or refresh, run an explicit browser-memory sync so the workspace raw-event cache reflects the latest ActivityWatch browser history.
 11. If candidates already exist for a review date and the sync imports no new browser events, return the existing candidates without rebuilding them.
 12. If candidates already exist for a review date and the sync imports new browser events, rebuild the daily candidates from current raw workspace memory history so late-day URLs are included.
-13. Generate daily task-oriented candidate streams for a requested review date, using raw workspace memory history rather than the UI display list.
-14. Before candidate generation, enrich browser events with stored `browser-page-content` text when a page artifact is available in the workspace so review grouping can use page semantics instead of URL/title alone.
-15. Return suggestion-only AI review hints without promoting any candidate, including keep-score and supporting reasons for the review UI.
-16. Record explicit keep or discard decisions and publish reviewed memory artifacts.
-17. Forward explicit knowledge and skill publishing calls to the OpenViking ingestion adapter.
-18. Build topic-knowledge merge candidates from stored draft knowledge artifacts when requested.
-19. Merge a daily-review draft into topic knowledge, publishing the new current-best artifact and any superseded previous version.
-20. List current-best topic knowledge summaries, fetch the current-best artifact for one topic key, and return topic history in newest-first order.
-21. For reviewed-memory knowledge generation APIs, resolve captured page text from reviewed memory events before creating the draft, then publish the resulting artifact.
-22. Approve a knowledge draft by loading the persisted draft by id and passing it through the existing topic-knowledge merge workflow.
-23. If the caller provides a draft snapshot, approve uses that snapshot after verifying its id matches `draftId`; this preserves the visible UI draft, source reviewed-memory ids, provenance refs, and recent edits even when an older persisted draft with the same id exists. If no snapshot is provided, approve falls back to the persisted knowledge list.
-24. When a knowledge or skill artifact is deleted, remove the workspace copy and record a service-level tombstone under `mirrorbrain/deleted-artifacts/` so later reads suppress both workspace and OpenViking copies of that id.
-25. When a deleted artifact id is published again later, clear its tombstone before persisting the fresh artifact so it becomes visible again.
+13. Before rebuilding daily candidates, exclude memory events and browser URLs that are already linked through reviewed memories to published knowledge so previously synthesized work is not clustered again.
+14. Generate daily task-oriented candidate streams for a requested review date, using raw workspace memory history rather than the UI display list.
+15. Before candidate generation, enrich browser events with stored `browser-page-content` text when a page artifact is available in the workspace so review grouping can use page semantics instead of URL/title alone.
+16. Return suggestion-only AI review hints without promoting any candidate, including keep-score and supporting reasons for the review UI.
+17. Record explicit keep or discard decisions and publish reviewed memory artifacts.
+18. Forward explicit knowledge and skill publishing calls to the OpenViking ingestion adapter.
+19. Build topic-knowledge merge candidates from stored draft knowledge artifacts when requested.
+20. Merge a daily-review draft into topic knowledge, publishing the new current-best artifact and any superseded previous version.
+21. List current-best topic knowledge summaries, fetch the current-best artifact for one topic key, and return topic history in newest-first order.
+22. For reviewed-memory knowledge generation APIs, resolve captured page text from reviewed memory events before creating the draft, then publish the resulting artifact.
+23. Approve a knowledge draft by loading the persisted draft by id and passing it through the existing topic-knowledge merge workflow.
+24. If the caller provides a draft snapshot, approve uses that snapshot after verifying its id matches `draftId`; this preserves the visible UI draft, source reviewed-memory ids, provenance refs, and recent edits even when an older persisted draft with the same id exists. If no snapshot is provided, approve falls back to the persisted knowledge list.
+25. When a knowledge or skill artifact is deleted, remove the workspace copy and record a service-level tombstone under `mirrorbrain/deleted-artifacts/` so later reads suppress both workspace and OpenViking copies of that id.
+26. When a deleted artifact id is published again later, clear its tombstone before persisting the fresh artifact so it becomes visible again.
 
 ## Operational Note
 
@@ -76,6 +77,7 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
 - unit and integration tests verify daily candidate memories can be created and published through the service contract
 - unit tests verify daily candidate generation syncs browser history before reading workspace raw events
 - unit tests verify existing daily candidates are reused when sync imports no new browser events and regenerated when sync imports new browser events
+- unit tests verify daily candidate regeneration excludes memory events and URLs already consumed by published knowledge
 - unit and integration tests verify candidate review suggestions stay suggestion-only
 - unit and integration tests verify explicit keep and discard review decisions publish reviewed memory artifacts through the service contract
 - unit and integration tests verify the service forwards explicit knowledge and skill publishing calls to OpenViking ingestion with runtime configuration

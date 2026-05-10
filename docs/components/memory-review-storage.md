@@ -36,6 +36,7 @@ This slice is not responsible for:
 4. A user review decision produces a `ReviewedMemory`.
 5. The service persists that reviewed memory into OpenViking resource storage.
 6. Later workflows can reload stored candidates or reviewed memories for UI or generation flows.
+7. Daily candidate refresh uses published knowledge `sourceReviewedMemoryIds` plus persisted reviewed memories to identify memory events that have already been synthesized into knowledge, then removes those events from the next clustering input.
 
 ## Dependencies
 
@@ -48,9 +49,11 @@ This slice is not responsible for:
 - if the OpenViking resource import fails, candidate or reviewed memory persistence fails with the underlying request error
 - candidate and reviewed memory currently use JSON resource files rather than richer typed OpenViking entities
 - lifecycle transitions still depend on explicit service calls; no background promotion is performed
+- reviewed memories must remain reloadable after candidate deletion because they are the durable bridge between published knowledge and the original memory events that should not be reclustered
 
 ## Test Strategy
 
 - adapter coverage in `src/integrations/openviking-store/index.test.ts`
 - service persistence coverage in `tests/integration/mirrorbrain-service-contract.test.ts`
+- service coverage in `src/apps/mirrorbrain-service/index.test.ts` verifies published-knowledge-consumed memory events are excluded from regenerated candidates
 - broader service and type verification through `Vitest` and `tsc --noEmit`

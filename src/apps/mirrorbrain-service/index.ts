@@ -1,4 +1,4 @@
-import { mkdir, readdir, unlink, writeFile, rm } from 'node:fs/promises';
+import { mkdir, readFile, readdir, unlink, writeFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { getMirrorBrainConfig } from '../../shared/config/index.js';
@@ -21,6 +21,7 @@ import {
   listMirrorBrainMemoryNarrativesFromOpenViking,
   listMirrorBrainCandidateMemoriesFromOpenViking,
   listMirrorBrainCandidateMemoriesFromWorkspace,
+  listMirrorBrainReviewedMemoriesFromOpenViking,
   listMirrorBrainSkillArtifactsFromWorkspace,
   type OpenVikingMemoryEventWriter,
 } from '../../integrations/openviking-store/index.js';
@@ -150,6 +151,7 @@ interface CreateMirrorBrainServiceDependencies {
   listMemoryNarratives?: typeof listMirrorBrainMemoryNarrativesFromOpenViking;
   listCandidateMemories?: typeof listMirrorBrainCandidateMemoriesFromOpenViking;
   listWorkspaceCandidateMemories?: typeof listMirrorBrainCandidateMemoriesFromWorkspace;
+  listReviewedMemories?: typeof listMirrorBrainReviewedMemoriesFromOpenViking;
   listKnowledge?: typeof listKnowledgeFromPluginApi;
   listSkillDrafts?: typeof listSkillDraftsFromPluginApi;
   publishMemoryNarrative?: typeof ingestMemoryNarrativeToOpenViking;
@@ -176,6 +178,43 @@ interface CreateMirrorBrainServiceDependencies {
 
 function normalizeMemoryEventReadResult(result: MemoryEventReadResult): MemoryEvent[] {
   return Array.isArray(result) ? result : result.items;
+}
+
+function isReviewedMemoryLike(value: unknown): value is ReviewedMemory {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'id' in value &&
+    'candidateMemoryId' in value &&
+    'memoryEventIds' in value &&
+    Array.isArray((value as { memoryEventIds?: unknown }).memoryEventIds)
+  );
+}
+
+function getKnowledgeConsumedMemoryRefs(
+  knowledgeArtifacts: KnowledgeArtifact[],
+  reviewedMemories: ReviewedMemory[],
+): { eventIds: Set<string>; urls: Set<string> } {
+  const reviewedMemoryIdsUsedByPublishedKnowledge = new Set(
+    knowledgeArtifacts
+      .filter((artifact) => artifact.draftState === 'published')
+      .flatMap((artifact) => artifact.sourceReviewedMemoryIds ?? []),
+  );
+  const consumedReviewedMemories = reviewedMemories.filter((reviewedMemory) =>
+    reviewedMemoryIdsUsedByPublishedKnowledge.has(reviewedMemory.id),
+  );
+
+  return {
+    eventIds: new Set(
+      consumedReviewedMemories.flatMap((reviewedMemory) => reviewedMemory.memoryEventIds),
+    ),
+    urls: new Set(
+      consumedReviewedMemories
+        .flatMap((reviewedMemory) => reviewedMemory.candidateSourceRefs ?? [])
+        .map((sourceRef) => sourceRef.url?.trim())
+        .filter((url): url is string => url !== undefined && url.length > 0),
+    ),
+  };
 }
 
 function mergeArtifactsById<T extends { id: string }>(
@@ -829,6 +868,39 @@ export function createMirrorBrainService(
       });
     }
   };
+  const loadReviewedMemories = async (): Promise<ReviewedMemory[]> => {
+    if (dependencies.listReviewedMemories !== undefined) {
+      return dependencies.listReviewedMemories({ baseUrl });
+    }
+
+    try {
+      return await listMirrorBrainReviewedMemoriesFromOpenViking({ baseUrl });
+    } catch {
+      const reviewedDir = join(workspaceDir, 'mirrorbrain', 'reviewed-memories');
+
+      try {
+        const files = await readdir(reviewedDir);
+        const items = await Promise.all(
+          files
+            .filter((file) => file.endsWith('.json'))
+            .map(async (file) => {
+              const content = await readFile(join(reviewedDir, file), 'utf8');
+              const parsed = JSON.parse(content) as unknown;
+
+              return isReviewedMemoryLike(parsed) ? parsed : null;
+            }),
+        );
+
+        return items.filter((item): item is ReviewedMemory => item !== null);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+          return [];
+        }
+
+        throw error;
+      }
+    }
+  };
   const refreshMemoryNarratives = async (
     buildNarratives: (input: { memoryEvents: MemoryEvent[] }) => MemoryNarrative[],
   ) => {
@@ -1187,8 +1259,22 @@ export function createMirrorBrainService(
       const memoryEvents = await listRawWorkspaceMemoryEvents({
         workspaceDir,
       });
+      const knowledgeArtifacts = await loadKnowledgeArtifacts();
+      const reviewedMemories = await loadReviewedMemories();
+      const consumedMemoryRefs = getKnowledgeConsumedMemoryRefs(
+        knowledgeArtifacts,
+        reviewedMemories,
+      );
+      const candidateSourceEvents = memoryEvents.filter((event) => {
+        if (consumedMemoryRefs.eventIds.has(event.id)) {
+          return false;
+        }
+
+        const url = typeof event.content.url === 'string' ? event.content.url.trim() : '';
+        return url.length === 0 || !consumedMemoryRefs.urls.has(url);
+      });
       const enrichedMemoryEvents = await Promise.all(
-        memoryEvents.map(async (event) => {
+        candidateSourceEvents.map(async (event) => {
           if (event.sourceType !== 'activitywatch-browser') {
             return event;
           }

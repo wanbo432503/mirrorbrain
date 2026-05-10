@@ -19,7 +19,9 @@ This UI is responsible for:
 - deriving the default review date from the user's resolved IANA timezone, with `Asia/Shanghai` as the fallback when the browser does not report one
 - rendering memory, candidate, source, reviewed-memory, and draft timestamps in the user's IANA timezone while preserving UTC ISO timestamps in persisted data
 - exposing daily candidate generation and explicit review actions
+- routing daily candidate creation through the service refresh endpoint instead of returning preloaded stale candidates in the browser
 - refreshing existing daily candidates after browser sync imports new events, so late-day URLs are considered when the user creates candidates again
+- excluding memory events and URLs already synthesized into published knowledge from later daily candidate clustering
 - presenting the review flow as a clearer workbench with candidate streams, focused evidence, and decision guidance
 - showing multiple candidate streams instead of a single current candidate
 - showing AI review suggestions as advisory detail, not final state
