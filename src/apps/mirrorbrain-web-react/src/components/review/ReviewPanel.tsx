@@ -384,10 +384,10 @@ export default function ReviewPanel() {
         {/* Left Column: Candidate List */}
         <div className="lg:col-span-1">
           <div className="mb-2">
-            <h2 className="font-heading font-bold text-xs text-slate-900 uppercase tracking-wide">
+            <h2 className="font-heading font-bold text-xs text-ink uppercase tracking-wide">
               Candidates
             </h2>
-            <p className="font-body text-xs text-slate-600">
+            <p className="font-body text-xs text-inkMuted-80">
               {unreviewedCandidates.length} candidates generated
             </p>
           </div>
@@ -404,10 +404,10 @@ export default function ReviewPanel() {
         {/* Right Column: Selected Candidate */}
         <div className="lg:col-span-2">
           <div className="mb-2">
-            <h2 className="font-heading font-bold text-xs text-slate-900 uppercase tracking-wide">
+            <h2 className="font-heading font-bold text-xs text-ink uppercase tracking-wide">
               {viewingMode === 'kept-list' ? 'Kept Candidates' : 'Selected Candidate'}
             </h2>
-            <p className="font-body text-xs text-slate-600">
+            <p className="font-body text-xs text-inkMuted-80">
               {viewingMode === 'kept-list'
                 ? `${keptCandidates.length} candidates kept`
                 : selectedCandidateId

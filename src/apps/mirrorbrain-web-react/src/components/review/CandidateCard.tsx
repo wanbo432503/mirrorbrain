@@ -71,11 +71,11 @@ export default function CandidateCard({
     <div
       onClick={onSelect}
       className={`
-        bg-white border rounded-lg p-4 cursor-pointer transition-colors duration-200
-        hover:shadow-md focus:ring-2 focus:ring-teal-500 focus:ring-offset-2
+        bg-canvas border rounded-lg p-4 cursor-pointer transition-colors duration-200
+        focus:ring-2 focus:ring-primary focus:ring-offset-2
         ${isSelected
-          ? 'border-teal-500 shadow-md ring-2 ring-teal-500 ring-offset-2'
-          : 'border-slate-200 hover:border-slate-300'
+          ? 'border-primary ring-2 ring-primary ring-offset-2'
+          : 'border-hairline hover:border-slate-300'
         }
       `}
       role="button"
@@ -91,7 +91,7 @@ export default function CandidateCard({
       <div className="space-y-2">
         {/* Top row: Title + Duration badge */}
         <div className="flex items-start justify-between gap-2">
-          <h4 className="font-heading font-semibold text-sm text-slate-900 line-clamp-2 flex-1">
+          <h4 className="font-heading font-semibold text-sm text-ink line-clamp-2 flex-1">
             {candidate.title}
           </h4>
 
@@ -104,7 +104,7 @@ export default function CandidateCard({
         </div>
 
         {/* Source count row */}
-        <div className="flex items-center gap-2 text-xs font-body text-slate-600">
+        <div className="flex items-center gap-2 text-xs font-body text-inkMuted-80">
           <span>{sourceCount} pages</span>
           {primaryCount > 0 && supportingCount > 0 && (
             <>
@@ -116,14 +116,14 @@ export default function CandidateCard({
         </div>
 
         {/* Time range */}
-        <p className="text-xs font-body text-slate-500">
+        <p className="text-xs font-body text-inkMuted-48">
           {formatTimeRange(candidate.timeRange.startAt, candidate.timeRange.endAt)}
         </p>
 
         {/* Bottom row: Theme + Keep Score */}
         <div className="flex items-center gap-2 flex-wrap">
           {/* Theme badge */}
-          <div className="inline-flex items-center px-2 py-1 rounded-md text-xs font-heading font-semibold bg-slate-100 text-slate-600">
+          <div className="inline-flex items-center px-2 py-1 rounded-md text-xs font-heading font-semibold bg-slate-100 text-inkMuted-80">
             {candidate.theme}
           </div>
 

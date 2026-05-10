@@ -9,11 +9,11 @@ export default function KeptCandidateCard({ reviewedMemory, onUndo }: KeptCandid
   const eventCount = reviewedMemory.memoryEventIds.length;
 
   return (
-    <div className="bg-white border border-green-200 rounded-lg p-3 shadow-sm">
+    <div className="bg-canvas border border-green-200 rounded-lg p-3 shadow-sm">
       <div className="space-y-2">
         {/* Header: Title + Badge */}
         <div className="flex items-start justify-between gap-2">
-          <h4 className="font-heading font-semibold text-sm text-slate-900 line-clamp-2 flex-1">
+          <h4 className="font-heading font-semibold text-sm text-ink line-clamp-2 flex-1">
             {reviewedMemory.candidateTitle}
           </h4>
 
@@ -26,15 +26,15 @@ export default function KeptCandidateCard({ reviewedMemory, onUndo }: KeptCandid
         </div>
 
         {/* Source count */}
-        <p className="text-xs font-body text-slate-600">
+        <p className="text-xs font-body text-inkMuted-80">
           {eventCount} pages
         </p>
 
         {/* Undo Button */}
-        <div className="pt-2 border-t border-slate-100">
+        <div className="pt-2 border-t border-hairline">
           <button
             onClick={() => onUndo(reviewedMemory.id)}
-            className="inline-flex items-center justify-center w-full h-8 rounded-md bg-slate-200 text-slate-700 hover:bg-red-100 hover:text-red-700 transition-colors duration-200 focus:ring-2 focus:ring-red-500 focus:ring-offset-1 cursor-pointer text-xs font-heading font-semibold"
+            className="inline-flex items-center justify-center w-full h-8 rounded-md bg-hairline text-inkMuted-80 hover:bg-red-100 hover:text-red-700 transition-colors duration-200 focus:ring-2 focus:ring-red-500 focus:ring-offset-1 cursor-pointer text-xs font-heading font-semibold"
             aria-label="Undo keep"
             type="button"
           >

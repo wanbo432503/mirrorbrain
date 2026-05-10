@@ -27,10 +27,10 @@ export default function ReviewGuidance({ suggestion, reviewedMemory }: ReviewGui
     return (
       <Card className="h-full overflow-y-auto max-h-[540px]">
         <div className="text-center py-12">
-          <p className="font-heading font-semibold text-base text-slate-600 mb-2">
+          <p className="font-heading font-semibold text-base text-inkMuted-80 mb-2">
             No guidance available
           </p>
-          <p className="font-body text-sm text-slate-500">
+          <p className="font-body text-sm text-inkMuted-48">
             Select a candidate to see AI suggestions
           </p>
         </div>
@@ -44,7 +44,7 @@ export default function ReviewGuidance({ suggestion, reviewedMemory }: ReviewGui
         {/* AI Suggestion */}
         {suggestion && (
           <div>
-            <h3 className="font-heading font-bold text-lg text-slate-900 mb-4 uppercase tracking-wide">
+            <h3 className="font-heading font-bold text-lg text-ink mb-4 uppercase tracking-wide">
               AI Recommendation
             </h3>
 
@@ -65,18 +65,18 @@ export default function ReviewGuidance({ suggestion, reviewedMemory }: ReviewGui
               </div>
 
               {/* Confidence Score */}
-              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+              <div className="bg-canvas border border-hairline rounded-lg p-3">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-heading font-semibold text-slate-600 uppercase">
+                  <p className="text-xs font-heading font-semibold text-inkMuted-80 uppercase">
                     Confidence
                   </p>
-                  <p className="text-sm font-heading font-bold text-slate-900">
+                  <p className="text-sm font-heading font-bold text-ink">
                     {Math.round(suggestion.confidenceScore * 100)}%
                   </p>
                 </div>
 
                 {/* Confidence Bar */}
-                <div className="w-full bg-slate-200 rounded-full h-2">
+                <div className="w-full bg-hairline rounded-full h-2">
                   <div
                     className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${suggestion.confidenceScore * 100}%` }}
@@ -86,16 +86,16 @@ export default function ReviewGuidance({ suggestion, reviewedMemory }: ReviewGui
 
               {/* Keep Score */}
               {typeof suggestion.keepScore === 'number' && (
-                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                <div className="bg-canvas border border-hairline rounded-lg p-3">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-heading font-semibold text-slate-600 uppercase">
+                    <p className="text-xs font-heading font-semibold text-inkMuted-80 uppercase">
                       Keep Score
                     </p>
-                    <p className="text-sm font-heading font-bold text-slate-900">
+                    <p className="text-sm font-heading font-bold text-ink">
                       {Math.round(suggestion.keepScore)}%
                     </p>
                   </div>
-                  <div className="w-full bg-slate-200 rounded-full h-2">
+                  <div className="w-full bg-hairline rounded-full h-2">
                     <div
                       className="bg-emerald-600 h-2 rounded-full transition-all duration-300"
                       style={{ width: `${Math.max(0, Math.min(100, suggestion.keepScore))}%` }}
@@ -105,35 +105,35 @@ export default function ReviewGuidance({ suggestion, reviewedMemory }: ReviewGui
               )}
 
               {/* Priority Score */}
-              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+              <div className="bg-canvas border border-hairline rounded-lg p-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-heading font-semibold text-slate-600 uppercase">
+                  <p className="text-xs font-heading font-semibold text-inkMuted-80 uppercase">
                     Priority
                   </p>
-                  <p className="text-sm font-heading font-bold text-slate-900">
+                  <p className="text-sm font-heading font-bold text-ink">
                     {Math.round(suggestion.priorityScore * 100)}
                   </p>
                 </div>
               </div>
 
               {/* Rationale */}
-              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                <p className="text-xs font-heading font-semibold text-slate-600 uppercase mb-2">
+              <div className="bg-canvas border border-hairline rounded-lg p-3">
+                <p className="text-xs font-heading font-semibold text-inkMuted-80 uppercase mb-2">
                   Rationale
                 </p>
-                <p className="font-body text-sm text-slate-700 leading-relaxed">
+                <p className="font-body text-sm text-ink leading-relaxed">
                   {suggestion.rationale}
                 </p>
               </div>
 
               {suggestion.supportingReasons && suggestion.supportingReasons.length > 0 && (
-                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                  <p className="text-xs font-heading font-semibold text-slate-600 uppercase mb-2">
+                <div className="bg-canvas border border-hairline rounded-lg p-3">
+                  <p className="text-xs font-heading font-semibold text-inkMuted-80 uppercase mb-2">
                     Why This Candidate Exists
                   </p>
                   <ul className="space-y-2">
                     {suggestion.supportingReasons.map((reason) => (
-                      <li key={reason} className="font-body text-sm text-slate-700 leading-relaxed">
+                      <li key={reason} className="font-body text-sm text-ink leading-relaxed">
                         {reason}
                       </li>
                     ))}
@@ -142,11 +142,11 @@ export default function ReviewGuidance({ suggestion, reviewedMemory }: ReviewGui
               )}
 
               {suggestion.evidenceSummary && (
-                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                  <p className="text-xs font-heading font-semibold text-slate-600 uppercase mb-2">
+                <div className="bg-canvas border border-hairline rounded-lg p-3">
+                  <p className="text-xs font-heading font-semibold text-inkMuted-80 uppercase mb-2">
                     Evidence Mix
                   </p>
-                  <p className="font-body text-sm text-slate-700 leading-relaxed">
+                  <p className="font-body text-sm text-ink leading-relaxed">
                     {suggestion.evidenceSummary}
                   </p>
                 </div>
@@ -158,8 +158,8 @@ export default function ReviewGuidance({ suggestion, reviewedMemory }: ReviewGui
 
         {/* Reviewed Memory */}
         {reviewedMemory && (
-          <div className="border-t border-slate-200 pt-6">
-            <h3 className="font-heading font-bold text-lg text-slate-900 mb-4 uppercase tracking-wide">
+          <div className="border-t border-hairline pt-6">
+            <h3 className="font-heading font-bold text-lg text-ink mb-4 uppercase tracking-wide">
               Reviewed Memory
             </h3>
 
@@ -178,21 +178,21 @@ export default function ReviewGuidance({ suggestion, reviewedMemory }: ReviewGui
               </div>
 
               {/* Candidate Title */}
-              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                <p className="text-xs font-heading font-semibold text-slate-600 uppercase mb-1">
+              <div className="bg-canvas border border-hairline rounded-lg p-3">
+                <p className="text-xs font-heading font-semibold text-inkMuted-80 uppercase mb-1">
                   Candidate
                 </p>
-                <p className="font-heading font-semibold text-sm text-slate-900">
+                <p className="font-heading font-semibold text-sm text-ink">
                   {reviewedMemory.candidateTitle}
                 </p>
               </div>
 
               {/* Reviewed At */}
-              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                <p className="text-xs font-heading font-semibold text-slate-600 uppercase mb-1">
+              <div className="bg-canvas border border-hairline rounded-lg p-3">
+                <p className="text-xs font-heading font-semibold text-inkMuted-80 uppercase mb-1">
                   Reviewed At
                 </p>
-                <p className="font-body text-sm text-slate-700">
+                <p className="font-body text-sm text-ink">
                   {new Date(reviewedMemory.reviewedAt).toLocaleString()}
                 </p>
               </div>

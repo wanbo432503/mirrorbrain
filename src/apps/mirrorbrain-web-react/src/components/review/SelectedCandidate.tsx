@@ -158,10 +158,10 @@ export default function SelectedCandidate({
       return (
         <Card className="h-full overflow-y-auto max-h-[540px]">
           <div className="text-center py-12">
-            <p className="font-heading font-semibold text-base text-slate-600 mb-2">
+            <p className="font-heading font-semibold text-base text-inkMuted-80 mb-2">
               No kept candidates
             </p>
-            <p className="font-body text-sm text-slate-500">
+            <p className="font-body text-sm text-inkMuted-48">
               Click "Keep" on candidates to add them here
             </p>
           </div>
@@ -174,7 +174,7 @@ export default function SelectedCandidate({
         <div className="space-y-3">
           <div className="mb-2 flex items-center justify-between">
             <div>
-              <h3 className="font-heading font-bold text-xs text-slate-900 uppercase tracking-wide">
+              <h3 className="font-heading font-bold text-xs text-ink uppercase tracking-wide">
                 Kept Candidates ({keptCandidates.length})
               </h3>
             </div>
@@ -217,7 +217,7 @@ export default function SelectedCandidate({
         <Card className="h-full">
           <div className="text-center py-12">
             <LoadingSpinner />
-            <p className="font-heading font-semibold text-base text-slate-600 mt-4">
+            <p className="font-heading font-semibold text-base text-inkMuted-80 mt-4">
               Generating knowledge draft...
             </p>
           </div>
