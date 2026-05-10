@@ -13,6 +13,11 @@ describe('ReviewPanel helpers', () => {
     expect(getDefaultReviewDate(new Date('2026-04-15T12:00:00+08:00'))).toBe('2026-04-15')
   })
 
+  it('uses the user timezone when deriving the default review date', () => {
+    expect(getDefaultReviewDate(new Date('2026-05-10T16:30:00.000Z'), 'Asia/Shanghai')).toBe('2026-05-11')
+    expect(getDefaultReviewDate(new Date('2026-05-10T16:30:00.000Z'), 'UTC')).toBe('2026-05-10')
+  })
+
   it('returns the local timezone for review requests', () => {
     expect(getLocalTimeZone()).toBeTruthy()
   })

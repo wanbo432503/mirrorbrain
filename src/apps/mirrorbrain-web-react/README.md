@@ -65,14 +65,14 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and an
   - `ReviewGuidance.tsx` - AI suggestions + reviewed memory
 
 - **Features:**
-  - Create daily candidates for the previous local calendar day
+  - Create daily candidates for the current user-local calendar day
   - Review auto-generation waits until the first memory load finishes, avoiding concurrent heavy startup requests against OpenViking
   - Select candidate + view task title, duration, formation reasons, and concrete visited URLs split into primary/supporting sources
   - AI review suggestions (confidence/priority/rationale/keep score/supporting reasons)
   - Keep/Discard decisions
   - Reviewed memory display
   - Knowledge approval removes the approved draft's source candidates from the review list and persisted candidate storage
-  - Review requests now send the local timezone so the service can use the correct day boundary
+  - Review requests derive and send the user's IANA timezone so both the default review date and backend day boundary match the user's local calendar day
   - Candidate lists, selected candidate details, and draft editors stretch to available viewport height and scroll internally
 
 ### Phase 5: Knowledge / Skill Panels + Forms ✅ (Completed)

@@ -8,19 +8,20 @@ import { useReviewWorkflow } from '../../hooks/useReviewWorkflow'
 import { useArtifacts } from '../../hooks/useArtifacts'
 import { useMirrorBrain } from '../../contexts/MirrorBrainContext'
 
-export function getDefaultReviewDate(now: Date = new Date()): string {
-  // Use today's date instead of yesterday for easier debugging
-  const today = new Date(now)
-
+export function getDefaultReviewDate(
+  now: Date = new Date(),
+  timeZone: string = getLocalTimeZone(),
+): string {
   return new Intl.DateTimeFormat('en-CA', {
+    timeZone,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).format(today)
+  }).format(now)
 }
 
 export function getLocalTimeZone(): string {
-  return Intl.DateTimeFormat().resolvedOptions().timeZone
+  return Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'Asia/Shanghai'
 }
 
 export function shouldAutoLoadDailyCandidates(input: {
@@ -77,8 +78,8 @@ export default function ReviewPanel() {
     saveSkillArtifact,
   } = useArtifacts(api)
 
-  const [reviewDate] = useState(getDefaultReviewDate())
-  const [reviewTimeZone] = useState(getLocalTimeZone())
+  const [reviewTimeZone] = useState(getLocalTimeZone)
+  const [reviewDate] = useState(() => getDefaultReviewDate(new Date(), reviewTimeZone))
   const [hasAutoLoaded, setHasAutoLoaded] = useState(false)
   const [keptCandidateIds, setKeptCandidateIds] = useState<Set<string>>(new Set())
   const [viewingMode, setViewingMode] = useState<'detail' | 'kept-list' | 'knowledge-draft' | 'skill-draft'>('detail')

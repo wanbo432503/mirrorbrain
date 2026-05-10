@@ -16,6 +16,7 @@ This UI is responsible for:
 - showing not-configured info feedback for memory-source buttons whose runtime support has not been wired up yet
 - showing review-window source volume as unique URLs instead of raw ActivityWatch event rows, so background tab sampling does not inflate the review metrics
 - showing kept candidate source volume as unique URLs when browser source refs are available, rather than raw event counts
+- deriving the default review date from the user's resolved IANA timezone, with `Asia/Shanghai` as the fallback when the browser does not report one
 - exposing daily candidate generation and explicit review actions
 - presenting the review flow as a clearer workbench with candidate streams, focused evidence, and decision guidance
 - showing multiple candidate streams instead of a single current candidate
@@ -54,7 +55,7 @@ This UI is not responsible for:
 3. The user sees up to ten memory URL records in the Memory tab list; overflow stays inside the list's scroll area.
 4. The user can jump directly to the first or last memory page when the imported list is long, while the pagination controls remain at the bottom of the tab.
 5. The user triggers browser sync when needed, or clicks shell/filesystem/screenshot sync entries that currently explain their not-configured runtime status.
-6. The user generates daily candidates for the previous local day from the review tab.
+6. The user generates daily candidates for the current local calendar day from the review tab.
 7. The UI shows the active review window and the number of unique source URLs before or after candidate generation.
 8. The UI lists multiple candidate streams and lets the user pick one.
 9. The UI shows AI review suggestions for the selected candidate without auto-reviewing it.
@@ -82,10 +83,10 @@ This UI is not responsible for:
 - the current implementation is intentionally minimal and favors operational clarity over visual completeness
 - the UI depends on the local HTTP service and asset preparation performed by `pnpm dev`
 - memory paging is purely client-side in the current MVP and does not yet reduce backend payload size
-- review window filtering is still fixed to the previous local day and does not yet provide a manual date picker
+- review window filtering is still fixed to the current local calendar day and does not yet provide a manual date picker
 - candidate grouping still depends on backend deterministic stream rules rather than richer semantic clustering
 - AI suggestions are advisory placeholders in Phase 1
-- the default daily review window is currently the previous local day to make testing and morning review easier
+- the default daily review window is currently derived from the user's local calendar day
 - artifact editing currently saves whole draft payloads rather than field-level patches
 - generated drafts are persisted automatically, but follow-up edits still rely on the explicit Save action
 - review-tab knowledge revision requests are captured into the editable note body; they are not a separate autonomous execution path
