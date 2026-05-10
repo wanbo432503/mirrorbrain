@@ -98,14 +98,14 @@ export function KnowledgeGraphPanel(props: KnowledgeGraphPanelProps): React.Reac
   return (
     <div className={className ?? 'knowledge-graph-panel'}>
       {/* Stats Header */}
-      <div className="graph-stats flex gap-4 text-sm text-slate-600 mb-4">
+      <div className="graph-stats flex gap-4 text-sm text-inkMuted-80 mb-4">
         <span className="px-2 py-1 bg-slate-100 rounded">
           Topics: {graph.stats.topics}
         </span>
         <span className="px-2 py-1 bg-slate-100 rounded">
           Artifacts: {graph.stats.knowledgeArtifacts}
         </span>
-        <span className="px-2 py-1 bg-teal-100 rounded">
+        <span className="px-2 py-1 bg-dividerSoft rounded">
           References: {filteredEdges.filter((e) => e.type === 'REFERENCES').length}
         </span>
         {props.showSimilarityEdges !== false && (
@@ -117,11 +117,11 @@ export function KnowledgeGraphPanel(props: KnowledgeGraphPanelProps): React.Reac
 
       {/* Placeholder for graph visualization */}
       <div
-        className="graph-container border border-slate-200 rounded-lg bg-slate-50"
+        className="graph-container border border-hairline rounded-lg bg-slate-50"
         style={{ minHeight: '400px', padding: '16px' }}
       >
         {/* Placeholder content - simple node list */}
-        <div className="text-xs uppercase tracking-wide text-slate-500 mb-2">
+        <div className="text-xs uppercase tracking-wide text-inkMuted-48 mb-2">
           Topics (click to view)
         </div>
         <div className="flex flex-wrap gap-2 mb-4">
@@ -129,14 +129,14 @@ export function KnowledgeGraphPanel(props: KnowledgeGraphPanelProps): React.Reac
             <button
               key={node.id}
               onClick={() => handleNodeClick(node)}
-              className="px-3 py-1 bg-teal-500 text-white rounded hover:bg-teal-600 transition-colors text-sm"
+              className="px-3 py-1 bg-primary text-white rounded hover:bg-primary transition-colors text-sm"
             >
               {node.label}
             </button>
           ))}
         </div>
 
-        <div className="text-xs uppercase tracking-wide text-slate-500 mb-2">
+        <div className="text-xs uppercase tracking-wide text-inkMuted-48 mb-2">
           Artifacts
         </div>
         <div className="flex flex-wrap gap-2">
@@ -144,7 +144,7 @@ export function KnowledgeGraphPanel(props: KnowledgeGraphPanelProps): React.Reac
             <button
               key={node.id}
               onClick={() => handleNodeClick(node)}
-              className="px-3 py-1 bg-slate-200 text-slate-700 rounded hover:bg-slate-300 transition-colors text-sm"
+              className="px-3 py-1 bg-hairline text-slate-700 rounded hover:bg-slate-300 transition-colors text-sm"
             >
               {node.label}
             </button>
