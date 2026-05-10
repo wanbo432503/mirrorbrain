@@ -9,18 +9,21 @@ afterEach(() => {
 })
 
 describe('SyncActions', () => {
-  it('renders browser and shell sync buttons with the same visual treatment', () => {
+  it('renders browser, shell, filesystem, and screenshot sync buttons with the same visual treatment', () => {
     render(
       <SyncActions
         onSyncBrowser={vi.fn()}
         onSyncShell={vi.fn()}
+        onSyncFilesystems={vi.fn()}
+        onSyncScreenshot={vi.fn()}
         isSyncingBrowser={false}
         isSyncingShell={false}
       />
     )
 
-    expect(screen.getByRole('button', { name: 'Sync Shell' }).className).toBe(
-      screen.getByRole('button', { name: 'Sync Browser' }).className
-    )
+    const browserClassName = screen.getByRole('button', { name: 'Sync Browser' }).className
+    expect(screen.getByRole('button', { name: 'Sync Shell' }).className).toBe(browserClassName)
+    expect(screen.getByRole('button', { name: 'Sync Filesystems' }).className).toBe(browserClassName)
+    expect(screen.getByRole('button', { name: 'Sync Screenshot' }).className).toBe(browserClassName)
   })
 })

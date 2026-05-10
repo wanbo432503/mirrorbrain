@@ -37,7 +37,7 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and an
 
 - **Memory Components:**
   - `MemoryPanel.tsx` - Memory tab container (fully functional)
-  - `SyncActions.tsx` - Browser/Shell sync buttons
+  - `SyncActions.tsx` - Browser/Shell/Filesystem/Screenshot sync buttons
   - `MemoryList.tsx` - Paginated memory events list
   - `MemoryRecord.tsx` - Individual event display
 
@@ -46,7 +46,7 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and an
   - Memory list displays newest events first
   - Memory tab requests 10 URL records per page by default
   - Memory content scrolls inside the active tab area instead of expanding the full page height
-  - Browser/Shell sync operations
+  - Browser sync runs against the backend; Shell / Filesystems / Screenshot buttons currently surface explicit not-configured info feedback until those runtimes are wired up
   - Pagination footer stays anchored at the bottom of the Memory tab with First / Previous / Next / Last controls
   - Error handling + loading states
   - Feedback banners (success/error)

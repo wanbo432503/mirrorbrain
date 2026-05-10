@@ -41,7 +41,12 @@ export default function MemoryPanel() {
 
   const [isLoading, setIsLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
+  const [localFeedback, setLocalFeedback] = useState<{
+    kind: 'info'
+    message: string
+  } | null>(null)
   const totalPages = state.memoryPagination?.totalPages ?? 1
+  const visibleFeedback = localFeedback ?? feedback
 
   // Load initial memory events on mount
   useEffect(() => {
@@ -80,6 +85,7 @@ export default function MemoryPanel() {
 
   // Update sync operations to also dispatch to global state
   const handleSyncBrowser = async () => {
+    setLocalFeedback(null)
     try {
       const summary = await syncBrowser()
       dispatch({ type: 'SYNC_BROWSER', payload: summary })
@@ -93,6 +99,7 @@ export default function MemoryPanel() {
   }
 
   const handleSyncShell = async () => {
+    setLocalFeedback(null)
     try {
       const summary = await syncShell()
       dispatch({ type: 'SYNC_SHELL', payload: summary })
@@ -101,8 +108,21 @@ export default function MemoryPanel() {
       const result = await api.listMemory(currentPage, MEMORY_PAGE_SIZE)
       dispatch({ type: 'LOAD_MEMORY_EVENTS', payload: result })
     } catch (error) {
-      // Error already handled by useSyncOperations
+      const message = error instanceof Error ? error.message : 'Shell sync failed'
+      if (message.includes('not configured for this MirrorBrain runtime')) {
+        setLocalFeedback({
+          kind: 'info',
+          message,
+        })
+      }
     }
+  }
+
+  const handleSyncUnavailable = (sourceLabel: string) => {
+    setLocalFeedback({
+      kind: 'info',
+      message: `${sourceLabel} history sync is not configured for this MirrorBrain runtime`,
+    })
   }
 
   if (isLoading) {
@@ -116,16 +136,18 @@ export default function MemoryPanel() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {/* Feedback Banner */}
-      {feedback && (
+      {visibleFeedback && (
         <div
           className={`mb-3 p-3 rounded-lg border ${
-            feedback.kind === 'success'
+            visibleFeedback.kind === 'success'
               ? 'bg-green-100 border-green-300 text-green-700'
-              : 'bg-red-100 border-red-300 text-red-700'
+              : visibleFeedback.kind === 'error'
+              ? 'bg-red-100 border-red-300 text-red-700'
+              : 'bg-blue-100 border-blue-300 text-blue-700'
           }`}
           role="alert"
         >
-          <p className="font-body font-medium text-sm">{feedback.message}</p>
+          <p className="font-body font-medium text-sm">{visibleFeedback.message}</p>
         </div>
       )}
 
@@ -133,6 +155,8 @@ export default function MemoryPanel() {
       <SyncActions
         onSyncBrowser={handleSyncBrowser}
         onSyncShell={handleSyncShell}
+        onSyncFilesystems={() => handleSyncUnavailable('Filesystem')}
+        onSyncScreenshot={() => handleSyncUnavailable('Screenshot')}
         isSyncingBrowser={isSyncingBrowser}
         isSyncingShell={isSyncingShell}
       />

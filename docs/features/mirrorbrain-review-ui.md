@@ -12,6 +12,8 @@ This UI is responsible for:
 - showing imported memory through a dedicated tab with paging, newest-first ordering, and explicit source/name/timestamp presentation
 - showing ten memory URL records per page by default, with the record list scrolling internally when it exceeds the visible tab height
 - keeping first, previous, next, and last memory pagination controls anchored at the bottom of the Memory tab
+- exposing future memory-source sync entry points for browser, shell, filesystems, and screenshot capture, while only browser sync currently performs a backend import
+- showing not-configured info feedback for memory-source buttons whose runtime support has not been wired up yet
 - showing review-window source volume as unique URLs instead of raw ActivityWatch event rows, so background tab sampling does not inflate the review metrics
 - exposing daily candidate generation and explicit review actions
 - presenting the review flow as a clearer workbench with candidate streams, focused evidence, and decision guidance
@@ -50,7 +52,7 @@ This UI is not responsible for:
 2. The user browses memory through the paged memory tab.
 3. The user sees up to ten memory URL records in the Memory tab list; overflow stays inside the list's scroll area.
 4. The user can jump directly to the first or last memory page when the imported list is long, while the pagination controls remain at the bottom of the tab.
-5. The user triggers browser sync when needed.
+5. The user triggers browser sync when needed, or clicks shell/filesystem/screenshot sync entries that currently explain their not-configured runtime status.
 6. The user generates daily candidates for the previous local day from the review tab.
 7. The UI shows the active review window and the number of unique source URLs before or after candidate generation.
 8. The UI lists multiple candidate streams and lets the user pick one.
