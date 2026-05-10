@@ -44,6 +44,8 @@ When the review workflow generates or regenerates knowledge or skill drafts, the
 
 When the review workflow approves a knowledge draft, the backend publishes the topic artifact and tombstones the source draft so future artifact reloads keep only the published knowledge. The hook replaces the approved draft in shared state with the returned published topic artifact while preserving provenance and `derivedFromKnowledgeIds` links.
 
+Workspace files under `mirrorbrain/knowledge` are treated as the durable local source for approved knowledge. Deletion markers are used to stop stale OpenViking copies from reappearing, but they must not hide a knowledge artifact that still exists in the workspace directory; this keeps the Knowledge tab stable after a browser refresh.
+
 When the user deletes a published knowledge artifact from the detail panel, the backend also tombstones any source draft ids recorded in `derivedFromKnowledgeIds`. The hook removes the deleted id from the shared artifact list immediately so the active timeline and detail view both advance without a manual refresh.
 
 Conversation messages are keyed by artifact category and id, so notes for one knowledge artifact do not leak into another knowledge artifact or skill artifact.

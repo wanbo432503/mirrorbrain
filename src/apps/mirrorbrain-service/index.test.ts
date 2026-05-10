@@ -899,6 +899,93 @@ describe('mirrorbrain service', () => {
     ]);
   });
 
+  it('keeps approved workspace knowledge visible when a stale deletion marker exists for the same id', async () => {
+    const workspaceDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-service-'));
+    const artifactId = 'topic-knowledge:workspace-approved:v1';
+    mkdirSync(join(workspaceDir, 'mirrorbrain', 'knowledge'), {
+      recursive: true,
+    });
+    mkdirSync(join(workspaceDir, 'mirrorbrain', 'deleted-artifacts', 'knowledge'), {
+      recursive: true,
+    });
+    writeFileSync(
+      join(workspaceDir, 'mirrorbrain', 'knowledge', `${artifactId}.md`),
+      [
+        `# ${artifactId}`,
+        '',
+        '- artifactType: topic-knowledge',
+        '- draftState: published',
+        '- topicKey: workspace-approved',
+        '- title: Workspace approved knowledge',
+        '- summary: Workspace approved summary',
+        '- version: 1',
+        '- isCurrentBest: true',
+        '- supersedesKnowledgeId: ',
+        '- updatedAt: 2026-05-10T10:00:00.000Z',
+        '- reviewedAt: 2026-05-10T09:00:00.000Z',
+        '- recencyLabel: 2026-05-10',
+        '',
+        '## Body',
+        'Workspace approved body',
+        '',
+        '## Source Reviewed Memories',
+        '- reviewed:workspace-approved',
+        '',
+        '## Derived Knowledge Artifacts',
+        '- knowledge-draft:workspace-approved',
+        '',
+        '## Provenance Refs',
+        '- reviewed-memory:reviewed:workspace-approved',
+      ].join('\n'),
+    );
+    writeFileSync(
+      join(
+        workspaceDir,
+        'mirrorbrain',
+        'deleted-artifacts',
+        'knowledge',
+        `${encodeURIComponent(artifactId)}.json`,
+      ),
+      JSON.stringify({ artifactId, deletedAt: '2026-05-09T10:00:00.000Z' }),
+    );
+
+    const api = createMirrorBrainService(
+      {
+        service: {
+          status: 'running' as const,
+          config: getMirrorBrainConfig(),
+          syncBrowserMemory: vi.fn(async () => ({
+            sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+            strategy: 'incremental' as const,
+            importedCount: 0,
+            lastSyncedAt: '2026-05-10T10:00:00.000Z',
+          })),
+          syncShellMemory: vi.fn(async () => ({
+            sourceKey: 'shell-history:/tmp/.zsh_history',
+            strategy: 'incremental' as const,
+            importedCount: 0,
+            lastSyncedAt: '2026-05-10T10:00:00.000Z',
+          })),
+          stop: vi.fn(),
+        },
+        workspaceDir,
+      },
+      {
+        listKnowledge: vi.fn(async () => []),
+        listSkillDrafts: vi.fn(async () => []),
+      },
+    );
+
+    await expect(api.listKnowledge()).resolves.toEqual([
+      expect.objectContaining({
+        id: artifactId,
+        draftState: 'published',
+        title: 'Workspace approved knowledge',
+        body: 'Workspace approved body',
+      }),
+    ]);
+  });
+
   it('deletes persisted knowledge and skill artifacts and filters them from later reads', async () => {
     const workspaceDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-service-'));
     mkdirSync(join(workspaceDir, 'mirrorbrain', 'knowledge'), {

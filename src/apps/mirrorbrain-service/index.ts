@@ -636,7 +636,7 @@ export function createMirrorBrainService(
 
     return mergeArtifactsById(
       openVikingKnowledge.filter((artifact) => !deletedKnowledgeIds.has(artifact.id)),
-      workspaceKnowledge.filter((artifact) => !deletedKnowledgeIds.has(artifact.id)),
+      workspaceKnowledge,
     );
   };
   const loadSkillArtifacts = async (): Promise<SkillArtifact[]> => {
