@@ -88,6 +88,7 @@ function AppContent({
             role="tabpanel"
             id={`${tab}-panel`}
             aria-labelledby={`${tab}-tab`}
+            className={`${isActive ? 'flex' : 'hidden'} min-h-0 flex-1 flex-col overflow-y-auto pt-md lg:overflow-hidden`}
             hidden={!isActive}
           >
             {shouldRenderPanel && tab === 'memory' && <MemoryPanel />}

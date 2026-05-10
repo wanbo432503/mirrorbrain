@@ -25,7 +25,7 @@ export function buildCandidateEvidenceSummary(
 export default function ReviewGuidance({ suggestion, reviewedMemory }: ReviewGuidanceProps) {
   if (!suggestion && !reviewedMemory) {
     return (
-      <Card className="h-full overflow-y-auto max-h-[540px]">
+      <Card className="h-full min-h-0 overflow-y-auto">
         <div className="text-center py-12">
           <p className="font-heading font-semibold text-base text-inkMuted-80 mb-2">
             No guidance available
@@ -39,7 +39,7 @@ export default function ReviewGuidance({ suggestion, reviewedMemory }: ReviewGui
   }
 
   return (
-    <Card className="h-full overflow-y-auto max-h-[540px]">
+    <Card className="h-full min-h-0 overflow-y-auto">
       <div className="space-y-6">
         {/* AI Suggestion */}
         {suggestion && (

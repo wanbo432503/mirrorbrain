@@ -73,7 +73,7 @@ export default function CandidateList({
   const sortedCandidates = sortByReviewPriority(candidates, getReviewSuggestion)
 
   return (
-    <div className="space-y-3 overflow-y-auto max-h-[540px] pr-2">
+    <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-2">
       {sortedCandidates.map((candidate) => (
         <CandidateCard
           key={candidate.id}

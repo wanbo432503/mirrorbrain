@@ -17,7 +17,7 @@ export default function ArtifactsPanel() {
   } = useArtifacts(api)
 
   return (
-    <div>
+    <div className="flex min-h-0 flex-1 flex-col">
       {/* Feedback Banner */}
       {feedback && (
         <div

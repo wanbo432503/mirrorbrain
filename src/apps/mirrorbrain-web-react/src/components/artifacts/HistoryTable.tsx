@@ -28,7 +28,7 @@ export default function HistoryTable({
 }: HistoryTableProps) {
   if (items.length === 0) {
     return (
-      <Card className="max-h-[540px] overflow-y-auto">
+      <Card className="h-full min-h-0 overflow-y-auto">
         <div>
           <p className="text-xs font-heading font-semibold text-inkMuted-80 uppercase tracking-wide mb-3">
             {title}
@@ -43,7 +43,7 @@ export default function HistoryTable({
   }
 
   return (
-    <Card className="max-h-[540px] overflow-y-auto">
+    <Card className="h-full min-h-0 overflow-y-auto">
       <div className="space-y-3">
         {/* Title */}
         <p className="text-xs font-heading font-semibold text-inkMuted-80 uppercase tracking-wide">

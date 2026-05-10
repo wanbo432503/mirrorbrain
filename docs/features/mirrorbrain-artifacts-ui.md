@@ -36,7 +36,7 @@ When the user deletes a published knowledge artifact from the detail panel, the 
 
 Conversation messages are keyed by artifact category and id, so notes for one knowledge artifact do not leak into another knowledge artifact or skill artifact.
 
-The left timeline panel and right detail/edit panel share the same fixed height, with overflow scrolling inside each panel so the detail display and edit input stay visually aligned with the history list.
+The left timeline panel and right detail/edit panel stretch to the available tab height, with overflow scrolling inside each panel so the detail display and edit input stay visually aligned with the history list across desktop and smaller viewport heights.
 
 The artifact edit message row uses a single-line full-width input with a send action on the right, matching the review note revision row for consistent edit entry behavior.
 

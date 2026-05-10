@@ -156,7 +156,7 @@ export default function SelectedCandidate({
   if (viewingMode === 'kept-list') {
     if (keptCandidates.length === 0) {
       return (
-        <Card className="h-full overflow-y-auto max-h-[540px]">
+        <Card className="h-full min-h-0 overflow-y-auto">
           <div className="text-center py-12">
             <p className="font-heading font-semibold text-base text-inkMuted-80 mb-2">
               No kept candidates
@@ -170,7 +170,7 @@ export default function SelectedCandidate({
     }
 
     return (
-      <Card className="h-full overflow-y-auto max-h-[540px]">
+      <Card className="h-full min-h-0 overflow-y-auto">
         <div className="space-y-3">
           <div className="mb-2 flex items-center justify-between">
             <div>
@@ -227,8 +227,8 @@ export default function SelectedCandidate({
 
     // Draft editing interface
     return (
-      <Card className="h-full max-h-[540px]">
-        <div className="flex h-full min-h-[492px] flex-col gap-4">
+      <Card className="h-full min-h-0">
+        <div className="flex h-full min-h-0 flex-col gap-4">
           {/* Header */}
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-heading font-bold text-base text-slate-900">
@@ -342,7 +342,7 @@ export default function SelectedCandidate({
 
     // Draft editing interface
     return (
-      <Card className="h-full overflow-y-auto max-h-[540px]">
+      <Card className="h-full min-h-0 overflow-y-auto">
         <div className="space-y-4">
           {/* Header */}
           <div className="flex items-center justify-between mb-3">
@@ -432,7 +432,7 @@ export default function SelectedCandidate({
   // Detail mode (existing behavior)
   if (!candidate) {
     return (
-      <Card className="h-full overflow-y-auto max-h-[540px]">
+      <Card className="h-full min-h-0 overflow-y-auto">
         <div className="text-center py-12">
           <p className="font-heading font-semibold text-base text-slate-600 mb-2">
             No candidate selected
@@ -455,7 +455,7 @@ export default function SelectedCandidate({
   const discardedSourceRefs = candidate.discardedSourceRefs ?? []
 
   return (
-    <Card className="h-full overflow-y-auto max-h-[540px]">
+    <Card className="h-full min-h-0 overflow-y-auto">
       <div className="space-y-4">
         {/* Title */}
         <div>

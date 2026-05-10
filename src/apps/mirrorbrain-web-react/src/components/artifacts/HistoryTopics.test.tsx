@@ -103,7 +103,7 @@ describe('HistoryTopics', () => {
     expect(screen.getByText(/Clarify execution requires confirmation/)).not.toBeNull()
   })
 
-  it('keeps the detail display the same height as the artifact history panel', () => {
+  it('lets the artifact history and detail panels stretch within the available tab height', () => {
     render(
       <HistoryTopics
         knowledgeTopics={[]}
@@ -112,8 +112,15 @@ describe('HistoryTopics', () => {
       />
     )
 
-    expect(screen.getByTestId('artifact-history-panel').className).toContain('h-[680px]')
-    expect(screen.getByTestId('artifact-detail-panel').className).toContain('h-[680px]')
+    const historyPanelClassName = screen.getByTestId('artifact-history-panel').className
+    const detailPanelClassName = screen.getByTestId('artifact-detail-panel').className
+
+    expect(historyPanelClassName).toContain('h-full')
+    expect(historyPanelClassName).toContain('min-h-0')
+    expect(detailPanelClassName).toContain('h-full')
+    expect(detailPanelClassName).toContain('min-h-0')
+    expect(historyPanelClassName).not.toContain('h-[680px]')
+    expect(detailPanelClassName).not.toContain('h-[680px]')
   })
 
   it('renders artifact edit message as a one-line full-width input row with send action', () => {

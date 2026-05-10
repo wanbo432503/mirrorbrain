@@ -1,6 +1,6 @@
 export default function Header() {
   return (
-    <header className="bg-surface-black h-11 flex items-center justify-between px-lg mb-0">
+    <header className="flex h-11 shrink-0 items-center justify-between bg-surface-black px-lg mb-0">
       <h1 className="text-display-lg text-bodyOnDark font-semibold tracking-tight">
         MirrorBrain
       </h1>

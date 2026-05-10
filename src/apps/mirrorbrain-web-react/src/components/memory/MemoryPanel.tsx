@@ -106,14 +106,14 @@ export default function MemoryPanel() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <div className="flex min-h-0 flex-1 items-center justify-center py-12">
         <LoadingSpinner size="large" />
       </div>
     )
   }
 
   return (
-    <div>
+    <div className="flex min-h-0 flex-1 flex-col">
       {/* Feedback Banner */}
       {feedback && (
         <div
@@ -154,7 +154,9 @@ export default function MemoryPanel() {
       )}
 
       {/* Memory List */}
-      <MemoryList events={state.memoryEvents} />
+      <div className="min-h-0 flex-1 overflow-y-auto pr-2">
+        <MemoryList events={state.memoryEvents} />
+      </div>
 
       {/* Pagination */}
       {totalPages > 1 && (

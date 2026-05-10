@@ -337,7 +337,7 @@ export default function ReviewPanel() {
   const displayFeedback = approvalFeedback || workflowFeedback
 
   return (
-    <div>
+    <div className="flex min-h-0 flex-1 flex-col">
       {/* Feedback Banner */}
       {displayFeedback && (
         <div
@@ -380,9 +380,9 @@ export default function ReviewPanel() {
       />
 
       {/* Two-Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-3">
         {/* Left Column: Candidate List */}
-        <div className="lg:col-span-1">
+        <div className="flex min-h-0 flex-col lg:col-span-1">
           <div className="mb-2">
             <h2 className="font-heading font-bold text-xs text-ink uppercase tracking-wide">
               Candidates
@@ -402,7 +402,7 @@ export default function ReviewPanel() {
         </div>
 
         {/* Right Column: Selected Candidate */}
-        <div className="lg:col-span-2">
+        <div className="flex min-h-0 flex-col lg:col-span-2">
           <div className="mb-2">
             <h2 className="font-heading font-bold text-xs text-ink uppercase tracking-wide">
               {viewingMode === 'kept-list' ? 'Kept Candidates' : 'Selected Candidate'}

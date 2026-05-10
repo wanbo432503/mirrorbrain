@@ -187,4 +187,30 @@ describe('App', () => {
     expect(within(detailPanel).getByText('Reloaded from backend')).not.toBeNull()
     expect(within(detailPanel).getByText('Reloaded knowledge body')).not.toBeNull()
   })
+
+  it('creates a continuous flex height chain for tab panels', async () => {
+    const fetchMock = stubInitialAppFetch()
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls.map((call) => String(call[0]))
+      ).toContain(`${window.location.origin}/memory?page=1&pageSize=5`)
+    })
+
+    const mainClassName = screen.getByRole('main').className
+    expect(mainClassName).toContain('flex')
+    expect(mainClassName).toContain('min-h-0')
+    expect(mainClassName).toContain('flex-1')
+    expect(mainClassName).toContain('flex-col')
+
+    const memoryPanel = document.getElementById('memory-panel')
+    expect(memoryPanel).not.toBeNull()
+    const memoryPanelClassName = memoryPanel?.className ?? ''
+    expect(memoryPanelClassName).toContain('flex')
+    expect(memoryPanelClassName).toContain('min-h-0')
+    expect(memoryPanelClassName).toContain('flex-1')
+    expect(memoryPanelClassName).toContain('flex-col')
+  })
 })

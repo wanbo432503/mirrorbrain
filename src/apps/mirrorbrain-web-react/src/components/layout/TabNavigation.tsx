@@ -25,7 +25,7 @@ export default function TabNavigation({ activeTab, onTabChange }: TabNavigationP
   return (
     <div
       role="tablist"
-      className="flex border-b border-slate-200"
+      className="flex shrink-0 border-b border-slate-200"
       aria-label="MirrorBrain main navigation"
     >
       {TABS.map((tab) => {

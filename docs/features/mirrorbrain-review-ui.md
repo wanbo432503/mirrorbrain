@@ -24,6 +24,7 @@ This UI is responsible for:
 - organizing the artifacts tab into a single `history topics` sub tab with separate Knowledge and Skill timelines
 - scoping artifact generation views to the candidate currently selected in the review tab
 - preserving the review tab workflow state after the user has visited it, so switching to memory or artifacts does not cancel in-flight knowledge generation or clear kept candidates
+- stretching the active tab workbench to the available viewport height, with candidate lists, selected candidate details, and draft editors scrolling inside their own panels instead of relying on fixed pixel heights
 - exposing explicit save actions for edited knowledge and skill drafts in the review tab
 - separating memory, review, and artifacts into distinct tabs instead of stacking all content on one page
 - placing sync, review, and artifact actions inside their corresponding tabs instead of a single global action bar
@@ -56,9 +57,10 @@ This UI is not responsible for:
 11. The user generates knowledge or skill drafts from the candidate currently selected in the review tab.
 12. The generated drafts are immediately written back through the artifact API so the artifacts tab and the next page load can restore them.
 13. After the review tab has been opened, switching to another tab hides rather than unmounts the review workbench, preserving kept candidates, draft state, and in-flight generation status.
-14. In the review tab, generated knowledge displays the note body directly in a self-scrolling note field and accepts a one-line revision request in a full-width input row with a send action on the right.
-15. The user can save the edited draft artifact back through the local service API.
-16. The UI renders a visible status message after each action so the workflow is not silent.
+14. The app shell, tab panel, and review workbench form a continuous flex height chain so the active tab fills the screen while long content scrolls inside the relevant list or detail panel.
+15. In the review tab, generated knowledge displays the note body directly in a self-scrolling note field and accepts a one-line revision request in a full-width input row with a send action on the right.
+16. The user can save the edited draft artifact back through the local service API.
+17. The UI renders a visible status message after each action so the workflow is not silent.
 
 ## Test Strategy
 

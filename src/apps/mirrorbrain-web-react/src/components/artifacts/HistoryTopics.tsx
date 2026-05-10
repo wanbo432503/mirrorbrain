@@ -134,8 +134,8 @@ export default function HistoryTopics({
       : isDeletingSkillArtifact
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
-      <Card className="h-[680px] overflow-y-auto" data-testid="artifact-history-panel">
+    <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
+      <Card className="h-full min-h-0 overflow-y-auto" data-testid="artifact-history-panel">
         <div className="space-y-4">
           <div role="tablist" aria-label="Artifact type" className="flex border-b border-slate-200">
             <button
@@ -211,7 +211,7 @@ export default function HistoryTopics({
         </div>
       </Card>
 
-      <Card className="h-[680px]" data-testid="artifact-detail-panel">
+      <Card className="h-full min-h-0" data-testid="artifact-detail-panel">
         {selectedArtifact ? (
           <div className="flex h-full flex-col justify-between gap-6">
             <div className="min-h-0 flex-1 overflow-y-auto pr-2">

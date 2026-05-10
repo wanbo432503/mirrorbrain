@@ -1,13 +1,13 @@
 # MirrorBrain Web UI - React Implementation
 
-Modern React-based web interface for MirrorBrain, built with Tailwind CSS and a tech-focused design aesthetic.
+Modern React-based web interface for MirrorBrain, built with Tailwind CSS and an Apple-style control, review, and artifact inspection surface.
 
 ## Project Status
 
 ### Phase 1: Foundation Setup ✅ (Completed)
 - React + TypeScript + Vite configuration
-- Tailwind CSS with Fira Code/Sans fonts
-- Modern tech style design system
+- Tailwind CSS with Apple-style design tokens
+- Refined light/dark-ready product UI styling
 - API client (15 methods, preserved logic)
 - Types system (165+ types)
 
@@ -43,6 +43,7 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and a 
 - **Features:**
   - Load memory events from API once per app session and reuse global state across tab switches
   - Memory list displays newest events first
+  - Memory content scrolls inside the active tab area instead of expanding the full page height
   - Browser/Shell sync operations
   - Pagination (5 events per page) with First / Previous / Next / Last controls
   - Error handling + loading states
@@ -70,6 +71,7 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and a 
   - Reviewed memory display
   - Knowledge approval removes the approved draft's source candidates from the review list and persisted candidate storage
   - Review requests now send the local timezone so the service can use the correct day boundary
+  - Candidate lists, selected candidate details, and draft editors stretch to available viewport height and scroll internally
 
 ### Phase 5: Artifacts Panel + Forms ✅ (Completed)
 - **Artifacts Hooks:**
@@ -104,6 +106,7 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and a 
   - Generated knowledge and skill drafts remain in shared app state across top-level tab switches and are written back through the artifact API so refresh restores them; the service reads back from merged OpenViking and workspace copies so newly generated artifacts are not lost if OpenViking is briefly behind
   - Review-generated knowledge displays the final note body directly in a single scrolling field, with a separate full-width one-line revision request input and send action below it
   - Artifact edit message uses the same single-line full-width input + send row pattern in the artifacts detail panel
+  - Artifact history and detail panels stretch to the available tab height and scroll internally instead of using fixed pixel heights
   - Draft editing (body-first note editing for knowledge)
   - Draft editing (approval state/confirmation for skill)
   - Save artifacts to API
@@ -115,22 +118,21 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and a 
 ## Design System
 
 ### Typography
-- **Headings:** Fira Code (monospace, bold, uppercase)
-- **Body:** Fira Sans (sans-serif, clean, readable)
+- **Headings:** Apple-style tight sans-serif scale
+- **Body:** Apple-style 17px readable body rhythm
 
-### Colors (Tailwind Slate + Blue)
-- Background: `slate-50` (#F8FAFC)
-- Primary Text: `slate-900` (#1E293B)
-- Secondary Text: `slate-600` (#475569)
-- Accent/CTA: `blue-600` (#2563EB)
-- Success: `green-100` / `green-700`
+### Colors
+- Background: `canvas.parchment` (`#f5f5f7`)
+- Primary surface: `canvas` (`#ffffff`)
+- Primary text: `ink` (`#1d1d1f`)
+- Muted text: `inkMuted`
+- Accent/CTA: Apple blue (`#0066cc` / `#0071e3`)
 
-### Visual Style: Exaggerated Minimalism
-- High contrast (dark text on light background)
-- Massive whitespace (padding: 12-16px, margins: 24-48px)
-- Bold typography (fontWeight: 600-900)
-- Minimal borders (slate-200)
-- Clean, statement design
+### Visual Style: Apple-Inspired Control Surface
+- Calm light canvas with restrained product panels
+- Tight typography, soft borders, and clear primary actions
+- Dark-mode-compatible token structure
+- Full-screen flex layout where each tab owns its scrollable content regions
 
 ### Accessibility Features
 - Visible focus rings on all interactive elements
