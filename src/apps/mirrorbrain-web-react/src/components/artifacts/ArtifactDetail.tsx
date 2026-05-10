@@ -1,4 +1,5 @@
 import Button from '../common/Button'
+import { KnowledgeMarkdownRenderer } from './KnowledgeMarkdownRenderer'
 import type { KnowledgeArtifact, SkillArtifact } from '../../types/index'
 
 export function KnowledgeArtifactDetail({
@@ -30,7 +31,20 @@ export function KnowledgeArtifactDetail({
         )}
       </div>
       <KnowledgeField label="Summary" value={artifact.summary ?? 'No summary'} />
-      <KnowledgeField label="Body" value={artifact.body ?? 'No body'} preserveWhitespace />
+      <div className="rounded-2xl border border-hairline bg-slate-50 p-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <p className="font-heading text-xs font-semibold uppercase text-inkMuted-48">
+            Knowledge Body
+          </p>
+          {artifact.topicKey && (
+            <span className="rounded-pill bg-canvas px-3 py-1 font-heading text-[11px] font-semibold uppercase text-inkMuted-80">
+              {artifact.topicKey}
+            </span>
+          )}
+        </div>
+        <KnowledgeMarkdownRenderer body={artifact.body ?? 'No body'} knowledgeId={artifact.id} />
+      </div>
+      <KnowledgeContext artifact={artifact} />
       <ArtifactMetadata
         items={[
           `Id: ${artifact.id}`,
@@ -66,6 +80,82 @@ export function KnowledgeArtifactDetail({
       />
       <ConversationNotes notes={notes} />
     </div>
+  )
+}
+
+function KnowledgeContext({ artifact }: { artifact: KnowledgeArtifact }) {
+  const tags = artifact.tags ?? []
+  const relatedKnowledgeIds = artifact.relatedKnowledgeIds ?? []
+
+  if (tags.length === 0 && relatedKnowledgeIds.length === 0 && !artifact.compilationMetadata) {
+    return null
+  }
+
+  return (
+    <section className="grid gap-3 rounded-2xl border border-hairline bg-canvas p-4 md:grid-cols-3">
+      <div className="md:col-span-1">
+        <p className="font-heading text-xs font-semibold uppercase text-inkMuted-48">
+          Tags
+        </p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {tags.length === 0 ? (
+            <span className="font-body text-sm text-inkMuted-48">No tags indexed.</span>
+          ) : (
+            tags.map((tag) => (
+              <span
+                key={tag}
+                className="rounded-pill border border-hairline bg-slate-50 px-3 py-1 font-body text-sm text-slate-700"
+              >
+                {tag}
+              </span>
+            ))
+          )}
+        </div>
+      </div>
+
+      <div className="md:col-span-1">
+        <p className="font-heading text-xs font-semibold uppercase text-inkMuted-48">
+          Related Knowledge
+        </p>
+        <div className="mt-2 flex flex-col gap-2">
+          {relatedKnowledgeIds.length === 0 ? (
+            <span className="font-body text-sm text-inkMuted-48">No direct relations indexed.</span>
+          ) : (
+            relatedKnowledgeIds.map((relatedId) => (
+              <button
+                key={relatedId}
+                type="button"
+                className="rounded-lg border border-hairline bg-slate-50 px-3 py-2 text-left font-body text-sm text-primary hover:border-primary"
+              >
+                {relatedId}
+              </button>
+            ))
+          )}
+        </div>
+      </div>
+
+      <div className="md:col-span-1">
+        <p className="font-heading text-xs font-semibold uppercase text-inkMuted-48">
+          Document Context
+        </p>
+        <dl className="mt-2 space-y-2">
+          <div>
+            <dt className="font-heading text-[11px] font-semibold uppercase text-inkMuted-48">
+              Artifact Type
+            </dt>
+            <dd className="font-body text-sm text-ink">{artifact.artifactType ?? 'knowledge'}</dd>
+          </div>
+          <div>
+            <dt className="font-heading text-[11px] font-semibold uppercase text-inkMuted-48">
+              Compilation
+            </dt>
+            <dd className="font-body text-sm text-ink">
+              {artifact.compilationMetadata?.generationMethod ?? 'standard-review'}
+            </dd>
+          </div>
+        </dl>
+      </div>
+    </section>
   )
 }
 

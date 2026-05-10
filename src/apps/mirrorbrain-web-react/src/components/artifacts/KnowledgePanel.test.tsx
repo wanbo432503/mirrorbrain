@@ -16,8 +16,10 @@ const olderKnowledge: KnowledgeArtifact = {
   topicKey: 'old',
   title: 'Older knowledge',
   summary: 'Older summary',
-  body: 'Older body',
+  body: '## Older heading\n\nOlder body with [[knowledge-new]] reference.',
   sourceReviewedMemoryIds: ['reviewed:old'],
+  relatedKnowledgeIds: ['knowledge-new'],
+  tags: ['legacy', 'ops'],
   updatedAt: '2026-04-20T10:00:00.000Z',
 }
 
@@ -28,7 +30,7 @@ const newerKnowledge: KnowledgeArtifact = {
   topicKey: 'new',
   title: 'Newer knowledge',
   summary: 'Newer summary',
-  body: 'Newer body',
+  body: '## Newer heading\n\nNewer body',
   sourceReviewedMemoryIds: ['reviewed:new'],
   updatedAt: '2026-04-29T10:00:00.000Z',
 }
@@ -95,7 +97,27 @@ describe('KnowledgePanel', () => {
     expect(within(detailPanel).getByText('Newer body')).not.toBeNull()
 
     fireEvent.click(within(historyPanel).getByRole('button', { name: /Older knowledge/ }))
-    expect(within(detailPanel).getByText('Older body')).not.toBeNull()
+    expect(within(detailPanel).getByText(/Older body/)).not.toBeNull()
+  })
+
+  it('renders the selected knowledge detail as a markdown document with context metadata', () => {
+    render(
+      <KnowledgePanel
+        knowledgeArtifacts={[olderKnowledge, newerKnowledge]}
+        knowledgeGraph={graph}
+        onDeleteKnowledgeArtifact={vi.fn()}
+      />
+    )
+
+    const historyPanel = screen.getByTestId('knowledge-history-panel')
+    fireEvent.click(within(historyPanel).getByRole('button', { name: /Older knowledge/ }))
+
+    const detailPanel = screen.getByTestId('knowledge-detail-panel')
+    expect(within(detailPanel).getByRole('heading', { name: 'Older heading' })).not.toBeNull()
+    expect(within(detailPanel).getByRole('link', { name: 'knowledge-new' })).not.toBeNull()
+    expect(within(detailPanel).getByText('legacy')).not.toBeNull()
+    expect(within(detailPanel).getByText('ops')).not.toBeNull()
+    expect(within(detailPanel).getByRole('button', { name: 'knowledge-new' })).not.toBeNull()
   })
 
   it('keeps the left knowledge list stable while graph mode switches the right panel from global to focused graph', () => {
@@ -113,9 +135,13 @@ describe('KnowledgePanel', () => {
     expect(within(historyPanel).getAllByTestId('knowledge-list-item')).toHaveLength(2)
     const graphPanel = screen.getByTestId('knowledge-graph-panel')
     expect(within(graphPanel).getByText('Global Knowledge Graph')).not.toBeNull()
+    expect(within(graphPanel).getByTestId('knowledge-graph-canvas')).not.toBeNull()
+    expect(within(graphPanel).getAllByTestId('knowledge-graph-node')).toHaveLength(2)
+    expect(within(graphPanel).getByTestId('knowledge-graph-edge')).not.toBeNull()
 
     fireEvent.click(within(historyPanel).getByRole('button', { name: /Older knowledge/ }))
     expect(within(graphPanel).getByText('Focused Knowledge Graph')).not.toBeNull()
     expect(within(graphPanel).getByText(/Centered on Older knowledge/)).not.toBeNull()
+    expect(within(graphPanel).getByText('SIMILAR')).not.toBeNull()
   })
 })

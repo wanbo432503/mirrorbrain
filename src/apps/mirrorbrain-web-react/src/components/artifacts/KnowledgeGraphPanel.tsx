@@ -1,20 +1,15 @@
-/**
- * Knowledge Graph Panel
- *
- * Placeholder component for knowledge graph visualization.
- * This provides a clean interface for future Cytoscape.js or similar visualization integration.
- *
- * Usage:
- * - Fetch graph data using api.getKnowledgeGraph()
- * - Pass to this component for rendering
- * - Handle topic/artifact click events for navigation
- */
-
 import type {
   KnowledgeGraphSnapshot,
   KnowledgeGraphNode,
   KnowledgeGraphEdge,
 } from '../../types/index';
+
+type PositionedNode = KnowledgeGraphNode & {
+  x: number;
+  y: number;
+  size: number;
+  color: string;
+};
 
 export interface KnowledgeGraphPanelProps {
   /** Graph snapshot data from API */
@@ -77,10 +72,9 @@ function filterEdges(
 }
 
 /**
- * Placeholder component for knowledge graph visualization.
- *
- * Currently renders a simple stats display and node list.
- * To be replaced with Cytoscape.js or similar visualization library.
+ * Lightweight knowledge graph visualization inspired by the PulseOS-lite graph workspace.
+ * MirrorBrain keeps this dependency-free for now: SVG gives us a real relation map without
+ * adding Cytoscape to the standalone web UI bundle.
  */
 export function KnowledgeGraphPanel(props: KnowledgeGraphPanelProps): React.ReactElement {
   const { graph, onTopicClick, onArtifactClick, className, focusArtifactId, focusArtifactTitle } =
@@ -114,9 +108,12 @@ export function KnowledgeGraphPanel(props: KnowledgeGraphPanelProps): React.Reac
     ? filteredEdges.filter((edge) => focusNodeIds.has(edge.source) && focusNodeIds.has(edge.target))
     : filteredEdges;
 
-  const topicNodes = visibleNodes.filter((n) => n.type === 'topic');
-  const artifactNodes = visibleNodes.filter((n) => n.type === 'knowledge-artifact');
   const isFocused = Boolean(focusNode);
+  const positionedNodes = positionGraphNodes(visibleNodes, visibleEdges, focusNode?.id ?? null);
+  const positionedNodeById = new Map(positionedNodes.map((node) => [node.id, node]));
+  const selectedNode = focusNode
+    ? positionedNodeById.get(focusNode.id) ?? null
+    : positionedNodes[0] ?? null;
 
   const handleNodeClick = (node: KnowledgeGraphNode) => {
     if (node.type === 'topic' && onTopicClick) {
@@ -131,95 +128,276 @@ export function KnowledgeGraphPanel(props: KnowledgeGraphPanelProps): React.Reac
 
   return (
     <div className={className ?? 'knowledge-graph-panel'}>
-      <div className="mb-4">
-        <p className="font-heading text-xs font-semibold uppercase text-inkMuted-48">
-          Knowledge Graph
-        </p>
-        <h3 className="mt-1 font-heading text-xl font-bold text-ink">
-          {isFocused ? 'Focused Knowledge Graph' : 'Global Knowledge Graph'}
-        </h3>
-        <p className="mt-1 font-body text-sm text-inkMuted-80">
-          {isFocused
-            ? `Centered on ${focusArtifactTitle ?? focusNode?.label ?? focusArtifactId}`
-            : 'All approved knowledge artifacts and their relations.'}
-        </p>
-      </div>
-
-      {/* Stats Header */}
-      <div className="graph-stats flex gap-4 text-sm text-inkMuted-80 mb-4">
-        <span className="px-2 py-1 bg-slate-100 rounded">
-          Topics: {graph.stats.topics}
-        </span>
-        <span className="px-2 py-1 bg-slate-100 rounded">
-          Artifacts: {graph.stats.knowledgeArtifacts}
-        </span>
-        <span className="px-2 py-1 bg-dividerSoft rounded">
-          References: {visibleEdges.filter((e) => e.type === 'REFERENCES').length}
-        </span>
-        {props.showSimilarityEdges !== false && (
-          <span className="px-2 py-1 bg-blue-100 rounded">
-            Similar: {visibleEdges.filter((e) => e.type === 'SIMILAR').length}
-          </span>
-        )}
-      </div>
-
-      {/* Placeholder for graph visualization */}
-      <div
-        className="graph-container border border-hairline rounded-lg bg-slate-50"
-        style={{ minHeight: '400px', padding: '16px' }}
-      >
-        {/* Placeholder content - simple node list */}
-        <div className="text-xs uppercase tracking-wide text-inkMuted-48 mb-2">
-          Topics (click to view)
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="font-heading text-xs font-semibold uppercase text-inkMuted-48">
+            Knowledge Graph
+          </p>
+          <h3 className="mt-1 font-heading text-xl font-bold text-ink">
+            {isFocused ? 'Focused Knowledge Graph' : 'Global Knowledge Graph'}
+          </h3>
+          <p className="mt-1 font-body text-sm text-inkMuted-80">
+            {isFocused
+              ? `Centered on ${focusArtifactTitle ?? focusNode?.label ?? focusArtifactId}`
+              : 'All approved knowledge artifacts and their relations.'}
+          </p>
         </div>
-        <div className="flex flex-wrap gap-2 mb-4">
-          {topicNodes.length === 0 ? (
-            <p className="font-body text-sm text-inkMuted-48">No topic nodes in this view.</p>
+        <div className="flex flex-wrap gap-2 text-sm text-inkMuted-80">
+          <GraphStat label="Topics" value={graph.stats.topics} />
+          <GraphStat label="Artifacts" value={graph.stats.knowledgeArtifacts} />
+          <GraphStat
+            label="References"
+            value={visibleEdges.filter((edge) => edge.type === 'REFERENCES').length}
+          />
+          {props.showSimilarityEdges !== false && (
+            <GraphStat
+              label="Similar"
+              value={visibleEdges.filter((edge) => edge.type === 'SIMILAR').length}
+            />
+          )}
+        </div>
+      </div>
+
+      <div className="grid min-h-[520px] overflow-hidden rounded-2xl border border-hairline bg-slate-50 lg:grid-cols-[minmax(0,1fr)_260px]">
+        <div className="relative min-h-[420px] overflow-hidden bg-[radial-gradient(circle_at_30%_20%,rgba(0,102,204,0.13),transparent_32%),radial-gradient(circle_at_70%_80%,rgba(17,24,39,0.08),transparent_34%)]">
+          {positionedNodes.length === 0 ? (
+            <div className="flex h-full min-h-[420px] items-center justify-center p-8 text-center">
+              <p className="font-body text-sm text-inkMuted-48">
+                No knowledge graph nodes are available yet.
+              </p>
+            </div>
           ) : (
-            topicNodes.map((node) => (
-              <button
-                key={node.id}
-                onClick={() => handleNodeClick(node)}
-                className="px-3 py-1 bg-primary text-white rounded hover:bg-primary transition-colors text-sm"
-              >
-                {node.label}
-              </button>
-            ))
+            <svg
+              data-testid="knowledge-graph-canvas"
+              role="img"
+              aria-label={isFocused ? 'Focused knowledge graph canvas' : 'Global knowledge graph canvas'}
+              viewBox="0 0 720 520"
+              className="h-full min-h-[420px] w-full"
+            >
+              <defs>
+                <filter id="knowledge-node-glow" x="-40%" y="-40%" width="180%" height="180%">
+                  <feGaussianBlur stdDeviation="7" result="blur" />
+                  <feMerge>
+                    <feMergeNode in="blur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+              </defs>
+              {visibleEdges.map((edge) => {
+                const source = positionedNodeById.get(edge.source);
+                const target = positionedNodeById.get(edge.target);
+                if (!source || !target) {
+                  return null;
+                }
+
+                const midX = (source.x + target.x) / 2;
+                const midY = (source.y + target.y) / 2;
+
+                return (
+                  <g key={edge.id} data-testid="knowledge-graph-edge">
+                    <line
+                      x1={source.x}
+                      y1={source.y}
+                      x2={target.x}
+                      y2={target.y}
+                      stroke={getEdgeColor(edge.type)}
+                      strokeWidth={edge.type === 'SIMILAR' ? 2.5 : 1.7}
+                      strokeDasharray={edge.type === 'REFERENCES' ? '8 7' : undefined}
+                      opacity="0.72"
+                    />
+                    <text
+                      x={midX}
+                      y={midY - 8}
+                      textAnchor="middle"
+                      className="fill-inkMuted-80 font-heading text-[10px] font-semibold"
+                    >
+                      {edge.type}
+                    </text>
+                  </g>
+                );
+              })}
+              {positionedNodes.map((node) => (
+                <g
+                  key={node.id}
+                  data-testid="knowledge-graph-node"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleNodeClick(node)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      handleNodeClick(node);
+                    }
+                  }}
+                  className="cursor-pointer"
+                >
+                  <circle
+                    cx={node.x}
+                    cy={node.y}
+                    r={node.size + 9}
+                    fill={node.color}
+                    opacity={node.id === focusNode?.id ? '0.18' : '0.08'}
+                  />
+                  <circle
+                    cx={node.x}
+                    cy={node.y}
+                    r={node.size}
+                    fill={node.color}
+                    fillOpacity={node.id === focusNode?.id ? '0.62' : '0.38'}
+                    stroke={node.id === focusNode?.id ? '#38bdf8' : node.color}
+                    strokeWidth={node.id === focusNode?.id ? 3 : 1.8}
+                    filter={node.id === focusNode?.id ? 'url(#knowledge-node-glow)' : undefined}
+                  />
+                  <text
+                    x={node.x}
+                    y={node.y + node.size + 18}
+                    textAnchor="middle"
+                    className="fill-ink font-body text-[12px] font-semibold"
+                  >
+                    {truncateLabel(node.label, 22)}
+                  </text>
+                </g>
+              ))}
+            </svg>
           )}
         </div>
 
-        <div className="text-xs uppercase tracking-wide text-inkMuted-48 mb-2">
-          Artifacts
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {artifactNodes.length === 0 ? (
-            <p className="font-body text-sm text-inkMuted-48">
-              No knowledge artifact nodes in this view.
+        <aside className="border-t border-hairline bg-canvas p-4 lg:border-l lg:border-t-0">
+          <p className="font-heading text-xs font-semibold uppercase text-inkMuted-48">
+            Selection
+          </p>
+          {selectedNode ? (
+            <div className="mt-3 space-y-4">
+              <div>
+                <h4 className="font-heading text-lg font-semibold text-ink">{selectedNode.label}</h4>
+                <p className="mt-1 font-body text-sm text-inkMuted-80">
+                  {selectedNode.properties.title ?? selectedNode.topicKey}
+                </p>
+              </div>
+              <dl className="space-y-2">
+                <GraphMeta label="Type" value={selectedNode.type} />
+                <GraphMeta label="Topic" value={selectedNode.topicKey} />
+                <GraphMeta label="Artifact" value={selectedNode.properties.artifactId ?? 'n/a'} />
+              </dl>
+              <div>
+                <p className="font-heading text-xs font-semibold uppercase text-inkMuted-48">
+                  Legend
+                </p>
+                <div className="mt-2 flex flex-col gap-2">
+                  <GraphLegend color="#0066cc" label="Topic" />
+                  <GraphLegend color="#111827" label="Knowledge artifact" />
+                  <GraphLegend color="#38bdf8" label="Focused artifact" />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="mt-3 font-body text-sm text-inkMuted-48">
+              Select a node to inspect its indexed context.
             </p>
-          ) : (
-            artifactNodes.map((node) => (
-              <button
-                key={node.id}
-                onClick={() => handleNodeClick(node)}
-                className={`px-3 py-1 rounded transition-colors text-sm ${
-                  node.id === focusNode?.id
-                    ? 'bg-primary text-white'
-                    : 'bg-hairline text-slate-700 hover:bg-slate-300'
-                }`}
-              >
-                {node.label}
-              </button>
-            ))
           )}
-        </div>
-
-        {/* Note about visualization */}
-        <div className="mt-4 text-xs text-slate-400 italic">
-          Graph visualization placeholder. Integrate Cytoscape.js for interactive network view.
-        </div>
+        </aside>
       </div>
     </div>
   );
+}
+
+function GraphStat({ label, value }: { label: string; value: number }) {
+  return (
+    <span className="rounded-pill border border-hairline bg-canvas px-3 py-1 font-heading text-[11px] font-semibold uppercase">
+      {label}: {value}
+    </span>
+  );
+}
+
+function GraphMeta({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="font-heading text-[11px] font-semibold uppercase text-inkMuted-48">
+        {label}
+      </dt>
+      <dd className="break-words font-body text-sm text-ink">{value}</dd>
+    </div>
+  );
+}
+
+function GraphLegend({ color, label }: { color: string; label: string }) {
+  return (
+    <div className="flex items-center gap-2 font-body text-sm text-inkMuted-80">
+      <span
+        className="h-3 w-3 rounded-full"
+        style={{ backgroundColor: color }}
+        aria-hidden="true"
+      />
+      {label}
+    </div>
+  );
+}
+
+function positionGraphNodes(
+  nodes: KnowledgeGraphNode[],
+  edges: KnowledgeGraphEdge[],
+  focusNodeId: string | null,
+): PositionedNode[] {
+  const center = { x: 360, y: 245 };
+  const relationships = edges.map((edge) => ({ source: edge.source, target: edge.target }));
+  const sortedNodes = [...nodes].sort((left, right) => {
+    if (left.id === focusNodeId) return -1;
+    if (right.id === focusNodeId) return 1;
+    return left.label.localeCompare(right.label);
+  });
+  const orbitNodes = focusNodeId
+    ? sortedNodes.filter((node) => node.id !== focusNodeId)
+    : sortedNodes;
+  const radius = focusNodeId ? 175 : 180;
+
+  return sortedNodes.map((node, index) => {
+    if (node.id === focusNodeId) {
+      return toPositionedNode(node, center.x, center.y, relationships, true);
+    }
+
+    const orbitIndex = focusNodeId
+      ? orbitNodes.findIndex((candidate) => candidate.id === node.id)
+      : index;
+    const angle = (Math.PI * 2 * orbitIndex) / Math.max(orbitNodes.length, 1) - Math.PI / 2;
+    const x = center.x + Math.cos(angle) * radius;
+    const y = center.y + Math.sin(angle) * (focusNodeId ? 125 : 155);
+    return toPositionedNode(node, x, y, relationships, false);
+  });
+}
+
+function toPositionedNode(
+  node: KnowledgeGraphNode,
+  x: number,
+  y: number,
+  relationships: Array<{ source: string; target: string }>,
+  focused: boolean,
+): PositionedNode {
+  const degree = relationships.filter(
+    (relationship) => relationship.source === node.id || relationship.target === node.id,
+  ).length;
+  return {
+    ...node,
+    x,
+    y,
+    size: Math.min((node.type === 'topic' ? 26 : 31) + degree * 3 + (focused ? 5 : 0), 46),
+    color: node.type === 'topic' ? '#0066cc' : '#111827',
+  };
+}
+
+function getEdgeColor(edgeType: KnowledgeGraphEdge['type']): string {
+  if (edgeType === 'SIMILAR') {
+    return '#38bdf8';
+  }
+
+  if (edgeType === 'REFERENCES') {
+    return '#94a3b8';
+  }
+
+  return '#f59e0b';
+}
+
+function truncateLabel(label: string, maxLength: number): string {
+  return label.length > maxLength ? `${label.slice(0, maxLength - 1)}…` : label;
 }
 
 export default KnowledgeGraphPanel;

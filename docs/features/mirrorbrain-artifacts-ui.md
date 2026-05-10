@@ -22,8 +22,8 @@ It does not synthesize new knowledge, execute skills, or persist conversational 
 
 ## Key Interfaces
 
-- `KnowledgeArtifact`: rendered with title, summary, body, lifecycle metadata, topic/version metadata, source refs, derived refs, and provenance refs in the detail panel.
-- `KnowledgeGraphSnapshot`: rendered in the Knowledge `Graph` mode as either the global relation view or a selected-artifact-centered view.
+- `KnowledgeArtifact`: rendered with title, summary, Markdown body, wiki-links, tags, related knowledge refs, lifecycle metadata, topic/version metadata, source refs, derived refs, and provenance refs in the detail panel.
+- `KnowledgeGraphSnapshot`: rendered in the Knowledge `Graph` mode as either the global relation view or a selected-artifact-centered SVG graph view.
 - `SkillArtifact`: rendered with id, approval state, confirmation requirement, workflow evidence refs, and optional timestamps.
 - `KnowledgeTabPanel`: loads knowledge artifacts through `useArtifacts`, fetches the knowledge graph from `/knowledge/graph`, and renders `KnowledgePanel`.
 - `KnowledgePanel`: owns Knowledge `List` / `Graph` subtab state, knowledge selection, and local conversation-note state.
@@ -34,7 +34,9 @@ It does not synthesize new knowledge, execute skills, or persist conversational 
 
 `KnowledgeTabPanel` and `SkillTabPanel` each read the relevant artifact arrays from `useArtifacts`. `KnowledgePanel` filters knowledge to `draftState: published`, sorts the list newest first, and keeps that left list unchanged when the user switches between `List` and `Graph` modes.
 
-In Knowledge `List` mode, the right detail panel defaults to the newest approved knowledge artifact and changes when another knowledge item is clicked. In Knowledge `Graph` mode, the right panel defaults to the global knowledge graph. Clicking a knowledge item in graph mode passes that artifact id into `KnowledgeGraphPanel`, which narrows the displayed placeholder graph to the centered artifact and directly related nodes and edges.
+In Knowledge `List` mode, the right detail panel defaults to the newest approved knowledge artifact and changes when another knowledge item is clicked. The body is rendered through `KnowledgeMarkdownRenderer`, so headings, tables, links, and `[[wiki-links]]` read like a durable document rather than a raw text blob. The detail view also exposes tags, related knowledge ids, and indexed document context in a compact metadata panel inspired by the PulseOS-lite document context panel.
+
+In Knowledge `Graph` mode, the right panel defaults to the global knowledge graph. Clicking a knowledge item in graph mode passes that artifact id into `KnowledgeGraphPanel`, which narrows the graph to the centered artifact and directly related nodes and edges. The graph renderer uses dependency-free SVG for nodes, relation lines, relation labels, selection metadata, and a legend; this mirrors the PulseOS-lite graph workspace information architecture without adding its Cytoscape dependency stack to MirrorBrain.
 
 `SkillPanel` sorts skill artifacts newest first, defaults selection to the newest visible skill, and updates the right-side detail panel when a skill item is clicked.
 
@@ -54,7 +56,7 @@ The artifact edit message row uses a single-line full-width input with a send ac
 
 - Artifacts without timestamps sort after timestamped artifacts.
 - Empty knowledge or skill lists show an empty state instead of a blank detail panel.
-- The current knowledge graph UI is still a placeholder node-list renderer. Commit `6b281c2bcc9de1c5acdd89237be8d65cb70a0823` correctly introduced the graph API and frontend data path, but its panel was not a complete graph visualization and did not define the Knowledge tab split or global-vs-focused UI behavior.
+- The current knowledge graph UI is an SVG renderer, not a full Cytoscape workspace. It supports global/focused relation reading but does not yet provide pan, zoom, drag, force relayout, or incremental graph synchronization.
 - Conversation notes are local UI state only. They are review/edit instructions, not published artifact mutations.
 - Generated artifacts are persisted; only in-progress edit notes can be lost if the browser closes before the user saves follow-up edits.
 - Delete actions remove the artifact from the persisted artifact list; deleting published knowledge also prevents its source draft from reappearing as a separate timeline item. Local conversation notes tied to that artifact id are effectively orphaned because the artifact is no longer selectable.
@@ -62,7 +64,7 @@ The artifact edit message row uses a single-line full-width input with a send ac
 
 ## Test Strategy
 
-- `KnowledgePanel.test.tsx` covers approved-only knowledge list rendering, newest-first ordering, default detail selection, stable left list across List/Graph modes, global graph default, and focused graph switching.
+- `KnowledgePanel.test.tsx` covers approved-only knowledge list rendering, newest-first ordering, default detail selection, Markdown detail rendering, context metadata, stable left list across List/Graph modes, global graph default, SVG graph nodes/edges, and focused graph switching.
 - `SkillPanel.test.tsx` covers newest-first skill rendering and default detail selection.
 - `HistoryTopics.test.tsx` remains as legacy coverage for the previous combined artifact history component until that component is removed.
 - Broader verification uses the root Vitest suite, root TypeScript check, and the Vite app production build.

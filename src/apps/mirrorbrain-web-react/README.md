@@ -95,7 +95,7 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and an
   - `SubtabNavigation.tsx` - History Topics / Draft Generation subtabs
   - `HistoryTable.tsx` - Legacy reusable history table
   - `HistoryTopics.tsx` - Legacy combined Knowledge / Skill artifact timeline
-  - `KnowledgeGraphPanel.tsx` - Placeholder knowledge graph renderer supporting global and selected-artifact-focused views
+  - `KnowledgeGraphPanel.tsx` - SVG knowledge graph renderer supporting global and selected-artifact-focused views
   - `KnowledgeDetailModal.tsx` - Topic knowledge detail dialog
   - `CandidateContext.tsx` - Reviewed memory context
   - `DraftEditor.tsx` - Knowledge/Skill draft editor
@@ -104,13 +104,13 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and an
   - Top-level Knowledge and Skill tabs replace the former combined Artifacts tab
   - Knowledge tab displays approved knowledge under stable left-side List / Graph subtabs
   - Knowledge List mode defaults the detail panel to the newest approved knowledge item and updates on item selection
-  - Knowledge Graph mode defaults the right panel to the global knowledge graph and switches to a selected-artifact-centered graph when a knowledge item is clicked
+  - Knowledge Graph mode defaults the right panel to the global knowledge graph and switches to a selected-artifact-centered SVG graph when a knowledge item is clicked
   - Skill tab displays generated skills in a separate timeline and detail panel
   - Artifact lists are ordered newest first using artifact update or review timestamps
   - The app loads persisted knowledge and skill artifacts on startup so the Knowledge and Skill tabs restore after refresh
   - Approved knowledge drafts are replaced by their published topic artifact in the Knowledge timeline, while older published topic versions remain available as history
   - Selecting a knowledge or skill shows its details in the corresponding right-side display
-  - Knowledge details show the artifact body, lifecycle metadata, topic/version metadata, source refs, derived refs, and provenance refs
+  - Knowledge details render the artifact body as Markdown with wiki-links, tags, related knowledge refs, lifecycle metadata, topic/version metadata, source refs, derived refs, and provenance refs
   - The artifact detail display includes a local conversation area for recording requested edits against the selected artifact
   - Generate knowledge from reviewed memories
   - Generate skill from reviewed memories
