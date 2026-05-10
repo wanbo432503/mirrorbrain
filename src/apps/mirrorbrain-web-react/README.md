@@ -73,6 +73,8 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and an
   - Reviewed memory display
   - Knowledge approval removes the approved draft's source candidates from the review list and persisted candidate storage
   - Review requests derive and send the user's IANA timezone so both the default review date and backend day boundary match the user's local calendar day
+  - Memory, candidate, reviewed-memory, knowledge, and skill timestamps are stored as UTC ISO strings but rendered in the user's IANA timezone, with `Asia/Shanghai` as the fallback
+  - Knowledge approval errors preserve the backend error detail in the review feedback banner
   - Candidate lists, selected candidate details, and draft editors stretch to available viewport height and scroll internally
 
 ### Phase 5: Knowledge / Skill Panels + Forms ✅ (Completed)
@@ -107,6 +109,7 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and an
   - Knowledge Graph mode defaults the right panel to the global knowledge graph and switches to a selected-artifact-centered SVG graph when a knowledge item is clicked
   - Skill tab displays generated skills in a separate timeline and detail panel
   - Artifact lists are ordered newest first using artifact update or review timestamps
+  - Artifact timestamps are displayed in the user's IANA timezone instead of raw UTC ISO strings
   - The app loads persisted knowledge and skill artifacts on startup so the Knowledge and Skill tabs restore after refresh
   - Approved knowledge drafts are replaced by their published topic artifact in the Knowledge timeline, while older published topic versions remain available as history
   - Selecting a knowledge or skill shows its details in the corresponding right-side display

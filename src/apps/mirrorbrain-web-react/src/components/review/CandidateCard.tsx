@@ -1,5 +1,6 @@
 import type { CandidateMemory } from '../../types/index'
 import type { CandidateReviewSuggestion } from '../../types/index'
+import { formatUserDateTime } from '../../shared/user-time'
 
 interface CandidateCardProps {
   candidate: CandidateMemory
@@ -11,16 +12,7 @@ interface CandidateCardProps {
 }
 
 function formatTimeRange(startAt: string, endAt: string): string {
-  const start = new Date(startAt)
-  const end = new Date(endAt)
-
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-  })
-
-  return `${formatter.format(start)} - ${formatter.format(end)}`
+  return `${formatUserDateTime(startAt)} - ${formatUserDateTime(endAt)}`
 }
 
 function calculateDuration(startAt: string, endAt: string): number {

@@ -6,6 +6,7 @@ import Input from '../forms/Input'
 import KnowledgeGraphPanel from './KnowledgeGraphPanel'
 import { KnowledgeArtifactDetail } from './ArtifactDetail'
 import { sortKnowledgeArtifactsByNewest } from './artifact-sorting'
+import { formatUserDateTime } from '../../shared/user-time'
 import type { KnowledgeArtifact, KnowledgeGraphSnapshot } from '../../types/index'
 
 type KnowledgeViewMode = 'list' | 'graph'
@@ -131,7 +132,7 @@ export default function KnowledgePanel({
                     <p className="mt-1 font-body text-sm text-slate-700">{summary}</p>
                     {timestamp && (
                       <p className="mt-2 font-heading text-[11px] font-semibold uppercase text-inkMuted-48">
-                        {timestamp}
+                        {formatUserDateTime(timestamp)}
                       </p>
                     )}
                   </button>

@@ -1095,9 +1095,8 @@ export function createMirrorBrainService(
       }
 
       const knowledgeArtifacts = await loadKnowledgeArtifacts();
-      const draft =
-        knowledgeArtifacts.find((artifact) => artifact.id === draftId) ??
-        draftSnapshot;
+      const persistedDraft = knowledgeArtifacts.find((artifact) => artifact.id === draftId);
+      const draft = draftSnapshot ?? persistedDraft;
 
       if (draft === undefined) {
         throw new Error(`Knowledge draft not found: ${draftId}`);

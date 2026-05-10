@@ -1,19 +1,8 @@
 import type { MemoryEvent } from '../../types/index'
+import { formatUserDateTime } from '../../shared/user-time'
 
 interface MemoryRecordProps {
   event: MemoryEvent
-}
-
-function formatTimestamp(timestamp: string): string {
-  const date = new Date(timestamp)
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-  })
-  return formatter.format(date)
 }
 
 export default function MemoryRecord({ event }: MemoryRecordProps) {
@@ -37,7 +26,7 @@ export default function MemoryRecord({ event }: MemoryRecordProps) {
             {getTitle()}
           </h3>
           <span className="text-xs font-body text-inkMuted-48 whitespace-nowrap">
-            {formatTimestamp(event.timestamp)}
+            {formatUserDateTime(event.timestamp)}
           </span>
         </div>
 

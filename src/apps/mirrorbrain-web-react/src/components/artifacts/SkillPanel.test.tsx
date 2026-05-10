@@ -44,4 +44,16 @@ describe('SkillPanel', () => {
     expect(within(detailPanel).getAllByText('Approval: approved').length).toBeGreaterThan(0)
     expect(within(detailPanel).getByText('reviewed:new')).not.toBeNull()
   })
+
+  it('renders skill timestamps in the user timezone instead of raw UTC ISO strings', () => {
+    render(
+      <SkillPanel
+        skillArtifacts={[newerSkill]}
+        onDeleteSkillArtifact={vi.fn()}
+      />
+    )
+
+    expect(screen.queryByText('2026-04-28T10:00:00.000Z')).toBeNull()
+    expect(screen.getAllByText(/2026-04-28 18:00/).length).toBeGreaterThan(0)
+  })
 })

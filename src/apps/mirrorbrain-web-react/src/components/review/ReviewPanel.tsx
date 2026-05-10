@@ -7,6 +7,7 @@ import { createMirrorBrainBrowserApi, type MirrorBrainWebAppApi } from '../../ap
 import { useReviewWorkflow } from '../../hooks/useReviewWorkflow'
 import { useArtifacts } from '../../hooks/useArtifacts'
 import { useMirrorBrain } from '../../contexts/MirrorBrainContext'
+import { getUserTimeZone } from '../../shared/user-time'
 
 export function getDefaultReviewDate(
   now: Date = new Date(),
@@ -21,7 +22,19 @@ export function getDefaultReviewDate(
 }
 
 export function getLocalTimeZone(): string {
-  return Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'Asia/Shanghai'
+  return getUserTimeZone()
+}
+
+export function getApprovalFailureMessage(error: unknown): string {
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return `Knowledge approval failed: ${error.message}`
+  }
+
+  if (typeof error === 'string' && error.trim().length > 0) {
+    return `Knowledge approval failed: ${error}`
+  }
+
+  return 'Knowledge approval failed'
 }
 
 export function shouldAutoLoadDailyCandidates(input: {
@@ -228,7 +241,7 @@ export default function ReviewPanel() {
       }
     } catch (error) {
       // Approve failed - no deletion attempt
-      setApprovalFeedback({ kind: 'error', message: 'Knowledge approval failed' })
+      setApprovalFeedback({ kind: 'error', message: getApprovalFailureMessage(error) })
     }
   }
 

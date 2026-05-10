@@ -2,6 +2,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import {
+  getApprovalFailureMessage,
   getCandidateIdsForReviewedMemorySources,
   getDefaultReviewDate,
   getLocalTimeZone,
@@ -20,6 +21,15 @@ describe('ReviewPanel helpers', () => {
 
   it('returns the local timezone for review requests', () => {
     expect(getLocalTimeZone()).toBeTruthy()
+  })
+
+  it('preserves backend knowledge approval errors in user feedback', () => {
+    expect(getApprovalFailureMessage(new Error('Knowledge draft not found: knowledge-draft:1'))).toBe(
+      'Knowledge approval failed: Knowledge draft not found: knowledge-draft:1'
+    )
+    expect(getApprovalFailureMessage('plain failure')).toBe(
+      'Knowledge approval failed: plain failure'
+    )
   })
 
   it('waits for the first memory load before auto-generating candidates', () => {

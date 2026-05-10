@@ -5,6 +5,7 @@ import EmptyState from '../common/EmptyState'
 import Input from '../forms/Input'
 import { SkillArtifactDetail } from './ArtifactDetail'
 import { sortSkillArtifactsByNewest } from './artifact-sorting'
+import { formatUserDateTime } from '../../shared/user-time'
 import type { SkillArtifact } from '../../types/index'
 
 interface SkillPanelProps {
@@ -75,7 +76,7 @@ export default function SkillPanel({
                   </p>
                   {timestamp && (
                     <p className="mt-2 font-heading text-[11px] font-semibold uppercase text-inkMuted-48">
-                      {timestamp}
+                      {formatUserDateTime(timestamp)}
                     </p>
                   )}
                 </button>

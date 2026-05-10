@@ -5,6 +5,7 @@ import Input from '../forms/Input'
 import Checkbox from '../forms/Checkbox'
 import LoadingSpinner from '../common/LoadingSpinner'
 import KeptCandidateCard from './KeptCandidateCard'
+import { formatUserDateTime } from '../../shared/user-time'
 import type { CandidateMemory, ReviewedMemory, KnowledgeArtifact, SkillArtifact } from '../../types/index'
 
 interface SelectedCandidateProps {
@@ -106,14 +107,7 @@ export function getCandidateDiscardReasons(
 }
 
 function formatTimestamp(timestamp: string): string {
-  const date = new Date(timestamp)
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-  }).format(date)
+  return formatUserDateTime(timestamp)
 }
 
 export default function SelectedCandidate({

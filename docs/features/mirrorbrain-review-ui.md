@@ -17,6 +17,7 @@ This UI is responsible for:
 - showing review-window source volume as unique URLs instead of raw ActivityWatch event rows, so background tab sampling does not inflate the review metrics
 - showing kept candidate source volume as unique URLs when browser source refs are available, rather than raw event counts
 - deriving the default review date from the user's resolved IANA timezone, with `Asia/Shanghai` as the fallback when the browser does not report one
+- rendering memory, candidate, source, reviewed-memory, and draft timestamps in the user's IANA timezone while preserving UTC ISO timestamps in persisted data
 - exposing daily candidate generation and explicit review actions
 - presenting the review flow as a clearer workbench with candidate streams, focused evidence, and decision guidance
 - showing multiple candidate streams instead of a single current candidate
@@ -36,6 +37,7 @@ This UI is responsible for:
 - placing sync, review, and artifact actions inside their corresponding tabs instead of a single global action bar
 - rendering candidate, suggestion, reviewed-memory, and artifact states with explicit field-level detail
 - showing visible action feedback for success and prerequisite errors
+- preserving backend error details in knowledge approval failure feedback so operators can distinguish missing drafts, service errors, and other publish failures
 
 This UI is not responsible for:
 

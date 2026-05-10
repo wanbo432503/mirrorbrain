@@ -11,6 +11,7 @@ The React artifacts UI is responsible for:
 - exposing generated knowledge and generated skill artifacts as separate top-level tabs
 - listing only published knowledge artifacts; draft knowledge remains part of the review workflow and is not shown in artifact history
 - ordering each list newest first by `updatedAt`, then `reviewedAt`
+- formatting artifact timestamps for display in the user's IANA timezone while keeping persisted artifact metadata as UTC ISO strings
 - keeping the Knowledge tab left item list stable across its `List` and `Graph` subtabs
 - showing the newest approved knowledge detail by default in Knowledge `List` mode
 - showing the global knowledge graph by default in Knowledge `Graph` mode, then a focused graph centered on the selected knowledge artifact after item selection
@@ -40,6 +41,8 @@ In Knowledge `Graph` mode, the right panel defaults to the global knowledge grap
 
 `SkillPanel` sorts skill artifacts newest first, defaults selection to the newest visible skill, and updates the right-side detail panel when a skill item is clicked.
 
+Timestamps remain UTC ISO strings in storage and API payloads. The React display layer converts `updatedAt` and `reviewedAt` through the shared user-time formatter, so users in `Asia/Shanghai` see local wall-clock times such as `2026-05-11 00:30` for `2026-05-10T16:30:00.000Z`.
+
 When the review workflow generates or regenerates knowledge or skill drafts, the hook persists the returned artifact through the save API and upserts the saved version into the shared artifact list. That keeps newly generated artifacts visible in the tab and reloadable after a page refresh.
 
 When the review workflow approves a knowledge draft, the backend publishes the topic artifact and tombstones the source draft so future artifact reloads keep only the published knowledge. The hook replaces the approved draft in shared state with the returned published topic artifact while preserving provenance and `derivedFromKnowledgeIds` links.
@@ -66,7 +69,8 @@ The artifact edit message row uses a single-line full-width input with a send ac
 
 ## Test Strategy
 
-- `KnowledgePanel.test.tsx` covers approved-only knowledge list rendering, newest-first ordering, default detail selection, Markdown detail rendering, context metadata, stable left list across List/Graph modes, global graph default, SVG graph nodes/edges, and focused graph switching.
-- `SkillPanel.test.tsx` covers newest-first skill rendering and default detail selection.
+- `KnowledgePanel.test.tsx` covers approved-only knowledge list rendering, newest-first ordering, default detail selection, Markdown detail rendering, context metadata, stable left list across List/Graph modes, global graph default, SVG graph nodes/edges, focused graph switching, and user-timezone timestamp display.
+- `SkillPanel.test.tsx` covers newest-first skill rendering, default detail selection, and user-timezone timestamp display.
+- `shared/user-time.test.ts` covers deterministic UTC-to-user-timezone formatting and fallback timezone behavior.
 - `HistoryTopics.test.tsx` remains as legacy coverage for the previous combined artifact history component until that component is removed.
 - Broader verification uses the root Vitest suite, root TypeScript check, and the Vite app production build.

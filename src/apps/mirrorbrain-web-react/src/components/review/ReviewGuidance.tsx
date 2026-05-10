@@ -1,4 +1,5 @@
 import Card from '../common/Card'
+import { formatUserDateTime } from '../../shared/user-time'
 import type { CandidateReviewSuggestion, ReviewedMemory } from '../../types/index'
 
 interface ReviewGuidanceProps {
@@ -193,7 +194,7 @@ export default function ReviewGuidance({ suggestion, reviewedMemory }: ReviewGui
                   Reviewed At
                 </p>
                 <p className="font-body text-sm text-ink">
-                  {new Date(reviewedMemory.reviewedAt).toLocaleString()}
+                  {formatUserDateTime(reviewedMemory.reviewedAt)}
                 </p>
               </div>
             </div>

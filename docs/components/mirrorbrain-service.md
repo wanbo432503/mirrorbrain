@@ -52,7 +52,7 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 18. List current-best topic knowledge summaries, fetch the current-best artifact for one topic key, and return topic history in newest-first order.
 19. For reviewed-memory knowledge generation APIs, resolve captured page text from reviewed memory events before creating the draft, then publish the resulting artifact.
 20. Approve a knowledge draft by loading the persisted draft by id and passing it through the existing topic-knowledge merge workflow.
-21. If the draft is not yet visible in the persisted knowledge list, approve can use the caller-provided draft snapshot after verifying its id matches `draftId`; this preserves the visible UI draft, source reviewed-memory ids, and provenance refs during publish.
+21. If the caller provides a draft snapshot, approve uses that snapshot after verifying its id matches `draftId`; this preserves the visible UI draft, source reviewed-memory ids, provenance refs, and recent edits even when an older persisted draft with the same id exists. If no snapshot is provided, approve falls back to the persisted knowledge list.
 22. When a knowledge or skill artifact is deleted, remove the workspace copy and record a service-level tombstone under `mirrorbrain/deleted-artifacts/` so later reads suppress both workspace and OpenViking copies of that id.
 23. When a deleted artifact id is published again later, clear its tombstone before persisting the fresh artifact so it becomes visible again.
 
@@ -79,7 +79,7 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
 - unit tests verify deleting persisted knowledge and skill artifacts removes workspace copies and suppresses later reads through tombstones
 - unit and integration tests verify reviewed memories can be turned into publishable Phase 3-ready knowledge artifacts through the service contract, including captured page text in the generated body
 - unit tests verify knowledge draft approval publishes through the topic merge workflow instead of reading unstored JSON files
-- unit tests verify knowledge draft approval can publish the caller draft snapshot when the persisted lookup has not caught up
+- unit tests verify knowledge draft approval can publish the caller draft snapshot when the persisted lookup has not caught up or still contains an older draft with the same id
 - unit and integration tests verify topic merge candidates can be built and merged through the service contract, including superseded-history publication on update
 - type checks ensure the service surface composes with the workflow layer
 

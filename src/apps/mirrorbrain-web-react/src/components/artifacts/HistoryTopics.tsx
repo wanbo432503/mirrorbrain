@@ -3,6 +3,7 @@ import Card from '../common/Card'
 import Button from '../common/Button'
 import EmptyState from '../common/EmptyState'
 import Input from '../forms/Input'
+import { formatUserDateTime } from '../../shared/user-time'
 import type { KnowledgeArtifact, SkillArtifact } from '../../types/index'
 
 interface HistoryTopicsProps {
@@ -200,7 +201,7 @@ export default function HistoryTopics({
                     <p className="font-body text-sm text-slate-700 mt-1">{summary}</p>
                     {timestamp && (
                       <p className="font-heading text-[11px] font-semibold uppercase text-inkMuted-48 mt-2">
-                        {timestamp}
+                        {formatUserDateTime(timestamp)}
                       </p>
                     )}
                   </button>
@@ -305,8 +306,8 @@ function ArtifactDetail({
               : null,
             `Sources: ${knowledge.sourceReviewedMemoryIds.length}`,
             `Derived: ${knowledge.derivedFromKnowledgeIds?.length ?? 0}`,
-            knowledge.updatedAt ? `Updated: ${knowledge.updatedAt}` : null,
-            knowledge.reviewedAt ? `Reviewed: ${knowledge.reviewedAt}` : null,
+            knowledge.updatedAt ? `Updated: ${formatUserDateTime(knowledge.updatedAt)}` : null,
+            knowledge.reviewedAt ? `Reviewed: ${formatUserDateTime(knowledge.reviewedAt)}` : null,
             knowledge.recencyLabel ? `Recency: ${knowledge.recencyLabel}` : null,
           ]}
         />
@@ -350,7 +351,7 @@ function ArtifactDetail({
           `Requires confirmation: ${
             skill.executionSafetyMetadata.requiresConfirmation ? 'yes' : 'no'
           }`,
-          skill.updatedAt ? `Updated: ${skill.updatedAt}` : null,
+          skill.updatedAt ? `Updated: ${formatUserDateTime(skill.updatedAt)}` : null,
         ]}
       />
       <div>

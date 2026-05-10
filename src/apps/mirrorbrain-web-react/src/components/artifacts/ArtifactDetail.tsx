@@ -1,5 +1,6 @@
 import Button from '../common/Button'
 import { KnowledgeMarkdownRenderer } from './KnowledgeMarkdownRenderer'
+import { formatUserDateTime } from '../../shared/user-time'
 import type { KnowledgeArtifact, SkillArtifact } from '../../types/index'
 
 export function KnowledgeArtifactDetail({
@@ -58,8 +59,8 @@ export function KnowledgeArtifactDetail({
           artifact.supersedesKnowledgeId ? `Supersedes: ${artifact.supersedesKnowledgeId}` : null,
           `Sources: ${artifact.sourceReviewedMemoryIds.length}`,
           `Derived: ${artifact.derivedFromKnowledgeIds?.length ?? 0}`,
-          artifact.updatedAt ? `Updated: ${artifact.updatedAt}` : null,
-          artifact.reviewedAt ? `Reviewed: ${artifact.reviewedAt}` : null,
+          artifact.updatedAt ? `Updated: ${formatUserDateTime(artifact.updatedAt)}` : null,
+          artifact.reviewedAt ? `Reviewed: ${formatUserDateTime(artifact.reviewedAt)}` : null,
           artifact.recencyLabel ? `Recency: ${artifact.recencyLabel}` : null,
         ]}
       />
@@ -191,7 +192,7 @@ export function SkillArtifactDetail({
           `Requires confirmation: ${
             artifact.executionSafetyMetadata.requiresConfirmation ? 'yes' : 'no'
           }`,
-          artifact.updatedAt ? `Updated: ${artifact.updatedAt}` : null,
+          artifact.updatedAt ? `Updated: ${formatUserDateTime(artifact.updatedAt)}` : null,
         ]}
       />
       <div>

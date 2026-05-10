@@ -158,6 +158,64 @@ describe('mirrorbrain service knowledge generation', () => {
     );
   });
 
+  it('approves the caller draft snapshot when a stale persisted draft has the same id', async () => {
+    const staleDraft: KnowledgeArtifact = {
+      id: 'knowledge-draft:reviewed:candidate:browser:vitest',
+      draftState: 'draft',
+      sourceReviewedMemoryIds: ['reviewed:candidate:browser:vitest'],
+      body: '',
+    };
+    const snapshot: KnowledgeArtifact = {
+      id: staleDraft.id,
+      artifactType: 'daily-review-draft',
+      draftState: 'draft',
+      topicKey: 'vitest-testing',
+      title: 'Complete Vitest setup note',
+      summary: 'Complete reviewed memory synthesized into tutorial knowledge.',
+      body: '## Source Synthesis\nUse the complete caller snapshot body.',
+      sourceReviewedMemoryIds: ['reviewed:candidate:browser:vitest'],
+      derivedFromKnowledgeIds: [],
+      version: 1,
+      isCurrentBest: false,
+      supersedesKnowledgeId: null,
+      updatedAt: '2026-04-21T12:00:00.000Z',
+      reviewedAt: '2026-04-21T10:00:00.000Z',
+      recencyLabel: '2026-04-21',
+      provenanceRefs: [
+        {
+          kind: 'reviewed-memory',
+          id: 'reviewed:candidate:browser:vitest',
+        },
+      ],
+    };
+    const publishKnowledge = vi.fn(async () => ({
+      sourcePath: '/tmp/mirrorbrain/knowledge.md',
+      rootUri: 'viking://resources/mirrorbrain/knowledge.md',
+    }));
+    const api = createMirrorBrainService(
+      {
+        service: runtimeService,
+        workspaceDir: mkdtempSync(join(tmpdir(), 'mirrorbrain-approval-snapshot-')),
+      },
+      {
+        listKnowledge: vi.fn(async () => [staleDraft]),
+        publishKnowledge,
+      },
+    );
+
+    const result = await api.approveKnowledgeDraft(snapshot.id, snapshot);
+
+    expect(result.assignedTopic).toEqual({
+      topicKey: 'vitest-testing',
+      title: 'Complete Vitest setup note',
+    });
+    expect(result.publishedArtifact).toMatchObject({
+      title: 'Complete Vitest setup note',
+      body: expect.stringContaining('complete caller snapshot body'),
+      topicKey: 'vitest-testing',
+    });
+  });
+
   it('removes the source draft from knowledge listings after approval', async () => {
     const draft: KnowledgeArtifact = {
       id: 'knowledge-draft:reviewed:candidate:browser:vitest',

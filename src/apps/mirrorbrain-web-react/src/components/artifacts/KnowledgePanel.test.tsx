@@ -100,6 +100,19 @@ describe('KnowledgePanel', () => {
     expect(within(detailPanel).getByText(/Older body/)).not.toBeNull()
   })
 
+  it('renders knowledge timestamps in the user timezone instead of raw UTC ISO strings', () => {
+    render(
+      <KnowledgePanel
+        knowledgeArtifacts={[newerKnowledge]}
+        knowledgeGraph={graph}
+        onDeleteKnowledgeArtifact={vi.fn()}
+      />
+    )
+
+    expect(screen.queryByText('2026-04-29T10:00:00.000Z')).toBeNull()
+    expect(screen.getAllByText(/2026-04-29 18:00/).length).toBeGreaterThan(0)
+  })
+
   it('renders the selected knowledge detail as a markdown document with context metadata', () => {
     render(
       <KnowledgePanel
