@@ -1,6 +1,6 @@
 import { ButtonHTMLAttributes } from 'react'
 
-type ButtonVariant = 'default' | 'primary' | 'success' | 'ghost'
+type ButtonVariant = 'primary' | 'secondary' | 'default' | 'pearl'
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant
@@ -17,28 +17,39 @@ export default function Button({
   ...props
 }: ButtonProps) {
   const baseClasses = `
-    px-3 py-1.5 rounded-lg font-heading font-semibold text-xs uppercase tracking-wide
-    transition-colors duration-200 cursor-pointer inline-flex items-center justify-center gap-2
-    focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 focus:outline-none
+    inline-flex items-center justify-center gap-2
+    transition-all duration-200 cursor-pointer
+    focus:ring-2 focus:ring-primary-focus focus:ring-offset-2 focus:outline-none
     disabled:opacity-50 disabled:cursor-not-allowed
+    active:scale-[0.95]
   `
 
   const variantClasses: Record<ButtonVariant, string> = {
-    default: `
-      bg-white text-slate-900 border border-slate-300
-      hover:bg-slate-100 hover:border-slate-400
-    `,
+    // Primary: Action Blue pill - main CTAs
     primary: `
-      bg-teal-600 text-white border border-transparent
-      hover:bg-teal-700
+      bg-primary text-white
+      rounded-pill px-5.5 py-2.75
+      text-body font-normal
     `,
-    success: `
-      bg-green-600 text-white border border-transparent
-      hover:bg-green-700
+    // Secondary: Ghost pill - second CTA with primary
+    secondary: `
+      bg-transparent text-primary
+      border border-primary
+      rounded-pill px-5.5 py-2.75
+      text-body font-normal
     `,
-    ghost: `
-      bg-transparent text-slate-600 border border-slate-300
-      hover:bg-slate-100 hover:text-slate-900 hover:border-slate-400
+    // Default: Dark utility - nav/utility buttons
+    default: `
+      bg-ink text-bodyOnDark
+      rounded-sm px-3.75 py-2
+      text-button-utility font-normal
+    `,
+    // Pearl: Secondary in cards
+    pearl: `
+      bg-surfacePearl text-inkMuted-80
+      border-2 border-dividerSoft
+      rounded-md px-3.5 py-2
+      text-caption font-normal
     `,
   }
 
