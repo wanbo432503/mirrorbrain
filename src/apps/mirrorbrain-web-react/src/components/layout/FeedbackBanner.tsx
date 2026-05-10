@@ -27,9 +27,9 @@ export default function FeedbackBanner({ feedback, onDismiss }: FeedbackBannerPr
   if (!feedback) return null
 
   const bgColorClasses: Record<FeedbackKind, string> = {
-    success: 'bg-green-100 border-green-300',
-    error: 'bg-red-100 border-red-300',
-    info: 'bg-blue-100 border-blue-300',
+    success: 'bg-green-50 border-green-300',
+    error: 'bg-red-50 border-red-300',
+    info: 'bg-primary/10 border-blue-300',
   }
 
   const textColorClasses: Record<FeedbackKind, string> = {
