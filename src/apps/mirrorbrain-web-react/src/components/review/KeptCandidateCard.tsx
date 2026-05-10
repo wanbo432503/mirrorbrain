@@ -5,8 +5,27 @@ interface KeptCandidateCardProps {
   onUndo: (reviewedMemoryId: string) => void;
 }
 
+function getKeptCandidateSourceLabel(reviewedMemory: ReviewedMemory): string {
+  const sourceRefs = reviewedMemory.candidateSourceRefs ?? [];
+  const uniqueUrls = new Set(
+    sourceRefs
+      .map((sourceRef) => sourceRef.url)
+      .filter((url): url is string => typeof url === 'string' && url.length > 0),
+  );
+
+  if (uniqueUrls.size > 0) {
+    return `${uniqueUrls.size} url${uniqueUrls.size === 1 ? '' : 's'}`;
+  }
+
+  const sourceCount = sourceRefs.length > 0
+    ? sourceRefs.length
+    : reviewedMemory.memoryEventIds.length;
+
+  return `${sourceCount} source${sourceCount === 1 ? '' : 's'}`;
+}
+
 export default function KeptCandidateCard({ reviewedMemory, onUndo }: KeptCandidateCardProps) {
-  const eventCount = reviewedMemory.memoryEventIds.length;
+  const sourceLabel = getKeptCandidateSourceLabel(reviewedMemory);
 
   return (
     <div className="bg-canvas border border-green-200 rounded-lg p-3 shadow-sm">
@@ -27,7 +46,7 @@ export default function KeptCandidateCard({ reviewedMemory, onUndo }: KeptCandid
 
         {/* Source count */}
         <p className="text-xs font-body text-inkMuted-80">
-          {eventCount} pages
+          {sourceLabel}
         </p>
 
         {/* Undo Button */}

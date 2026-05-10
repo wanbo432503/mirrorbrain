@@ -15,6 +15,7 @@ This UI is responsible for:
 - exposing future memory-source sync entry points for browser, shell, filesystems, and screenshot capture, while only browser sync currently performs a backend import
 - showing not-configured info feedback for memory-source buttons whose runtime support has not been wired up yet
 - showing review-window source volume as unique URLs instead of raw ActivityWatch event rows, so background tab sampling does not inflate the review metrics
+- showing kept candidate source volume as unique URLs when browser source refs are available, rather than raw event counts
 - exposing daily candidate generation and explicit review actions
 - presenting the review flow as a clearer workbench with candidate streams, focused evidence, and decision guidance
 - showing multiple candidate streams instead of a single current candidate
@@ -58,16 +59,17 @@ This UI is not responsible for:
 8. The UI lists multiple candidate streams and lets the user pick one.
 9. The UI shows AI review suggestions for the selected candidate without auto-reviewing it.
 10. The user explicitly keeps or discards the selected candidate.
-11. The user opens the Knowledge or Skill tab to browse previously generated outputs in separate top-level timelines.
-12. The user generates knowledge or skill drafts from the candidate currently selected in the review tab.
-13. The generated drafts are immediately written back through the artifact API so the Knowledge or Skill tab and the next page load can restore them.
-14. After the review tab has been opened, switching to another tab hides rather than unmounts the review workbench, preserving kept candidates, draft state, and in-flight generation status.
-15. The app shell, tab panel, and review workbench form a continuous flex height chain so the active tab fills the screen while long content scrolls inside the relevant list or detail panel.
-16. The app header uses the same max-width and horizontal padding as the tab content, so the MirrorBrain title and Personal Memory & Knowledge descriptor align with the Memory tab's left edge.
-17. The user can toggle between light and dark themes from the header; the selected mode is stored locally and applied through `data-theme`.
-18. In the review tab, generated knowledge displays the note body directly in a self-scrolling note field and accepts a one-line revision request in a full-width input row with a send action on the right.
-19. The user can save the edited draft artifact back through the local service API.
-20. The UI renders a visible status message after each action so the workflow is not silent.
+11. Kept candidate cards display unique URL counts for browser candidates, falling back to generic source counts only when URL refs are unavailable.
+12. The user opens the Knowledge or Skill tab to browse previously generated outputs in separate top-level timelines.
+13. The user generates knowledge or skill drafts from the candidate currently selected in the review tab.
+14. The generated drafts are immediately written back through the artifact API so the Knowledge or Skill tab and the next page load can restore them.
+15. After the review tab has been opened, switching to another tab hides rather than unmounts the review workbench, preserving kept candidates, draft state, and in-flight generation status.
+16. The app shell, tab panel, and review workbench form a continuous flex height chain so the active tab fills the screen while long content scrolls inside the relevant list or detail panel.
+17. The app header uses the same max-width and horizontal padding as the tab content, so the MirrorBrain title and Personal Memory & Knowledge descriptor align with the Memory tab's left edge.
+18. The user can toggle between light and dark themes from the header; the selected mode is stored locally and applied through `data-theme`.
+19. In the review tab, generated knowledge displays the note body directly in a self-scrolling note field and accepts a one-line revision request in a full-width input row with a send action on the right.
+20. The user can save the edited draft artifact back through the local service API.
+21. The UI renders a visible status message after each action so the workflow is not silent.
 
 ## Test Strategy
 

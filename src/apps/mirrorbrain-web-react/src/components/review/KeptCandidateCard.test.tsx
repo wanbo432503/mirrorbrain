@@ -34,6 +34,40 @@ describe('KeptCandidateCard', () => {
     expect(screen.getByText('Kept')).not.toBeNull();
   });
 
+  it('shows the unique URL count instead of raw event count', () => {
+    render(
+      <KeptCandidateCard
+        reviewedMemory={{
+          ...mockReviewedMemory,
+          memoryEventIds: ['event-1', 'event-2', 'event-3'],
+          candidateSourceRefs: [
+            {
+              id: 'event-1',
+              sourceType: 'activitywatch-browser',
+              timestamp: '2026-04-28T10:00:00Z',
+              url: 'https://example.com/docs',
+            },
+            {
+              id: 'event-2',
+              sourceType: 'activitywatch-browser',
+              timestamp: '2026-04-28T10:05:00Z',
+              url: 'https://example.com/docs',
+            },
+            {
+              id: 'event-3',
+              sourceType: 'activitywatch-browser',
+              timestamp: '2026-04-28T10:10:00Z',
+              url: 'https://example.com/api',
+            },
+          ],
+        }}
+        onUndo={() => {}}
+      />,
+    );
+
+    expect(screen.getByText('2 urls')).not.toBeNull();
+  });
+
   it('should call onUndo when undo button clicked', async () => {
     const user = userEvent.setup();
     const onUndo = vi.fn();
