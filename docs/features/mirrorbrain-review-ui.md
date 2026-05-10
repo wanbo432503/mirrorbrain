@@ -26,6 +26,7 @@ This UI is responsible for:
 - scoping artifact generation views to the candidate currently selected in the review tab
 - preserving the review tab workflow state after the user has visited it, so switching to memory or artifacts does not cancel in-flight knowledge generation or clear kept candidates
 - stretching the active tab workbench to the available viewport height, with candidate lists, selected candidate details, and draft editors scrolling inside their own panels instead of relying on fixed pixel heights
+- aligning the MirrorBrain brand header to the same left boundary as the tab content and exposing an explicit light/dark theme toggle
 - exposing explicit save actions for edited knowledge and skill drafts in the review tab
 - separating memory, review, and artifacts into distinct tabs instead of stacking all content on one page
 - placing sync, review, and artifact actions inside their corresponding tabs instead of a single global action bar
@@ -60,9 +61,11 @@ This UI is not responsible for:
 13. The generated drafts are immediately written back through the artifact API so the artifacts tab and the next page load can restore them.
 14. After the review tab has been opened, switching to another tab hides rather than unmounts the review workbench, preserving kept candidates, draft state, and in-flight generation status.
 15. The app shell, tab panel, and review workbench form a continuous flex height chain so the active tab fills the screen while long content scrolls inside the relevant list or detail panel.
-16. In the review tab, generated knowledge displays the note body directly in a self-scrolling note field and accepts a one-line revision request in a full-width input row with a send action on the right.
-17. The user can save the edited draft artifact back through the local service API.
-18. The UI renders a visible status message after each action so the workflow is not silent.
+16. The app header uses the same max-width and horizontal padding as the tab content, so the MirrorBrain title and Personal Memory & Knowledge descriptor align with the Memory tab's left edge.
+17. The user can toggle between light and dark themes from the header; the selected mode is stored locally and applied through `data-theme`.
+18. In the review tab, generated knowledge displays the note body directly in a self-scrolling note field and accepts a one-line revision request in a full-width input row with a send action on the right.
+19. The user can save the edited draft artifact back through the local service API.
+20. The UI renders a visible status message after each action so the workflow is not silent.
 
 ## Test Strategy
 

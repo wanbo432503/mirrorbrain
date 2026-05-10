@@ -12,6 +12,7 @@ import { useMirrorBrainState } from './hooks/useMirrorBrainState'
 type TabType = 'memory' | 'review' | 'artifacts'
 type FeedbackKind = 'success' | 'error' | 'info'
 type VisitedTabs = Record<TabType, boolean>
+type ThemeMode = 'light' | 'dark'
 
 const TABS: TabType[] = ['memory', 'review', 'artifacts']
 
@@ -20,17 +21,29 @@ interface Feedback {
   message: string
 }
 
+function getInitialTheme(): ThemeMode {
+  return window.localStorage.getItem('mirrorbrain-theme') === 'dark' ? 'dark' : 'light'
+}
+
 function App() {
   const [activeTab, setActiveTab] = useState<TabType>('memory')
   const [feedback, setFeedback] = useState<Feedback | null>(null)
+  const [theme, setTheme] = useState<ThemeMode>(getInitialTheme)
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    window.localStorage.setItem('mirrorbrain-theme', theme)
+  }, [theme])
 
   return (
     <MirrorBrainProvider>
       <AppContent
         activeTab={activeTab}
         feedback={feedback}
+        theme={theme}
         onTabChange={setActiveTab}
         onDismissFeedback={() => setFeedback(null)}
+        onThemeToggle={() => setTheme((current) => (current === 'light' ? 'dark' : 'light'))}
       />
     </MirrorBrainProvider>
   )
@@ -39,13 +52,17 @@ function App() {
 function AppContent({
   activeTab,
   feedback,
+  theme,
   onTabChange,
   onDismissFeedback,
+  onThemeToggle,
 }: {
   activeTab: TabType
   feedback: Feedback | null
+  theme: ThemeMode
   onTabChange: (tab: TabType) => void
   onDismissFeedback: () => void
+  onThemeToggle: () => void
 }) {
   const api = useMemo(
     () => createMirrorBrainBrowserApi(window.location.origin),
@@ -73,7 +90,7 @@ function AppContent({
   }, [activeTab])
 
   return (
-    <AppShell>
+    <AppShell theme={theme} onThemeToggle={onThemeToggle}>
       {feedback && <FeedbackBanner feedback={feedback} onDismiss={onDismissFeedback} />}
 
       <TabNavigation activeTab={activeTab} onTabChange={onTabChange} />

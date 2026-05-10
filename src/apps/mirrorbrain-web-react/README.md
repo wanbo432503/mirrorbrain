@@ -15,6 +15,7 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and an
 - **Layout Components:**
   - `TabNavigation.tsx` - Memory/Review/Artifacts tabs with keyboard navigation
   - `FeedbackBanner.tsx` - Success/Error/Info messages with auto-dismiss
+  - `Header.tsx` - App brand row aligned to the main content container with a light/dark theme toggle
 
 - **Common Components:**
   - `Button.tsx` - 4 variants (default/primary/success/ghost) + loading state
@@ -132,7 +133,7 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and an
 ### Visual Style: Apple-Inspired Control Surface
 - Calm light canvas with restrained product panels
 - Tight typography, soft borders, and clear primary actions
-- Dark-mode-compatible token structure
+- Light and dark themes driven by `data-theme` design tokens, with a header toggle for switching modes
 - Full-screen flex layout where each tab owns its scrollable content regions
 
 ### Accessibility Features

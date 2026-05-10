@@ -7,6 +7,8 @@ import App from './App'
 afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
+  window.localStorage.clear()
+  document.documentElement.removeAttribute('data-theme')
 })
 
 describe('App', () => {
@@ -221,5 +223,49 @@ describe('App', () => {
     const paginationFooterClassName = screen.getByTestId('memory-pagination-footer').className
     expect(paginationFooterClassName).toContain('shrink-0')
     expect(paginationFooterClassName).toContain('border-t')
+  })
+
+  it('aligns the header brand with the memory tab content and uses readable light-mode text', async () => {
+    const fetchMock = stubInitialAppFetch()
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls.map((call) => String(call[0]))
+      ).toContain(`${window.location.origin}/memory?page=1&pageSize=10`)
+    })
+
+    const headerContentClassName = screen.getByTestId('app-header-content').className
+    expect(headerContentClassName).toContain('mx-auto')
+    expect(headerContentClassName).toContain('w-full')
+    expect(headerContentClassName).toContain('max-w-7xl')
+    expect(headerContentClassName).toContain('px-lg')
+
+    expect(screen.getByRole('heading', { name: 'MirrorBrain' }).className).toContain('text-ink')
+    expect(screen.getByText('Personal Memory & Knowledge').className).toContain('text-ink')
+  })
+
+  it('lets the user switch between light and dark themes', async () => {
+    const user = userEvent.setup()
+    const fetchMock = stubInitialAppFetch()
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls.map((call) => String(call[0]))
+      ).toContain(`${window.location.origin}/memory?page=1&pageSize=10`)
+    })
+
+    expect(document.documentElement.dataset.theme).toBe('light')
+
+    await user.click(screen.getByRole('button', { name: /switch to dark theme/i }))
+    expect(document.documentElement.dataset.theme).toBe('dark')
+    expect(window.localStorage.getItem('mirrorbrain-theme')).toBe('dark')
+
+    await user.click(screen.getByRole('button', { name: /switch to light theme/i }))
+    expect(document.documentElement.dataset.theme).toBe('light')
+    expect(window.localStorage.getItem('mirrorbrain-theme')).toBe('light')
   })
 })
