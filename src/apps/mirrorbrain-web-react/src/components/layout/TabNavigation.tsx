@@ -44,11 +44,11 @@ export default function TabNavigation({ activeTab, onTabChange }: TabNavigationP
             className={`
               px-4 py-2 font-heading font-semibold text-xs uppercase tracking-wide
               cursor-pointer transition-colors duration-200
-              focus:ring-2 focus:ring-teal-500 focus:ring-inset focus:outline-none
+              focus:ring-2 focus:ring-primary-focus focus:ring-inset focus:outline-none
               border-b-2 -mb-px
               ${isActive
-                ? 'border-teal-600 text-teal-700 bg-teal-50/50'
-                : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
+                ? 'border-primary text-primary bg-canvas/50'
+                : 'border-transparent text-inkMuted-80 hover:text-ink hover:border-slate-300'
               }
             `}
           >
