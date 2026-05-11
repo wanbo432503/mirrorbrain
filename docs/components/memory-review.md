@@ -8,7 +8,7 @@ This component turns raw `MemoryEvent` records into daily `CandidateMemory` stre
 
 This component is responsible for:
 
-- filtering raw memory events into a daily review window
+- filtering raw memory events into a daily review window while excluding local browser pages that may already exist in historical storage
 - grouping daily events into one or more task-oriented candidate memory streams
 - deriving stream metadata such as `title`, `theme`, `summary`, `timeRange`, source URL refs, and page-role hints
 - recording explicit `keep` or `discard` review decisions while preserving candidate context
@@ -33,7 +33,7 @@ Detailed algorithm walkthrough:
 ## Data Flow
 
 1. A caller passes normalized memory events and a `reviewDate` into `createCandidateMemories(...)`.
-2. The component keeps only events whose timestamp falls on that review date.
+2. The component keeps only events whose timestamp falls on that review date, then excludes local browser URLs such as `localhost`, `*.localhost`, `127.x.x.x`, `0.0.0.0`, and `::1`.
 3. The component prefers browser page-content text and page title when they are available, then falls back to raw browser title and URL tokens.
 4. The component assigns page-role hints such as search, docs, chat, issue, pull-request, repository, debug, reference, or generic web.
 5. The component groups events into task-oriented candidate streams using deterministic heuristic similarity across page text, titles, URLs, time, hosts, and page-role compatibility.
@@ -87,6 +87,7 @@ Detailed algorithm walkthrough:
 ## Failure Modes And Operational Constraints
 
 - candidate creation throws if the selected review date has no memory events
+- candidate creation also throws when the selected review date only contains filtered local browser pages
 - daily scope currently depends on ISO timestamp prefixes matching the provided `reviewDate`
 - grouping is heuristic rather than model-based, so it can still miss subtle semantic relationships between tasks
 - browser page-content text is used when available, but the flow still falls back to title/URL-only grouping when the page artifact is missing

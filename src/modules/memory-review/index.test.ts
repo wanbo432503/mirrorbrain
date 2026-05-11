@@ -113,6 +113,32 @@ describe('memory review', () => {
     expect(candidates[1]?.title).toMatch(/Mirrorbrain/i);
   });
 
+  it('does not create review candidates from local browser urls', () => {
+    const candidates = createCandidateMemories({
+      reviewDate: '2026-05-11',
+      memoryEvents: [
+        createBrowserMemoryEvent({
+          id: 'browser:local-dev',
+          timestamp: '2026-05-11T01:01:00.000Z',
+          url: 'http://127.0.0.1:3007/',
+          title: '127.0.0.1:3007',
+        }),
+        createBrowserMemoryEvent({
+          id: 'browser:remote-docs',
+          timestamp: '2026-05-11T01:05:00.000Z',
+          url: 'https://docs.example.com/mirrorbrain/review',
+          title: 'MirrorBrain Review Docs',
+        }),
+      ],
+    });
+
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]?.memoryEventIds).toEqual(['browser:remote-docs']);
+    expect(candidates[0]?.sourceRefs?.map((sourceRef) => sourceRef.url)).toEqual([
+      'https://docs.example.com/mirrorbrain/review',
+    ]);
+  });
+
   it('caps generated candidates at 10 by merging low-evidence browser work into broader tasks', () => {
     const taskNames = [
       'Alpha',
@@ -1442,7 +1468,7 @@ describe('AI guidance quality', () => {
     ).toBe(true);
   });
 
-  it('generates contextual rationale for debugging sessions', () => {
+  it('excludes local debugging pages before generating review guidance', () => {
     const events = [
       {
         ...createBrowserMemoryEvent({
@@ -1476,23 +1502,19 @@ describe('AI guidance quality', () => {
       reviewDate: '2026-03-20',
       memoryEvents: events,
     });
-
     const suggestions = suggestCandidateReviews(candidates);
 
-    // Rationale should recognize debugging pattern
-    expect(suggestions[0].rationale.toLowerCase()).toMatch(/debug|test|troubleshoot|localhost|local|development/);
-    expect(suggestions[0].rationale).not.toBe(
-      'This candidate has enough repeated and sustained activity to preserve as a meaningful work item.',
-    );
-
-    // Should mention localhost + docs pattern
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0].memoryEventIds).toEqual(['browser:docs-debug']);
+    expect(candidates[0]?.sourceRefs?.map((sourceRef) => sourceRef.url)).toEqual([
+      'https://docs.example.com/debugging',
+    ]);
     expect(
-      suggestions[0].supportingReasons?.some(reason =>
+      suggestions[0].supportingReasons?.some((reason) =>
         reason.toLowerCase().includes('localhost') ||
-        reason.toLowerCase().includes('debugging') ||
         reason.toLowerCase().includes('local')
       ),
-    ).toBe(true);
+    ).toBe(false);
   });
 });
 });

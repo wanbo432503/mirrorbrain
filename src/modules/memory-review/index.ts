@@ -170,6 +170,7 @@ export function createCandidateMemories(
       getCalendarDateForComparison(event.timestamp, reviewTimeZone) ===
       input.reviewDate,
     )
+    .filter((event) => !isLocalBrowserPageMemoryEvent(event))
     .sort((left, right) => left.timestamp.localeCompare(right.timestamp));
 
   if (dailyEvents.length === 0) {
@@ -232,6 +233,28 @@ export function createCandidateMemories(
         reviewState: 'pending',
       };
     });
+}
+
+function isLocalBrowserPageMemoryEvent(event: MemoryEvent): boolean {
+  if (!event.sourceType.includes('browser') || typeof event.content.url !== 'string') {
+    return false;
+  }
+
+  try {
+    const url = new URL(event.content.url);
+    const hostname = url.hostname.toLowerCase();
+
+    return (
+      hostname === 'localhost' ||
+      hostname.endsWith('.localhost') ||
+      hostname === '0.0.0.0' ||
+      hostname === '::1' ||
+      hostname === '[::1]' ||
+      /^127(?:\.\d{1,3}){3}$/u.test(hostname)
+    );
+  } catch {
+    return false;
+  }
 }
 
 export function reviewCandidateMemory(

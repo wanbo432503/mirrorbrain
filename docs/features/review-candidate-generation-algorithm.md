@@ -31,7 +31,7 @@ Each event may contain:
 
 ## High-Level Flow
 
-1. Filter memory events into the requested review day.
+1. Filter memory events into the requested review day and exclude local browser URLs such as `localhost`, `*.localhost`, `127.x.x.x`, `0.0.0.0`, and `::1` so historical local development pages cannot produce review candidates.
 2. Sort events by timestamp ascending.
 3. Build per-event descriptors:
    - host
@@ -189,7 +189,7 @@ Current ordering matters:
 1. `code-review` if issue + PR + repository all appear together
 2. `bug-fix` if issue appears
 3. `feature-implementation` if PR appears
-4. `debugging` if localhost/debug appears
+4. `debugging` if non-local debug evidence appears
 5. `research` if docs/reference dominates
 6. otherwise `general`
 
