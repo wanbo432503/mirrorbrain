@@ -48,6 +48,171 @@ const mergeCandidate: KnowledgeArtifact = {
   updatedAt: '2026-04-30T10:00:00.000Z',
 }
 
+const versionedKnowledgeArtifacts: KnowledgeArtifact[] = [
+  {
+    id: 'topic-knowledge:llm-wiki-ai-native-knowledge-management:v4',
+    draftState: 'published',
+    artifactType: 'topic-knowledge',
+    topicKey: 'llm-wiki-ai-native-knowledge-management',
+    title: 'LLM Wiki 与 AI 原生公司的知识管理模式 (v4)',
+    summary: 'Latest summary',
+    body: 'Latest body',
+    sourceReviewedMemoryIds: ['reviewed:v4'],
+    version: 4,
+    isCurrentBest: true,
+    supersedesKnowledgeId: 'topic-knowledge:llm-wiki-ai-native-knowledge-management:v3',
+    updatedAt: '2026-05-11T10:00:00.000Z',
+  },
+  {
+    id: 'topic-knowledge:llm-wiki-ai-native-knowledge-management:v3',
+    draftState: 'published',
+    artifactType: 'topic-knowledge',
+    topicKey: 'llm-wiki-ai-native-knowledge-management',
+    title: 'LLM Wiki 与 AI 原生公司的知识管理模式 (v3)',
+    summary: 'Older summary',
+    body: 'Older body',
+    sourceReviewedMemoryIds: ['reviewed:v3'],
+    version: 3,
+    isCurrentBest: false,
+    supersedesKnowledgeId: 'topic-knowledge:llm-wiki-ai-native-knowledge-management:v2',
+    updatedAt: '2026-05-10T10:00:00.000Z',
+  },
+  {
+    id: 'topic-knowledge:llm-wiki-ai-native-memory-building:v2',
+    draftState: 'published',
+    artifactType: 'topic-knowledge',
+    topicKey: 'llm-wiki-ai-native-memory-building',
+    title: 'LLM Wiki 与 AI 原生公司记忆构建模式 (v2)',
+    summary: 'Memory building summary',
+    body: 'Memory building body',
+    sourceReviewedMemoryIds: ['reviewed:v2'],
+    version: 2,
+    isCurrentBest: true,
+    supersedesKnowledgeId: null,
+    updatedAt: '2026-05-09T10:00:00.000Z',
+  },
+  {
+    id: 'topic-knowledge:llm-wiki-ai-native-knowledge-management:v1',
+    draftState: 'published',
+    artifactType: 'topic-knowledge',
+    topicKey: 'llm-wiki-ai-native-knowledge-management',
+    title: 'LLM Wiki 与 AI 原生公司的知识管理模式 (v1)',
+    summary: 'Oldest summary',
+    body: 'Oldest body',
+    sourceReviewedMemoryIds: ['reviewed:v1'],
+    version: 1,
+    isCurrentBest: false,
+    supersedesKnowledgeId: null,
+    updatedAt: '2026-05-08T10:00:00.000Z',
+  },
+]
+
+const versionedGraph: KnowledgeGraphSnapshot = {
+  generatedAt: '2026-05-11T10:00:00.000Z',
+  stats: {
+    topics: 2,
+    knowledgeArtifacts: 4,
+    wikilinkReferences: 0,
+    similarityRelations: 0,
+  },
+  nodes: [
+    {
+      id: 'topic:llm-wiki-ai-native-knowledge-management',
+      type: 'topic',
+      label: 'LLM Wiki 与 AI 原生公司的知识管理模式 (v4)',
+      topicKey: 'llm-wiki-ai-native-knowledge-management',
+      properties: {
+        artifactId: 'topic-knowledge:llm-wiki-ai-native-knowledge-management:v4',
+        title: 'LLM Wiki 与 AI 原生公司的知识管理模式 (v4)',
+      },
+    },
+    {
+      id: 'artifact:topic-knowledge:llm-wiki-ai-native-knowledge-management:v4',
+      type: 'knowledge-artifact',
+      label: 'LLM Wiki 与 AI 原生公司的知识管理模式 (v4)',
+      topicKey: 'llm-wiki-ai-native-knowledge-management',
+      properties: {
+        artifactId: 'topic-knowledge:llm-wiki-ai-native-knowledge-management:v4',
+        title: 'LLM Wiki 与 AI 原生公司的知识管理模式 (v4)',
+      },
+    },
+    {
+      id: 'artifact:topic-knowledge:llm-wiki-ai-native-knowledge-management:v3',
+      type: 'knowledge-artifact',
+      label: 'LLM Wiki 与 AI 原生公司的知识管理模式 (v3)',
+      topicKey: 'llm-wiki-ai-native-knowledge-management',
+      properties: {
+        artifactId: 'topic-knowledge:llm-wiki-ai-native-knowledge-management:v3',
+        title: 'LLM Wiki 与 AI 原生公司的知识管理模式 (v3)',
+      },
+    },
+    {
+      id: 'topic:llm-wiki-ai-native-memory-building',
+      type: 'topic',
+      label: 'LLM Wiki 与 AI 原生公司记忆构建模式 (v2)',
+      topicKey: 'llm-wiki-ai-native-memory-building',
+      properties: {
+        artifactId: 'topic-knowledge:llm-wiki-ai-native-memory-building:v2',
+        title: 'LLM Wiki 与 AI 原生公司记忆构建模式 (v2)',
+      },
+    },
+    {
+      id: 'artifact:topic-knowledge:llm-wiki-ai-native-memory-building:v2',
+      type: 'knowledge-artifact',
+      label: 'LLM Wiki 与 AI 原生公司记忆构建模式 (v2)',
+      topicKey: 'llm-wiki-ai-native-memory-building',
+      properties: {
+        artifactId: 'topic-knowledge:llm-wiki-ai-native-memory-building:v2',
+        title: 'LLM Wiki 与 AI 原生公司记忆构建模式 (v2)',
+      },
+    },
+    {
+      id: 'artifact:topic-knowledge:llm-wiki-ai-native-knowledge-management:v1',
+      type: 'knowledge-artifact',
+      label: 'LLM Wiki 与 AI 原生公司的知识管理模式 (v1)',
+      topicKey: 'llm-wiki-ai-native-knowledge-management',
+      properties: {
+        artifactId: 'topic-knowledge:llm-wiki-ai-native-knowledge-management:v1',
+        title: 'LLM Wiki 与 AI 原生公司的知识管理模式 (v1)',
+      },
+    },
+  ],
+  edges: [
+    {
+      id: 'contains:v4',
+      type: 'CONTAINS',
+      source: 'topic:llm-wiki-ai-native-knowledge-management',
+      target: 'artifact:topic-knowledge:llm-wiki-ai-native-knowledge-management:v4',
+      label: 'contains',
+      properties: {},
+    },
+    {
+      id: 'contains:v3',
+      type: 'CONTAINS',
+      source: 'topic:llm-wiki-ai-native-knowledge-management',
+      target: 'artifact:topic-knowledge:llm-wiki-ai-native-knowledge-management:v3',
+      label: 'contains',
+      properties: {},
+    },
+    {
+      id: 'contains:v2',
+      type: 'CONTAINS',
+      source: 'topic:llm-wiki-ai-native-memory-building',
+      target: 'artifact:topic-knowledge:llm-wiki-ai-native-memory-building:v2',
+      label: 'contains',
+      properties: {},
+    },
+    {
+      id: 'contains:v1',
+      type: 'CONTAINS',
+      source: 'topic:llm-wiki-ai-native-knowledge-management',
+      target: 'artifact:topic-knowledge:llm-wiki-ai-native-knowledge-management:v1',
+      label: 'contains',
+      properties: {},
+    },
+  ],
+}
+
 const graph: KnowledgeGraphSnapshot = {
   generatedAt: '2026-04-29T10:00:00.000Z',
   stats: {
@@ -187,5 +352,31 @@ describe('KnowledgePanel', () => {
     fireEvent.click(screen.getByText('Approve Merge'))
 
     expect(onApproveKnowledgeCandidate).toHaveBeenCalledWith(mergeCandidate)
+  })
+
+  it('hides superseded versions from the knowledge list and graph', () => {
+    render(
+      <KnowledgePanel
+        knowledgeArtifacts={versionedKnowledgeArtifacts}
+        knowledgeGraph={versionedGraph}
+        onDeleteKnowledgeArtifact={vi.fn()}
+      />
+    )
+
+    const historyPanel = screen.getByTestId('knowledge-history-panel')
+    const items = within(historyPanel).getAllByTestId('knowledge-list-item')
+    expect(items).toHaveLength(2)
+    expect(within(historyPanel).queryByText('LLM Wiki 与 AI 原生公司的知识管理模式 (v3)')).toBeNull()
+    expect(within(historyPanel).queryByText('LLM Wiki 与 AI 原生公司的知识管理模式 (v1)')).toBeNull()
+    expect(within(historyPanel).getByText('LLM Wiki 与 AI 原生公司的知识管理模式 (v4)')).not.toBeNull()
+    expect(within(historyPanel).getByText('LLM Wiki 与 AI 原生公司记忆构建模式 (v2)')).not.toBeNull()
+
+    fireEvent.click(within(historyPanel).getByRole('tab', { name: 'Graph' }))
+
+    const graphPanel = screen.getByTestId('knowledge-graph-panel')
+    expect(within(graphPanel).getAllByTestId('knowledge-graph-node')).toHaveLength(4)
+    expect(within(graphPanel).queryByText('LLM Wiki 与 AI 原生公司的知识管理模式 (v3)')).toBeNull()
+    expect(within(graphPanel).queryByText('LLM Wiki 与 AI 原生公司的知识管理模式 (v1)')).toBeNull()
+    expect(within(graphPanel).getAllByText('LLM Wiki 与 AI 原生公司的知识管理模式 (v4)').length).toBeGreaterThan(0)
   })
 })

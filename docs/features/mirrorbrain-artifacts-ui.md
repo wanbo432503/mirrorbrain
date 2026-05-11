@@ -9,7 +9,7 @@ The former Artifacts tab is split into top-level Knowledge and Skill tabs. Knowl
 The React artifacts UI is responsible for:
 
 - exposing generated knowledge and generated skill artifacts as separate top-level tabs
-- listing only published knowledge artifacts; draft knowledge remains part of the review workflow and is not shown in artifact history
+- listing only the current-best published knowledge artifact per topic in the main Knowledge tab; draft knowledge remains part of the review workflow and is not shown in artifact history
 - ordering each list newest first by `updatedAt`, then `reviewedAt`
 - formatting artifact timestamps for display in the user's IANA timezone while keeping persisted artifact metadata as UTC ISO strings
 - keeping the Knowledge tab left item list stable across its `List` and `Graph` subtabs
@@ -34,7 +34,7 @@ It does not synthesize new knowledge, execute skills, or persist conversational 
 
 ## Data Flow
 
-`KnowledgeTabPanel` and `SkillTabPanel` each read the relevant artifact arrays from `useArtifacts`. When Knowledge tab mounts, it refreshes the knowledge list and graph from the backend, then performs a short delayed refresh to pick up asynchronous lint output such as newly persisted merge candidates. `KnowledgePanel` filters normal knowledge to `draftState: published`, sorts the list newest first, and keeps that left list unchanged when the user switches between `List` and `Graph` modes. `topic-merge-candidate` drafts are rendered separately under `Merge Suggestions` instead of being mixed into the published knowledge list.
+`KnowledgeTabPanel` and `SkillTabPanel` each read the relevant artifact arrays from `useArtifacts`. When Knowledge tab mounts, it refreshes the knowledge list and graph from the backend, then performs a short delayed refresh to pick up asynchronous lint output such as newly persisted merge candidates. `KnowledgePanel` reduces the published knowledge set to the current-best artifact per topic, sorts the visible list newest first, and keeps that left list unchanged when the user switches between `List` and `Graph` modes. `topic-merge-candidate` drafts are rendered separately under `Merge Suggestions` instead of being mixed into the published knowledge list.
 
 In Knowledge `List` mode, the right detail panel defaults to the newest approved knowledge artifact and changes when another knowledge item is clicked. The body is rendered through `KnowledgeMarkdownRenderer`, so headings, tables, links, and `[[wiki-links]]` read like a durable document rather than a raw text blob. The detail view also exposes tags, related knowledge ids, and indexed document context in a compact metadata panel inspired by the PulseOS-lite document context panel.
 
@@ -48,7 +48,7 @@ When the review workflow generates or regenerates knowledge or skill drafts, the
 
 When the review workflow approves a knowledge draft, the backend publishes the topic artifact and tombstones the source draft so future artifact reloads keep only the published knowledge. The hook replaces the approved draft in shared state with the returned published topic artifact while preserving provenance and `derivedFromKnowledgeIds` links.
 
-When asynchronous knowledge lint creates a `topic-merge-candidate`, the Knowledge tab renders it under `Merge Suggestions`. Selecting a suggestion shows the candidate body and provenance, and `Approve Merge` calls the same approval API used by review-generated drafts. The UI does not auto-merge similar notes.
+When asynchronous knowledge lint creates a `topic-merge-candidate`, the Knowledge tab renders it under `Merge Suggestions`. Selecting a suggestion shows the candidate body and provenance, and `Approve Merge` calls the same approval API used by review-generated drafts. The UI does not auto-merge similar notes. Older topic versions stay out of the main Knowledge list and graph, but history-oriented screens can still show them when they explicitly load history.
 
 Workspace files under `mirrorbrain/knowledge` are treated as the durable local source for approved knowledge. Deletion markers are used to stop stale OpenViking copies from reappearing, but they must not hide a knowledge artifact that still exists in the workspace directory; this keeps the Knowledge tab stable after a browser refresh.
 
@@ -74,7 +74,7 @@ The artifact edit message row uses a single-line full-width input with a send ac
 
 ## Test Strategy
 
-- `KnowledgePanel.test.tsx` covers approved-only knowledge list rendering, newest-first ordering, default detail selection, Markdown detail rendering, context metadata, stable left list across List/Graph modes, global graph default, SVG graph nodes/edges, focused graph switching, merge suggestion display/approval, and user-timezone timestamp display.
+- `KnowledgePanel.test.tsx` covers current-best-only knowledge list rendering, newest-first ordering, default detail selection, Markdown detail rendering, context metadata, stable left list across List/Graph modes, global graph default, SVG graph nodes/edges, focused graph switching, merge suggestion display/approval, version filtering, and user-timezone timestamp display.
 - `useArtifacts.test.tsx` covers reloading the knowledge list so background lint artifacts can become visible in shared UI state.
 - `KnowledgeGraphPanel.test.tsx` covers focused graph expansion from a selected knowledge artifact to related topics/artifacts and drag repositioning.
 - `SkillPanel.test.tsx` covers newest-first skill rendering, default detail selection, and user-timezone timestamp display.

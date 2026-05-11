@@ -5,7 +5,10 @@ import EmptyState from '../common/EmptyState'
 import Input from '../forms/Input'
 import KnowledgeGraphPanel from './KnowledgeGraphPanel'
 import { KnowledgeArtifactDetail } from './ArtifactDetail'
-import { sortKnowledgeArtifactsByNewest } from './artifact-sorting'
+import {
+  selectCurrentBestKnowledgeArtifacts,
+  sortKnowledgeArtifactsByNewest,
+} from './artifact-sorting'
 import { formatUserDateTime } from '../../shared/user-time'
 import type { KnowledgeArtifact, KnowledgeGraphSnapshot } from '../../types/index'
 
@@ -46,7 +49,7 @@ export default function KnowledgePanel({
   const [conversationNotes, setConversationNotes] = useState<Record<string, string[]>>({})
 
   const approvedKnowledge = useMemo(
-    () => sortKnowledgeArtifactsByNewest(knowledgeArtifacts),
+    () => sortKnowledgeArtifactsByNewest(selectCurrentBestKnowledgeArtifacts(knowledgeArtifacts)),
     [knowledgeArtifacts]
   )
   const mergeCandidates = useMemo(
@@ -67,6 +70,10 @@ export default function KnowledgePanel({
     (activeMode === 'list' ? approvedKnowledge[0] : null)
   const selectedArtifact = selectedMergeCandidate ?? selectedKnowledge
   const selectedNotes = selectedArtifact ? conversationNotes[selectedArtifact.id] ?? [] : []
+  const filteredGraph = useMemo(
+    () => filterKnowledgeGraph(knowledgeGraph ?? EMPTY_GRAPH, approvedKnowledge),
+    [approvedKnowledge, knowledgeGraph]
+  )
 
   function handleModeChange(mode: KnowledgeViewMode) {
     setActiveMode(mode)
@@ -263,7 +270,7 @@ export default function KnowledgePanel({
       ) : (
         <Card className="h-full min-h-0 overflow-y-auto" data-testid="knowledge-graph-panel">
           <KnowledgeGraphPanel
-            graph={knowledgeGraph ?? EMPTY_GRAPH}
+            graph={filteredGraph}
             focusArtifactId={selectedKnowledge?.id}
             focusArtifactTitle={selectedKnowledge?.title ?? selectedKnowledge?.id}
           />
@@ -277,4 +284,39 @@ function getKnowledgeTimestamp(artifact: KnowledgeArtifact): number {
   const timestamp = artifact.updatedAt ?? artifact.reviewedAt ?? ''
   const value = new Date(timestamp).getTime()
   return Number.isFinite(value) ? value : 0
+}
+
+function filterKnowledgeGraph(
+  graph: KnowledgeGraphSnapshot,
+  visibleKnowledgeArtifacts: KnowledgeArtifact[],
+): KnowledgeGraphSnapshot {
+  const visibleArtifactIds = new Set(visibleKnowledgeArtifacts.map((artifact) => artifact.id))
+  const visibleTopicKeys = new Set(
+    visibleKnowledgeArtifacts
+      .map((artifact) => artifact.topicKey)
+      .filter((topicKey): topicKey is string => typeof topicKey === 'string' && topicKey.length > 0)
+  )
+  const nodes = graph.nodes.filter((node) => {
+    if (node.type === 'topic') {
+      return visibleTopicKeys.has(node.topicKey)
+    }
+
+    return visibleArtifactIds.has(node.properties.artifactId ?? '')
+  })
+  const visibleNodeIds = new Set(nodes.map((node) => node.id))
+  const edges = graph.edges.filter(
+    (edge) => visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)
+  )
+
+  return {
+    ...graph,
+    stats: {
+      topics: nodes.filter((node) => node.type === 'topic').length,
+      knowledgeArtifacts: nodes.filter((node) => node.type === 'knowledge-artifact').length,
+      wikilinkReferences: edges.filter((edge) => edge.type === 'REFERENCES').length,
+      similarityRelations: edges.filter((edge) => edge.type === 'SIMILAR').length,
+    },
+    nodes,
+    edges,
+  }
 }
