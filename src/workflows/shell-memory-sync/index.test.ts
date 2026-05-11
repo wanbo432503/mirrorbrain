@@ -187,4 +187,46 @@ describe('shell memory sync workflow', () => {
       importedEvents: [],
     });
   });
+
+  it('passes shell source authorization policy to the generic sync workflow', async () => {
+    let shellHistoryRead = false;
+    let persisted = false;
+
+    await expect(
+      runShellMemorySyncOnce(
+        {
+          config: getMirrorBrainConfig(),
+          now: '2026-03-20T08:00:00.000Z',
+          scopeId: 'scope-shell',
+          historyPath: '/tmp/.zsh_history',
+        },
+        {
+          checkpointStore: {
+            readCheckpoint: async () => null,
+            writeCheckpoint: async () => undefined,
+          },
+          readShellHistory: async () => {
+            shellHistoryRead = true;
+            return [];
+          },
+          authorizeSourceSync: async (source) => {
+            expect(source).toEqual({
+              sourceKey: 'shell-history:/tmp/.zsh_history',
+              sourceCategory: 'shell',
+              scopeId: 'scope-shell',
+            });
+            return false;
+          },
+          writeMemoryEvent: async () => {
+            persisted = true;
+          },
+        },
+      ),
+    ).rejects.toThrowError(
+      'Memory source shell-history:/tmp/.zsh_history is not authorized for scope scope-shell.',
+    );
+
+    expect(shellHistoryRead).toBe(false);
+    expect(persisted).toBe(false);
+  });
 });

@@ -26,6 +26,7 @@ import type { MemoryEvent, MirrorBrainConfig } from '../../shared/types/index.js
 import type { SyncCheckpointStore } from '../../integrations/file-sync-checkpoint-store/index.js';
 import {
   runMemorySourceSyncOnce,
+  type MemorySourceSyncAuthorizationDependency,
   type MemorySourceSyncResult,
 } from '../memory-source-sync/index.js';
 
@@ -40,6 +41,7 @@ interface RunBrowserMemorySyncOnceInput {
 
 interface RunBrowserMemorySyncOnceDependencies {
   checkpointStore: SyncCheckpointStore;
+  authorizeSourceSync?: MemorySourceSyncAuthorizationDependency;
   fetchBrowserEvents?: typeof fetchActivityWatchBrowserEvents;
   fetchPageContent?: typeof fetchBrowserPageContent;
   ingestPageContent?: typeof ingestBrowserPageContentToOpenViking;
@@ -104,6 +106,7 @@ export async function runBrowserMemorySyncOnce(
     },
     {
       checkpointStore: dependencies.checkpointStore,
+      authorizeSourceSync: dependencies.authorizeSourceSync,
       sourceRegistry: createMemorySourceRegistry([
         createActivityWatchBrowserMemorySourcePlugin({
           bucketId: input.bucketId,

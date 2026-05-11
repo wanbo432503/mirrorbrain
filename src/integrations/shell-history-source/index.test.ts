@@ -6,6 +6,7 @@ import {
   createInitialShellHistorySyncPlan,
   normalizeShellHistoryEntry,
   parseShellHistory,
+  sanitizeShellCommand,
 } from './index.js';
 
 describe('shell history source', () => {
@@ -91,6 +92,57 @@ plain line
       captureMetadata: {
         upstreamSource: 'shell-history',
         checkpoint: '2026-03-18T16:35:00.000Z',
+      },
+    });
+  });
+
+  it('redacts secrets from shell commands before normalization persists them', () => {
+    expect(
+      sanitizeShellCommand(
+        'OPENAI_API_KEY=sk-test-secret curl -H "Authorization: Bearer ghp_secretvalue" https://user:password@example.com --password hunter2 --token abc123',
+      ),
+    ).toEqual({
+      command:
+        'OPENAI_API_KEY=[REDACTED] curl -H "Authorization: Bearer [REDACTED]" https://[REDACTED]@example.com --password [REDACTED] --token [REDACTED]',
+      redactionApplied: true,
+    });
+  });
+
+  it('stores only the redacted shell command in memory events', () => {
+    expect(
+      normalizeShellHistoryEntry({
+        scopeId: 'scope-shell',
+        event: {
+          id: 'shell-history:1773974100:deploy',
+          timestamp: '2026-03-18T16:35:00.000Z',
+          command:
+            'GITHUB_TOKEN=ghp_secretvalue deploy --password hunter2 --api-key sk-test-secret',
+        },
+      }).content,
+    ).toEqual({
+      command:
+        'GITHUB_TOKEN=[REDACTED] deploy --password [REDACTED] --api-key [REDACTED]',
+      commandName: 'deploy',
+      redactionApplied: true,
+    });
+  });
+
+  it('derives persisted shell event identifiers from redacted commands', () => {
+    expect(
+      normalizeShellHistoryEntry({
+        scopeId: 'scope-shell',
+        event: {
+          id: 'shell-history:1773974100:deploy-token-abc123',
+          timestamp: '2026-03-18T16:35:00.000Z',
+          command: 'deploy --token abc123',
+        },
+      }),
+    ).toMatchObject({
+      id: 'shell:shell-history:1773974100:deploy-token-redacted',
+      sourceRef: 'shell-history:1773974100:deploy-token-redacted',
+      content: {
+        command: 'deploy --token [REDACTED]',
+        redactionApplied: true,
       },
     });
   });

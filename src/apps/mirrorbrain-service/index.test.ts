@@ -146,11 +146,13 @@ describe('mirrorbrain service', () => {
         config,
         now: '2026-03-20T10:00:00.000Z',
         bucketId: 'aw-watcher-web-chrome',
+        initialBackfillStartAt: undefined,
         scopeId: 'scope-browser',
         workspaceDir: '/tmp/mirrorbrain-workspace',
       },
       {
         checkpointStore,
+        authorizeSourceSync: expect.any(Function),
         writeMemoryEvent,
       },
     );
@@ -227,6 +229,7 @@ describe('mirrorbrain service', () => {
       },
       {
         checkpointStore,
+        authorizeSourceSync: expect.any(Function),
         writeMemoryEvent,
       },
     );
@@ -286,8 +289,62 @@ describe('mirrorbrain service', () => {
       },
       {
         checkpointStore,
+        authorizeSourceSync: expect.any(Function),
         writeMemoryEvent,
       },
+    );
+  });
+
+  it('wires revoked runtime authorization scopes into browser sync execution', async () => {
+    const config = getMirrorBrainConfig();
+    const checkpointStore = {
+      readCheckpoint: vi.fn(async () => null),
+      writeCheckpoint: vi.fn(async () => undefined),
+    };
+    const runBrowserMemorySyncOnce = vi.fn(async (_input, dependencies) => {
+      const isAuthorized = await dependencies.authorizeSourceSync?.({
+        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+        sourceCategory: 'browser',
+        scopeId: 'scope-browser',
+      });
+
+      if (!isAuthorized) {
+        throw new Error('browser sync was rejected by runtime authorization');
+      }
+
+      return {
+        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+        strategy: 'initial-backfill' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:00:00.000Z',
+      };
+    });
+    const service = startMirrorBrainService(
+      {
+        config,
+        browserBucketId: 'aw-watcher-web-chrome',
+        browserScopeId: 'scope-browser',
+      },
+      {
+        createCheckpointStore: vi.fn(() => checkpointStore),
+        createMemoryEventWriter: vi.fn(() => ({
+          writeMemoryEvent: vi.fn(async () => undefined),
+        })),
+        getAuthorizationScope: vi.fn(async () => ({
+          id: 'scope-browser',
+          sourceCategory: 'browser' as const,
+          revokedAt: '2026-03-20T09:59:00.000Z',
+        })),
+        runBrowserMemorySyncOnce,
+        startBrowserSyncPolling: vi.fn(() => ({
+          stop: vi.fn(),
+        })),
+        now: () => '2026-03-20T10:00:00.000Z',
+      },
+    );
+
+    await expect(service.syncBrowserMemory()).rejects.toThrowError(
+      'browser sync was rejected by runtime authorization',
     );
   });
 

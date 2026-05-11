@@ -254,7 +254,8 @@ Responsibilities:
 - Read configured shell history files.
 - Parse command entries and timestamps where available.
 - Create initial and incremental sync plans.
-- Normalize commands into shell `MemoryEvent` records with command metadata.
+- Redact common secret-bearing command fragments before MirrorBrain persistence.
+- Normalize redacted commands into shell `MemoryEvent` records with command metadata.
 - Expose a `shell-history:<path>` source key and plugin.
 
 Inputs:
@@ -263,7 +264,7 @@ Inputs:
 
 Outputs:
 
-- Parsed `ShellHistoryEntry[]` and normalized shell memory events.
+- Parsed `ShellHistoryEntry[]` and normalized shell memory events with redacted `content.command` values.
 
 Dependencies:
 
@@ -273,6 +274,7 @@ Dependencies:
 Failure modes and constraints:
 
 - Missing or unreadable history files surface as read errors.
+- Command redaction is best-effort and protects MirrorBrain-owned storage, not the user's original history file.
 - Workspace/session context is inferred later by shell narrative generation; it
   is not guaranteed by this source.
 

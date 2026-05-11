@@ -12,6 +12,49 @@ describe('browser memory sync workflow', () => {
     vi.useRealTimers();
   });
 
+  it('passes browser source authorization policy to the generic sync workflow', async () => {
+    let browserEventsFetched = false;
+    let persisted = false;
+
+    await expect(
+      runBrowserMemorySyncOnce(
+        {
+          config: getMirrorBrainConfig(),
+          now: '2026-03-20T08:00:00.000Z',
+          bucketId: 'aw-watcher-web-chrome',
+          scopeId: 'scope-browser',
+          workspaceDir: '/tmp/mirrorbrain',
+        },
+        {
+          checkpointStore: {
+            readCheckpoint: async () => null,
+            writeCheckpoint: async () => undefined,
+          },
+          fetchBrowserEvents: async () => {
+            browserEventsFetched = true;
+            return [];
+          },
+          authorizeSourceSync: async (source) => {
+            expect(source).toEqual({
+              sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+              sourceCategory: 'browser',
+              scopeId: 'scope-browser',
+            });
+            return false;
+          },
+          writeMemoryEvent: async () => {
+            persisted = true;
+          },
+        },
+      ),
+    ).rejects.toThrowError(
+      'Memory source activitywatch-browser:aw-watcher-web-chrome is not authorized for scope scope-browser.',
+    );
+
+    expect(browserEventsFetched).toBe(false);
+    expect(persisted).toBe(false);
+  });
+
   it('runs an initial backfill when no checkpoint exists and persists the latest checkpoint', async () => {
     const config = getMirrorBrainConfig();
     const checkpoints: Array<{

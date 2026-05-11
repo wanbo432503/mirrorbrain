@@ -3,7 +3,11 @@ import type {
   OpenVikingMemoryEventWriter,
 } from '../../integrations/openviking-store/index.js';
 import { persistMemoryEvent, type MemorySourceRegistry } from '../../modules/memory-capture/index.js';
-import type { MemoryEvent, MirrorBrainConfig } from '../../shared/types/index.js';
+import type {
+  MemoryEvent,
+  MirrorBrainConfig,
+  MirrorBrainSourceCategory,
+} from '../../shared/types/index.js';
 import type { SyncCheckpoint, SyncCheckpointStore } from '../../integrations/file-sync-checkpoint-store/index.js';
 
 export interface MemorySourceSyncResult {
@@ -13,6 +17,16 @@ export interface MemorySourceSyncResult {
   lastSyncedAt: string;
   importedEvents?: MemoryEvent[];
 }
+
+export interface MemorySourceSyncAuthorizationInput {
+  sourceKey: string;
+  sourceCategory: MirrorBrainSourceCategory;
+  scopeId: string;
+}
+
+export type MemorySourceSyncAuthorizationDependency = (
+  input: MemorySourceSyncAuthorizationInput,
+) => boolean | Promise<boolean>;
 
 interface RunMemorySourceSyncOnceInput {
   config: MirrorBrainConfig;
@@ -24,6 +38,7 @@ interface RunMemorySourceSyncOnceInput {
 interface RunMemorySourceSyncOnceDependencies {
   checkpointStore: SyncCheckpointStore;
   sourceRegistry: MemorySourceRegistry;
+  authorizeSourceSync?: MemorySourceSyncAuthorizationDependency;
   prepareEvents?: (events: MemoryEvent[]) => Promise<MemoryEvent[]>;
   writeMemoryEvent: OpenVikingMemoryEventWriter['writeMemoryEvent'];
 }
@@ -39,6 +54,20 @@ function getNextCheckpoint(
     .at(-1) ?? now;
 }
 
+async function assertSourceSyncAuthorized(
+  input: MemorySourceSyncAuthorizationInput,
+  authorizeSourceSync: MemorySourceSyncAuthorizationDependency | undefined,
+): Promise<void> {
+  const isAuthorized =
+    authorizeSourceSync === undefined ? true : await authorizeSourceSync(input);
+
+  if (!isAuthorized) {
+    throw new Error(
+      `Memory source ${input.sourceKey} is not authorized for scope ${input.scopeId}.`,
+    );
+  }
+}
+
 export async function runMemorySourceSyncOnce(
   input: RunMemorySourceSyncOnceInput,
   dependencies: RunMemorySourceSyncOnceDependencies,
@@ -50,6 +79,17 @@ export async function runMemorySourceSyncOnce(
       `Memory source plugin is not registered for source key ${input.sourceKey}.`,
     );
   }
+
+  const authorizationInput = {
+    sourceKey: source.sourceKey,
+    sourceCategory: source.sourceCategory,
+    scopeId: input.scopeId,
+  };
+
+  await assertSourceSyncAuthorized(
+    authorizationInput,
+    dependencies.authorizeSourceSync,
+  );
 
   const checkpoint = await dependencies.checkpointStore.readCheckpoint(
     source.sourceKey,
@@ -75,6 +115,11 @@ export async function runMemorySourceSyncOnce(
     dependencies.prepareEvents === undefined
       ? sanitizedEvents
       : await dependencies.prepareEvents(sanitizedEvents);
+
+  await assertSourceSyncAuthorized(
+    authorizationInput,
+    dependencies.authorizeSourceSync,
+  );
 
   for (const event of preparedEvents) {
     await persistMemoryEvent(event, {

@@ -8,6 +8,7 @@ import { createMemorySourceRegistry } from '../../modules/memory-capture/index.j
 import type { MirrorBrainConfig } from '../../shared/types/index.js';
 import {
   runMemorySourceSyncOnce,
+  type MemorySourceSyncAuthorizationDependency,
   type MemorySourceSyncResult,
 } from '../memory-source-sync/index.js';
 
@@ -20,6 +21,7 @@ interface RunShellMemorySyncOnceInput {
 
 interface RunShellMemorySyncOnceDependencies {
   checkpointStore: SyncCheckpointStore;
+  authorizeSourceSync?: MemorySourceSyncAuthorizationDependency;
   readShellHistory?: typeof readShellHistory;
   writeMemoryEvent: OpenVikingMemoryEventWriter['writeMemoryEvent'];
 }
@@ -39,6 +41,7 @@ export async function runShellMemorySyncOnce(
     },
     {
       checkpointStore: dependencies.checkpointStore,
+      authorizeSourceSync: dependencies.authorizeSourceSync,
       sourceRegistry: createMemorySourceRegistry([
         createShellHistoryMemorySourcePlugin({
           historyPath: input.historyPath,

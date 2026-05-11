@@ -10,6 +10,8 @@ This component is responsible for:
 
 - reading an authorized shell history file
 - parsing supported history formats into timestamped shell entries
+- redacting common secret-bearing command fragments before MirrorBrain persistence
+- deriving persisted shell event identifiers from redacted command text
 - filtering entries to the requested sync window
 - normalizing shell entries into `MemoryEvent` records
 
@@ -23,6 +25,7 @@ This component is not responsible for:
 
 - `parseShellHistory(...)`
 - `readShellHistory(...)`
+- `sanitizeShellCommand(...)`
 - `normalizeShellHistoryEntry(...)`
 - `createShellHistoryMemorySourcePlugin(...)`
 
@@ -33,8 +36,10 @@ This component is not responsible for:
 3. Parsed entries are filtered to the requested time range.
 4. Each retained entry is normalized into a `MemoryEvent` with:
    - `sourceType: shell-history`
-   - the raw command
+   - an `id` and `sourceRef` rebuilt from the redacted command
+   - the redacted command
    - a derived `commandName`
+   - `redactionApplied: true` when MirrorBrain changed the command before storage
    - provenance in `captureMetadata`
 
 ## Test Strategy
@@ -46,5 +51,6 @@ This component is not responsible for:
 
 - the first implementation only supports zsh extended history lines
 - malformed or untimestamped lines are ignored
+- command redaction is best-effort and protects MirrorBrain storage, including command-derived shell memory identifiers; it does not alter the user's original shell history file
 - no shell-output, cwd, or session reconstruction is attempted yet
 - deduplication is currently record-id based after parsing

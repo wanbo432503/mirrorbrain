@@ -8,6 +8,16 @@ interface CreateAuthorizationScopeInput {
   sourceCategory: MirrorBrainSourceCategory;
 }
 
+interface CreateMemorySourceAuthorizationPolicyInput {
+  getAuthorizationScope(scopeId: string): Promise<AuthorizationScope | null>;
+}
+
+interface MemorySourceAuthorizationPolicyInput {
+  scopeId: string;
+  sourceKey: string;
+  sourceCategory: MirrorBrainSourceCategory;
+}
+
 export function createAuthorizationScope(
   input: CreateAuthorizationScopeInput,
 ): AuthorizationScope {
@@ -35,5 +45,19 @@ export function revokeAuthorizationScope(
   return {
     ...scope,
     revokedAt: new Date().toISOString(),
+  };
+}
+
+export function createMemorySourceAuthorizationPolicy(
+  input: CreateMemorySourceAuthorizationPolicyInput,
+): (source: MemorySourceAuthorizationPolicyInput) => Promise<boolean> {
+  return async (source) => {
+    const scope = await input.getAuthorizationScope(source.scopeId);
+
+    if (scope === null) {
+      return false;
+    }
+
+    return isSourceCategoryAuthorized(scope, source.sourceCategory);
   };
 }

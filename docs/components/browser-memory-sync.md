@@ -8,6 +8,7 @@ This workflow executes the live browser ingestion loop for Phase 1. It now acts 
 
 - owns timer-driven polling for the browser source and the browser-facing sync entrypoint
 - wires the ActivityWatch browser source plugin into the generic memory-source sync workflow
+- forwards the runtime source authorization policy to the generic memory-source sync workflow
 - groups repeated visits by URL and keeps per-URL access history on persisted browser memory events
 - schedules shared page-content backfill after raw browser memory events have already been persisted
 - does not own candidate memory review, knowledge generation, or skill generation
@@ -23,13 +24,15 @@ This workflow executes the live browser ingestion loop for Phase 1. It now acts 
 2. When the resolved bucket exposes a `created` timestamp, use it as the initial browser backfill start so the first sync can import the bucket's retained history.
 3. Build an ActivityWatch browser source plugin for the resolved browser bucket.
 4. Register that plugin with the generic memory-source sync workflow.
-5. Let the generic workflow read the checkpoint, compute the sync plan, and fetch browser events.
-6. Normalize events, discard local development pages filtered by the browser source adapter, and suppress near-duplicate browser page records.
-7. Group retained browser events by URL.
-8. Build URL-level `accessTimes` and `latestAccessedAt` metadata for the retained browser events before persistence.
-9. Persist the browser memory events first so large historical backfills can make `/memory` visible quickly.
-10. In a follow-up background step, either reuse an existing shared page artifact or fetch readable page text once per URL, then update the page-content artifact in OpenViking.
-11. Repeat on the configured polling interval when polling is enabled.
+5. Let the generic workflow check authorization before ActivityWatch fetch.
+6. Let the generic workflow read the checkpoint, compute the sync plan, and fetch browser events.
+7. Normalize events, discard local development pages filtered by the browser source adapter, and suppress near-duplicate browser page records.
+8. Group retained browser events by URL.
+9. Build URL-level `accessTimes` and `latestAccessedAt` metadata for the retained browser events before persistence.
+10. Let the generic workflow check authorization again before persistence.
+11. Persist the browser memory events first so large historical backfills can make `/memory` visible quickly.
+12. In a follow-up background step, either reuse an existing shared page artifact or fetch readable page text once per URL, then update the page-content artifact in OpenViking.
+13. Repeat on the configured polling interval when polling is enabled.
 
 ## Test Strategy
 
@@ -44,3 +47,4 @@ This workflow executes the live browser ingestion loop for Phase 1. It now acts 
 - bucket auto-discovery depends on ActivityWatch bucket `last_updated` metadata being present and comparable across browser watcher buckets
 - page-text extraction is currently heuristic and does not use a dedicated readability library
 - background page-content backfill is best-effort and can lag behind raw browser memory visibility during large imports
+- page-content backfill is not scheduled when the generic sync workflow rejects the source before fetch

@@ -79,7 +79,12 @@ import {
   reviewCandidateMemory,
   suggestCandidateReviews,
 } from '../../modules/memory-review/index.js';
+import {
+  createAuthorizationScope,
+  createMemorySourceAuthorizationPolicy,
+} from '../../modules/authorization-scope-policy/index.js';
 import type {
+  AuthorizationScope,
   CandidateMemory,
   CandidateReviewSuggestion,
   KnowledgeArtifact,
@@ -112,6 +117,7 @@ interface StartMirrorBrainServiceDependencies {
   fetchActivityWatchBuckets?: typeof fetchActivityWatchBuckets;
   runBrowserMemorySyncOnce?: typeof runBrowserMemorySyncOnce;
   runShellMemorySyncOnce?: typeof runShellMemorySyncOnce;
+  getAuthorizationScope?: (scopeId: string) => Promise<AuthorizationScope | null>;
   now?: () => string;
 }
 
@@ -337,6 +343,28 @@ export function startMirrorBrainService(
   const loadActivityWatchBuckets =
     dependencies.fetchActivityWatchBuckets ?? fetchActivityWatchBuckets;
   const now = dependencies.now ?? (() => new Date().toISOString());
+  const getAuthorizationScope =
+    dependencies.getAuthorizationScope ??
+    (async (scopeId: string): Promise<AuthorizationScope | null> => {
+      if (scopeId === browserScopeId) {
+        return createAuthorizationScope({
+          id: browserScopeId,
+          sourceCategory: 'browser',
+        });
+      }
+
+      if (scopeId === shellScopeId) {
+        return createAuthorizationScope({
+          id: shellScopeId,
+          sourceCategory: 'shell',
+        });
+      }
+
+      return null;
+    });
+  const authorizeSourceSync = createMemorySourceAuthorizationPolicy({
+    getAuthorizationScope,
+  });
   const resolveBrowserBucket = async () => {
     if (configuredBrowserBucketId !== undefined) {
       return {
@@ -378,6 +406,7 @@ export function startMirrorBrainService(
       },
       {
         checkpointStore,
+        authorizeSourceSync,
         writeMemoryEvent: memoryEventWriter.writeMemoryEvent,
       },
     ));
@@ -398,6 +427,7 @@ export function startMirrorBrainService(
       },
       {
         checkpointStore,
+        authorizeSourceSync,
         writeMemoryEvent: memoryEventWriter.writeMemoryEvent,
       },
     );

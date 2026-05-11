@@ -44,6 +44,12 @@ interface CreateShellHistoryMemorySourcePluginInput {
 }
 
 const ZSH_EXTENDED_HISTORY_PATTERN = /^: (\d+):\d+;(.*)$/u;
+const SENSITIVE_ENV_ASSIGNMENT_PATTERN =
+  /\b([A-Z0-9_]*(?:TOKEN|SECRET|PASSWORD|PASS|API[_-]?KEY|KEY)[A-Z0-9_]*)=([^\s]+)/giu;
+const BEARER_TOKEN_PATTERN = /(Authorization:\s*Bearer\s+)[^"'\s]+/giu;
+const URL_CREDENTIAL_PATTERN = /(https?:\/\/)[^\/\s:@]+:[^\/\s@]+@/giu;
+const SENSITIVE_FLAG_PATTERN =
+  /(--(?:password|passwd|token|api-key|apikey|secret|key)(?:=|\s+))("[^"]+"|'[^']+'|\S+)/giu;
 
 function slugifyCommand(command: string): string {
   const normalized = command
@@ -58,9 +64,54 @@ function slugifyCommand(command: string): string {
 }
 
 function getCommandName(command: string): string {
-  const [commandName] = command.trim().split(/\s+/u);
+  const commandName = command
+    .trim()
+    .split(/\s+/u)
+    .find((part) => !/^[A-Za-z_][A-Za-z0-9_]*=/u.test(part));
 
   return commandName && commandName.length > 0 ? commandName : 'unknown';
+}
+
+export function sanitizeShellCommand(command: string): {
+  command: string;
+  redactionApplied: boolean;
+} {
+  let sanitized = command;
+
+  sanitized = sanitized.replace(
+    SENSITIVE_ENV_ASSIGNMENT_PATTERN,
+    '$1=[REDACTED]',
+  );
+  sanitized = sanitized.replace(BEARER_TOKEN_PATTERN, '$1[REDACTED]');
+  sanitized = sanitized.replace(URL_CREDENTIAL_PATTERN, '$1[REDACTED]@');
+  sanitized = sanitized.replace(
+    SENSITIVE_FLAG_PATTERN,
+    (match, prefix: string) => {
+      const separator = prefix.endsWith('=') ? '' : ' ';
+      return `${prefix.trimEnd()}${separator}[REDACTED]`;
+    },
+  );
+
+  return {
+    command: sanitized,
+    redactionApplied: sanitized !== command,
+  };
+}
+
+function createShellHistoryEntryId(timestampSeconds: string, command: string): string {
+  const sanitizedCommand = sanitizeShellCommand(command);
+
+  return `shell-history:${timestampSeconds}:${slugifyCommand(sanitizedCommand.command)}`;
+}
+
+function getShellHistoryTimestampSeconds(entry: ShellHistoryEntry): string {
+  const idMatch = entry.id.match(/^shell-history:(\d+):/u);
+
+  if (idMatch) {
+    return idMatch[1];
+  }
+
+  return String(Math.floor(new Date(entry.timestamp).getTime() / 1000));
 }
 
 export function createInitialShellHistorySyncPlan(
@@ -110,7 +161,7 @@ export function parseShellHistory(contents: string): ShellHistoryEntry[] {
 
       return [
         {
-          id: `shell-history:${rawTimestamp}:${slugifyCommand(command)}`,
+          id: createShellHistoryEntryId(rawTimestamp, command),
           timestamp: new Date(timestampMs).toISOString(),
           command: command.trim(),
         },
@@ -132,16 +183,27 @@ export async function readShellHistory(
 export function normalizeShellHistoryEntry(
   input: NormalizeShellHistoryEntryInput,
 ): MemoryEvent {
+  const sanitizedCommand = sanitizeShellCommand(input.event.command);
+  const sourceRef = createShellHistoryEntryId(
+    getShellHistoryTimestampSeconds(input.event),
+    input.event.command,
+  );
+  const content: MemoryEvent['content'] = {
+    command: sanitizedCommand.command,
+    commandName: getCommandName(input.event.command),
+  };
+
+  if (sanitizedCommand.redactionApplied) {
+    content.redactionApplied = true;
+  }
+
   return {
-    id: `shell:${input.event.id}`,
+    id: `shell:${sourceRef}`,
     sourceType: 'shell-history',
-    sourceRef: input.event.id,
+    sourceRef,
     timestamp: input.event.timestamp,
     authorizationScopeId: input.scopeId,
-    content: {
-      command: input.event.command,
-      commandName: getCommandName(input.event.command),
-    },
+    content,
     captureMetadata: {
       upstreamSource: 'shell-history',
       checkpoint: input.event.timestamp,
