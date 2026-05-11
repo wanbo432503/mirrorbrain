@@ -126,6 +126,8 @@ describe('mirrorbrain http server', () => {
         executionSafetyMetadata: {
           requiresConfirmation: true,
         },
+        updatedAt: '2026-03-20T10:00:00.000Z',
+        reviewedAt: null,
       },
     ]);
     const syncBrowserMemory = vi.fn(async () => ({
@@ -255,6 +257,8 @@ describe('mirrorbrain http server', () => {
           executionSafetyMetadata: {
             requiresConfirmation: true,
           },
+          updatedAt: '2026-03-20T10:00:00.000Z',
+          reviewedAt: null,
         },
       ],
     });

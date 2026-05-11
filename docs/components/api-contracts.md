@@ -14,6 +14,7 @@ This component owns shared runtime schemas for MirrorBrain HTTP transport DTOs. 
 ## Key Interfaces
 
 - `knowledgeArtifactDtoSchema`
+- `skillArtifactDtoSchema`
 
 ## Data Flow
 
@@ -29,5 +30,5 @@ This component owns shared runtime schemas for MirrorBrain HTTP transport DTOs. 
 
 ## Known Risks Or Limitations
 
-- only the knowledge artifact response schema has moved into this shared contract layer so far
+- only the knowledge and skill artifact response schemas have moved into this shared contract layer so far
 - the schema is still handwritten JSON Schema; later work should expand this module to cover all public DTOs and use it as the source for frontend/client types

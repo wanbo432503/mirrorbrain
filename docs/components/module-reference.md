@@ -1104,12 +1104,13 @@ Inputs:
 
 Outputs:
 
-- Runtime DTO schemas such as `knowledgeArtifactDtoSchema`.
+- Runtime DTO schemas such as `knowledgeArtifactDtoSchema` and
+  `skillArtifactDtoSchema`.
 
 Failure modes and constraints:
 
-- The current slice covers knowledge artifact responses only; additional API
-  DTOs still need migration into this shared layer.
+- The current slice covers knowledge and skill artifact responses; additional
+  API DTOs still need migration into this shared layer.
 
 Verification:
 

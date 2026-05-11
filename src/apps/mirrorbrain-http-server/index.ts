@@ -7,7 +7,10 @@ import fastifySwaggerUi from '@fastify/swagger-ui';
 import fastifyStatic from '@fastify/static';
 
 import { getMirrorBrainConfig } from '../../shared/config/index.js';
-import { knowledgeArtifactDtoSchema } from '../../shared/api-contracts/index.js';
+import {
+  knowledgeArtifactDtoSchema,
+  skillArtifactDtoSchema,
+} from '../../shared/api-contracts/index.js';
 import { ValidationError } from '../mirrorbrain-service/errors.js';
 import type {
   CandidateMemory,
@@ -400,30 +403,7 @@ const knowledgeGraphSnapshotSchema = {
   required: ['generatedAt', 'stats', 'nodes', 'edges'],
 } as const;
 
-const skillArtifactSchema = {
-  type: 'object',
-  properties: {
-    id: { type: 'string' },
-    approvalState: { type: 'string', enum: ['draft', 'approved'] },
-    workflowEvidenceRefs: {
-      type: 'array',
-      items: { type: 'string' },
-    },
-    executionSafetyMetadata: {
-      type: 'object',
-      properties: {
-        requiresConfirmation: { type: 'boolean' },
-      },
-      required: ['requiresConfirmation'],
-    },
-  },
-  required: [
-    'id',
-    'approvalState',
-    'workflowEvidenceRefs',
-    'executionSafetyMetadata',
-  ],
-} as const;
+const skillArtifactSchema = skillArtifactDtoSchema;
 
 const browserSyncSummarySchema = {
   type: 'object',
