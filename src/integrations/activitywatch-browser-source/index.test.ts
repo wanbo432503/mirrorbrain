@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { getMirrorBrainConfig } from '../../shared/config/index.js';
 import {
+  createActivityWatchBrowserMemorySourcePlugin,
   createInitialBrowserSyncPlan,
   createIncrementalBrowserSyncPlan,
   fetchActivityWatchBuckets,
@@ -163,5 +164,54 @@ describe('activitywatch browser source', () => {
         },
       ]),
     ).toBe('aw-watcher-web-chrome_wanbodeMacBook-Pro-2.local');
+  });
+
+  it('filters local browser pages before they become memory events', () => {
+    const plugin = createActivityWatchBrowserMemorySourcePlugin({
+      bucketId: 'aw-watcher-web-chrome',
+    });
+    const events = [
+      {
+        id: 'aw-event-localhost',
+        timestamp: '2026-03-20T08:00:00.000Z',
+        data: {
+          url: 'http://localhost:5173/app',
+          title: 'Localhost App',
+        },
+      },
+      {
+        id: 'aw-event-loopback',
+        timestamp: '2026-03-20T08:01:00.000Z',
+        data: {
+          url: 'http://127.0.0.1:5500/app',
+          title: 'Loopback App',
+        },
+      },
+      {
+        id: 'aw-event-wildcard',
+        timestamp: '2026-03-20T08:02:00.000Z',
+        data: {
+          url: 'http://0.0.0.0:3000/app',
+          title: 'Wildcard App',
+        },
+      },
+      {
+        id: 'aw-event-remote',
+        timestamp: '2026-03-20T08:03:00.000Z',
+        data: {
+          url: 'https://example.com/tasks',
+          title: 'Example Tasks',
+        },
+      },
+    ].map((event) =>
+      plugin.normalizeEvent({
+        scopeId: 'scope-browser',
+        event,
+      }),
+    );
+
+    expect(plugin.sanitizeEvents?.(events).map((event) => event.id)).toEqual([
+      'browser:aw-event-remote',
+    ]);
   });
 });

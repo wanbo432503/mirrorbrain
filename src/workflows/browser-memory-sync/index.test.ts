@@ -240,10 +240,11 @@ describe('browser memory sync workflow', () => {
     expect(ingestPageContent).toHaveBeenCalledTimes(1);
   });
 
-  it('skips page fetch and content import for localhost development urls', async () => {
+  it('does not import localhost development urls as memory events', async () => {
     const config = getMirrorBrainConfig();
     const fetchPageContent = vi.fn();
     const ingestPageContent = vi.fn();
+    const persistedRecordIds: string[] = [];
 
     const result = await runBrowserMemorySyncOnce(
       {
@@ -270,20 +271,16 @@ describe('browser memory sync workflow', () => {
         ],
         fetchPageContent,
         ingestPageContent,
-        writeMemoryEvent: async () => undefined,
+        writeMemoryEvent: async (record) => {
+          persistedRecordIds.push(record.recordId);
+        },
       },
     );
 
     expect(fetchPageContent).not.toHaveBeenCalled();
     expect(ingestPageContent).not.toHaveBeenCalled();
-    expect(result.importedEvents?.[0]).toMatchObject({
-      id: 'browser:aw-event-local-1',
-      content: {
-        url: 'http://127.0.0.1:5500/app',
-        title: 'Local App',
-      },
-    });
-    expect(result.importedEvents?.[0]?.content).not.toHaveProperty('textStorage');
+    expect(persistedRecordIds).toEqual([]);
+    expect(result.importedEvents).toEqual([]);
   });
 
   it('continues sync when page fetch returns unauthorized for a browser url', async () => {

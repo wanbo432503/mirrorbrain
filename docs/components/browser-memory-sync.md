@@ -24,7 +24,7 @@ This workflow executes the live browser ingestion loop for Phase 1. It now acts 
 3. Build an ActivityWatch browser source plugin for the resolved browser bucket.
 4. Register that plugin with the generic memory-source sync workflow.
 5. Let the generic workflow read the checkpoint, compute the sync plan, and fetch browser events.
-6. Normalize events and suppress near-duplicate browser page records.
+6. Normalize events, discard local development pages filtered by the browser source adapter, and suppress near-duplicate browser page records.
 7. Group retained browser events by URL.
 8. Build URL-level `accessTimes` and `latestAccessedAt` metadata for the retained browser events before persistence.
 9. Persist the browser memory events first so large historical backfills can make `/memory` visible quickly.

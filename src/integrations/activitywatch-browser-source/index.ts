@@ -183,10 +183,32 @@ function createBrowserEventSignature(event: {
   ].join('|');
 }
 
+function isLocalBrowserPageEvent(event: MemoryEvent): boolean {
+  if (typeof event.content.url !== 'string') {
+    return false;
+  }
+
+  try {
+    const url = new URL(event.content.url);
+    const hostname = url.hostname.toLowerCase();
+
+    return (
+      hostname === 'localhost' ||
+      hostname.endsWith('.localhost') ||
+      hostname === '0.0.0.0' ||
+      hostname === '::1' ||
+      hostname === '[::1]' ||
+      /^127(?:\.\d{1,3}){3}$/u.test(hostname)
+    );
+  } catch {
+    return false;
+  }
+}
+
 function sanitizeActivityWatchBrowserEvents(events: MemoryEvent[]): MemoryEvent[] {
-  const sortedEvents = [...events].sort((left, right) =>
-    left.timestamp.localeCompare(right.timestamp),
-  );
+  const sortedEvents = events
+    .filter((event) => !isLocalBrowserPageEvent(event))
+    .sort((left, right) => left.timestamp.localeCompare(right.timestamp));
   const keptEvents: typeof sortedEvents = [];
 
   for (const event of sortedEvents) {
