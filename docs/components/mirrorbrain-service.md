@@ -11,6 +11,7 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 - wires browser polling to checkpoint persistence and OpenViking memory ingestion
 - exposes an explicit shell-history sync operation when a shell history path is configured
 - wires runtime memory-source authorization policy into browser and shell sync execution
+- wires separate page-content capture authorization into browser page text backfill
 - exposes the high-level service contract used by `openclaw`
 - keeps raw memory listing and `openclaw` retrieval shaping as separate concerns
 - falls back to workspace-cached raw memory events when OpenViking-backed memory reads fail
@@ -32,37 +33,39 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 - `startMirrorBrainService(...)`
 - `createMirrorBrainService(...)`
 - `getAuthorizationScope(scopeId)` dependency for runtime authorization lookup
+- `authorizePageContentCapture(...)` dependency for URL-level readable page text capture checks
 
 ## Data Flow
 
 1. Load MirrorBrain config.
 2. Create a file-backed sync checkpoint store and an OpenViking-backed memory writer.
 3. Build a runtime source authorization policy from `getAuthorizationScope(...)`.
-4. Start the browser sync polling workflow with a real `runBrowserMemorySyncOnce(...)` callback and the runtime authorization policy.
-5. Optionally expose a shell-history sync operation through `runShellMemorySyncOnce(...)` when a history path is configured, using the same runtime authorization policy.
-6. Return a runtime service handle with `status` and `stop()`.
-7. Expose the `openclaw`-facing service contract around that runtime handle.
-8. After explicit browser or shell sync calls through the service contract, return the sync summary immediately and schedule the corresponding narrative rebuild in the background when new events were imported.
-9. List raw imported memory when review-oriented workflows need event-level records, preferring OpenViking-backed reads and falling back to workspace-cached memory-event files when storage reads fail.
-10. Forward `openclaw` memory retrieval calls through the configured OpenViking base URL and return shaped retrieval results.
-11. Before daily candidate generation or refresh, run an explicit browser-memory sync so the workspace raw-event cache reflects the latest ActivityWatch browser history.
-12. If candidates already exist for a review date and the sync imports no new browser events, return the existing candidates without rebuilding them.
-13. If candidates already exist for a review date and the sync imports new browser events, rebuild the daily candidates from current raw workspace memory history so late-day URLs are included.
-14. Before rebuilding daily candidates, exclude memory events and browser URLs that are already linked through reviewed memories to published knowledge so previously synthesized work is not clustered again.
-15. Generate daily task-oriented candidate streams for a requested review date, using raw workspace memory history rather than the UI display list.
-16. Before candidate generation, enrich browser events with stored `browser-page-content` text when a page artifact is available in the workspace so review grouping can use page semantics instead of URL/title alone.
-17. Return suggestion-only AI review hints without promoting any candidate, including keep-score and supporting reasons for the review UI.
-18. Record explicit keep or discard decisions and publish reviewed memory artifacts.
-19. Forward explicit knowledge and skill publishing calls to the OpenViking ingestion adapter.
-20. Build topic-knowledge merge candidates from stored draft knowledge artifacts when requested.
-21. Merge a daily-review draft into topic knowledge, publishing the new current-best artifact and any superseded previous version.
-22. List current-best topic knowledge summaries, fetch the current-best artifact for one topic key, and return topic history in newest-first order.
-23. For reviewed-memory knowledge generation APIs, resolve captured page text from reviewed memory events before creating the draft, then publish the resulting artifact.
-24. After the generated artifact is published and returned, schedule asynchronous knowledge lint to refresh relation metadata, tombstone mechanically duplicated generated drafts, and publish reviewable merge candidates for similar knowledge.
-25. Approve a knowledge draft or merge candidate by loading the persisted artifact by id and passing it through the existing topic-knowledge merge workflow.
-26. If the caller provides a draft snapshot, approve uses that snapshot after verifying its id matches `draftId`; this preserves the visible UI draft, source reviewed-memory ids, provenance refs, and recent edits even when an older persisted draft with the same id exists. If no snapshot is provided, approve falls back to the persisted knowledge list.
-27. When a knowledge or skill artifact is deleted, remove the workspace copy and record a service-level tombstone under `mirrorbrain/deleted-artifacts/` so later reads suppress both workspace and OpenViking copies of that id.
-28. When a deleted artifact id is published again later, clear its tombstone before persisting the fresh artifact so it becomes visible again.
+4. Build a separate page-content capture authorization callback, using the injected dependency when present and denying readable page text capture by default.
+5. Start the browser sync polling workflow with a real `runBrowserMemorySyncOnce(...)` callback plus runtime source and page-content authorization policies.
+6. Optionally expose a shell-history sync operation through `runShellMemorySyncOnce(...)` when a history path is configured, using the same runtime authorization policy.
+7. Return a runtime service handle with `status` and `stop()`.
+8. Expose the `openclaw`-facing service contract around that runtime handle.
+9. After explicit browser or shell sync calls through the service contract, return the sync summary immediately and schedule the corresponding narrative rebuild in the background when new events were imported.
+10. List raw imported memory when review-oriented workflows need event-level records, preferring OpenViking-backed reads and falling back to workspace-cached memory-event files when storage reads fail.
+11. Forward `openclaw` memory retrieval calls through the configured OpenViking base URL and return shaped retrieval results.
+12. Before daily candidate generation or refresh, run an explicit browser-memory sync so the workspace raw-event cache reflects the latest ActivityWatch browser history.
+13. If candidates already exist for a review date and the sync imports no new browser events, return the existing candidates without rebuilding them.
+14. If candidates already exist for a review date and the sync imports new browser events, rebuild the daily candidates from current raw workspace memory history so late-day URLs are included.
+15. Before rebuilding daily candidates, exclude memory events and browser URLs that are already linked through reviewed memories to published knowledge so previously synthesized work is not clustered again.
+16. Generate daily task-oriented candidate streams for a requested review date, using raw workspace memory history rather than the UI display list.
+17. Before candidate generation, enrich browser events with stored `browser-page-content` text when a page artifact is available in the workspace so review grouping can use page semantics instead of URL/title alone.
+18. Return suggestion-only AI review hints without promoting any candidate, including keep-score and supporting reasons for the review UI.
+19. Record explicit keep or discard decisions and publish reviewed memory artifacts.
+20. Forward explicit knowledge and skill publishing calls to the OpenViking ingestion adapter.
+21. Build topic-knowledge merge candidates from stored draft knowledge artifacts when requested.
+22. Merge a daily-review draft into topic knowledge, publishing the new current-best artifact and any superseded previous version.
+23. List current-best topic knowledge summaries, fetch the current-best artifact for one topic key, and return topic history in newest-first order.
+24. For reviewed-memory knowledge generation APIs, resolve captured page text from reviewed memory events before creating the draft, then publish the resulting artifact.
+25. After the generated artifact is published and returned, schedule asynchronous knowledge lint to refresh relation metadata, tombstone mechanically duplicated generated drafts, and publish reviewable merge candidates for similar knowledge.
+26. Approve a knowledge draft or merge candidate by loading the persisted artifact by id and passing it through the existing topic-knowledge merge workflow.
+27. If the caller provides a draft snapshot, approve uses that snapshot after verifying its id matches `draftId`; this preserves the visible UI draft, source reviewed-memory ids, provenance refs, and recent edits even when an older persisted draft with the same id exists. If no snapshot is provided, approve falls back to the persisted knowledge list.
+28. When a knowledge or skill artifact is deleted, remove the workspace copy and record a service-level tombstone under `mirrorbrain/deleted-artifacts/` so later reads suppress both workspace and OpenViking copies of that id.
+29. When a deleted artifact id is published again later, clear its tombstone before persisting the fresh artifact so it becomes visible again.
 
 ## Operational Note
 
@@ -74,6 +77,7 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
 - unit tests verify `stop()` stops the background polling lifecycle
 - unit tests verify the service wires workspace, bucket, scope, checkpoint store, and memory writer into browser sync execution
 - unit tests verify the service forwards runtime source authorization into browser sync execution and revoked scopes deny sync
+- unit tests verify the service forwards page-content capture authorization into browser sync execution and keeps it independent from browser source authorization
 - unit tests verify the service wires an authorized shell history path into shell sync execution
 - unit tests verify explicit browser sync schedules browser theme narrative rebuilds
 - unit tests verify explicit browser sync returns before the background narrative rebuild finishes
@@ -100,6 +104,7 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
 
 - the service currently defaults to automatic discovery of the most recently updated ActivityWatch browser watcher bucket and a single browser scope (`scope-browser`) unless a browser bucket is explicitly overridden at startup
 - if no external authorization-scope lookup is injected at startup, the runtime service bootstraps narrow active scopes for the configured browser and shell scope ids; durable scope persistence remains outside this service component
+- if no page-content capture authorization dependency is injected at startup, readable page text backfill is denied by default while browser activity memory capture can still proceed
 - shell sync is currently explicit only; it does not start a shell polling loop or discover shell history paths automatically
 - the retrieval contract now accepts lightweight query and filter input, but still uses minimal result shaping rather than mature ranking
 - raw memory list endpoints can fall back to workspace-cached memory-event files when OpenViking reads fail, so event history may appear before the corresponding OpenViking-backed retrieval views fully recover

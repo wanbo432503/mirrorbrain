@@ -153,6 +153,7 @@ describe('mirrorbrain service', () => {
       {
         checkpointStore,
         authorizeSourceSync: expect.any(Function),
+        authorizePageContentCapture: expect.any(Function),
         writeMemoryEvent,
       },
     );
@@ -230,6 +231,7 @@ describe('mirrorbrain service', () => {
       {
         checkpointStore,
         authorizeSourceSync: expect.any(Function),
+        authorizePageContentCapture: expect.any(Function),
         writeMemoryEvent,
       },
     );
@@ -346,6 +348,68 @@ describe('mirrorbrain service', () => {
     await expect(service.syncBrowserMemory()).rejects.toThrowError(
       'browser sync was rejected by runtime authorization',
     );
+  });
+
+  it('keeps page content capture authorization independent from browser source sync authorization', async () => {
+    const config = getMirrorBrainConfig();
+    const checkpointStore = {
+      readCheckpoint: vi.fn(async () => null),
+      writeCheckpoint: vi.fn(async () => undefined),
+    };
+    const pageAuthorizationDecisions: boolean[] = [];
+    const runBrowserMemorySyncOnce = vi.fn(async (_input, dependencies) => {
+      const sourceAuthorized = await dependencies.authorizeSourceSync?.({
+        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+        sourceCategory: 'browser',
+        scopeId: 'scope-browser',
+      });
+      const pageAuthorized = await dependencies.authorizePageContentCapture?.({
+        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+        scopeId: 'scope-browser',
+        url: 'https://example.com/private',
+      });
+
+      pageAuthorizationDecisions.push(Boolean(pageAuthorized));
+
+      if (!sourceAuthorized) {
+        throw new Error('browser sync was rejected by runtime authorization');
+      }
+
+      return {
+        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+        strategy: 'initial-backfill' as const,
+        importedCount: 1,
+        lastSyncedAt: '2026-03-20T10:00:00.000Z',
+      };
+    });
+    const service = startMirrorBrainService(
+      {
+        config,
+        browserBucketId: 'aw-watcher-web-chrome',
+        browserScopeId: 'scope-browser',
+      },
+      {
+        createCheckpointStore: vi.fn(() => checkpointStore),
+        createMemoryEventWriter: vi.fn(() => ({
+          writeMemoryEvent: vi.fn(async () => undefined),
+        })),
+        getAuthorizationScope: vi.fn(async () => ({
+          id: 'scope-browser',
+          sourceCategory: 'browser' as const,
+          revokedAt: null,
+        })),
+        runBrowserMemorySyncOnce,
+        startBrowserSyncPolling: vi.fn(() => ({
+          stop: vi.fn(),
+        })),
+        now: () => '2026-03-20T10:00:00.000Z',
+      },
+    );
+
+    await expect(service.syncBrowserMemory()).resolves.toMatchObject({
+      importedCount: 1,
+    });
+    expect(pageAuthorizationDecisions).toEqual([false]);
   });
 
   it('rejects shell sync when no shell history path is configured', async () => {

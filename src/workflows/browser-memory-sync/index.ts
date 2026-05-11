@@ -39,9 +39,20 @@ interface RunBrowserMemorySyncOnceInput {
   workspaceDir?: string;
 }
 
+export interface BrowserPageContentCaptureAuthorizationInput {
+  sourceKey: string;
+  scopeId: string;
+  url: string;
+}
+
+export type BrowserPageContentCaptureAuthorizationDependency = (
+  input: BrowserPageContentCaptureAuthorizationInput,
+) => boolean | Promise<boolean>;
+
 interface RunBrowserMemorySyncOnceDependencies {
   checkpointStore: SyncCheckpointStore;
   authorizeSourceSync?: MemorySourceSyncAuthorizationDependency;
+  authorizePageContentCapture?: BrowserPageContentCaptureAuthorizationDependency;
   fetchBrowserEvents?: typeof fetchActivityWatchBrowserEvents;
   fetchPageContent?: typeof fetchBrowserPageContent;
   ingestPageContent?: typeof ingestBrowserPageContentToOpenViking;
@@ -91,18 +102,40 @@ export async function runBrowserMemorySyncOnce(
   const fetchPage = dependencies.fetchPageContent ?? fetchBrowserPageContent;
   const ingestPage =
     dependencies.ingestPageContent ?? ingestBrowserPageContentToOpenViking;
+  const sourceKey = getActivityWatchBrowserSourceKey(input.bucketId);
+  const pageContentAuthorization = new Map<string, boolean>();
   const groupedArtifacts = new Map<string, BrowserPageContentArtifact>();
   const groupedEvents = new Map<string, MemoryEvent[]>();
   const existingArtifactStorage = new Map<
     string,
     { sourcePath: string; rootUri: string }
   >();
+  const isPageContentCaptureAuthorized = async (url: string) => {
+    const cached = pageContentAuthorization.get(url);
+
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    const isAuthorized =
+      dependencies.authorizePageContentCapture === undefined
+        ? true
+        : await dependencies.authorizePageContentCapture({
+            sourceKey,
+            scopeId: input.scopeId,
+            url,
+          });
+
+    pageContentAuthorization.set(url, isAuthorized);
+
+    return isAuthorized;
+  };
   const result = await runMemorySourceSyncOnce(
     {
       config: input.config,
       now: input.now,
       scopeId: input.scopeId,
-      sourceKey: getActivityWatchBrowserSourceKey(input.bucketId),
+      sourceKey,
     },
     {
       checkpointStore: dependencies.checkpointStore,
@@ -170,7 +203,10 @@ export async function runBrowserMemorySyncOnce(
 
           groupedArtifacts.set(url, sharedArtifact);
 
-          if (sharedArtifact.text.length > 0) {
+          if (
+            sharedArtifact.text.length > 0 &&
+            (await isPageContentCaptureAuthorized(url))
+          ) {
             existingArtifactStorage.set(
               url,
               createBrowserPageContentStorageRef(workspaceDir, sharedArtifact),
@@ -219,6 +255,10 @@ export async function runBrowserMemorySyncOnce(
   if (groupedArtifacts.size > 0) {
     void (async () => {
       for (const [url, artifact] of groupedArtifacts) {
+        if (!(await isPageContentCaptureAuthorized(url))) {
+          continue;
+        }
+
         let artifactToStore = artifact;
 
         if (artifactToStore.text.length === 0) {

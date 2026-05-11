@@ -855,15 +855,18 @@ Responsibilities:
 - Register the ActivityWatch browser source plugin.
 - Group events by URL during preparation.
 - Load or create shared browser page content artifacts.
-- Attach access times and page content references to memory events.
+- Attach access times to memory events and attach page content references only
+  when page-content authorization allows the URL.
 - Persist normalized browser events through the generic sync engine.
-- Asynchronously fetch and ingest missing page text.
+- Asynchronously fetch and ingest missing page text after the separate
+  page-content authorization policy allows the URL.
 - Start configurable polling around `runSyncOnce`.
 
 Inputs:
 
 - Config, current time, bucket id, optional initial backfill start, scope id,
-  workspace dir, checkpoint store, page fetcher, page ingester, and writer.
+  workspace dir, checkpoint store, source authorization, page-content
+  authorization, page fetcher, page ingester, and writer.
 
 Outputs:
 
@@ -873,6 +876,8 @@ Failure modes and constraints:
 
 - Failed page fetches are skipped so browser event sync can continue.
 - Localhost and non-HTTP(S) URLs are not fetched as page content.
+- Browser event authorization and page-content capture authorization are
+  separate dependencies.
 
 Verification:
 

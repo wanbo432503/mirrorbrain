@@ -42,6 +42,7 @@ import {
 import {
   runBrowserMemorySyncOnce,
   startBrowserMemorySyncPolling,
+  type BrowserPageContentCaptureAuthorizationDependency,
   type BrowserMemorySyncResult,
 } from '../../workflows/browser-memory-sync/index.js';
 import {
@@ -118,6 +119,7 @@ interface StartMirrorBrainServiceDependencies {
   runBrowserMemorySyncOnce?: typeof runBrowserMemorySyncOnce;
   runShellMemorySyncOnce?: typeof runShellMemorySyncOnce;
   getAuthorizationScope?: (scopeId: string) => Promise<AuthorizationScope | null>;
+  authorizePageContentCapture?: BrowserPageContentCaptureAuthorizationDependency;
   now?: () => string;
 }
 
@@ -365,6 +367,8 @@ export function startMirrorBrainService(
   const authorizeSourceSync = createMemorySourceAuthorizationPolicy({
     getAuthorizationScope,
   });
+  const authorizePageContentCapture: BrowserPageContentCaptureAuthorizationDependency =
+    dependencies.authorizePageContentCapture ?? (async () => false);
   const resolveBrowserBucket = async () => {
     if (configuredBrowserBucketId !== undefined) {
       return {
@@ -407,6 +411,7 @@ export function startMirrorBrainService(
       {
         checkpointStore,
         authorizeSourceSync,
+        authorizePageContentCapture,
         writeMemoryEvent: memoryEventWriter.writeMemoryEvent,
       },
     ));

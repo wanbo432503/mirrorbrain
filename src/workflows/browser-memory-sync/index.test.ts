@@ -283,6 +283,74 @@ describe('browser memory sync workflow', () => {
     expect(ingestPageContent).toHaveBeenCalledTimes(1);
   });
 
+  it('requires separate page content authorization before fetching readable page text', async () => {
+    const config = getMirrorBrainConfig();
+    const fetchPageContent = vi.fn(async ({ url, title, fetchedAt }) => ({
+      url,
+      title,
+      fetchedAt,
+      text: 'Private text',
+    }));
+    const ingestPageContent = vi.fn(async ({ artifact }) => ({
+      sourcePath: `/tmp/mirrorbrain/mirrorbrain/browser-page-content/${artifact.id}.md`,
+      rootUri: `viking://resources/mirrorbrain-browser-page-content-${artifact.id}.md`,
+    }));
+    const persistedRecordContents: Array<Record<string, unknown>> = [];
+
+    const result = await runBrowserMemorySyncOnce(
+      {
+        config,
+        now: '2026-03-20T08:00:00.000Z',
+        bucketId: 'aw-watcher-web-chrome',
+        scopeId: 'scope-browser',
+        workspaceDir: '/tmp/mirrorbrain',
+      },
+      {
+        checkpointStore: {
+          readCheckpoint: async () => null,
+          writeCheckpoint: async () => undefined,
+        },
+        fetchBrowserEvents: async () => [
+          {
+            id: 'aw-event-private-1',
+            timestamp: '2026-03-20T07:45:00.000Z',
+            data: {
+              url: 'https://private.example.com/secure',
+              title: 'Private Page',
+            },
+          },
+        ],
+        authorizePageContentCapture: async (source) => {
+          expect(source).toEqual({
+            sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+            scopeId: 'scope-browser',
+            url: 'https://private.example.com/secure',
+          });
+          return false;
+        },
+        fetchPageContent,
+        ingestPageContent,
+        writeMemoryEvent: async (record) => {
+          persistedRecordContents.push(record.payload.content);
+        },
+      },
+    );
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(fetchPageContent).not.toHaveBeenCalled();
+    expect(ingestPageContent).not.toHaveBeenCalled();
+    expect(persistedRecordContents[0]).toMatchObject({
+      url: 'https://private.example.com/secure',
+      title: 'Private Page',
+      latestAccessedAt: '2026-03-20T07:45:00.000Z',
+      accessTimes: ['2026-03-20T07:45:00.000Z'],
+    });
+    expect(persistedRecordContents[0]).not.toHaveProperty('textStorage');
+    expect(result.importedEvents?.[0]?.content).not.toHaveProperty('textStorage');
+  });
+
   it('does not import localhost development urls as memory events', async () => {
     const config = getMirrorBrainConfig();
     const fetchPageContent = vi.fn();
