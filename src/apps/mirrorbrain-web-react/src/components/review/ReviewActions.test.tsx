@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 import ReviewActions from './ReviewActions'
 
 describe('ReviewActions', () => {
-  it('renders daily-candidate feedback directly below the create button', () => {
+  it('renders daily-candidate feedback to the left of the create button', () => {
     const { container } = render(
       <ReviewActions
         onCreateCandidates={() => {}}
@@ -18,11 +18,12 @@ describe('ReviewActions', () => {
     const button = screen.getByRole('button', { name: 'Create Daily Candidates' })
     const alert = screen.getByRole('alert')
 
-    expect(button.compareDocumentPosition(alert) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(alert.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(alert.textContent ?? '').toContain('Created 3 daily candidates')
     expect(alert.className).toContain('p-3')
     expect(alert.className).toContain('rounded-lg')
     expect(alert.className).toContain('border')
-    expect(container.firstElementChild?.className ?? '').toContain('flex-col')
+    expect(alert.className).toContain('flex-1')
+    expect(container.firstElementChild?.className ?? '').toContain('items-stretch')
   })
 })

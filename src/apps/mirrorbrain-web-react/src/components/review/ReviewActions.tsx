@@ -17,18 +17,10 @@ export default function ReviewActions({
   feedback,
 }: ReviewActionsProps) {
   return (
-    <div className="flex flex-col items-end mb-3">
-      <Button
-        variant="primary"
-        onClick={onCreateCandidates}
-        loading={isCreatingCandidates}
-        disabled={isCreatingCandidates || isReviewing}
-      >
-        {isCreatingCandidates ? 'Creating...' : 'Create Daily Candidates'}
-      </Button>
+    <div className="mb-3 flex items-stretch justify-end gap-3">
       {feedback && (
         <div
-          className={`mt-3 p-3 rounded-lg border ${
+          className={`min-w-0 flex-1 self-stretch p-3 rounded-lg border ${
             feedback.kind === 'success'
               ? 'bg-green-100 border-green-300 text-green-700'
               : feedback.kind === 'error'
@@ -40,6 +32,15 @@ export default function ReviewActions({
           <p className="font-body font-medium text-sm">{feedback.message}</p>
         </div>
       )}
+      <Button
+        variant="primary"
+        onClick={onCreateCandidates}
+        loading={isCreatingCandidates}
+        disabled={isCreatingCandidates || isReviewing}
+        className="self-stretch"
+      >
+        {isCreatingCandidates ? 'Creating...' : 'Create Daily Candidates'}
+      </Button>
     </div>
   )
 }
