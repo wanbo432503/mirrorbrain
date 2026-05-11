@@ -105,4 +105,17 @@ describe('KnowledgeGraphPanel', () => {
 
     expect(circle.getAttribute('cx')).not.toBe(initialX)
   })
+
+  it('stacks the graph canvas above the selection panel', () => {
+    const { container } = render(<KnowledgeGraphPanel graph={topicRelationGraph} />)
+
+    const shell = container.querySelector('div.min-h-\\[520px\\]') as HTMLElement | null
+
+    expect(shell).not.toBeNull()
+    expect(shell?.className ?? '').toContain('flex-col')
+    expect(shell?.className ?? '').not.toContain('lg:grid-cols-[minmax(0,1fr)_260px]')
+    expect(screen.getByTestId('knowledge-graph-canvas').parentElement?.nextElementSibling?.textContent ?? '').toContain(
+      'Selection',
+    )
+  })
 })

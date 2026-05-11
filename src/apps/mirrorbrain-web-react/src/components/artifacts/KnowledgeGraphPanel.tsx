@@ -197,7 +197,7 @@ export function KnowledgeGraphPanel(props: KnowledgeGraphPanelProps): React.Reac
         </div>
       </div>
 
-      <div className="grid min-h-[520px] overflow-hidden rounded-2xl border border-hairline bg-slate-50 lg:grid-cols-[minmax(0,1fr)_260px]">
+      <div className="flex min-h-[520px] flex-col overflow-hidden rounded-2xl border border-hairline bg-slate-50">
         <div className="relative min-h-[420px] overflow-hidden bg-[radial-gradient(circle_at_30%_20%,rgba(0,102,204,0.13),transparent_32%),radial-gradient(circle_at_70%_80%,rgba(17,24,39,0.08),transparent_34%)]">
           {positionedNodes.length === 0 ? (
             <div className="flex h-full min-h-[420px] items-center justify-center p-8 text-center">
@@ -311,7 +311,7 @@ export function KnowledgeGraphPanel(props: KnowledgeGraphPanelProps): React.Reac
           )}
         </div>
 
-        <aside className="border-t border-hairline bg-canvas p-4 lg:border-l lg:border-t-0">
+        <aside className="border-t border-hairline bg-canvas p-4">
           <p className="font-heading text-xs font-semibold uppercase text-inkMuted-48">
             Selection
           </p>
