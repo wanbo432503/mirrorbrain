@@ -9,6 +9,7 @@ import {
 } from '../../integrations/file-sync-checkpoint-store/index.js';
 import {
   ingestCandidateMemoryToOpenViking,
+  deleteCandidateMemoryFromOpenViking,
   ingestMemoryEventToOpenViking,
   ingestKnowledgeArtifactToOpenViking,
   ingestMemoryNarrativeToOpenViking,
@@ -159,6 +160,7 @@ interface CreateMirrorBrainServiceDependencies {
   publishSkill?: typeof ingestSkillArtifactToOpenViking;
   publishCandidateMemory?: typeof ingestCandidateMemoryToOpenViking;
   publishReviewedMemory?: typeof ingestReviewedMemoryToOpenViking;
+  deleteCandidateMemoryResource?: typeof deleteCandidateMemoryFromOpenViking;
   undoReviewedMemory?: (reviewedMemoryId: string, workspaceDir: string) => Promise<void>;
   buildBrowserThemeNarratives?: typeof generateBrowserThemeNarratives;
   buildShellProblemNarratives?: typeof generateShellProblemNarratives;
@@ -447,6 +449,8 @@ export function createMirrorBrainService(
     dependencies.publishCandidateMemory ?? ingestCandidateMemoryToOpenViking;
   const publishReviewedMemory =
     dependencies.publishReviewedMemory ?? ingestReviewedMemoryToOpenViking;
+  const deleteCandidateMemoryResource =
+    dependencies.deleteCandidateMemoryResource ?? deleteCandidateMemoryFromOpenViking;
   const undoReviewedMemory =
     dependencies.undoReviewedMemory ??
     (async (reviewedMemoryId: string, workspaceDir: string) => {
@@ -497,16 +501,27 @@ export function createMirrorBrainService(
 
     console.log(`[deleteCandidateMemory] Deleting candidate memory file: ${candidateFilePath}`);
 
+    let workspaceDeleteError: unknown = null;
+
     try {
       await unlink(candidateFilePath);
       console.log(`[deleteCandidateMemory] Successfully deleted: ${candidateMemoryId}`);
     } catch (error) {
       if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
         console.log(`[deleteCandidateMemory] File already deleted: ${candidateFilePath}`);
-        return;
+      } else {
+        console.error(`[deleteCandidateMemory] Error deleting file: ${candidateFilePath}`, error);
+        workspaceDeleteError = error;
       }
-      console.error(`[deleteCandidateMemory] Error deleting file: ${candidateFilePath}`, error);
-      throw error;
+    }
+
+    await deleteCandidateMemoryResource({
+      baseUrl,
+      candidateMemoryId,
+    });
+
+    if (workspaceDeleteError !== null) {
+      throw workspaceDeleteError;
     }
   };
   const deleteKnowledgeArtifactById = async (artifactId: string): Promise<void> => {

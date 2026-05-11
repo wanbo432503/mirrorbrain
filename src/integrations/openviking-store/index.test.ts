@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   createMirrorBrainResourceTarget,
+  deleteCandidateMemoryFromOpenViking,
   ingestCandidateMemoryToOpenViking,
   createOpenVikingMemoryEventRecord,
   ingestKnowledgeArtifactToOpenViking,
@@ -486,6 +487,48 @@ describe('openviking store adapter', () => {
     expect(result.rootUri).toBe(
       'viking://resources/mirrorbrain/candidate-memories/candidate:browser:aw-event-1.json',
     );
+  });
+
+  it('deletes a candidate memory resource from OpenViking', async () => {
+    const requests: Array<{
+      url: string;
+      method: string;
+    }> = [];
+
+    await deleteCandidateMemoryFromOpenViking(
+      {
+        baseUrl: 'http://127.0.0.1:1933',
+        candidateMemoryId: 'candidate:browser:aw-event-1',
+      },
+      async (input, init) => {
+        requests.push({
+          url: String(input),
+          method: init?.method ?? 'GET',
+        });
+
+        return new Response(
+          JSON.stringify({
+            status: 'ok',
+            result: {
+              uri: 'viking://resources/mirrorbrain-candidate-memories-candidate-browser-aw-event-1.json',
+            },
+          }),
+          {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          },
+        );
+      },
+    );
+
+    expect(requests).toEqual([
+      {
+        url: 'http://127.0.0.1:1933/api/v1/fs?uri=viking%3A%2F%2Fresources%2Fmirrorbrain-candidate-memories-candidate-browser-aw-event-1.json&recursive=true',
+        method: 'DELETE',
+      },
+    ]);
   });
 
   it('imports a reviewed memory into OpenViking through the resources API', async () => {

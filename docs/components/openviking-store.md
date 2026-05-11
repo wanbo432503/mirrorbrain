@@ -22,6 +22,7 @@ This component is the storage adapter that maps MirrorBrain artifacts into OpenV
 - `ingestMemoryEventToOpenViking(...)`
 - `ingestMemoryNarrativeToOpenViking(...)`
 - `ingestBrowserPageContentToOpenViking(...)`
+- `deleteCandidateMemoryFromOpenViking(...)`
 - `ingestKnowledgeArtifactToOpenViking(...)`
 - `ingestSkillArtifactToOpenViking(...)`
 - `listMirrorBrainMemoryEventsFromOpenViking(...)`
@@ -44,7 +45,8 @@ This component is the storage adapter that maps MirrorBrain artifacts into OpenV
 10. Knowledge artifacts are reloaded from stored markdown by treating the serialized `## Body` block as opaque markdown until the explicit metadata sections begin, so nested headings inside the body survive a refresh.
 11. Browser page-content artifacts are written as local markdown files under `mirrorbrain/browser-page-content/` and imported non-blockingly so raw memory-event sync does not stall on downstream indexing.
 12. The same adapter can also read historical `MemoryEvent` JSON files directly from the local workspace cache under `mirrorbrain/memory-events/` when the caller needs a non-OpenViking fallback.
-13. The UI memory-event cache under `mirrorbrain/cache/memory-events-cache.json` is treated as rebuildable; missing, structurally invalid, empty, or corrupt cache files are ignored so the service can reinitialize from workspace/OpenViking sources.
+13. Candidate deletion removes the encoded OpenViking resource through `DELETE /api/v1/fs?uri=...&recursive=true`, matching OpenViking's documented filesystem removal endpoint.
+14. The UI memory-event cache under `mirrorbrain/cache/memory-events-cache.json` is treated as rebuildable; missing, structurally invalid, empty, or corrupt cache files are ignored so the service can reinitialize from workspace/OpenViking sources.
 
 ## Operational Note
 
@@ -56,6 +58,7 @@ For local setup and startup expectations around OpenViking, see the repository [
 - unit tests verify payload preservation
 - unit tests verify ingestion metadata remains attached
 - unit tests verify HTTP request payloads for memory, memory-narrative, candidate, reviewed, knowledge, and skill imports, including non-blocking memory-event ingestion
+- unit tests verify candidate memory deletion calls OpenViking's filesystem delete endpoint
 - unit tests verify browser page-content imports are queued without blocking sync completion
 - unit tests verify transient OpenViking point-lock failures are retried for resource imports
 - unit tests verify HTTP-based listing and content reads for memory, memory-narrative, candidate, reviewed, knowledge, and skill retrieval
@@ -74,7 +77,7 @@ For local setup and startup expectations around OpenViking, see the repository [
 - memory-event sync completion now means MirrorBrain has handed imported events to OpenViking, not that every event has finished OpenViking-side indexing
 - browser page-content imports are queued non-blockingly, so vector retrieval may lag behind raw memory-event visibility until OpenViking finishes downstream indexing
 - repeated or long-lived OpenViking lock contention still fails after the bounded retry budget is exhausted
-- historical duplicates are suppressed at retrieval time for browser data, but the underlying OpenViking resources are still append-oriented and remain on disk until a separate cleanup path exists
+- historical duplicates are suppressed at retrieval time for browser data; candidate resources now have a hard-delete path, while raw memory-event and narrative cleanup remains separate follow-up work
 - Phase 1 does not publish directly into OpenViking `agent/skills`; it stores skill drafts as MirrorBrain-managed resources for stable classification and retrieval
 - knowledge artifacts are parsed back from stored markdown conventions, including Phase 3 topic-aware metadata, so retrieval depends on those content conventions staying stable
 - Phase 3 knowledge markdown now carries richer topic-aware metadata and provenance sections; callers should preserve those conventions when extending storage

@@ -12,6 +12,7 @@ This storage slice is responsible for:
 - writing reviewed memories to OpenViking resources
 - reading candidate memories back for later review flows
 - reading reviewed memories back for downstream knowledge and skill generation
+- deleting candidate memories from both the MirrorBrain workspace cache and OpenViking resource storage
 
 This slice is not responsible for:
 
@@ -25,8 +26,10 @@ This slice is not responsible for:
 - `ingestReviewedMemoryToOpenViking(...)`
 - `listMirrorBrainCandidateMemoriesFromOpenViking(...)`
 - `listMirrorBrainReviewedMemoriesFromOpenViking(...)`
+- `deleteCandidateMemoryFromOpenViking(...)`
 - `createMirrorBrainService(...).createDailyCandidateMemories(...)`
 - `createMirrorBrainService(...).reviewCandidateMemory(...)`
+- `createMirrorBrainService(...).deleteCandidateMemory(...)`
 
 ## Data Flow
 
@@ -37,6 +40,7 @@ This slice is not responsible for:
 5. The service persists that reviewed memory into OpenViking resource storage.
 6. Later workflows can reload stored candidates or reviewed memories for UI or generation flows.
 7. Daily candidate refresh uses published knowledge `sourceReviewedMemoryIds` plus persisted reviewed memories to identify memory events that have already been synthesized into knowledge, then removes those events from the next clustering input.
+8. When a user deletes a candidate, the service removes the local `mirrorbrain/candidate-memories/<id>.json` file and also removes the corresponding encoded OpenViking resource so stale OpenViking copies do not reappear in later candidate lists.
 
 ## Dependencies
 
@@ -47,6 +51,7 @@ This slice is not responsible for:
 ## Failure Modes And Operational Constraints
 
 - if the OpenViking resource import fails, candidate or reviewed memory persistence fails with the underlying request error
+- if OpenViking candidate deletion fails, the service surfaces the OpenViking error even if the local workspace file was already missing
 - candidate and reviewed memory currently use JSON resource files rather than richer typed OpenViking entities
 - lifecycle transitions still depend on explicit service calls; no background promotion is performed
 - reviewed memories must remain reloadable after candidate deletion because they are the durable bridge between published knowledge and the original memory events that should not be reclustered
@@ -56,4 +61,5 @@ This slice is not responsible for:
 - adapter coverage in `src/integrations/openviking-store/index.test.ts`
 - service persistence coverage in `tests/integration/mirrorbrain-service-contract.test.ts`
 - service coverage in `src/apps/mirrorbrain-service/index.test.ts` verifies published-knowledge-consumed memory events are excluded from regenerated candidates
+- service coverage verifies candidate deletion removes the workspace file and invokes OpenViking resource deletion, including the local-file-already-missing case
 - broader service and type verification through `Vitest` and `tsc --noEmit`

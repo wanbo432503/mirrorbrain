@@ -2111,6 +2111,62 @@ describe('mirrorbrain service', () => {
       await rm(workspaceDir, { recursive: true, force: true });
     });
 
+    it('deletes candidate memory from workspace and OpenViking resources', async () => {
+      const service = {
+        status: 'running' as const,
+        config: getMirrorBrainConfig(),
+        syncBrowserMemory: vi.fn(async () => ({
+          sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+          strategy: 'incremental' as const,
+          importedCount: 0,
+          lastSyncedAt: '2026-03-20T10:00:00.000Z',
+          importedEvents: [],
+        })),
+        syncShellMemory: vi.fn(async () => ({
+          sourceKey: 'shell-history:/tmp/.zsh_history',
+          strategy: 'incremental' as const,
+          importedCount: 0,
+          lastSyncedAt: '2026-03-20T10:00:00.000Z',
+          importedEvents: [],
+        })),
+        stop: vi.fn(),
+      };
+      const workspaceDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-candidate-delete-'));
+      const candidateId = 'candidate:delete-both-stores';
+      const candidateDir = join(workspaceDir, 'mirrorbrain', 'candidate-memories');
+      const filePath = join(candidateDir, `${candidateId}.json`);
+      const deleteCandidateMemoryResource = vi.fn(async () => undefined);
+
+      await mkdir(candidateDir, { recursive: true });
+      await writeFile(filePath, JSON.stringify({ id: candidateId }));
+
+      const api = createMirrorBrainService(
+        {
+          service,
+          workspaceDir,
+        },
+        {
+          listMemoryEvents: vi.fn(async () => ({
+            items: [],
+            pagination: { total: 0, page: 1, pageSize: 10, totalPages: 1 },
+          })),
+          listKnowledge: vi.fn(async () => []),
+          listSkillDrafts: vi.fn(async () => []),
+          deleteCandidateMemoryResource,
+        },
+      );
+
+      await api.deleteCandidateMemory(candidateId);
+
+      await expect(access(filePath)).rejects.toThrow();
+      expect(deleteCandidateMemoryResource).toHaveBeenCalledWith({
+        baseUrl: service.config.openViking.baseUrl,
+        candidateMemoryId: candidateId,
+      });
+
+      await rm(workspaceDir, { recursive: true, force: true });
+    });
+
     it('should succeed if file already deleted (idempotent)', async () => {
       const service = {
         status: 'running' as const,
@@ -2134,6 +2190,7 @@ describe('mirrorbrain service', () => {
 
       const workspaceDir = '/tmp/mirrorbrain-test-workspace';
       const candidateId = 'candidate:non-existent';
+      const deleteCandidateMemoryResource = vi.fn(async () => undefined);
 
       const api = createMirrorBrainService(
         {
@@ -2147,11 +2204,16 @@ describe('mirrorbrain service', () => {
           })),
           listKnowledge: vi.fn(async () => []),
           listSkillDrafts: vi.fn(async () => []),
+          deleteCandidateMemoryResource,
         },
       );
 
       // Delete non-existent candidate - should succeed without error
       await expect(api.deleteCandidateMemory(candidateId)).resolves.toBeUndefined();
+      expect(deleteCandidateMemoryResource).toHaveBeenCalledWith({
+        baseUrl: service.config.openViking.baseUrl,
+        candidateMemoryId: candidateId,
+      });
 
       // Cleanup
       await rm(workspaceDir, { recursive: true, force: true });

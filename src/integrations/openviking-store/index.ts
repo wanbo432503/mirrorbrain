@@ -38,6 +38,11 @@ interface IngestCandidateMemoryToOpenVikingInput {
   artifact: CandidateMemory;
 }
 
+interface DeleteCandidateMemoryFromOpenVikingInput {
+  baseUrl: string;
+  candidateMemoryId: string;
+}
+
 interface IngestReviewedMemoryToOpenVikingInput {
   baseUrl: string;
   workspaceDir: string;
@@ -315,6 +320,38 @@ export async function ingestCandidateMemoryToOpenViking(
     },
     fetchImpl,
   );
+}
+
+export async function deleteCandidateMemoryFromOpenViking(
+  input: DeleteCandidateMemoryFromOpenVikingInput,
+  fetchImpl: FetchLike = fetch,
+): Promise<void> {
+  const uri = createMirrorBrainResourceTarget(
+    'candidate-memories',
+    `${input.candidateMemoryId}.json`,
+  );
+  const url = new URL('/api/v1/fs', input.baseUrl);
+  url.searchParams.set('uri', uri);
+  url.searchParams.set('recursive', 'true');
+
+  const response = await fetchImpl(url.toString(), {
+    method: 'DELETE',
+  });
+
+  if (response.status === 404) {
+    return;
+  }
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    const trimmedErrorBody = errorBody.trim();
+
+    throw new Error(
+      trimmedErrorBody.length > 0
+        ? `OpenViking request failed with status ${response.status}: ${trimmedErrorBody}`
+        : `OpenViking request failed with status ${response.status}`,
+    );
+  }
 }
 
 export async function ingestMemoryNarrativeToOpenViking(

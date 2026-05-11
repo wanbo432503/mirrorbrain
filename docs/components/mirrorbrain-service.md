@@ -97,7 +97,8 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
 - stored browser and shell narratives are rebuilt after explicit service sync operations, but the rebuild now happens in the background and may lag slightly behind the returned sync summary
 - background browser polling still relies on the raw-event retrieval fallback until a later narrative-refresh hook is added there
 - generation remains caller-driven; the service exposes explicit methods but does not schedule daily review or skill extraction automatically
-- artifact deletion currently relies on service-owned tombstones rather than a documented OpenViking hard-delete API, so upstream OpenViking resources may still exist even though MirrorBrain no longer surfaces them
+- knowledge and skill artifact deletion currently relies on service-owned tombstones rather than a documented OpenViking hard-delete path in this service layer, so upstream OpenViking resources may still exist even though MirrorBrain no longer surfaces them
+- candidate deletion removes both the MirrorBrain workspace candidate file and the corresponding OpenViking resource
 - candidate generation is heuristic and bounded to at most 10 tasks per review window
 - AI review suggestions are heuristic placeholders in Phase 1
 - retrieval methods still lack pagination and advanced ranking
