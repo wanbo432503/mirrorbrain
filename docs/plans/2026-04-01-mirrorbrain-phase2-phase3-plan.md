@@ -587,10 +587,14 @@ Clustering signal order:
 
 ## Phase 3: Knowledge Quality
 
-Status: implemented at the minimum planned baseline. The detailed execution handoff and resulting acceptance shape are captured in:
+Status: implemented at the minimum planned baseline. The current implementation
+contract is now captured in component documentation rather than historical
+execution handoff files:
 
-- `docs/plans/2026-04-03-phase3-knowledge-implementation-plan.md`
-- `docs/plans/2026-04-03-phase3-knowledge-test-spec.md`
+- `docs/components/module-reference.md`
+- `docs/components/topic-knowledge-merge.md`
+- `docs/components/topic-knowledge-read.md`
+- `docs/components/topic-knowledge-quality.md`
 
 ### Goal
 
@@ -688,15 +692,6 @@ Keep capture, synchronization, memory shaping, knowledge creation, and skill gen
 ### Safety Rule
 
 Even when the roadmap prioritizes usability and execution power, authorization, provenance, and review boundaries remain mandatory constraints rather than optional polish.
-
-## Phase 3 Formal Planning Artifacts
-
-The implementation-grade Phase 3 planning artifacts now live in:
-
-- `docs/plans/2026-04-03-phase3-knowledge-implementation-plan.md`
-- `docs/plans/2026-04-03-phase3-knowledge-test-spec.md`
-
-These documents should be treated as the execution handoff for future Phase 3 implementation work.
 
 ## Documentation Deliverables
 

@@ -100,10 +100,14 @@ Use it for:
 - Technical design: `docs/plans/2026-03-16-mirrorbrain-technical-design.md`
 - Phase 2 / Phase 3 roadmap:
   `docs/plans/2026-04-01-mirrorbrain-phase2-phase3-plan.md`
-- Phase 3 implementation plan:
-  `docs/plans/2026-04-03-phase3-knowledge-implementation-plan.md`
-- Phase 3 test spec:
-  `docs/plans/2026-04-03-phase3-knowledge-test-spec.md`
+
+## Current Implementation Docs
+
+- Module reference: `docs/components/module-reference.md`
+- HTTP API contract: `docs/components/mirrorbrain-http-api.md`
+- Topic knowledge merge: `docs/components/topic-knowledge-merge.md`
+- Topic knowledge read surface: `docs/components/topic-knowledge-read.md`
+- Topic knowledge quality: `docs/components/topic-knowledge-quality.md`
 
 ## Recommended Next Work
 
