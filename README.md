@@ -252,6 +252,8 @@ Primary local endpoints:
 - `POST /skills/generate`
 
 The full generated schema is available at `/openapi.json` and `/docs`.
+The written API contract is documented in
+[docs/components/mirrorbrain-http-api.md](./docs/components/mirrorbrain-http-api.md).
 
 ## Documentation
 
@@ -259,6 +261,7 @@ Start here:
 
 - [Documentation index](./docs/README.md)
 - [Current module reference](./docs/components/module-reference.md)
+- [MirrorBrain HTTP API](./docs/components/mirrorbrain-http-api.md)
 - [Current project status](./docs/features/current-project-status.md)
 - [OpenClaw memory tool example](./docs/features/openclaw-memory-tool-example.md)
 - [OpenClaw demo guide](./docs/features/openclaw-memory-demo-guide.md)

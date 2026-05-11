@@ -4,6 +4,9 @@
 
 `mirrorbrain-http-server` is the runnable local HTTP surface for the Phase 1 MVP. It now uses `Fastify` as the server framework, wraps the existing MirrorBrain service contract, and exposes both JSON endpoints and OpenAPI-backed interactive docs.
 
+For the written endpoint contract, request/response payloads, examples, and
+lifecycle semantics, see [MirrorBrain HTTP API](./mirrorbrain-http-api.md).
+
 ## Responsibility Boundary
 
 This component is responsible for:

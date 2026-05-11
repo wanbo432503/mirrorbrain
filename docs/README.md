@@ -26,6 +26,9 @@ The React UI consumes the same HTTP API that an external host can use.
 - [Module Reference](./components/module-reference.md): current source-code
   module catalog with responsibilities, inputs, outputs, dependencies, failure
   modes, and verification strategy.
+- [MirrorBrain HTTP API](./components/mirrorbrain-http-api.md): dedicated
+  local HTTP API contract, endpoint payloads, examples, lifecycle rules, and
+  failure modes.
 - [Current Project Status](./features/current-project-status.md): concise
   implemented / not-yet-implemented status snapshot.
 - [OpenClaw Memory Tool Example](./features/openclaw-memory-tool-example.md):

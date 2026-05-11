@@ -242,6 +242,8 @@ http://127.0.0.1:3007/docs
 - `POST /skills/generate`
 
 完整 schema 在 `/openapi.json` 和 `/docs`。
+专门的书面 API contract 见
+[docs/components/mirrorbrain-http-api.md](./docs/components/mirrorbrain-http-api.md)。
 
 ## 文档
 
@@ -249,6 +251,7 @@ http://127.0.0.1:3007/docs
 
 - [文档索引](./docs/README.md)
 - [当前模块参考](./docs/components/module-reference.md)
+- [MirrorBrain HTTP API](./docs/components/mirrorbrain-http-api.md)
 - [当前项目状态](./docs/features/current-project-status.md)
 - [OpenClaw memory tool example](./docs/features/openclaw-memory-tool-example.md)
 - [OpenClaw demo guide](./docs/features/openclaw-memory-demo-guide.md)
