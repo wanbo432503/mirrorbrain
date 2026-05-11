@@ -21,6 +21,7 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 - publishes knowledge and skill artifacts through explicit OpenViking-backed service methods
 - deletes persisted knowledge and skill artifacts through workspace-backed tombstones so removed ids stay hidden even if OpenViking still lists older copies
 - generates source-content-aware knowledge drafts from reviewed memories before publishing them
+- schedules the knowledge lint workflow after reviewed-memory knowledge generation and regeneration
 - exposes topic-merge helper methods that turn daily-review drafts into topic merge candidates and publish topic knowledge artifacts
 - exposes read-oriented topic knowledge helpers for listing current-best topics, reading one current-best topic, and reading topic history
 - does not own domain logic for memory review, knowledge generation, or skill generation
@@ -54,10 +55,11 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 20. Merge a daily-review draft into topic knowledge, publishing the new current-best artifact and any superseded previous version.
 21. List current-best topic knowledge summaries, fetch the current-best artifact for one topic key, and return topic history in newest-first order.
 22. For reviewed-memory knowledge generation APIs, resolve captured page text from reviewed memory events before creating the draft, then publish the resulting artifact.
-23. Approve a knowledge draft by loading the persisted draft by id and passing it through the existing topic-knowledge merge workflow.
-24. If the caller provides a draft snapshot, approve uses that snapshot after verifying its id matches `draftId`; this preserves the visible UI draft, source reviewed-memory ids, provenance refs, and recent edits even when an older persisted draft with the same id exists. If no snapshot is provided, approve falls back to the persisted knowledge list.
-25. When a knowledge or skill artifact is deleted, remove the workspace copy and record a service-level tombstone under `mirrorbrain/deleted-artifacts/` so later reads suppress both workspace and OpenViking copies of that id.
-26. When a deleted artifact id is published again later, clear its tombstone before persisting the fresh artifact so it becomes visible again.
+23. After the generated artifact is published and returned, schedule asynchronous knowledge lint to refresh relation metadata and tombstone mechanically duplicated generated drafts.
+24. Approve a knowledge draft by loading the persisted draft by id and passing it through the existing topic-knowledge merge workflow.
+25. If the caller provides a draft snapshot, approve uses that snapshot after verifying its id matches `draftId`; this preserves the visible UI draft, source reviewed-memory ids, provenance refs, and recent edits even when an older persisted draft with the same id exists. If no snapshot is provided, approve falls back to the persisted knowledge list.
+26. When a knowledge or skill artifact is deleted, remove the workspace copy and record a service-level tombstone under `mirrorbrain/deleted-artifacts/` so later reads suppress both workspace and OpenViking copies of that id.
+27. When a deleted artifact id is published again later, clear its tombstone before persisting the fresh artifact so it becomes visible again.
 
 ## Operational Note
 
@@ -83,6 +85,7 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
 - unit and integration tests verify the service forwards explicit knowledge and skill publishing calls to OpenViking ingestion with runtime configuration
 - unit tests verify deleting persisted knowledge and skill artifacts removes workspace copies and suppresses later reads through tombstones
 - unit and integration tests verify reviewed memories can be turned into publishable Phase 3-ready knowledge artifacts through the service contract, including captured page text in the generated body
+- unit tests verify reviewed-memory knowledge generation schedules asynchronous knowledge lint after publishing the generated artifact
 - unit tests verify knowledge draft approval publishes through the topic merge workflow instead of reading unstored JSON files
 - unit tests verify knowledge draft approval can publish the caller draft snapshot when the persisted lookup has not caught up or still contains an older draft with the same id
 - unit and integration tests verify topic merge candidates can be built and merged through the service contract, including superseded-history publication on update
@@ -97,6 +100,7 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
 - stored browser and shell narratives are rebuilt after explicit service sync operations, but the rebuild now happens in the background and may lag slightly behind the returned sync summary
 - background browser polling still relies on the raw-event retrieval fallback until a later narrative-refresh hook is added there
 - generation remains caller-driven; the service exposes explicit methods but does not schedule daily review or skill extraction automatically
+- knowledge lint is a background maintenance workflow; it refreshes relations and deletes only mechanically duplicated generated drafts, while published knowledge updates still require the approval and topic-merge path
 - knowledge and skill artifact deletion currently relies on service-owned tombstones rather than a documented OpenViking hard-delete path in this service layer, so upstream OpenViking resources may still exist even though MirrorBrain no longer surfaces them
 - candidate deletion removes both the MirrorBrain workspace candidate file and the corresponding OpenViking resource
 - candidate generation is heuristic and bounded to at most 10 tasks per review window

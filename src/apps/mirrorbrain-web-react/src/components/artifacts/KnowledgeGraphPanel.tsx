@@ -3,6 +3,7 @@ import type {
   KnowledgeGraphNode,
   KnowledgeGraphEdge,
 } from '../../types/index';
+import { useEffect, useMemo, useState } from 'react';
 
 type PositionedNode = KnowledgeGraphNode & {
   x: number;
@@ -80,26 +81,59 @@ export function KnowledgeGraphPanel(props: KnowledgeGraphPanelProps): React.Reac
   const { graph, onTopicClick, onArtifactClick, className, focusArtifactId, focusArtifactTitle } =
     props;
 
-  const filteredEdges = filterEdges(graph.edges, props);
+  const [positionOverrides, setPositionOverrides] = useState<Record<string, { x: number; y: number }>>({});
+  const [dragState, setDragState] = useState<{
+    nodeId: string;
+    startClientX: number;
+    startClientY: number;
+    startNodeX: number;
+    startNodeY: number;
+  } | null>(null);
+
+  useEffect(() => {
+    setPositionOverrides({});
+  }, [graph.generatedAt, focusArtifactId]);
+
+  useEffect(() => {
+    if (dragState === null) {
+      return undefined;
+    }
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const nextX = clamp(dragState.startNodeX + event.clientX - dragState.startClientX, 48, 672);
+      const nextY = clamp(dragState.startNodeY + event.clientY - dragState.startClientY, 48, 472);
+
+      setPositionOverrides((current) => ({
+        ...current,
+        [dragState.nodeId]: {
+          x: nextX,
+          y: nextY,
+        },
+      }));
+    };
+    const handlePointerUp = () => {
+      setDragState(null);
+    };
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+    };
+  }, [dragState]);
+
+  const filteredEdges = useMemo(() => filterEdges(graph.edges, props), [graph.edges, props]);
   const focusNode = focusArtifactId
     ? graph.nodes.find(
         (node) =>
           node.type === 'knowledge-artifact' && node.properties.artifactId === focusArtifactId,
       )
     : null;
-  const focusNodeIds = new Set<string>();
-
-  if (focusNode) {
-    focusNodeIds.add(focusNode.id);
-    filteredEdges.forEach((edge) => {
-      if (edge.source === focusNode.id) {
-        focusNodeIds.add(edge.target);
-      }
-      if (edge.target === focusNode.id) {
-        focusNodeIds.add(edge.source);
-      }
-    });
-  }
+  const focusNodeIds = focusNode
+    ? getFocusedKnowledgeGraphNodeIds(graph.nodes, filteredEdges, focusNode.id)
+    : new Set<string>();
 
   const visibleNodes = focusNode
     ? graph.nodes.filter((node) => focusNodeIds.has(node.id))
@@ -109,7 +143,12 @@ export function KnowledgeGraphPanel(props: KnowledgeGraphPanelProps): React.Reac
     : filteredEdges;
 
   const isFocused = Boolean(focusNode);
-  const positionedNodes = positionGraphNodes(visibleNodes, visibleEdges, focusNode?.id ?? null);
+  const positionedNodes = positionGraphNodes(
+    visibleNodes,
+    visibleEdges,
+    focusNode?.id ?? null,
+    positionOverrides,
+  );
   const positionedNodeById = new Map(positionedNodes.map((node) => [node.id, node]));
   const selectedNode = focusNode
     ? positionedNodeById.get(focusNode.id) ?? null
@@ -223,6 +262,16 @@ export function KnowledgeGraphPanel(props: KnowledgeGraphPanelProps): React.Reac
                   role="button"
                   tabIndex={0}
                   onClick={() => handleNodeClick(node)}
+                  onPointerDown={(event) => {
+                    event.preventDefault();
+                    setDragState({
+                      nodeId: node.id,
+                      startClientX: event.clientX,
+                      startClientY: event.clientY,
+                      startNodeX: node.x,
+                      startNodeY: node.y,
+                    });
+                  }}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
                       event.preventDefault();
@@ -337,6 +386,7 @@ function positionGraphNodes(
   nodes: KnowledgeGraphNode[],
   edges: KnowledgeGraphEdge[],
   focusNodeId: string | null,
+  positionOverrides: Record<string, { x: number; y: number }> = {},
 ): PositionedNode[] {
   const center = { x: 360, y: 245 };
   const relationships = edges.map((edge) => ({ source: edge.source, target: edge.target }));
@@ -352,7 +402,14 @@ function positionGraphNodes(
 
   return sortedNodes.map((node, index) => {
     if (node.id === focusNodeId) {
-      return toPositionedNode(node, center.x, center.y, relationships, true);
+      const override = positionOverrides[node.id];
+      return toPositionedNode(
+        node,
+        override?.x ?? center.x,
+        override?.y ?? center.y,
+        relationships,
+        true,
+      );
     }
 
     const orbitIndex = focusNodeId
@@ -361,8 +418,88 @@ function positionGraphNodes(
     const angle = (Math.PI * 2 * orbitIndex) / Math.max(orbitNodes.length, 1) - Math.PI / 2;
     const x = center.x + Math.cos(angle) * radius;
     const y = center.y + Math.sin(angle) * (focusNodeId ? 125 : 155);
-    return toPositionedNode(node, x, y, relationships, false);
+    const override = positionOverrides[node.id];
+    return toPositionedNode(node, override?.x ?? x, override?.y ?? y, relationships, false);
   });
+}
+
+function getFocusedKnowledgeGraphNodeIds(
+  nodes: KnowledgeGraphNode[],
+  edges: KnowledgeGraphEdge[],
+  focusNodeId: string,
+): Set<string> {
+  const nodeIds = new Set<string>([focusNodeId]);
+  const topicIds = new Set<string>();
+
+  for (const edge of edges) {
+    if (edge.source === focusNodeId) {
+      nodeIds.add(edge.target);
+    }
+
+    if (edge.target === focusNodeId) {
+      nodeIds.add(edge.source);
+    }
+
+    if (edge.type !== 'CONTAINS') {
+      continue;
+    }
+
+    if (edge.source === focusNodeId) {
+      nodeIds.add(edge.target);
+      topicIds.add(edge.target);
+    }
+
+    if (edge.target === focusNodeId) {
+      nodeIds.add(edge.source);
+      topicIds.add(edge.source);
+    }
+  }
+
+  for (const node of nodes) {
+    if (node.id === focusNodeId && node.topicKey.length > 0) {
+      topicIds.add(`topic:${node.topicKey}`);
+    }
+  }
+
+  for (const edge of edges) {
+    if (edge.type === 'CONTAINS') {
+      continue;
+    }
+
+    if (topicIds.has(edge.source)) {
+      nodeIds.add(edge.source);
+      nodeIds.add(edge.target);
+      topicIds.add(edge.target);
+    }
+
+    if (topicIds.has(edge.target)) {
+      nodeIds.add(edge.source);
+      nodeIds.add(edge.target);
+      topicIds.add(edge.source);
+    }
+  }
+
+  for (const edge of edges) {
+    if (edge.type !== 'CONTAINS') {
+      continue;
+    }
+
+    if (topicIds.has(edge.source)) {
+      nodeIds.add(edge.source);
+      nodeIds.add(edge.target);
+    }
+
+    if (topicIds.has(edge.target)) {
+      nodeIds.add(edge.source);
+      nodeIds.add(edge.target);
+    }
+  }
+
+  return nodeIds;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
 }
 
 function toPositionedNode(

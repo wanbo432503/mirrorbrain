@@ -14,7 +14,7 @@ The React artifacts UI is responsible for:
 - formatting artifact timestamps for display in the user's IANA timezone while keeping persisted artifact metadata as UTC ISO strings
 - keeping the Knowledge tab left item list stable across its `List` and `Graph` subtabs
 - showing the newest approved knowledge detail by default in Knowledge `List` mode
-- showing the global knowledge graph by default in Knowledge `Graph` mode, then a focused graph centered on the selected knowledge artifact after item selection
+- showing the global knowledge graph by default in Knowledge `Graph` mode, then a focused graph centered on the selected knowledge artifact and its related topics/artifacts after item selection
 - showing the selected skill artifact in a right-side detail panel
 - capturing local conversation notes that describe requested edits for the selected artifact
 - exposing explicit delete actions for persisted knowledge and skill artifacts
@@ -37,7 +37,7 @@ It does not synthesize new knowledge, execute skills, or persist conversational 
 
 In Knowledge `List` mode, the right detail panel defaults to the newest approved knowledge artifact and changes when another knowledge item is clicked. The body is rendered through `KnowledgeMarkdownRenderer`, so headings, tables, links, and `[[wiki-links]]` read like a durable document rather than a raw text blob. The detail view also exposes tags, related knowledge ids, and indexed document context in a compact metadata panel inspired by the PulseOS-lite document context panel.
 
-In Knowledge `Graph` mode, the right panel defaults to the global knowledge graph. Clicking a knowledge item in graph mode passes that artifact id into `KnowledgeGraphPanel`, which narrows the graph to the centered artifact and directly related nodes and edges. The graph renderer uses dependency-free SVG for nodes, relation lines, relation labels, selection metadata, and a legend; this mirrors the PulseOS-lite graph workspace information architecture without adding its Cytoscape dependency stack to MirrorBrain.
+In Knowledge `Graph` mode, the right panel defaults to the global knowledge graph. Clicking a knowledge item in graph mode passes that artifact id into `KnowledgeGraphPanel`, which narrows the graph to the centered artifact, its containing topic, related topics, and knowledge artifacts contained by those related topics. Direct artifact-to-artifact edges are preserved for older graph snapshots. The graph renderer uses dependency-free SVG for nodes, relation lines, relation labels, selection metadata, drag repositioning, and a legend; this mirrors the PulseOS-lite graph workspace information architecture without adding its Cytoscape dependency stack to MirrorBrain.
 
 `SkillPanel` sorts skill artifacts newest first, defaults selection to the newest visible skill, and updates the right-side detail panel when a skill item is clicked.
 
@@ -61,7 +61,7 @@ The artifact edit message row uses a single-line full-width input with a send ac
 
 - Artifacts without timestamps sort after timestamped artifacts.
 - Empty knowledge or skill lists show an empty state instead of a blank detail panel.
-- The current knowledge graph UI is an SVG renderer, not a full Cytoscape workspace. It supports global/focused relation reading but does not yet provide pan, zoom, drag, force relayout, or incremental graph synchronization.
+- The current knowledge graph UI is an SVG renderer, not a full Cytoscape workspace. It supports global/focused relation reading and drag repositioning, but does not yet provide pan, zoom, force relayout, or incremental graph synchronization.
 - Conversation notes are local UI state only. They are review/edit instructions, not published artifact mutations.
 - Generated artifacts are persisted; only in-progress edit notes can be lost if the browser closes before the user saves follow-up edits.
 - Delete actions remove the artifact from the persisted artifact list; deleting published knowledge also prevents its source draft from reappearing as a separate timeline item. Local conversation notes tied to that artifact id are effectively orphaned because the artifact is no longer selectable.
@@ -70,6 +70,7 @@ The artifact edit message row uses a single-line full-width input with a send ac
 ## Test Strategy
 
 - `KnowledgePanel.test.tsx` covers approved-only knowledge list rendering, newest-first ordering, default detail selection, Markdown detail rendering, context metadata, stable left list across List/Graph modes, global graph default, SVG graph nodes/edges, focused graph switching, and user-timezone timestamp display.
+- `KnowledgeGraphPanel.test.tsx` covers focused graph expansion from a selected knowledge artifact to related topics/artifacts and drag repositioning.
 - `SkillPanel.test.tsx` covers newest-first skill rendering, default detail selection, and user-timezone timestamp display.
 - `shared/user-time.test.ts` covers deterministic UTC-to-user-timezone formatting and fallback timezone behavior.
 - `HistoryTopics.test.tsx` remains as legacy coverage for the previous combined artifact history component until that component is removed.

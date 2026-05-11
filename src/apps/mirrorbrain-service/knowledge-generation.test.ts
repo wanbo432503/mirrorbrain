@@ -496,4 +496,53 @@ describe('mirrorbrain service knowledge generation', () => {
       }),
     );
   });
+
+  it('schedules knowledge lint asynchronously after generating a knowledge draft', async () => {
+    const generatedArtifact: KnowledgeArtifact = {
+      id: 'knowledge-draft:reviewed:candidate:browser:vitest-new',
+      artifactType: 'daily-review-draft',
+      draftState: 'draft',
+      topicKey: 'vitest-testing',
+      title: 'Vitest debugging workflow',
+      summary: 'More notes about Vitest tests.',
+      body: 'Vitest debug workflow.',
+      sourceReviewedMemoryIds: ['reviewed:candidate:browser:vitest'],
+      tags: ['vitest'],
+    };
+    const lintKnowledge = vi.fn(async () => ({
+      updateArtifacts: [],
+      deleteArtifactIds: [],
+    }));
+    const api = createMirrorBrainService(
+      {
+        service: runtimeService,
+        workspaceDir: '/tmp/mirrorbrain-workspace',
+      },
+      {
+        listKnowledge: vi.fn(async () => []),
+        generateKnowledge: vi.fn(async () => generatedArtifact),
+        publishKnowledge: vi.fn(async () => ({
+          sourcePath: '/tmp/mirrorbrain/knowledge.md',
+          rootUri: 'viking://resources/mirrorbrain/knowledge.md',
+        })),
+        lintKnowledge,
+      },
+    );
+
+    const artifact = await api.generateKnowledgeFromReviewedMemories([
+      reviewedMemory,
+    ]);
+
+    expect(artifact.id).toBe(generatedArtifact.id);
+    await vi.waitFor(() => {
+      expect(lintKnowledge).toHaveBeenCalledWith(
+        expect.objectContaining({
+          seedKnowledgeIds: [generatedArtifact.id],
+          knowledgeArtifacts: expect.arrayContaining([
+            expect.objectContaining({ id: generatedArtifact.id }),
+          ]),
+        }),
+      );
+    });
+  });
 });

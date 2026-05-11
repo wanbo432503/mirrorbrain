@@ -62,6 +62,11 @@ import {
   mergeDailyReviewIntoTopicKnowledge,
 } from '../../workflows/topic-knowledge-merge/index.js';
 import {
+  lintKnowledgeArtifacts,
+  type KnowledgeLintInput,
+  type KnowledgeLintPlan,
+} from '../../workflows/knowledge-lint/index.js';
+import {
   analyzeKnowledgeWithConfiguredLLM,
   generateKnowledgeFromReviewedMemories as generateKnowledgeWithSourceContent,
 } from '../../modules/knowledge-generation-llm/index.js';
@@ -144,6 +149,10 @@ type CreateCandidateMemoriesDependency = (
   input: Parameters<typeof createCandidateMemories>[0],
 ) => CandidateMemory[] | Promise<CandidateMemory[]>;
 
+type LintKnowledgeDependency = (
+  input: KnowledgeLintInput,
+) => KnowledgeLintPlan | Promise<KnowledgeLintPlan>;
+
 interface CreateMirrorBrainServiceDependencies {
   queryMemory?: typeof queryMemoryFromPluginApi;
   listMemoryEvents?: ListMemoryEventsDependency;
@@ -166,6 +175,7 @@ interface CreateMirrorBrainServiceDependencies {
   buildShellProblemNarratives?: typeof generateShellProblemNarratives;
   buildTopicKnowledgeCandidates?: typeof buildTopicKnowledgeCandidates;
   mergeTopicKnowledge?: typeof mergeDailyReviewIntoTopicKnowledge;
+  lintKnowledge?: LintKnowledgeDependency;
   generateKnowledge?: (input: {
     reviewedMemories: ReviewedMemory[];
     existingDraft?: KnowledgeArtifact;
@@ -556,6 +566,7 @@ export function createMirrorBrainService(
     dependencies.buildTopicKnowledgeCandidates ?? buildTopicKnowledgeCandidates;
   const mergeTopicKnowledge =
     dependencies.mergeTopicKnowledge ?? mergeDailyReviewIntoTopicKnowledge;
+  const lintKnowledge = dependencies.lintKnowledge ?? lintKnowledgeArtifacts;
   const loadBrowserPageArtifact =
     dependencies.loadBrowserPageContentArtifactFromWorkspace ??
     loadBrowserPageContentArtifactFromWorkspace;
@@ -821,6 +832,39 @@ export function createMirrorBrainService(
     return relatedArtifacts.filter((artifact) =>
       updatedArtifacts.some((updated) => updated.id === artifact.id),
     );
+  };
+  const scheduleKnowledgeLint = (seedArtifacts: KnowledgeArtifact[]): void => {
+    const seedKnowledgeIds = seedArtifacts.map((artifact) => artifact.id);
+
+    void (async () => {
+      const existingArtifacts = await loadKnowledgeArtifacts();
+      const knowledgeArtifacts = mergeArtifactsById(existingArtifacts, seedArtifacts);
+      const plan = await lintKnowledge({
+        knowledgeArtifacts,
+        seedKnowledgeIds,
+      });
+
+      await Promise.all(
+        plan.deleteArtifactIds.map((artifactId) =>
+          deleteKnowledgeArtifactById(artifactId),
+        ),
+      );
+      await Promise.all(
+        plan.updateArtifacts.map((artifact) =>
+          publishKnowledge({
+            baseUrl,
+            workspaceDir,
+            artifact,
+          }),
+        ),
+      );
+    })().catch((error) => {
+      console.error(
+        `[knowledge-lint] Failed to lint knowledge artifacts: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    });
   };
   const listOpenVikingMemoryEventArray = async (
     input: { baseUrl: string },
@@ -1136,6 +1180,7 @@ export function createMirrorBrainService(
 
       await clearDeletedArtifact('knowledge', artifact.id);
       const [refreshedArtifact] = await refreshKnowledgeRelations([artifact]);
+      scheduleKnowledgeLint([refreshedArtifact ?? artifact]);
 
       return refreshedArtifact ?? artifact;
     },
@@ -1165,6 +1210,7 @@ export function createMirrorBrainService(
 
       await clearDeletedArtifact('knowledge', artifact.id);
       const [refreshedArtifact] = await refreshKnowledgeRelations([artifact]);
+      scheduleKnowledgeLint([refreshedArtifact ?? artifact]);
 
       return refreshedArtifact ?? artifact;
     },
