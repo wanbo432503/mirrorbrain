@@ -858,6 +858,15 @@ export function createMirrorBrainService(
           }),
         ),
       );
+      await Promise.all(
+        plan.mergeCandidateArtifacts.map((artifact) =>
+          publishKnowledge({
+            baseUrl,
+            workspaceDir,
+            artifact,
+          }),
+        ),
+      );
     })().catch((error) => {
       console.error(
         `[knowledge-lint] Failed to lint knowledge artifacts: ${
@@ -1248,9 +1257,21 @@ export function createMirrorBrainService(
       const publishedArtifact = result.artifact;
       const topicKey = publishedArtifact.topicKey ?? draft.topicKey ?? 'untitled-topic';
       const title = publishedArtifact.title ?? draft.title ?? 'Untitled Knowledge';
+      const sourceArtifactIdsToDelete = new Set(
+        (publishedArtifact.derivedFromKnowledgeIds ?? []).filter((id) =>
+          id.startsWith('knowledge-draft:'),
+        ),
+      );
+
+      if (
+        draft.id.startsWith('knowledge-draft:') ||
+        draft.artifactType === 'topic-merge-candidate'
+      ) {
+        sourceArtifactIdsToDelete.add(draft.id);
+      }
+
       await Promise.all(
-        (publishedArtifact.derivedFromKnowledgeIds ?? [])
-          .filter((id) => id.startsWith('knowledge-draft:'))
+        [...sourceArtifactIdsToDelete]
           .map((id) => deleteKnowledgeArtifactById(id)),
       );
 

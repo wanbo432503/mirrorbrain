@@ -16,6 +16,8 @@ interface KnowledgePanelProps {
   knowledgeGraph?: KnowledgeGraphSnapshot | null
   onDeleteKnowledgeArtifact?: (artifactId: string) => Promise<void> | void
   isDeletingKnowledgeArtifact?: boolean
+  onApproveKnowledgeCandidate?: (artifact: KnowledgeArtifact) => Promise<void> | void
+  isApprovingKnowledgeCandidate?: boolean
 }
 
 const EMPTY_GRAPH: KnowledgeGraphSnapshot = {
@@ -35,6 +37,8 @@ export default function KnowledgePanel({
   knowledgeGraph,
   onDeleteKnowledgeArtifact,
   isDeletingKnowledgeArtifact = false,
+  onApproveKnowledgeCandidate,
+  isApprovingKnowledgeCandidate = false,
 }: KnowledgePanelProps) {
   const [activeMode, setActiveMode] = useState<KnowledgeViewMode>('list')
   const [selectedKnowledgeId, setSelectedKnowledgeId] = useState<string | null>(null)
@@ -45,10 +49,24 @@ export default function KnowledgePanel({
     () => sortKnowledgeArtifactsByNewest(knowledgeArtifacts),
     [knowledgeArtifacts]
   )
+  const mergeCandidates = useMemo(
+    () =>
+      knowledgeArtifacts
+        .filter((artifact) => artifact.artifactType === 'topic-merge-candidate')
+        .sort(
+          (left, right) =>
+            getKnowledgeTimestamp(right) - getKnowledgeTimestamp(left)
+        ),
+    [knowledgeArtifacts]
+  )
+  const selectedMergeCandidate = mergeCandidates.find(
+    (artifact) => artifact.id === selectedKnowledgeId
+  )
   const selectedKnowledge =
     approvedKnowledge.find((artifact) => artifact.id === selectedKnowledgeId) ??
     (activeMode === 'list' ? approvedKnowledge[0] : null)
-  const selectedNotes = selectedKnowledge ? conversationNotes[selectedKnowledge.id] ?? [] : []
+  const selectedArtifact = selectedMergeCandidate ?? selectedKnowledge
+  const selectedNotes = selectedArtifact ? conversationNotes[selectedArtifact.id] ?? [] : []
 
   function handleModeChange(mode: KnowledgeViewMode) {
     setActiveMode(mode)
@@ -60,13 +78,13 @@ export default function KnowledgePanel({
 
   function handleApplyMessage() {
     const message = editMessage.trim()
-    if (!selectedKnowledge || message.length === 0) {
+    if (!selectedArtifact || message.length === 0) {
       return
     }
 
     setConversationNotes((current) => ({
       ...current,
-      [selectedKnowledge.id]: [...(current[selectedKnowledge.id] ?? []), message],
+      [selectedArtifact.id]: [...(current[selectedArtifact.id] ?? []), message],
     }))
     setEditMessage('')
   }
@@ -100,7 +118,7 @@ export default function KnowledgePanel({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-          {approvedKnowledge.length === 0 ? (
+          {approvedKnowledge.length === 0 && mergeCandidates.length === 0 ? (
             <EmptyState
               message="No approved knowledge yet"
               description="Published knowledge will appear here newest first."
@@ -109,7 +127,7 @@ export default function KnowledgePanel({
             <div className="space-y-2">
               {approvedKnowledge.map((artifact) => {
                 const selected =
-                  activeMode === 'list'
+                  activeMode === 'list' && selectedKnowledgeId === null
                     ? artifact.id === selectedKnowledge?.id
                     : artifact.id === selectedKnowledgeId
                 const title = artifact.title ?? 'Untitled Knowledge'
@@ -138,6 +156,43 @@ export default function KnowledgePanel({
                   </button>
                 )
               })}
+              {mergeCandidates.length > 0 && (
+                <div className="mt-4 border-t border-slate-200 pt-4">
+                  <p className="mb-2 font-heading text-xs font-semibold uppercase text-inkMuted-48">
+                    Merge Suggestions
+                  </p>
+                  <div className="space-y-2">
+                    {mergeCandidates.map((artifact) => {
+                      const selected = artifact.id === selectedKnowledgeId
+                      const title = artifact.title ?? 'Untitled Merge Candidate'
+                      const summary = artifact.summary ?? 'No summary'
+                      const timestamp = artifact.updatedAt ?? artifact.reviewedAt
+
+                      return (
+                        <button
+                          key={artifact.id}
+                          type="button"
+                          data-testid="knowledge-merge-candidate-item"
+                          onClick={() => setSelectedKnowledgeId(artifact.id)}
+                          className={`w-full rounded-lg border p-3 text-left transition-colors ${
+                            selected
+                              ? 'border-primary bg-canvas'
+                              : 'border-amber-200 bg-amber-50 hover:border-amber-300 hover:bg-white'
+                          }`}
+                        >
+                          <p className="font-body text-sm font-semibold text-ink">{title}</p>
+                          <p className="mt-1 font-body text-sm text-slate-700">{summary}</p>
+                          {timestamp && (
+                            <p className="mt-2 font-heading text-[11px] font-semibold uppercase text-inkMuted-48">
+                              {formatUserDateTime(timestamp)}
+                            </p>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -145,15 +200,30 @@ export default function KnowledgePanel({
 
       {activeMode === 'list' ? (
         <Card className="h-full min-h-0" data-testid="knowledge-detail-panel">
-          {selectedKnowledge ? (
+          {selectedArtifact ? (
             <div className="flex h-full flex-col justify-between gap-6">
               <div className="min-h-0 flex-1 overflow-y-auto pr-2">
+                {selectedMergeCandidate && onApproveKnowledgeCandidate && (
+                  <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                    <p className="font-body text-sm text-amber-900">
+                      Review this suggested merge before publishing it as topic knowledge.
+                    </p>
+                    <Button
+                      variant="primary"
+                      onClick={() => onApproveKnowledgeCandidate(selectedMergeCandidate)}
+                      disabled={isApprovingKnowledgeCandidate}
+                      className="shrink-0"
+                    >
+                      Approve Merge
+                    </Button>
+                  </div>
+                )}
                 <KnowledgeArtifactDetail
-                  artifact={selectedKnowledge}
+                  artifact={selectedArtifact}
                   notes={selectedNotes}
                   onDelete={
                     onDeleteKnowledgeArtifact
-                      ? () => onDeleteKnowledgeArtifact(selectedKnowledge.id)
+                      ? () => onDeleteKnowledgeArtifact(selectedArtifact.id)
                       : undefined
                   }
                   isDeleting={isDeletingKnowledgeArtifact}
@@ -201,4 +271,10 @@ export default function KnowledgePanel({
       )}
     </div>
   )
+}
+
+function getKnowledgeTimestamp(artifact: KnowledgeArtifact): number {
+  const timestamp = artifact.updatedAt ?? artifact.reviewedAt ?? ''
+  const value = new Date(timestamp).getTime()
+  return Number.isFinite(value) ? value : 0
 }

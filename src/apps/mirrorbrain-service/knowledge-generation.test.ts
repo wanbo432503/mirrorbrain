@@ -272,6 +272,54 @@ describe('mirrorbrain service knowledge generation', () => {
     await expect(api.listKnowledge()).resolves.toEqual([result.publishedArtifact]);
   });
 
+  it('removes the approved merge candidate from knowledge listings after approval', async () => {
+    const mergeCandidate: KnowledgeArtifact = {
+      id: 'topic-merge-candidate:vitest-testing:knowledge-new:knowledge-old',
+      artifactType: 'topic-merge-candidate',
+      draftState: 'draft',
+      topicKey: 'vitest-testing',
+      title: 'Merge candidate: Vitest debugging workflow',
+      summary: 'Suggested merge with similar knowledge.',
+      body: '## Merge Suggestion\nUse Vitest debug workflow.',
+      sourceReviewedMemoryIds: ['reviewed:candidate:browser:vitest'],
+      derivedFromKnowledgeIds: [
+        'knowledge-draft:reviewed:candidate:browser:vitest-new',
+        'topic-knowledge:vitest-testing:v1',
+      ],
+      updatedAt: '2026-04-21T12:00:00.000Z',
+    };
+    const persistedArtifacts: KnowledgeArtifact[] = [mergeCandidate];
+    const publishKnowledge = vi.fn(async (input: { artifact: KnowledgeArtifact }) => {
+      const existingIndex = persistedArtifacts.findIndex(
+        (artifact) => artifact.id === input.artifact.id,
+      );
+      if (existingIndex === -1) {
+        persistedArtifacts.push(input.artifact);
+      } else {
+        persistedArtifacts[existingIndex] = input.artifact;
+      }
+
+      return {
+        sourcePath: '/tmp/mirrorbrain/knowledge.md',
+        rootUri: 'viking://resources/mirrorbrain/knowledge.md',
+      };
+    });
+    const api = createMirrorBrainService(
+      {
+        service: runtimeService,
+        workspaceDir: mkdtempSync(join(tmpdir(), 'mirrorbrain-approval-merge-candidate-')),
+      },
+      {
+        listKnowledge: vi.fn(async () => persistedArtifacts),
+        publishKnowledge,
+      },
+    );
+
+    const result = await api.approveKnowledgeDraft(mergeCandidate.id);
+
+    await expect(api.listKnowledge()).resolves.toEqual([result.publishedArtifact]);
+  });
+
   it('deletes the source draft when deleting a published knowledge artifact', async () => {
     const draft: KnowledgeArtifact = {
       id: 'knowledge-draft:reviewed:candidate:browser:vitest',
@@ -512,6 +560,7 @@ describe('mirrorbrain service knowledge generation', () => {
     const lintKnowledge = vi.fn(async () => ({
       updateArtifacts: [],
       deleteArtifactIds: [],
+      mergeCandidateArtifacts: [],
     }));
     const api = createMirrorBrainService(
       {
@@ -541,6 +590,61 @@ describe('mirrorbrain service knowledge generation', () => {
           knowledgeArtifacts: expect.arrayContaining([
             expect.objectContaining({ id: generatedArtifact.id }),
           ]),
+        }),
+      );
+    });
+  });
+
+  it('publishes merge candidates returned by asynchronous knowledge lint', async () => {
+    const generatedArtifact: KnowledgeArtifact = {
+      id: 'knowledge-draft:reviewed:candidate:browser:vitest-new',
+      artifactType: 'daily-review-draft',
+      draftState: 'draft',
+      topicKey: 'vitest-testing',
+      title: 'Vitest debugging workflow',
+      summary: 'More notes about Vitest tests.',
+      body: 'Vitest debug workflow.',
+      sourceReviewedMemoryIds: ['reviewed:candidate:browser:vitest'],
+      tags: ['vitest'],
+    };
+    const mergeCandidate: KnowledgeArtifact = {
+      id: 'topic-merge-candidate:vitest-testing:knowledge-new:knowledge-old',
+      artifactType: 'topic-merge-candidate',
+      draftState: 'draft',
+      topicKey: 'vitest-testing',
+      title: 'Merge candidate: Vitest debugging workflow',
+      summary: 'Suggested merge with similar knowledge.',
+      body: '## Merge Suggestion',
+      sourceReviewedMemoryIds: ['reviewed:candidate:browser:vitest'],
+      derivedFromKnowledgeIds: [generatedArtifact.id, 'topic-knowledge:vitest-testing:v1'],
+    };
+    const publishKnowledge = vi.fn(async () => ({
+      sourcePath: '/tmp/mirrorbrain/knowledge.md',
+      rootUri: 'viking://resources/mirrorbrain/knowledge.md',
+    }));
+    const api = createMirrorBrainService(
+      {
+        service: runtimeService,
+        workspaceDir: '/tmp/mirrorbrain-workspace',
+      },
+      {
+        listKnowledge: vi.fn(async () => []),
+        generateKnowledge: vi.fn(async () => generatedArtifact),
+        publishKnowledge,
+        lintKnowledge: vi.fn(async () => ({
+          updateArtifacts: [],
+          deleteArtifactIds: [],
+          mergeCandidateArtifacts: [mergeCandidate],
+        })),
+      },
+    );
+
+    await api.generateKnowledgeFromReviewedMemories([reviewedMemory]);
+
+    await vi.waitFor(() => {
+      expect(publishKnowledge).toHaveBeenCalledWith(
+        expect.objectContaining({
+          artifact: mergeCandidate,
         }),
       );
     });

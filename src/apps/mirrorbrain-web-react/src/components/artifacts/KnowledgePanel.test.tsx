@@ -35,6 +35,19 @@ const newerKnowledge: KnowledgeArtifact = {
   updatedAt: '2026-04-29T10:00:00.000Z',
 }
 
+const mergeCandidate: KnowledgeArtifact = {
+  id: 'topic-merge-candidate:new:knowledge-new:knowledge-old',
+  draftState: 'draft',
+  artifactType: 'topic-merge-candidate',
+  topicKey: 'new',
+  title: 'Merge candidate: Newer knowledge',
+  summary: 'Suggested merge with similar knowledge: Older knowledge.',
+  body: '## Merge Suggestion\n\nMerge newer and older knowledge.',
+  sourceReviewedMemoryIds: ['reviewed:new', 'reviewed:old'],
+  derivedFromKnowledgeIds: ['knowledge-new', 'knowledge-old'],
+  updatedAt: '2026-04-30T10:00:00.000Z',
+}
+
 const graph: KnowledgeGraphSnapshot = {
   generatedAt: '2026-04-29T10:00:00.000Z',
   stats: {
@@ -156,5 +169,23 @@ describe('KnowledgePanel', () => {
     expect(within(graphPanel).getByText('Focused Knowledge Graph')).not.toBeNull()
     expect(within(graphPanel).getByText(/Centered on Older knowledge/)).not.toBeNull()
     expect(within(graphPanel).getByText('SIMILAR')).not.toBeNull()
+  })
+
+  it('shows merge candidates and lets the user approve one', () => {
+    const onApproveKnowledgeCandidate = vi.fn()
+
+    render(
+      <KnowledgePanel
+        knowledgeArtifacts={[olderKnowledge, newerKnowledge, mergeCandidate]}
+        knowledgeGraph={graph}
+        onApproveKnowledgeCandidate={onApproveKnowledgeCandidate}
+      />
+    )
+
+    expect(screen.getByText('Merge Suggestions')).not.toBeNull()
+    fireEvent.click(screen.getByText('Merge candidate: Newer knowledge'))
+    fireEvent.click(screen.getByText('Approve Merge'))
+
+    expect(onApproveKnowledgeCandidate).toHaveBeenCalledWith(mergeCandidate)
   })
 })

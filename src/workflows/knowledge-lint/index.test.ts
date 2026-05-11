@@ -54,4 +54,51 @@ describe('lintKnowledgeArtifacts', () => {
       ]),
     );
   });
+
+  it('creates merge candidates for similar non-duplicate knowledge instead of merging automatically', () => {
+    const generatedDraft: KnowledgeArtifact = {
+      id: 'knowledge-draft:reviewed:candidate:browser:new',
+      artifactType: 'daily-review-draft',
+      draftState: 'draft',
+      topicKey: 'mirrorbrain-review',
+      title: 'MirrorBrain review flow',
+      summary: 'Generate knowledge from reviewed memories.',
+      body: 'MirrorBrain review candidates generate knowledge and refresh relations.',
+      sourceReviewedMemoryIds: ['reviewed:memory:1'],
+      tags: ['mirrorbrain', 'review'],
+      updatedAt: '2026-05-11T01:00:00.000Z',
+    };
+    const similarPublishedKnowledge: KnowledgeArtifact = {
+      id: 'topic-knowledge:mirrorbrain-review:v1',
+      artifactType: 'topic-knowledge',
+      draftState: 'published',
+      topicKey: 'mirrorbrain-review',
+      title: 'MirrorBrain candidate review',
+      summary: 'Review candidates before publishing knowledge.',
+      body: 'MirrorBrain review candidates should be human approved.',
+      sourceReviewedMemoryIds: ['reviewed:memory:2'],
+      tags: ['mirrorbrain', 'review'],
+      version: 1,
+      isCurrentBest: true,
+      updatedAt: '2026-05-10T01:00:00.000Z',
+    };
+
+    const plan = lintKnowledgeArtifacts({
+      knowledgeArtifacts: [generatedDraft, similarPublishedKnowledge],
+      seedKnowledgeIds: [generatedDraft.id],
+    });
+
+    expect(plan.mergeCandidateArtifacts).toEqual([
+      expect.objectContaining({
+        artifactType: 'topic-merge-candidate',
+        draftState: 'draft',
+        topicKey: 'mirrorbrain-review',
+        derivedFromKnowledgeIds: [
+          generatedDraft.id,
+          similarPublishedKnowledge.id,
+        ],
+      }),
+    ]);
+    expect(plan.deleteArtifactIds).toEqual([]);
+  });
 });

@@ -10,6 +10,8 @@ export default function KnowledgeTabPanel() {
     knowledgeArtifacts,
     feedback,
     isDeletingKnowledge,
+    isApprovingKnowledge,
+    approveKnowledge,
     deleteKnowledgeArtifact,
   } = useArtifacts(api)
   const [knowledgeGraph, setKnowledgeGraph] = useState<KnowledgeGraphSnapshot | null>(null)
@@ -61,6 +63,10 @@ export default function KnowledgeTabPanel() {
         knowledgeGraph={knowledgeGraph}
         onDeleteKnowledgeArtifact={deleteKnowledgeArtifact}
         isDeletingKnowledgeArtifact={isDeletingKnowledge}
+        onApproveKnowledgeCandidate={async (artifact) => {
+          await approveKnowledge(artifact)
+        }}
+        isApprovingKnowledgeCandidate={isApprovingKnowledge}
       />
     </div>
   )

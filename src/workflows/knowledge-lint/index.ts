@@ -10,6 +10,7 @@ export interface KnowledgeLintInput {
 export interface KnowledgeLintPlan {
   updateArtifacts: KnowledgeArtifact[];
   deleteArtifactIds: string[];
+  mergeCandidateArtifacts: KnowledgeArtifact[];
 }
 
 export function lintKnowledgeArtifacts(
@@ -25,6 +26,11 @@ export function lintKnowledgeArtifacts(
     tags: buildRelationTags(artifact),
   }));
   const graph = buildKnowledgeRelationGraph(relationInput);
+  const mergeCandidateArtifacts = buildMergeCandidateArtifacts({
+    activeArtifacts,
+    graph,
+    seedKnowledgeIds: input.seedKnowledgeIds,
+  });
   const updateArtifacts = activeArtifacts
     .map((artifact) => withRelatedKnowledgeIds(artifact, graph.get(artifact.id) ?? []))
     .filter((artifact, index) =>
@@ -34,7 +40,123 @@ export function lintKnowledgeArtifacts(
   return {
     updateArtifacts,
     deleteArtifactIds,
+    mergeCandidateArtifacts,
   };
+}
+
+function buildMergeCandidateArtifacts(input: {
+  activeArtifacts: KnowledgeArtifact[];
+  graph: Map<string, string[]>;
+  seedKnowledgeIds: string[];
+}): KnowledgeArtifact[] {
+  const artifactById = new Map(
+    input.activeArtifacts.map((artifact) => [artifact.id, artifact]),
+  );
+  const existingCandidateKeys = new Set(
+    input.activeArtifacts
+      .filter((artifact) => artifact.artifactType === 'topic-merge-candidate')
+      .map((artifact) => getDerivedKnowledgeKey(artifact.derivedFromKnowledgeIds ?? [])),
+  );
+  const candidates: KnowledgeArtifact[] = [];
+
+  for (const seedKnowledgeId of input.seedKnowledgeIds) {
+    const seedArtifact = artifactById.get(seedKnowledgeId);
+
+    if (!seedArtifact || seedArtifact.artifactType === 'topic-merge-candidate') {
+      continue;
+    }
+
+    for (const relatedKnowledgeId of input.graph.get(seedKnowledgeId) ?? []) {
+      const relatedArtifact = artifactById.get(relatedKnowledgeId);
+
+      if (!relatedArtifact || relatedArtifact.artifactType === 'topic-merge-candidate') {
+        continue;
+      }
+
+      if (hasSameReviewedMemorySources(seedArtifact, relatedArtifact)) {
+        continue;
+      }
+
+      const derivedFromKnowledgeIds = [seedArtifact.id, relatedArtifact.id];
+      const candidateKey = getDerivedKnowledgeKey(derivedFromKnowledgeIds);
+
+      if (existingCandidateKeys.has(candidateKey)) {
+        continue;
+      }
+
+      existingCandidateKeys.add(candidateKey);
+      candidates.push(createMergeCandidate(seedArtifact, relatedArtifact));
+    }
+  }
+
+  return candidates;
+}
+
+function createMergeCandidate(
+  seedArtifact: KnowledgeArtifact,
+  relatedArtifact: KnowledgeArtifact,
+): KnowledgeArtifact {
+  const topicKey =
+    seedArtifact.topicKey ?? relatedArtifact.topicKey ?? 'untitled-topic';
+  const title = `Merge candidate: ${seedArtifact.title ?? seedArtifact.id}`;
+  const relatedTitle = relatedArtifact.title ?? relatedArtifact.id;
+  const updatedAt = [seedArtifact.updatedAt, relatedArtifact.updatedAt]
+    .filter((value): value is string => value !== undefined)
+    .sort()
+    .at(-1);
+
+  return {
+    ...seedArtifact,
+    id: `topic-merge-candidate:${topicKey}:${encodeURIComponent(seedArtifact.id)}:${encodeURIComponent(relatedArtifact.id)}`,
+    artifactType: 'topic-merge-candidate',
+    draftState: 'draft',
+    topicKey,
+    title,
+    summary: `Suggested merge with similar knowledge: ${relatedTitle}.`,
+    body: [
+      '## Merge Suggestion',
+      '',
+      `This candidate links similar knowledge artifacts for human review: ${seedArtifact.title ?? seedArtifact.id} and ${relatedTitle}.`,
+      '',
+      '## New Knowledge',
+      '',
+      seedArtifact.body ?? seedArtifact.summary ?? '',
+      '',
+      '## Related Knowledge',
+      '',
+      relatedArtifact.body ?? relatedArtifact.summary ?? '',
+    ].join('\n'),
+    sourceReviewedMemoryIds: Array.from(
+      new Set([
+        ...seedArtifact.sourceReviewedMemoryIds,
+        ...relatedArtifact.sourceReviewedMemoryIds,
+      ]),
+    ),
+    derivedFromKnowledgeIds: [seedArtifact.id, relatedArtifact.id],
+    isCurrentBest: false,
+    supersedesKnowledgeId: null,
+    updatedAt,
+    provenanceRefs: [
+      ...(seedArtifact.provenanceRefs ?? []),
+      ...(relatedArtifact.provenanceRefs ?? []),
+      { kind: 'knowledge-artifact', id: seedArtifact.id },
+      { kind: 'knowledge-artifact', id: relatedArtifact.id },
+    ],
+    tags: Array.from(new Set([...(seedArtifact.tags ?? []), ...(relatedArtifact.tags ?? [])])),
+    relatedKnowledgeIds: [seedArtifact.id, relatedArtifact.id],
+  };
+}
+
+function getDerivedKnowledgeKey(knowledgeIds: string[]): string {
+  return [...knowledgeIds].sort().join('|');
+}
+
+function hasSameReviewedMemorySources(
+  left: KnowledgeArtifact,
+  right: KnowledgeArtifact,
+): boolean {
+  return getDerivedKnowledgeKey(left.sourceReviewedMemoryIds) ===
+    getDerivedKnowledgeKey(right.sourceReviewedMemoryIds);
 }
 
 function findDuplicatedDraftIds(
