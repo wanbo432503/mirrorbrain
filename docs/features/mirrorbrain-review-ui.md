@@ -40,6 +40,7 @@ This UI is responsible for:
 - placing sync, review, and artifact actions inside their corresponding tabs instead of a single global action bar
 - rendering candidate, suggestion, reviewed-memory, and artifact states with explicit field-level detail
 - showing visible action feedback for success and prerequisite errors
+- placing daily-candidate creation feedback directly below the create button while preserving the existing feedback styling
 - preserving backend error details in knowledge approval failure feedback so operators can distinguish missing drafts, service errors, and other publish failures
 
 This UI is not responsible for:

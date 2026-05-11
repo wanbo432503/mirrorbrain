@@ -347,27 +347,8 @@ export default function ReviewPanel() {
 
   const selectedCandidate = getSelectedCandidate()
 
-  // Display approval feedback if present, otherwise workflow feedback
-  const displayFeedback = approvalFeedback || workflowFeedback
-
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {/* Feedback Banner */}
-      {displayFeedback && (
-        <div
-          className={`mb-3 p-3 rounded-lg border ${
-            displayFeedback.kind === 'success'
-              ? 'bg-green-100 border-green-300 text-green-700'
-              : displayFeedback.kind === 'error'
-              ? 'bg-red-100 border-red-300 text-red-700'
-              : 'bg-blue-100 border-blue-300 text-blue-700'
-          }`}
-          role="alert"
-        >
-          <p className="font-body font-medium text-sm">{displayFeedback.message}</p>
-        </div>
-      )}
-
       {!state.hasLoadedMemoryEvents && (
         <div
           className="mb-3 p-3 rounded-lg border bg-blue-100 border-blue-300 text-blue-700"
@@ -384,6 +365,7 @@ export default function ReviewPanel() {
         onCreateCandidates={handleCreateCandidates}
         isCreatingCandidates={isCreatingCandidates}
         isReviewing={isReviewing}
+        feedback={approvalFeedback || workflowFeedback}
       />
 
       {/* Metrics Grid */}
