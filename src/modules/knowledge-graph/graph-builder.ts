@@ -79,7 +79,7 @@ export function buildKnowledgeGraphSnapshot(
     nodes.push({
       id: buildTopicNodeId(topicKey),
       type: 'topic' as KnowledgeGraphNodeType,
-      label: currentBest.title ?? topicKey,
+      label: topicKey,
       topicKey,
       properties: {
         artifactId: currentBest.id,

@@ -47,7 +47,8 @@ describe('buildKnowledgeGraphSnapshot', () => {
     expect(topicNodes).toHaveLength(2);
 
     expect(topicNodes[0].topicKey).toBe('topic-a');
-    expect(topicNodes[0].label).toBe('Topic A Title');
+    expect(topicNodes[0].label).toBe('topic-a');
+    expect(topicNodes[0].properties.title).toBe('Topic A Title');
     expect(topicNodes[1].topicKey).toBe('topic-b');
   });
 
@@ -279,8 +280,9 @@ describe('buildKnowledgeGraphSnapshot', () => {
     const snapshot = buildKnowledgeGraphSnapshot(artifacts);
 
     const topicNode = snapshot.nodes.find((n) => n.type === 'topic');
-    expect(topicNode?.label).toBe('New Title');
+    expect(topicNode?.label).toBe('topic-a');
     expect(topicNode?.properties.summary).toBe('New summary');
+    expect(topicNode?.properties.title).toBe('New Title');
     expect(topicNode?.properties.artifactId).toBe('artifact-2');
   });
 
