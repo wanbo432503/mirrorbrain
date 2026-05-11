@@ -58,7 +58,10 @@ and deployment hardening.
 
 ## Core Data Types
 
-The canonical TypeScript definitions live in `src/shared/types/index.ts`.
+The canonical domain TypeScript definitions live in `src/shared/types/index.ts`.
+Runtime HTTP DTO schemas are moving into `src/shared/api-contracts/`; in the
+current slice, `KnowledgeArtifact` response serialization uses that shared
+contract.
 
 ### Source Category
 
@@ -127,16 +130,20 @@ Important fields:
 
 Knowledge artifacts are derived from reviewed memory.
 
-Important fields:
+Required response fields:
 
 - `id`
 - `draftState: 'draft' | 'published'`
+- `sourceReviewedMemoryIds`
+
+Additional fields may be present when the artifact has enough review, topic, or
+publication metadata:
+
 - `artifactType?: 'daily-review-draft' | 'topic-merge-candidate' | 'topic-knowledge'`
 - `topicKey?: string | null`
 - `title`
 - `summary`
 - `body`
-- `sourceReviewedMemoryIds`
 - `derivedFromKnowledgeIds`
 - `version`
 - `isCurrentBest`
@@ -147,6 +154,7 @@ Important fields:
 - `provenanceRefs`
 - `tags`
 - `relatedKnowledgeIds`
+- `compilationMetadata`
 
 ### Skill Artifact
 

@@ -24,7 +24,7 @@ MirrorBrain preserves three product surfaces:
 | Integrations | `src/integrations/` | Adapters for ActivityWatch, shell history, OpenViking, browser content, checkpoints, and openclaw. |
 | Modules | `src/modules/` | Domain rules, artifact construction, lifecycle policy, scoring, relation logic, and shared domain transformations. |
 | Workflows | `src/workflows/` | Multi-step orchestration that composes modules and integrations. |
-| Shared | `src/shared/` | Cross-cutting types, config defaults, and low-level HTTP LLM helpers. |
+| Shared | `src/shared/` | Cross-cutting types, API contracts, config defaults, and low-level HTTP LLM helpers. |
 
 ## Apps
 
@@ -123,7 +123,7 @@ Outputs:
 Dependencies:
 
 - Fastify, `@fastify/swagger`, `@fastify/swagger-ui`, `@fastify/static`.
-- Shared artifact types and service errors.
+- Shared API contract schemas, shared artifact types, and service errors.
 
 Failure modes and constraints:
 
@@ -1086,6 +1086,34 @@ Verification:
 - `src/workflows/skill-draft-builder/index.test.ts`
 
 ## Shared Modules
+
+### `src/shared/api-contracts`
+
+Purpose: provide shared runtime schemas for MirrorBrain public API DTOs.
+
+Responsibilities:
+
+- Define JSON-schema-compatible DTO schemas used by transport surfaces.
+- Keep HTTP response required fields aligned with domain type required fields.
+- Provide a future source for generated or re-exported frontend/plugin client
+  types.
+
+Inputs:
+
+- Domain object shapes from `src/shared/types`.
+
+Outputs:
+
+- Runtime DTO schemas such as `knowledgeArtifactDtoSchema`.
+
+Failure modes and constraints:
+
+- The current slice covers knowledge artifact responses only; additional API
+  DTOs still need migration into this shared layer.
+
+Verification:
+
+- `src/shared/api-contracts/index.test.ts`
 
 ### `src/shared/types`
 

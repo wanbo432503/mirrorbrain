@@ -278,6 +278,69 @@ describe('mirrorbrain http server', () => {
     });
   });
 
+  it('serializes minimal valid knowledge artifacts without requiring optional topic fields', async () => {
+    const service = {
+      service: {
+        status: 'running' as const,
+        config: getMirrorBrainConfig(),
+      },
+      syncBrowserMemory: vi.fn(),
+      syncShellMemory: vi.fn(),
+      listMemoryEvents: vi.fn(async () => []),
+      queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
+      listKnowledge: vi.fn(async (): Promise<KnowledgeArtifact[]> => [
+        {
+          id: 'knowledge-draft:minimal',
+          draftState: 'draft',
+          sourceReviewedMemoryIds: ['reviewed:minimal'],
+          tags: ['release'],
+          relatedKnowledgeIds: ['topic-knowledge:release-process'],
+          compilationMetadata: {
+            discoveryInsights: ['The release process repeats weekly.'],
+            generationMethod: 'two-stage-compilation',
+            discoveryStageCompletedAt: '2026-05-11T09:00:00.000Z',
+            executeStageCompletedAt: '2026-05-11T09:05:00.000Z',
+          },
+        },
+      ]),
+      listSkillDrafts: vi.fn(async () => []),
+      createDailyCandidateMemories: vi.fn(),
+      suggestCandidateReviews: vi.fn(),
+      reviewCandidateMemory: vi.fn(),
+      undoCandidateReview: vi.fn(),
+      deleteCandidateMemory: vi.fn(),
+      generateKnowledgeFromReviewedMemories: vi.fn(),
+      generateSkillDraftFromReviewedMemories: vi.fn(),
+    };
+    const server = await startMirrorBrainHttpServer({
+      service,
+      port: 0,
+    });
+    servers.push(server);
+
+    const response = await fetch(`${server.origin}/knowledge`);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      items: [
+        {
+          id: 'knowledge-draft:minimal',
+          draftState: 'draft',
+          sourceReviewedMemoryIds: ['reviewed:minimal'],
+          tags: ['release'],
+          relatedKnowledgeIds: ['topic-knowledge:release-process'],
+          compilationMetadata: {
+            discoveryInsights: ['The release process repeats weekly.'],
+            generationMethod: 'two-stage-compilation',
+            discoveryStageCompletedAt: '2026-05-11T09:00:00.000Z',
+            executeStageCompletedAt: '2026-05-11T09:05:00.000Z',
+          },
+        },
+      ],
+    });
+  });
+
   it('publishes edited knowledge and skill drafts through save endpoints', async () => {
     const publishKnowledge = vi.fn(async (input) => input);
     const publishSkillDraft = vi.fn(async (input) => input);

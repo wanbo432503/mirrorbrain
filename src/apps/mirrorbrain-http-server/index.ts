@@ -7,6 +7,7 @@ import fastifySwaggerUi from '@fastify/swagger-ui';
 import fastifyStatic from '@fastify/static';
 
 import { getMirrorBrainConfig } from '../../shared/config/index.js';
+import { knowledgeArtifactDtoSchema } from '../../shared/api-contracts/index.js';
 import { ValidationError } from '../mirrorbrain-service/errors.js';
 import type {
   CandidateMemory,
@@ -314,66 +315,7 @@ const candidateReviewSuggestionSchema = {
   ],
 } as const;
 
-const knowledgeArtifactSchema = {
-  type: 'object',
-  properties: {
-    artifactType: {
-      type: 'string',
-      enum: ['daily-review-draft', 'topic-merge-candidate', 'topic-knowledge'],
-    },
-    id: { type: 'string' },
-    draftState: { type: 'string', enum: ['draft', 'published'] },
-    topicKey: { type: ['string', 'null'] },
-    title: { type: 'string' },
-    summary: { type: 'string' },
-    body: { type: 'string' },
-    sourceReviewedMemoryIds: {
-      type: 'array',
-      items: { type: 'string' },
-    },
-    derivedFromKnowledgeIds: {
-      type: 'array',
-      items: { type: 'string' },
-    },
-    version: { type: 'number' },
-    isCurrentBest: { type: 'boolean' },
-    supersedesKnowledgeId: { type: ['string', 'null'] },
-    updatedAt: { type: 'string' },
-    reviewedAt: { type: ['string', 'null'] },
-    recencyLabel: { type: 'string' },
-    provenanceRefs: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          kind: {
-            type: 'string',
-            enum: ['reviewed-memory', 'knowledge-artifact'],
-          },
-          id: { type: 'string' },
-        },
-        required: ['kind', 'id'],
-      },
-    },
-  },
-  required: [
-    'artifactType',
-    'id',
-    'draftState',
-    'topicKey',
-    'title',
-    'summary',
-    'body',
-    'sourceReviewedMemoryIds',
-    'derivedFromKnowledgeIds',
-    'version',
-    'isCurrentBest',
-    'supersedesKnowledgeId',
-    'reviewedAt',
-    'recencyLabel',
-    'provenanceRefs',
-  ],
-} as const;
+const knowledgeArtifactSchema = knowledgeArtifactDtoSchema;
 
 const knowledgeTopicSummarySchema = {
   type: 'object',
