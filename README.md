@@ -3,76 +3,92 @@
 [README 中文版](./README_CN.md)
 
 MirrorBrain / 镜像大脑 is the memory and capability layer for `openclaw`.
+It runs as an independent local service while exposing capability-oriented APIs
+that can be wrapped by an `openclaw` plugin.
 
-It is meant to do three things:
+MirrorBrain is not a generic note application. Its product boundary is the
+conversion of authorized work activity into three explicitly separated outputs:
 
-- capture authorized work activity as `memory`
-- turn reviewed memory into readable `knowledge`
-- turn repeated reviewed workflows into reusable `skill` drafts
+- `memory`: source-attributed records, recall views, candidate memories,
+  reviewed memories, and retrieval narratives.
+- `knowledge`: human-readable synthesized artifacts derived from reviewed
+  memory, including topic-oriented current-best knowledge and history.
+- `skill`: Agent Skill drafts derived from reviewed workflow evidence, with
+  confirmation required before execution.
 
-## Current Status
+## Current Implementation
 
-This repository now carries a working Phase 2 **and** Phase 3 implementation baseline.
+The repository contains a working Phase 2 and Phase 3 baseline:
 
-What works now:
+- Browser memory sync through ActivityWatch and `aw-watcher-web`.
+- Shell history sync through an explicit configured history file.
+- Local storage and retrieval through OpenViking plus workspace fallback files.
+- Browser page-text capture for richer review and knowledge generation.
+- `openclaw`-facing `query_memory` retrieval helpers and demo docs.
+- Offline browser theme narratives for "what did I work on?" recall.
+- Offline shell problem narratives for command-line problem-solving recall.
+- Daily candidate generation, review decisions, reviewed memory, knowledge
+  draft generation, topic knowledge approval, and skill draft generation.
+- Topic knowledge versioning with current-best markers and history.
+- Knowledge relation graph support using wikilinks and TF-IDF similarity.
+- React web UI for local control, review, knowledge browsing, and skill drafts.
+- Fastify HTTP API with OpenAPI docs.
 
-- browser source sync via `ActivityWatch` + `aw-watcher-web`
-- shell history source sync
-- local storage and retrieval via `OpenViking`
-- `openclaw`-facing `query_memory` retrieval contract and demo docs
-- offline browser theme narratives for `昨天/今天我做了什么？` style recall
-- offline shell problem narratives for `我之前是怎么通过命令行解决这个问题的？` style recall
-- Phase 3 topic-knowledge model, merge workflow, and current-best history chain
-- topic knowledge read surfaces across service, HTTP, and the standalone web UI
-- fixture-backed topic-knowledge quality evaluation with a deterministic rubric
-- local HTTP service and standalone web UI
-- browser sync, daily candidate stream generation, AI review suggestions, reviewed memory, knowledge draft, and skill draft flow
+Not yet implemented:
 
-What is not implemented yet:
+- Document ingestion.
+- `openclaw` conversation capture.
+- Full source authorization and revocation UX.
+- Direct `openclaw` topic list/detail/history adapter helpers.
+- Production deployment, retention, and operations hardening.
+- Autonomous skill execution beyond draft generation and approval-state modeling.
 
-- document ingestion
-- `openclaw` conversation capture
-- broader source authorization UX
-- richer topic detail/history browsing in the standalone UI
-- direct `openclaw` topic list/detail/history adapter helpers
-- production-grade deployment and operations
+## Architecture
 
-## Todo
+MirrorBrain is an API-first TypeScript system.
 
-The next obvious tasks after Phase 3 are:
+| Layer | Path | Responsibility |
+| --- | --- | --- |
+| Apps | `src/apps/` | Runtime service, HTTP server, and web UI surfaces. |
+| Integrations | `src/integrations/` | ActivityWatch, shell history, browser page content, OpenViking, checkpoints, and openclaw adapters. |
+| Modules | `src/modules/` | Domain rules for authorization, capture, review, knowledge, graphing, relation scoring, caching, and skills. |
+| Workflows | `src/workflows/` | Multi-step orchestration for sync, narratives, review, topic merge, linting, quality checks, and skill drafting. |
+| Shared | `src/shared/` | Cross-layer types, config defaults, and low-level LLM HTTP helpers. |
 
-- add more authorized source types beyond browser activity
-- strengthen topic-knowledge consistency and richer topic browsing
-- expose topic knowledge more directly to `openclaw`
-- strengthen skill execution quality without weakening confirmation boundaries
-- make local setup simpler than the current ActivityWatch + OpenViking stack
+Read the full code-facing module catalog:
 
-Planning docs live under [`docs/plans/`](./docs/plans/).
+- [docs/README.md](./docs/README.md)
+- [docs/components/module-reference.md](./docs/components/module-reference.md)
 
-Current roadmap/status docs:
+## Runtime Data
 
-- minimum `openclaw` tool example: [`docs/features/openclaw-memory-tool-example.md`](./docs/features/openclaw-memory-tool-example.md)
-- minimum manual demo guide: [`docs/features/openclaw-memory-demo-guide.md`](./docs/features/openclaw-memory-demo-guide.md)
-- current project status: [`docs/features/current-project-status.md`](./docs/features/current-project-status.md)
-- Phase 2 / Phase 3 roadmap: [`docs/plans/2026-04-01-mirrorbrain-phase2-phase3-plan.md`](./docs/plans/2026-04-01-mirrorbrain-phase2-phase3-plan.md)
-- Phase 3 implementation plan: [`docs/plans/2026-04-03-phase3-knowledge-implementation-plan.md`](./docs/plans/2026-04-03-phase3-knowledge-implementation-plan.md)
-- Phase 3 test spec: [`docs/plans/2026-04-03-phase3-knowledge-test-spec.md`](./docs/plans/2026-04-03-phase3-knowledge-test-spec.md)
-- browser theme narratives: [`docs/components/browser-theme-narratives.md`](./docs/components/browser-theme-narratives.md)
-- shell problem narratives: [`docs/components/shell-problem-narratives.md`](./docs/components/shell-problem-narratives.md)
-- topic knowledge merge: [`docs/components/topic-knowledge-merge.md`](./docs/components/topic-knowledge-merge.md)
-- topic knowledge read surfaces: [`docs/components/topic-knowledge-read.md`](./docs/components/topic-knowledge-read.md)
-- topic knowledge quality evaluation: [`docs/components/topic-knowledge-quality.md`](./docs/components/topic-knowledge-quality.md)
+MirrorBrain stores local workspace artifacts under
+`<MIRRORBRAIN_WORKSPACE_DIR>/mirrorbrain/`:
+
+- `memory-events/`
+- `browser-page-content/`
+- `candidate-memories/`
+- `reviewed-memories/`
+- `memory-narratives/`
+- `knowledge/`
+- `skill-drafts/`
+- `state/sync-checkpoints/`
+- `cache/`
+- `deleted-artifacts/`
+
+OpenViking is used for indexing and retrieval, but MirrorBrain also keeps
+workspace files as inspectable local records and fallback reads.
 
 ## Quick Start
 
 ### 1. Prerequisites
 
-You need:
+Install or prepare:
 
 - Node.js
 - `pnpm`
 - ActivityWatch running locally
-- `aw-watcher-web` installed in your browser
+- `aw-watcher-web` installed in the browser being captured
 - OpenViking running locally
 
 Default local endpoints:
@@ -81,14 +97,14 @@ Default local endpoints:
 - OpenViking: `http://127.0.0.1:1933`
 - MirrorBrain: `http://127.0.0.1:3007`
 
-### 2. Install ActivityWatch
+### 2. Start ActivityWatch
 
-1. Install ActivityWatch from `https://activitywatch.net/`
-2. Start ActivityWatch
-3. Install `aw-watcher-web` in the browser you want to track
-4. Open the ActivityWatch UI and confirm browser tab events are being recorded
+1. Install ActivityWatch from `https://activitywatch.net/`.
+2. Start ActivityWatch.
+3. Install `aw-watcher-web` in the target browser.
+4. Confirm the ActivityWatch UI shows browser tab events.
 
-### 3. Install and Start OpenViking
+### 3. Start OpenViking
 
 Install the server:
 
@@ -96,7 +112,7 @@ Install the server:
 pip install openviking --upgrade --force-reinstall
 ```
 
-Create `~/.openviking/ov.conf`. You can copy the model values from the MirrorBrain `.env` file described below:
+Create `~/.openviking/ov.conf`:
 
 ```json
 {
@@ -127,23 +143,23 @@ Create `~/.openviking/ov.conf`. You can copy the model values from the MirrorBra
 }
 ```
 
-Export the config path and start the server:
+Start OpenViking:
 
 ```bash
 export OPENVIKING_CONFIG_FILE=~/.openviking/ov.conf
 openviking-server
 ```
 
-If OpenViking cannot start, fix that first. MirrorBrain depends on it.
+MirrorBrain expects OpenViking to be reachable before startup.
 
-### 4. Install MirrorBrain
+### 4. Configure MirrorBrain
 
 ```bash
 pnpm install
 cp .env.example .env
 ```
 
-Edit `.env` so these values match your machine:
+Set the local values:
 
 ```bash
 MIRRORBRAIN_ACTIVITYWATCH_BASE_URL=http://127.0.0.1:5600
@@ -159,63 +175,106 @@ MIRRORBRAIN_EMBEDDING_MODEL=replace-with-your-embedding-model
 MIRRORBRAIN_EMBEDDING_DIMENSION=1024
 ```
 
-MirrorBrain reads the `MIRRORBRAIN_LLM_*` values directly for title and knowledge generation. OpenViking uses the embedding values through `~/.openviking/ov.conf`, so keep those two files consistent.
+MirrorBrain reads `MIRRORBRAIN_LLM_*` values for knowledge/title generation.
+OpenViking reads embedding settings from `~/.openviking/ov.conf`, so keep both
+files consistent.
 
-### 5. Start MirrorBrain
+### 5. Run MirrorBrain
 
 ```bash
 pnpm dev
 ```
 
-The startup command now performs local bring-up checks before launching MirrorBrain:
+The startup command:
 
-- reports missing required `.env` values in one pass
-- checks `OpenViking` reachability
-- checks that `ActivityWatch` has browser events in the last hour
-- starts a background `vite build --watch` process for `src/apps/mirrorbrain-web-react`
-- waits for the first React build output before serving the web UI
-- wires shell history sync into the runtime when `MIRRORBRAIN_SHELL_HISTORY_PATH` is configured
-- starts MirrorBrain as a background process and prints the service address and log path
+- validates required `.env` values
+- checks OpenViking reachability
+- checks ActivityWatch browser watcher readiness
+- starts the React `vite build --watch` process
+- waits for the first React build output
+- starts the MirrorBrain HTTP service
+- enables shell sync when `MIRRORBRAIN_SHELL_HISTORY_PATH` is configured
+- prints the service address, process id, and log path
 
-Then open:
+Open the UI:
 
 ```text
 http://127.0.0.1:3007
 ```
 
-API docs:
+OpenAPI docs:
 
 ```text
 http://127.0.0.1:3007/docs
 ```
 
-### 6. Verify the MVP Flow
+## Basic Verification Flow
 
 In the web UI:
 
-1. Click `Sync Browser Memory`
-2. Open the `Review` tab and click `Create Candidate`
-3. The UI will generate candidate streams from yesterday's local memory window, then select one daily candidate stream
-4. Optionally inspect the AI review suggestion
-5. Click `Keep Candidate`
-6. Open the `Artifacts` tab
-7. Click `Generate Knowledge`
-8. Click `Generate Skill`
+1. Open the `Memory` tab and run browser sync.
+2. Optionally run shell sync if a shell history path is configured.
+3. Open the `Review` tab and create daily candidates.
+4. Review a candidate and keep it.
+5. Open the `Knowledge` tab and generate or approve a knowledge draft.
+6. Open the `Skill` tab and generate a skill draft from reviewed memory.
 
 Expected result:
 
-- memory events appear in the page
-- one or more daily candidate streams are shown
-- the selected candidate shows a title, summary, and suggestion
-- one reviewed memory id is shown
-- one knowledge draft id is shown
-- one skill draft id is shown
+- Imported memory events appear with source attribution.
+- Daily candidates show summaries, source refs, and review guidance.
+- Kept candidates become reviewed memories.
+- Knowledge drafts preserve reviewed-memory provenance.
+- Approved topic knowledge appears in topic and graph views.
+- Skill drafts keep workflow evidence refs and require confirmation metadata.
 
-## Useful Commands
+## HTTP Surface
+
+Primary local endpoints:
+
+- `GET /health`
+- `GET /memory`
+- `POST /memory/query`
+- `POST /sync/browser`
+- `POST /sync/shell`
+- `GET /candidate-memories`
+- `POST /candidate-memories/daily`
+- `POST /reviewed-memories`
+- `GET /knowledge`
+- `GET /knowledge/topics`
+- `GET /knowledge/topics/:topicKey`
+- `GET /knowledge/topics/:topicKey/history`
+- `GET /knowledge/graph`
+- `POST /knowledge/generate`
+- `POST /knowledge/regenerate`
+- `POST /knowledge/approve`
+- `GET /skills`
+- `POST /skills/generate`
+
+The full generated schema is available at `/openapi.json` and `/docs`.
+
+## Documentation
+
+Start here:
+
+- [Documentation index](./docs/README.md)
+- [Current module reference](./docs/components/module-reference.md)
+- [Current project status](./docs/features/current-project-status.md)
+- [OpenClaw memory tool example](./docs/features/openclaw-memory-tool-example.md)
+- [OpenClaw demo guide](./docs/features/openclaw-memory-demo-guide.md)
+- [Phase 2 / Phase 3 plan](./docs/plans/2026-04-01-mirrorbrain-phase2-phase3-plan.md)
+
+## Commands
 
 ```bash
 pnpm dev
 pnpm test
 pnpm typecheck
 pnpm e2e
+```
+
+For documentation-only changes:
+
+```bash
+git diff --check
 ```
