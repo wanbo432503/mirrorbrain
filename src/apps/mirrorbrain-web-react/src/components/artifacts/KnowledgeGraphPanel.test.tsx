@@ -90,6 +90,9 @@ describe('KnowledgeGraphPanel', () => {
     expect(within(canvas).getByText('REFERENCES')).not.toBeNull()
     expect(within(canvas).getByText('OpenClaw')).not.toBeNull()
     expect(within(canvas).getByText('OpenClaw knowledge')).not.toBeNull()
+
+    const focusedNode = within(canvas).getAllByTestId('knowledge-graph-node')[0]
+    expect(focusedNode.querySelectorAll('circle')[1]?.getAttribute('stroke')).toBe('#facc15')
   })
 
   it('lets users drag graph nodes to new positions', () => {

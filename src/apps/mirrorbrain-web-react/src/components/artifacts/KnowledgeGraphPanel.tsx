@@ -293,7 +293,7 @@ export function KnowledgeGraphPanel(props: KnowledgeGraphPanelProps): React.Reac
                     r={node.size}
                     fill={node.color}
                     fillOpacity={node.id === focusNode?.id ? '0.62' : '0.38'}
-                    stroke={node.id === focusNode?.id ? '#38bdf8' : node.color}
+                    stroke={node.id === focusNode?.id ? '#facc15' : node.color}
                     strokeWidth={node.id === focusNode?.id ? 3 : 1.8}
                     filter={node.id === focusNode?.id ? 'url(#knowledge-node-glow)' : undefined}
                   />
@@ -330,7 +330,7 @@ export function KnowledgeGraphPanel(props: KnowledgeGraphPanelProps): React.Reac
                 <div className="mt-2 flex flex-col gap-2">
                   <GraphLegend color="#0066cc" label="Topic" />
                   <GraphLegend color="#111827" label="Knowledge artifact" />
-                  <GraphLegend color="#38bdf8" label="Focused artifact" />
+                  <GraphLegend color="#facc15" label="Focused artifact" />
                 </div>
               </div>
             </div>
@@ -501,13 +501,13 @@ function toPositionedNode(
     x,
     y,
     size: Math.min((node.type === 'topic' ? 26 : 31) + degree * 3 + (focused ? 5 : 0), 46),
-    color: node.type === 'topic' ? '#0066cc' : '#111827',
+    color: focused ? '#facc15' : node.type === 'topic' ? '#0066cc' : '#111827',
   };
 }
 
 function getEdgeColor(edgeType: KnowledgeGraphEdge['type']): string {
   if (edgeType === 'SIMILAR') {
-    return '#38bdf8';
+    return '#f59e0b';
   }
 
   if (edgeType === 'REFERENCES') {
