@@ -26,6 +26,9 @@ The React UI consumes the same HTTP API that an external host can use.
 - [Module Reference](./components/module-reference.md): current source-code
   module catalog with responsibilities, inputs, outputs, dependencies, failure
   modes, and verification strategy.
+- [Codebase Architecture Refactor Analysis](./codebase-architecture-refactor-analysis.md):
+  code-level review of current structure, boundary issues, implementation risks,
+  and recommended refactor sequence.
 - [MirrorBrain HTTP API](./components/mirrorbrain-http-api.md): dedicated
   local HTTP API contract, endpoint payloads, examples, lifecycle rules, and
   failure modes.
