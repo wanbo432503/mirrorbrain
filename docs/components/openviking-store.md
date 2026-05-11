@@ -37,7 +37,7 @@ This component is the storage adapter that maps MirrorBrain artifacts into OpenV
 2. The adapter writes artifact content to local files when the OpenViking endpoint expects file-path based import.
 3. Memory, browser-page-content, memory-narrative, candidate, reviewed, knowledge, and skill-draft artifacts are imported through `POST /api/v1/resources`.
 4. Memory-event imports are queued with non-blocking OpenViking resource imports so large browser backfills and incremental sync runs do not stall on per-event completion waits.
-5. When OpenViking returns a transient point-lock acquisition failure on `POST /api/v1/resources`, the adapter retries the import a small number of times before surfacing the error.
+5. When OpenViking returns a transient point-lock acquisition failure on `POST /api/v1/resources`, the adapter retries the import a small number of times before surfacing the error, including memory-narrative, knowledge, and skill draft imports that use file-path based resource writes.
 6. Because OpenViking may flatten imported resources at the root, MirrorBrain encodes logical namespaces into resource names such as `mirrorbrain-memory-events-...` and `mirrorbrain-skill-drafts-...` instead of assuming nested directories will exist under `viking://resources/`.
 7. Retrieval uses `GET /api/v1/fs/ls` at `viking://resources/`, filters by the MirrorBrain namespace prefixes, resolves directory-backed resources to their inner files, and then loads content with `GET /api/v1/content/read`.
 8. Memory retrieval also tolerates legacy flat browser resources such as `browser503`, deduplicates by `MemoryEvent.id` when both legacy and prefixed resources contain the same event, and compresses browser display rows by URL so repeated visits are shown as one memory item with merged `accessTimes` and the most recent visible timestamp.
@@ -60,7 +60,7 @@ For local setup and startup expectations around OpenViking, see the repository [
 - unit tests verify HTTP request payloads for memory, memory-narrative, candidate, reviewed, knowledge, and skill imports, including non-blocking memory-event ingestion
 - unit tests verify candidate memory deletion calls OpenViking's filesystem delete endpoint
 - unit tests verify browser page-content imports are queued without blocking sync completion
-- unit tests verify transient OpenViking point-lock failures are retried for resource imports
+- unit tests verify transient OpenViking point-lock failures are retried for resource imports, including knowledge and skill imports
 - unit tests verify HTTP-based listing and content reads for memory, memory-narrative, candidate, reviewed, knowledge, and skill retrieval
 - unit tests verify local workspace-backed memory-event reads
 - unit tests verify missing or corrupt memory-event display caches are treated as cache misses

@@ -612,6 +612,75 @@ describe('openviking store adapter', () => {
     );
   });
 
+  it('retries knowledge imports when OpenViking reports a point lock failure', async () => {
+    const workspaceDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-openviking-'));
+    const requests: Array<{
+      url: string;
+      method: string;
+      body: string;
+    }> = [];
+    let attempt = 0;
+
+    const result = await ingestKnowledgeArtifactToOpenViking(
+      {
+        baseUrl: 'http://127.0.0.1:1933',
+        workspaceDir,
+        artifact: {
+          id: 'topic-knowledge:vitest-testing:v1',
+          artifactType: 'topic-knowledge',
+          draftState: 'published',
+          topicKey: 'vitest-testing',
+          title: 'Vitest setup and debugging',
+          summary: 'Latest summary',
+          body: 'Latest body',
+          sourceReviewedMemoryIds: ['reviewed:candidate:browser:aw-event-1'],
+          version: 1,
+          isCurrentBest: true,
+          supersedesKnowledgeId: null,
+          updatedAt: '2026-04-21T12:00:00.000Z',
+          reviewedAt: '2026-04-21T10:00:00.000Z',
+          recencyLabel: 'updated on 2026-04-21',
+        },
+      },
+      async (input, init) => {
+        attempt += 1;
+        requests.push({
+          url: String(input),
+          method: init?.method ?? 'GET',
+          body: String(init?.body ?? ''),
+        });
+
+        if (attempt === 1) {
+          return new Response('Failed to acquire point lock for ["/local/default/resources"]', {
+            status: 500,
+          });
+        }
+
+        return new Response(
+          JSON.stringify({
+            status: 'ok',
+            result: {
+              status: 'success',
+              root_uri: 'viking://resources/mirrorbrain/knowledge/topic-knowledge:vitest-testing:v1.md',
+            },
+            time: 0.01,
+          }),
+          {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          },
+        );
+      },
+    );
+
+    expect(requests).toHaveLength(2);
+    expect(result.rootUri).toBe(
+      'viking://resources/mirrorbrain/knowledge/topic-knowledge:vitest-testing:v1.md',
+    );
+  });
+
   it('imports a skill draft into OpenViking through the resources API', async () => {
     const workspaceDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-openviking-'));
     const requests: Array<{

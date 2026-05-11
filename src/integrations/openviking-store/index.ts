@@ -480,32 +480,20 @@ export async function ingestKnowledgeArtifactToOpenViking(
   mkdirSync(resourceDir, { recursive: true });
   writeFileSync(sourcePath, markdown);
 
-  const response = await fetchImpl(`${input.baseUrl}/api/v1/resources`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      path: sourcePath,
-      target,
+  const { rootUri } = await ingestFileResourceToOpenViking(
+    {
+      baseUrl: input.baseUrl,
+      sourcePath,
+      targetUri: target,
       reason: 'MirrorBrain imported knowledge draft',
-      wait: false,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`OpenViking request failed with status ${response.status}`);
-  }
-
-  const payload = (await response.json()) as {
-    result?: {
-      root_uri?: string;
-    };
-  };
+      waitForCompletion: false,
+    },
+    fetchImpl,
+  );
 
   return {
     sourcePath,
-    rootUri: payload.result?.root_uri ?? target,
+    rootUri,
   };
 }
 
@@ -534,32 +522,20 @@ export async function ingestSkillArtifactToOpenViking(
   mkdirSync(resourceDir, { recursive: true });
   writeFileSync(sourcePath, content);
 
-  const response = await fetchImpl(`${input.baseUrl}/api/v1/resources`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      path: sourcePath,
-      target,
+  const { rootUri } = await ingestFileResourceToOpenViking(
+    {
+      baseUrl: input.baseUrl,
+      sourcePath,
+      targetUri: target,
       reason: 'MirrorBrain imported skill draft',
-      wait: false,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`OpenViking request failed with status ${response.status}`);
-  }
-
-  const payload = (await response.json()) as {
-    result?: {
-      root_uri?: string;
-    };
-  };
+      waitForCompletion: false,
+    },
+    fetchImpl,
+  );
 
   return {
     sourcePath,
-    uri: payload.result?.root_uri ?? target,
+    uri: rootUri,
   };
 }
 
