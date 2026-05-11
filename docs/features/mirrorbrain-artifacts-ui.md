@@ -34,7 +34,7 @@ It does not synthesize new knowledge, execute skills, or persist conversational 
 
 ## Data Flow
 
-`KnowledgeTabPanel` and `SkillTabPanel` each read the relevant artifact arrays from `useArtifacts`. `KnowledgePanel` filters normal knowledge to `draftState: published`, sorts the list newest first, and keeps that left list unchanged when the user switches between `List` and `Graph` modes. `topic-merge-candidate` drafts are rendered separately under `Merge Suggestions` instead of being mixed into the published knowledge list.
+`KnowledgeTabPanel` and `SkillTabPanel` each read the relevant artifact arrays from `useArtifacts`. When Knowledge tab mounts, it refreshes the knowledge list and graph from the backend, then performs a short delayed refresh to pick up asynchronous lint output such as newly persisted merge candidates. `KnowledgePanel` filters normal knowledge to `draftState: published`, sorts the list newest first, and keeps that left list unchanged when the user switches between `List` and `Graph` modes. `topic-merge-candidate` drafts are rendered separately under `Merge Suggestions` instead of being mixed into the published knowledge list.
 
 In Knowledge `List` mode, the right detail panel defaults to the newest approved knowledge artifact and changes when another knowledge item is clicked. The body is rendered through `KnowledgeMarkdownRenderer`, so headings, tables, links, and `[[wiki-links]]` read like a durable document rather than a raw text blob. The detail view also exposes tags, related knowledge ids, and indexed document context in a compact metadata panel inspired by the PulseOS-lite document context panel.
 
@@ -69,11 +69,13 @@ The artifact edit message row uses a single-line full-width input with a send ac
 - Generated artifacts are persisted; only in-progress edit notes can be lost if the browser closes before the user saves follow-up edits.
 - Delete actions remove the artifact from the persisted artifact list; deleting published knowledge also prevents its source draft from reappearing as a separate timeline item. Local conversation notes tied to that artifact id are effectively orphaned because the artifact is no longer selectable.
 - Merge suggestions are draft artifacts; they are visible for explicit review but are not treated as published knowledge until approved.
+- Merge suggestions are produced asynchronously by knowledge lint, so they can appear shortly after the generated knowledge response rather than in the exact same UI tick.
 - Skill detail display remains conservative because current skill artifacts only expose approval state, workflow evidence refs, and confirmation metadata.
 
 ## Test Strategy
 
 - `KnowledgePanel.test.tsx` covers approved-only knowledge list rendering, newest-first ordering, default detail selection, Markdown detail rendering, context metadata, stable left list across List/Graph modes, global graph default, SVG graph nodes/edges, focused graph switching, merge suggestion display/approval, and user-timezone timestamp display.
+- `useArtifacts.test.tsx` covers reloading the knowledge list so background lint artifacts can become visible in shared UI state.
 - `KnowledgeGraphPanel.test.tsx` covers focused graph expansion from a selected knowledge artifact to related topics/artifacts and drag repositioning.
 - `SkillPanel.test.tsx` covers newest-first skill rendering, default detail selection, and user-timezone timestamp display.
 - `shared/user-time.test.ts` covers deterministic UTC-to-user-timezone formatting and fallback timezone behavior.

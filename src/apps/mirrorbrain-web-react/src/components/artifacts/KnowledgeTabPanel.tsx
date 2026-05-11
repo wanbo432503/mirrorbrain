@@ -12,6 +12,7 @@ export default function KnowledgeTabPanel() {
     isDeletingKnowledge,
     isApprovingKnowledge,
     approveKnowledge,
+    reloadKnowledge,
     deleteKnowledgeArtifact,
   } = useArtifacts(api)
   const [knowledgeGraph, setKnowledgeGraph] = useState<KnowledgeGraphSnapshot | null>(null)
@@ -19,27 +20,34 @@ export default function KnowledgeTabPanel() {
   useEffect(() => {
     let active = true
 
-    async function loadKnowledgeGraph() {
+    async function loadKnowledgeData() {
       if (!api.getKnowledgeGraph) {
         return
       }
 
       try {
-        const graph = await api.getKnowledgeGraph()
+        const [graph] = await Promise.all([
+          api.getKnowledgeGraph(),
+          reloadKnowledge(),
+        ])
         if (active) {
           setKnowledgeGraph(graph)
         }
       } catch (error) {
-        console.error('Failed to load knowledge graph', error)
+        console.error('Failed to load knowledge data', error)
       }
     }
 
-    void loadKnowledgeGraph()
+    void loadKnowledgeData()
+    const lintRefreshTimer = window.setTimeout(() => {
+      void loadKnowledgeData()
+    }, 1500)
 
     return () => {
       active = false
+      window.clearTimeout(lintRefreshTimer)
     }
-  }, [api])
+  }, [api, reloadKnowledge])
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">

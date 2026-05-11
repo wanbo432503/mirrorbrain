@@ -555,4 +555,44 @@ describe('useArtifacts', () => {
     expect(api.approveKnowledge).toHaveBeenCalledWith(draft)
     expect(result.current.knowledgeArtifacts).toEqual([otherDraft, publishedArtifact])
   })
+
+  it('reloads knowledge artifacts so background lint merge candidates become visible', async () => {
+    const mergeCandidate: KnowledgeArtifact = {
+      id: 'topic-merge-candidate:vitest:knowledge-new:knowledge-old',
+      draftState: 'draft',
+      artifactType: 'topic-merge-candidate',
+      topicKey: 'vitest',
+      title: 'Merge candidate: Vitest workflow',
+      summary: 'Suggested merge with similar knowledge.',
+      body: '## Merge Suggestion',
+      sourceReviewedMemoryIds: ['reviewed:vitest'],
+      derivedFromKnowledgeIds: ['knowledge-new', 'knowledge-old'],
+      updatedAt: '2026-05-11T10:00:00.000Z',
+    }
+    const api: MirrorBrainWebAppApi = {
+      getHealth: vi.fn(),
+      listMemory: vi.fn(),
+      listKnowledge: vi.fn(async () => [mergeCandidate]),
+      listKnowledgeTopics: vi.fn(),
+      listSkills: vi.fn(),
+      syncBrowser: vi.fn(),
+      syncShell: vi.fn(),
+      createDailyCandidates: vi.fn(),
+      suggestCandidateReviews: vi.fn(),
+      reviewCandidateMemory: vi.fn(),
+      undoCandidateReview: vi.fn(),
+      generateKnowledge: vi.fn(),
+      generateSkill: vi.fn(),
+    } as unknown as MirrorBrainWebAppApi
+
+    const wrapper = createWrapper()
+    const { result } = renderHook(() => useArtifacts(api), { wrapper })
+
+    await act(async () => {
+      await result.current.reloadKnowledge()
+    })
+
+    expect(api.listKnowledge).toHaveBeenCalled()
+    expect(result.current.knowledgeArtifacts).toEqual([mergeCandidate])
+  })
 })

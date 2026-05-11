@@ -43,6 +43,12 @@ export function useArtifacts(api: MirrorBrainWebAppApi) {
   const [isDeletingKnowledge, setIsDeletingKnowledge] = useState(false)
   const [isDeletingSkill, setIsDeletingSkill] = useState(false)
 
+  const reloadKnowledge = useCallback(async () => {
+    const knowledge = await api.listKnowledge()
+    dispatch({ type: 'LOAD_KNOWLEDGE', payload: knowledge })
+    return knowledge
+  }, [api, dispatch])
+
   const generateKnowledge = useCallback(
     async (reviewedMemories: ReviewedMemory[]) => {
       setIsGeneratingKnowledge(true)
@@ -373,6 +379,7 @@ export function useArtifacts(api: MirrorBrainWebAppApi) {
     saveSkillArtifact,
     deleteKnowledgeArtifact,
     deleteSkillArtifact,
+    reloadKnowledge,
     dismissFeedback,
   }
 }
