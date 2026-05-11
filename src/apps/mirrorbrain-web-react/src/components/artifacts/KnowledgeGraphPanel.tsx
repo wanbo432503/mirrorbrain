@@ -323,11 +323,6 @@ export function KnowledgeGraphPanel(props: KnowledgeGraphPanelProps): React.Reac
                   {selectedNode.properties.title ?? selectedNode.topicKey}
                 </p>
               </div>
-              <dl className="space-y-2">
-                <GraphMeta label="Type" value={selectedNode.type} />
-                <GraphMeta label="Topic" value={selectedNode.topicKey} />
-                <GraphMeta label="Artifact" value={selectedNode.properties.artifactId ?? 'n/a'} />
-              </dl>
               <div>
                 <p className="font-heading text-xs font-semibold uppercase text-inkMuted-48">
                   Legend
@@ -355,17 +350,6 @@ function GraphStat({ label, value }: { label: string; value: number }) {
     <span className="rounded-pill border border-hairline bg-canvas px-3 py-1 font-heading text-[11px] font-semibold uppercase">
       {label}: {value}
     </span>
-  );
-}
-
-function GraphMeta({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="font-heading text-[11px] font-semibold uppercase text-inkMuted-48">
-        {label}
-      </dt>
-      <dd className="break-words font-body text-sm text-ink">{value}</dd>
-    </div>
   );
 }
 

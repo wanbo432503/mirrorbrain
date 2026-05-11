@@ -117,5 +117,8 @@ describe('KnowledgeGraphPanel', () => {
     expect(screen.getByTestId('knowledge-graph-canvas').parentElement?.nextElementSibling?.textContent ?? '').toContain(
       'Selection',
     )
+    expect(screen.queryByText('Type', { selector: 'dt' })).toBeNull()
+    expect(screen.queryByText('Topic', { selector: 'dt' })).toBeNull()
+    expect(screen.queryByText('Artifact', { selector: 'dt' })).toBeNull()
   })
 })
