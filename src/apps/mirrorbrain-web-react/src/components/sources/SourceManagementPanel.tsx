@@ -1,0 +1,294 @@
+import { useEffect, useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
+
+import {
+  createMirrorBrainBrowserApi,
+  type MirrorBrainWebAppApi,
+} from '../../api/client'
+import type {
+  SourceAuditEvent,
+  SourceInstanceSummary,
+  SourceLedgerKind,
+} from '../../types/index'
+import Button from '../common/Button'
+import LoadingSpinner from '../common/LoadingSpinner'
+
+type SourceDetailTab = 'Overview' | 'Recent Memory' | 'Audit' | 'Settings'
+
+interface SourceManagementPanelProps {
+  api?: MirrorBrainWebAppApi
+}
+
+const DETAIL_TABS: SourceDetailTab[] = [
+  'Overview',
+  'Recent Memory',
+  'Audit',
+  'Settings',
+]
+
+function getSourceKey(source: {
+  sourceKind: SourceLedgerKind
+  sourceInstanceId: string
+}): string {
+  return `${source.sourceKind}:${source.sourceInstanceId}`
+}
+
+function formatImportMessage(input: {
+  importedCount: number
+  scannedLedgerCount: number
+}): string {
+  const eventLabel = input.importedCount === 1 ? 'event' : 'events'
+  const ledgerLabel = input.scannedLedgerCount === 1 ? 'ledger' : 'ledgers'
+
+  return `Imported ${input.importedCount} source ledger ${eventLabel} across ${input.scannedLedgerCount} scanned ${ledgerLabel}.`
+}
+
+export default function SourceManagementPanel({
+  api,
+}: SourceManagementPanelProps) {
+  const defaultApi = useMemo(
+    () => createMirrorBrainBrowserApi(window.location.origin),
+    [],
+  )
+  const sourceApi = api ?? defaultApi
+  const [sources, setSources] = useState<SourceInstanceSummary[]>([])
+  const [selectedSourceKey, setSelectedSourceKey] = useState<string | null>(null)
+  const [selectedTab, setSelectedTab] = useState<SourceDetailTab>('Overview')
+  const [auditEvents, setAuditEvents] = useState<SourceAuditEvent[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isImporting, setIsImporting] = useState(false)
+  const [feedback, setFeedback] = useState<string | null>(null)
+
+  const selectedSource =
+    sources.find((source) => getSourceKey(source) === selectedSourceKey) ??
+    sources[0] ??
+    null
+
+  const loadSources = async () => {
+    const loadedSources = await sourceApi.listSourceStatuses()
+    setSources(loadedSources)
+    setSelectedSourceKey(
+      (current) => current ?? (loadedSources[0] ? getSourceKey(loadedSources[0]) : null),
+    )
+  }
+
+  useEffect(() => {
+    let isMounted = true
+
+    const load = async () => {
+      try {
+        const loadedSources = await sourceApi.listSourceStatuses()
+
+        if (!isMounted) {
+          return
+        }
+
+        setSources(loadedSources)
+        setSelectedSourceKey(loadedSources[0] ? getSourceKey(loadedSources[0]) : null)
+      } finally {
+        if (isMounted) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    void load()
+
+    return () => {
+      isMounted = false
+    }
+  }, [sourceApi])
+
+  useEffect(() => {
+    if (selectedSource === null) {
+      setAuditEvents([])
+      return
+    }
+
+    let isMounted = true
+
+    const loadAudit = async () => {
+      const events = await sourceApi.listSourceAuditEvents({
+        sourceKind: selectedSource.sourceKind,
+        sourceInstanceId: selectedSource.sourceInstanceId,
+      })
+
+      if (isMounted) {
+        setAuditEvents(events)
+      }
+    }
+
+    void loadAudit()
+
+    return () => {
+      isMounted = false
+    }
+  }, [selectedSource, sourceApi])
+
+  const handleImportNow = async () => {
+    setIsImporting(true)
+    setFeedback(null)
+
+    try {
+      const result = await sourceApi.importSourceLedgers()
+      setFeedback(formatImportMessage(result))
+      await loadSources()
+    } finally {
+      setIsImporting(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-0 flex-1 items-center justify-center py-12">
+        <LoadingSpinner size="large" />
+      </div>
+    )
+  }
+
+  if (selectedSource === null) {
+    return (
+      <section className="flex min-h-0 flex-1 flex-col gap-4 p-4">
+        <h2 className="font-heading text-xl font-semibold">Sources</h2>
+        <p className="font-body text-sm text-inkMuted-80">
+          No source activity has been imported yet.
+        </p>
+      </section>
+    )
+  }
+
+  return (
+    <section className="flex min-h-0 flex-1 flex-col gap-4 p-4 md:flex-row">
+      <aside className="shrink-0 border-b border-hairline pb-4 md:w-72 md:border-b-0 md:border-r md:pb-0 md:pr-4">
+        <h2 className="font-heading text-xl font-semibold">Sources</h2>
+        <div className="mt-4 flex flex-col gap-2">
+          {sources.map((source) => {
+            const sourceKey = getSourceKey(source)
+            const isSelected = sourceKey === getSourceKey(selectedSource)
+
+            return (
+              <button
+                key={sourceKey}
+                type="button"
+                className={`rounded-sm border px-3 py-2 text-left text-sm ${
+                  isSelected
+                    ? 'border-primary bg-canvas-parchment text-primary'
+                    : 'border-hairline bg-canvas text-ink'
+                }`}
+                onClick={() => setSelectedSourceKey(sourceKey)}
+              >
+                <span className="block font-semibold">{source.sourceInstanceId}</span>
+                <span className="block text-xs text-inkMuted-80">{source.sourceKind}</span>
+              </button>
+            )
+          })}
+        </div>
+      </aside>
+
+      <div className="min-w-0 flex-1">
+        {feedback && (
+          <div
+            role="status"
+            className="mb-3 rounded-sm border border-green-300 bg-green-100 p-3 text-sm text-green-700"
+          >
+            {feedback}
+          </div>
+        )}
+
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="font-heading text-lg font-semibold">
+              {selectedSource.sourceInstanceId}
+            </h3>
+            <p className="text-sm text-inkMuted-80">{selectedSource.sourceKind}</p>
+          </div>
+          <span className="rounded-sm border border-hairline px-2 py-1 text-xs uppercase">
+            {selectedSource.lifecycleStatus}
+          </span>
+        </div>
+
+        <div role="tablist" className="mt-4 flex border-b border-hairline">
+          {DETAIL_TABS.map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              role="tab"
+              aria-selected={selectedTab === tab}
+              className={`px-3 py-2 text-sm ${
+                selectedTab === tab
+                  ? 'border-b-2 border-primary text-primary'
+                  : 'text-inkMuted-80'
+              }`}
+              onClick={() => setSelectedTab(tab)}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
+        {selectedTab === 'Overview' && (
+          <div className="mt-4 grid grid-cols-2 gap-3 text-sm lg:grid-cols-4">
+            <Metric label="Imported" value={selectedSource.importedCount} />
+            <Metric label="Skipped" value={selectedSource.skippedCount} />
+            <Metric label="Recorder" value={selectedSource.recorderStatus} />
+            <Metric
+              label="Checkpoint"
+              value={selectedSource.checkpointSummary ?? 'none'}
+            />
+            {selectedSource.latestWarning && (
+              <div className="col-span-full rounded-sm border border-amber-300 bg-amber-50 p-3 text-amber-800">
+                {selectedSource.latestWarning}
+              </div>
+            )}
+          </div>
+        )}
+
+        {selectedTab === 'Recent Memory' && (
+          <div className="mt-4 rounded-sm border border-hairline p-4 text-sm text-inkMuted-80">
+            No recent memory records for this source.
+          </div>
+        )}
+
+        {selectedTab === 'Audit' && (
+          <div className="mt-4 flex flex-col gap-2">
+            {auditEvents.map((event) => (
+              <article
+                key={event.id}
+                className="rounded-sm border border-hairline p-3 text-sm"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <strong>{event.eventType}</strong>
+                  <span>{event.severity}</span>
+                </div>
+                <p className="mt-1 text-inkMuted-80">{event.message}</p>
+                <p className="mt-1 break-words text-xs text-inkMuted-80">
+                  {event.ledgerPath}:{event.lineNumber}
+                </p>
+              </article>
+            ))}
+          </div>
+        )}
+
+        {selectedTab === 'Settings' && (
+          <div className="mt-4 flex flex-col gap-4 text-sm">
+            <div>
+              <p>Ledger import</p>
+              <Button variant="primary" loading={isImporting} onClick={handleImportNow}>
+                Import Now
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+
+function Metric({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="rounded-sm border border-hairline bg-canvas p-3">
+      <p className="text-xs uppercase text-inkMuted-80">{label}</p>
+      <p className="mt-1 break-words font-semibold">{value}</p>
+    </div>
+  )
+}

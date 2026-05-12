@@ -110,6 +110,7 @@ Key endpoints:
   `POST /knowledge/approve`
 - `GET /skills`, `POST /skills`, `DELETE /skills/:artifactId`,
   `POST /skills/generate`
+- `POST /sources/import`, `GET /sources/audit`, `GET /sources/status`
 
 Inputs:
 
@@ -143,12 +144,12 @@ Purpose: provide the current standalone and embeddable MirrorBrain operator UI.
 
 Responsibilities:
 
-- Render the memory, review, knowledge, and skill tabs.
+- Render the memory, review, knowledge, skill, and source management tabs.
 - Consume only the HTTP API through `src/api/client.ts`.
 - Manage shared UI state with `MirrorBrainContext` and feature hooks.
 - Provide sync controls, paginated memory event listing, daily candidate review,
   knowledge generation/regeneration/approval, knowledge graph visualization,
-  and skill draft generation/editing.
+  skill draft generation/editing, and operational source ledger inspection.
 
 Primary modules:
 
@@ -162,6 +163,8 @@ Primary modules:
   guidance, kept candidate undo, and metrics.
 - `components/artifacts/*`: knowledge panel, skill panel, history, markdown
   rendering, topic modal, graph panel, and wikilink hover cards.
+- `components/sources/*`: Phase 4 source status, audit, and manual import
+  controls.
 - `components/common`, `components/forms`, `components/layout`: local design
   system primitives.
 
@@ -172,7 +175,8 @@ Inputs:
 
 Outputs:
 
-- API mutations for sync, review, knowledge, and skill workflows.
+- API mutations for sync, review, knowledge, skill, and source import
+  workflows.
 - A UI suitable for local debugging and future embedding.
 
 Dependencies:
@@ -190,6 +194,8 @@ Verification:
 
 - Component and hook tests under `src/apps/mirrorbrain-web-react/src/**/*.test.tsx`.
 - API client tests in `src/apps/mirrorbrain-web-react/src/api/client.test.ts`.
+- Source management UI tests in
+  `src/apps/mirrorbrain-web-react/src/components/sources/SourceManagementPanel.test.tsx`.
 
 ### `src/apps/mirrorbrain-web`
 

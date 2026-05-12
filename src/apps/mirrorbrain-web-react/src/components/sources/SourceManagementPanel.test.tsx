@@ -1,0 +1,82 @@
+// @vitest-environment jsdom
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+
+import type { MirrorBrainWebAppApi } from '../../api/client'
+import SourceManagementPanel from './SourceManagementPanel'
+
+afterEach(() => {
+  cleanup()
+})
+
+describe('SourceManagementPanel', () => {
+  it('shows source overview, audit, settings tabs, and manual import now', async () => {
+    const api = {
+      listSourceStatuses: vi.fn(async () => [
+        {
+          sourceKind: 'browser' as const,
+          sourceInstanceId: 'chrome-main',
+          lifecycleStatus: 'degraded' as const,
+          recorderStatus: 'unknown' as const,
+          lastImporterScanAt: '2026-05-12T10:30:00.000Z',
+          lastImportedAt: '2026-05-12T10:00:00.000Z',
+          importedCount: 2,
+          skippedCount: 1,
+          latestWarning: 'Skipped invalid source ledger line.',
+          checkpointSummary: 'ledgers/2026-05-12/browser.jsonl next line 4',
+        },
+      ]),
+      listSourceAuditEvents: vi.fn(async () => [
+        {
+          id: 'source-audit:warning-1',
+          eventType: 'schema-validation-failed',
+          sourceKind: 'browser' as const,
+          sourceInstanceId: 'chrome-main',
+          ledgerPath: 'ledgers/2026-05-12/browser.jsonl',
+          lineNumber: 2,
+          occurredAt: '2026-05-12T10:31:00.000Z',
+          severity: 'warning' as const,
+          message: 'Skipped invalid source ledger line.',
+        },
+      ]),
+      importSourceLedgers: vi.fn(async () => ({
+        importedCount: 1,
+        skippedCount: 0,
+        scannedLedgerCount: 1,
+        changedLedgerCount: 1,
+        ledgerResults: [],
+      })),
+    } as unknown as MirrorBrainWebAppApi
+
+    render(<SourceManagementPanel api={api} />)
+
+    await waitFor(() => {
+      expect(screen.getAllByText('chrome-main')).toHaveLength(2)
+    })
+    expect(screen.getByText('degraded')).not.toBeNull()
+    expect(screen.getByText('Imported')).not.toBeNull()
+    expect(screen.getByText('2')).not.toBeNull()
+    expect(screen.getByText('Skipped')).not.toBeNull()
+    expect(screen.getAllByText('1').length).toBeGreaterThan(0)
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Audit' }))
+    await screen.findByText('schema-validation-failed')
+    expect(screen.getByText('Skipped invalid source ledger line.')).not.toBeNull()
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Settings' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Import Now' }))
+
+    await waitFor(() => {
+      expect(api.importSourceLedgers).toHaveBeenCalledTimes(1)
+    })
+    expect(
+      await screen.findByText('Imported 1 source ledger event across 1 scanned ledger.')
+    ).not.toBeNull()
+    expect(api.listSourceStatuses).toHaveBeenCalledTimes(2)
+    expect(api.listSourceAuditEvents).toHaveBeenCalledWith({
+      sourceKind: 'browser',
+      sourceInstanceId: 'chrome-main',
+    })
+  })
+})

@@ -6,6 +6,58 @@ export interface BrowserSyncSummary {
   importedEvents?: MemoryEvent[];
 }
 
+export type SourceLedgerKind =
+  | 'browser'
+  | 'file-activity'
+  | 'screenshot'
+  | 'shell'
+  | 'agent-transcript';
+
+export interface SourceLedgerImportCheckpoint {
+  ledgerPath: string;
+  nextLineNumber: number;
+  updatedAt: string;
+}
+
+export interface SourceLedgerImportResult {
+  importedCount: number;
+  skippedCount: number;
+  scannedLedgerCount: number;
+  changedLedgerCount: number;
+  ledgerResults: Array<{
+    ledgerPath: string;
+    importedCount: number;
+    skippedCount: number;
+    checkpoint: SourceLedgerImportCheckpoint;
+  }>;
+}
+
+export interface SourceAuditEvent {
+  id: string;
+  eventType: string;
+  sourceKind?: SourceLedgerKind;
+  sourceInstanceId?: string;
+  ledgerPath: string;
+  lineNumber: number;
+  occurredAt: string;
+  severity: 'info' | 'warning' | 'error';
+  message: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface SourceInstanceSummary {
+  sourceKind: SourceLedgerKind;
+  sourceInstanceId: string;
+  lifecycleStatus: 'enabled' | 'disabled' | 'running' | 'degraded' | 'error';
+  recorderStatus: 'unknown' | 'running' | 'stopped' | 'error';
+  lastImporterScanAt?: string;
+  lastImportedAt?: string;
+  importedCount: number;
+  skippedCount: number;
+  latestWarning?: string;
+  checkpointSummary?: string;
+}
+
 export interface MirrorBrainSyncConfig {
   pollingIntervalMs: number;
   initialBackfillHours: number;

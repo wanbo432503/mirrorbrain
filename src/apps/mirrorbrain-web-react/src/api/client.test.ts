@@ -142,4 +142,85 @@ describe('createMirrorBrainBrowserApi', () => {
       }),
     );
   });
+
+  it('calls Phase 4 source management endpoints', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          items: [
+            {
+              sourceKind: 'browser',
+              sourceInstanceId: 'chrome-main',
+              lifecycleStatus: 'enabled',
+              recorderStatus: 'unknown',
+              importedCount: 1,
+              skippedCount: 0,
+            },
+          ],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          items: [
+            {
+              id: 'source-audit:entry-1',
+              eventType: 'entry-imported',
+              sourceKind: 'browser',
+              sourceInstanceId: 'chrome-main',
+              ledgerPath: 'ledgers/2026-05-12/browser.jsonl',
+              lineNumber: 1,
+              occurredAt: '2026-05-12T10:31:00.000Z',
+              severity: 'info',
+              message: 'Imported browser ledger entry.',
+            },
+          ],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          import: {
+            importedCount: 1,
+            skippedCount: 0,
+            scannedLedgerCount: 1,
+            changedLedgerCount: 1,
+            ledgerResults: [],
+          },
+        }),
+      }) as unknown as typeof fetch;
+    vi.stubGlobal('fetch', fetchMock);
+
+    const api = createMirrorBrainBrowserApi('http://localhost:3000');
+
+    await expect(api.listSourceStatuses?.()).resolves.toEqual([
+      expect.objectContaining({
+        sourceKind: 'browser',
+        sourceInstanceId: 'chrome-main',
+      }),
+    ]);
+    await expect(api.listSourceAuditEvents?.({ sourceKind: 'browser' })).resolves.toEqual([
+      expect.objectContaining({
+        id: 'source-audit:entry-1',
+        sourceKind: 'browser',
+      }),
+    ]);
+    await expect(api.importSourceLedgers?.()).resolves.toMatchObject({
+      importedCount: 1,
+      scannedLedgerCount: 1,
+    });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, 'http://localhost:3000/sources/status');
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      'http://localhost:3000/sources/audit?sourceKind=browser',
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      'http://localhost:3000/sources/import',
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
 });

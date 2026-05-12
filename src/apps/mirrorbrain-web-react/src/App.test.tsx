@@ -135,6 +135,33 @@ describe('App', () => {
         )
       }
 
+      if (url.endsWith('/sources/status')) {
+        return new Response(
+          JSON.stringify({
+            items: [
+              {
+                sourceKind: 'browser',
+                sourceInstanceId: 'chrome-main',
+                lifecycleStatus: 'enabled',
+                recorderStatus: 'unknown',
+                importedCount: 1,
+                skippedCount: 0,
+              },
+            ],
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      }
+
+      if (url.includes('/sources/audit')) {
+        return new Response(
+          JSON.stringify({
+            items: [],
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      }
+
       if (url.includes('/candidate-memories/daily')) {
         return new Response(JSON.stringify({ candidates: [] }), {
           status: 200,
@@ -234,6 +261,27 @@ describe('App', () => {
     expect(screen.queryByRole('tab', { name: /artifacts/i })).toBeNull()
     expect(screen.getByRole('tab', { name: /knowledge/i })).not.toBeNull()
     expect(screen.getByRole('tab', { name: /skill/i })).not.toBeNull()
+  })
+
+  it('shows Phase 4 sources as a top-level tab', async () => {
+    const user = userEvent.setup()
+    const fetchMock = stubInitialAppFetch()
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls.map((call) => String(call[0]))
+      ).toContain(`${window.location.origin}/memory?page=1&pageSize=10`)
+    })
+
+    await user.click(screen.getByRole('tab', { name: /sources/i }))
+
+    expect(await screen.findAllByText('chrome-main')).toHaveLength(2)
+    expect(document.getElementById('sources-panel')).not.toBeNull()
+    expect(
+      fetchMock.mock.calls.map((call) => String(call[0]))
+    ).toContain(`${window.location.origin}/sources/status`)
   })
 
   it('creates a continuous flex height chain for tab panels', async () => {

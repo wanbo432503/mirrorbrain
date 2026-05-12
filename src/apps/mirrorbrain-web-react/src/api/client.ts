@@ -7,6 +7,10 @@ import type {
   ReviewedMemory,
   BrowserSyncSummary,
   KnowledgeGraphSnapshot,
+  SourceAuditEvent,
+  SourceInstanceSummary,
+  SourceLedgerImportResult,
+  SourceLedgerKind,
 } from '../types/index';
 
 export interface PaginatedMemoryEvents {
@@ -37,6 +41,12 @@ export interface MirrorBrainWebAppApi {
   listCandidateMemoriesByDate?(reviewDate: string): Promise<CandidateMemory[]>;
   syncBrowser(): Promise<BrowserSyncSummary>;
   syncShell(): Promise<BrowserSyncSummary>;
+  importSourceLedgers(): Promise<SourceLedgerImportResult>;
+  listSourceAuditEvents(filter?: {
+    sourceKind?: SourceLedgerKind;
+    sourceInstanceId?: string;
+  }): Promise<SourceAuditEvent[]>;
+  listSourceStatuses(): Promise<SourceInstanceSummary[]>;
   createDailyCandidates(
     reviewDate: string,
     reviewTimeZone?: string
@@ -154,6 +164,37 @@ export function createMirrorBrainBrowserApi(
       });
       const body = await readJson<{ sync: BrowserSyncSummary }>(response);
       return body.sync;
+    },
+
+    async importSourceLedgers() {
+      const response = await fetch(`${baseUrl}/sources/import`, {
+        method: 'POST',
+      });
+      const body = await readJson<{ import: SourceLedgerImportResult }>(response);
+      return body.import;
+    },
+
+    async listSourceAuditEvents(filter = {}) {
+      const params = new URLSearchParams();
+      if (filter.sourceKind !== undefined) {
+        params.set('sourceKind', filter.sourceKind);
+      }
+      if (filter.sourceInstanceId !== undefined) {
+        params.set('sourceInstanceId', filter.sourceInstanceId);
+      }
+
+      const queryString = params.toString();
+      const response = await fetch(
+        `${baseUrl}/sources/audit${queryString ? `?${queryString}` : ''}`
+      );
+      const body = await readJson<{ items: SourceAuditEvent[] }>(response);
+      return body.items;
+    },
+
+    async listSourceStatuses() {
+      const response = await fetch(`${baseUrl}/sources/status`);
+      const body = await readJson<{ items: SourceInstanceSummary[] }>(response);
+      return body.items;
     },
 
     async createDailyCandidates(reviewDate: string, reviewTimeZone?: string) {

@@ -13,7 +13,7 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and an
 
 ### Phase 2: Core Components ✅ (Completed)
 - **Layout Components:**
-  - `TabNavigation.tsx` - Memory/Review/Knowledge/Skill tabs with keyboard navigation
+  - `TabNavigation.tsx` - Memory/Review/Knowledge/Skill/Sources tabs with keyboard navigation
   - `FeedbackBanner.tsx` - Success/Error/Info messages with auto-dismiss
   - `Header.tsx` - App brand row aligned to the main content container with a light/dark theme toggle
 
@@ -129,6 +129,17 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and an
 - Testing (unit + integration + E2E) (Phase 6)
 - Deployment + documentation (Phase 7)
 
+### Current Phase 4: Source Management Surface
+- **Source Components:**
+  - `SourceManagementPanel.tsx` - Source status, audit, recent memory placeholder, and settings surface for Phase 4 ledger imports
+
+- **Features:**
+  - Top-level Sources tab for operational source inspection
+  - Source instance list backed by `/sources/status`
+  - Source-specific audit events backed by `/sources/audit`
+  - Manual `Import Now` action backed by `/sources/import`
+  - Operational source UI remains separate from memory, knowledge, and skill outputs
+
 ## Design System
 
 ### Typography
@@ -186,9 +197,10 @@ src/apps/mirrorbrain-web-react/
 │   │   ├── common/        # Button, Card, MetricTile, Pagination, etc.
 │   │   ├── memory/        # (Phase 3)
 │   │   ├── review/        # (Phase 4)
-│   │   └── artifacts/     # (Phase 5)
+│   │   ├── artifacts/     # (Phase 5)
+│   │   └── sources/       # Source Management UI
 │   ├── hooks/             # useMirrorBrainState, useMemoryEvents, etc. (Phase 3-5)
-│   ├── api/               # client.ts (15 API methods)
+│   ├── api/               # client.ts (API methods)
 │   ├── contexts/          # MirrorBrainContext (Phase 3)
 │   ├── types/             # 165+ TypeScript interfaces
 │   ├── styles/            # Tailwind CSS base styles
@@ -199,7 +211,7 @@ src/apps/mirrorbrain-web-react/
 
 ## API Integration
 
-All 15 API methods preserved from original implementation:
+Core API methods include:
 
 1. `getHealth()` - Service status check
 2. `listMemory()` - Memory events list
@@ -216,6 +228,9 @@ All 15 API methods preserved from original implementation:
 13. `generateSkill()` - Generate skill
 14. `saveSkillArtifact()` - Save skill draft
 15. `listReviewedMemories()` - Reviewed memories
+16. `importSourceLedgers()` - Trigger Phase 4 ledger import
+17. `listSourceAuditEvents()` - List operational source audit records
+18. `listSourceStatuses()` - List source instance status summaries
 
 **API Logic Preservation:** 95% identical to original vanilla TypeScript implementation.
 
