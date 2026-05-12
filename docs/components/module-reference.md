@@ -1015,6 +1015,38 @@ Verification:
 
 - `src/workflows/source-recorder-supervisor/index.test.ts`
 
+### `src/workflows/work-session-analysis`
+
+Purpose: build Phase 4 work-session candidates from selected memory windows.
+
+Responsibilities:
+
+- Filter `MemoryEvent` records into a user-selected analysis window.
+- Group included records by project entity hints.
+- Preserve source event ids, source types, timestamps, and title relation hints.
+- Initialize generated candidates as pending review artifacts.
+
+Inputs:
+
+- Analysis window preset and time range, generation timestamp, and
+  source-attributed memory events.
+
+Outputs:
+
+- `WorkSessionAnalysisResult` with pending `WorkSessionCandidate` records and
+  excluded memory event ids.
+
+Failure modes and constraints:
+
+- Source authorization and memory retrieval are caller responsibilities.
+- Missing project entities are grouped under `unassigned`.
+- Generated candidates are not reviewed memories, knowledge articles, or skill
+  artifacts.
+
+Verification:
+
+- `src/workflows/work-session-analysis/index.test.ts`
+
 ### `src/workflows/browser-memory-sync`
 
 Purpose: sync ActivityWatch browser events and attach browser page content.
