@@ -19,6 +19,7 @@ boundaries, expected payloads, failure modes, and client usage guidance.
 The HTTP API is a local-first capability surface for:
 
 - memory sync, listing, retrieval, candidate creation, and review
+- Phase 4 source-ledger manual import, audit inspection, and source status
 - knowledge listing, generation, regeneration, approval, topic reading, graph
   reading, saving, and deletion
 - skill draft listing, generation, saving, and deletion
@@ -387,6 +388,107 @@ Failure mode:
 
 - Returns an error when the runtime was started without
   `MIRRORBRAIN_SHELL_HISTORY_PATH`.
+
+## Source Management Endpoints
+
+### `POST /sources/import`
+
+Triggers explicit Phase 4 source-ledger import. This is the manual Import Now
+operation for changed daily JSONL ledgers under the MirrorBrain workspace.
+
+Response status: `202`
+
+Response:
+
+```json
+{
+  "import": {
+    "importedCount": 1,
+    "skippedCount": 0,
+    "scannedLedgerCount": 1,
+    "changedLedgerCount": 1,
+    "ledgerResults": [
+      {
+        "ledgerPath": "ledgers/2026-05-12/browser.jsonl",
+        "importedCount": 1,
+        "skippedCount": 0,
+        "checkpoint": {
+          "ledgerPath": "ledgers/2026-05-12/browser.jsonl",
+          "nextLineNumber": 2,
+          "updatedAt": "2026-05-12T10:31:00.000Z"
+        }
+      }
+    ]
+  }
+}
+```
+
+Notes:
+
+- Manual import is checkpointed and should not duplicate previously imported
+  ledger lines.
+- Malformed ledger lines are represented as source audit warnings and do not
+  block later lines.
+- This endpoint imports ledgers; it does not start source recorders.
+
+### `GET /sources/audit`
+
+Lists operational source audit events.
+
+Query parameters:
+
+| Name | Required | Description |
+| --- | --- | --- |
+| `sourceKind` | no | Source kind such as `browser`, `shell`, or `agent-transcript`. |
+| `sourceInstanceId` | no | Source instance id such as `chrome-main`. |
+
+Response:
+
+```json
+{
+  "items": [
+    {
+      "id": "source-audit:entry-1",
+      "eventType": "entry-imported",
+      "sourceKind": "browser",
+      "sourceInstanceId": "chrome-main",
+      "ledgerPath": "ledgers/2026-05-12/browser.jsonl",
+      "lineNumber": 1,
+      "occurredAt": "2026-05-12T10:31:00.000Z",
+      "severity": "info",
+      "message": "Imported browser ledger entry."
+    }
+  ]
+}
+```
+
+### `GET /sources/status`
+
+Lists source instance summaries derived from operational checkpoint and audit
+state.
+
+Response:
+
+```json
+{
+  "items": [
+    {
+      "sourceKind": "browser",
+      "sourceInstanceId": "chrome-main",
+      "lifecycleStatus": "enabled",
+      "recorderStatus": "unknown",
+      "importedCount": 1,
+      "skippedCount": 0,
+      "checkpointSummary": "ledgers/2026-05-12/browser.jsonl next line 2"
+    }
+  ]
+}
+```
+
+Notes:
+
+- Source audit/status records are operational metadata, not user work memory.
+- Recorder status is `unknown` until recorder supervision is wired.
 
 ## Candidate And Review Endpoints
 

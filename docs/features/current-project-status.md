@@ -39,6 +39,8 @@ owning MirrorBrain's internal workflows.
   the default 30-minute scan cadence.
 - Local Phase 4 source-ledger state store for per-ledger checkpoints,
   operational source audit events, and derived source instance summaries.
+- Service and HTTP API methods for manual Phase 4 source-ledger import,
+  source audit listing, and source status summaries.
 - Runtime source authorization checks before source fetch and before
   persistence.
 - Best-effort shell command secret redaction before MirrorBrain storage,

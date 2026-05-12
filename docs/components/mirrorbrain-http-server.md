@@ -14,6 +14,7 @@ This component is responsible for:
 - reporting service health and effective runtime config
 - exposing a browser sync trigger endpoint
 - exposing a shell sync trigger endpoint
+- exposing Phase 4 source-ledger manual import, audit, and status endpoints
 - exposing raw read endpoints for memory, knowledge, and skill drafts
 - exposing a theme-level memory retrieval endpoint for `openclaw`-style queries
 - exposing write endpoints for daily candidate creation, candidate review suggestions, explicit review decisions, and artifact generation
@@ -36,6 +37,9 @@ Those concerns remain in the service, workflow, module, and integration layers.
 - `GET /health`
 - `POST /sync/browser`
 - `POST /sync/shell`
+- `POST /sources/import`
+- `GET /sources/audit`
+- `GET /sources/status`
 - `GET /memory`
 - `POST /memory/query`
 - `GET /knowledge`
@@ -60,14 +64,16 @@ Those concerns remain in the service, workflow, module, and integration layers.
 3. `Fastify` routes each request to the corresponding service method.
 4. OpenAPI metadata is registered alongside the routes and published through Swagger UI.
 5. `POST /sync/browser` and `POST /sync/shell` trigger explicit source sync operations through the service layer and return the sync summary without waiting for background narrative rebuild work.
-6. `GET /memory` returns raw memory events for the standalone MVP and review-oriented flows.
-7. `POST /memory/query` forwards a query-shaped retrieval request and returns theme-level memory results.
-8. `POST /knowledge` and `POST /skills` let the standalone UI save edited draft artifacts back through the service layer.
-9. The server serializes the domain result as JSON and returns an HTTP status that matches the action.
-10. Daily candidate creation returns task-oriented candidates with source URL refs, bounded result counts, and explicit time ranges.
-11. AI review suggestions stay separate from reviewed-memory writes, and now include a keep-score plus supporting reasons so the UI can explain why a candidate exists and why it may be worth keeping.
-12. Knowledge generation, regeneration, and approval routes delegate to the service layer and return structured errors when a capability is unavailable.
-13. `POST /knowledge/approve` accepts the current draft snapshot along with `draftId` so the service can publish the visible draft even if the storage index has not exposed it yet.
+6. `POST /sources/import` runs the Phase 4 source-ledger import workflow through the service layer and returns import counts.
+7. `GET /sources/audit` and `GET /sources/status` expose operational source state without adding audit records to memory retrieval.
+8. `GET /memory` returns raw memory events for the standalone MVP and review-oriented flows.
+9. `POST /memory/query` forwards a query-shaped retrieval request and returns theme-level memory results.
+10. `POST /knowledge` and `POST /skills` let the standalone UI save edited draft artifacts back through the service layer.
+11. The server serializes the domain result as JSON and returns an HTTP status that matches the action.
+12. Daily candidate creation returns task-oriented candidates with source URL refs, bounded result counts, and explicit time ranges.
+13. AI review suggestions stay separate from reviewed-memory writes, and now include a keep-score plus supporting reasons so the UI can explain why a candidate exists and why it may be worth keeping.
+14. Knowledge generation, regeneration, and approval routes delegate to the service layer and return structured errors when a capability is unavailable.
+15. `POST /knowledge/approve` accepts the current draft snapshot along with `draftId` so the service can publish the visible draft even if the storage index has not exposed it yet.
 
 ## Dependencies
 
@@ -90,6 +96,8 @@ Those concerns remain in the service, workflow, module, and integration layers.
 - draft save endpoints trust the caller to send a full artifact payload and do not yet offer field-level patch semantics
 - `POST /memory/query` is still a thin Phase 2A contract and does not yet expose pagination or mature ranking controls
 - `POST /sync/shell` depends on an explicitly configured shell history path in the runtime service
+- `POST /sources/import` depends on a service object that implements Phase 4 source-ledger import; otherwise it returns `501`
+- source audit and source status endpoints are operational metadata surfaces, not memory retrieval endpoints
 - sync responses can include a recent `importedEvents` preview so standalone clients can surface newly imported memory immediately without returning the full imported event batch
 - knowledge approval depends on a persisted draft id; missing ids return a request error rather than a partially shaped success payload
 
@@ -97,6 +105,7 @@ Those concerns remain in the service, workflow, module, and integration layers.
 
 - unit-style HTTP behavior coverage in `src/apps/mirrorbrain-http-server/index.test.ts`
 - unit-style coverage for Swagger UI and OpenAPI schema publication
+- unit-style coverage for Phase 4 source import, audit, and status endpoints
 - broader integration coverage through the wrapped service contract tests
 - API client coverage verifies failed knowledge approval responses are surfaced as errors before UI state reads topic metadata
 - `tsc --noEmit` after TypeScript changes

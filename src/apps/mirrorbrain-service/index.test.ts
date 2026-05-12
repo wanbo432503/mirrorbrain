@@ -13,6 +13,7 @@ import type {
   MemoryQueryResult,
   ReviewedMemory,
 } from '../../shared/types/index.js';
+import type { SourceAuditEvent } from '../../modules/source-ledger-importer/index.js';
 import { createMirrorBrainService, startMirrorBrainService } from './index.js';
 
 function createCandidateMemoryFixture(input: {
@@ -497,6 +498,144 @@ describe('mirrorbrain service', () => {
       baseUrl: expectedOpenVikingBaseUrl,
     });
     expect(api.service).toBe(service);
+  });
+
+  it('imports Phase 4 source ledgers through the service facade and exposes operational source state', async () => {
+    const memoryEvent: MemoryEvent = {
+      id: 'ledger:browser:event-1',
+      sourceType: 'browser',
+      sourceRef: 'browser:chrome-main:event-1',
+      timestamp: '2026-05-12T10:00:00.000Z',
+      authorizationScopeId: 'scope-source-ledger',
+      content: {
+        title: 'Phase 4 Design',
+        summary: 'Phase 4 source ledgers.',
+        contentKind: 'browser-page',
+        sourceSpecific: {},
+      },
+      captureMetadata: {
+        upstreamSource: 'source-ledger:browser',
+        checkpoint: 'ledgers/2026-05-12/browser.jsonl:1',
+      },
+    };
+    const auditEvent: SourceAuditEvent = {
+      id: 'source-audit:entry-1',
+      eventType: 'entry-imported',
+      sourceKind: 'browser',
+      sourceInstanceId: 'chrome-main',
+      ledgerPath: 'ledgers/2026-05-12/browser.jsonl',
+      lineNumber: 1,
+      occurredAt: '2026-05-12T10:31:00.000Z',
+      severity: 'info',
+      message: 'Imported browser ledger entry.',
+    };
+    const stateStore = {
+      readCheckpoint: vi.fn(async () => null),
+      writeCheckpoint: vi.fn(async () => undefined),
+      writeSourceAuditEvent: vi.fn(async () => undefined),
+      listSourceAuditEvents: vi.fn(async () => [auditEvent]),
+      listSourceInstanceSummaries: vi.fn(async () => [
+        {
+          sourceKind: 'browser' as const,
+          sourceInstanceId: 'chrome-main',
+          lifecycleStatus: 'enabled' as const,
+          recorderStatus: 'unknown' as const,
+          importedCount: 1,
+          skippedCount: 0,
+        },
+      ]),
+    };
+    const writeMemoryEvent = vi.fn(async () => undefined);
+    const importSourceLedgers = vi.fn(async (_input, dependencies) => {
+      await dependencies.writeMemoryEvent(memoryEvent);
+      await dependencies.writeSourceAuditEvent(auditEvent);
+      await dependencies.writeCheckpoint({
+        ledgerPath: 'ledgers/2026-05-12/browser.jsonl',
+        nextLineNumber: 2,
+        updatedAt: '2026-05-12T10:31:00.000Z',
+      });
+
+      return {
+        importedCount: 1,
+        skippedCount: 0,
+        scannedLedgerCount: 1,
+        changedLedgerCount: 1,
+        ledgerResults: [],
+      };
+    });
+    const service = {
+      status: 'running' as const,
+      config: getMirrorBrainConfig(),
+      syncBrowserMemory: vi.fn(async () => ({
+        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:00:00.000Z',
+      })),
+      syncShellMemory: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:00:00.000Z',
+      })),
+      stop: vi.fn(),
+    };
+
+    const api = createMirrorBrainService(
+      {
+        service,
+        workspaceDir: '/tmp/mirrorbrain-workspace',
+      },
+      {
+        createSourceLedgerStateStore: vi.fn(() => stateStore),
+        createMemoryEventWriter: vi.fn(() => ({
+          writeMemoryEvent,
+        })),
+        importSourceLedgers,
+        listKnowledge: vi.fn(async () => []),
+        listSkillDrafts: vi.fn(async () => []),
+        now: () => '2026-05-12T10:31:00.000Z',
+      },
+    );
+
+    await expect(api.importSourceLedgers()).resolves.toMatchObject({
+      importedCount: 1,
+      skippedCount: 0,
+      scannedLedgerCount: 1,
+    });
+    await expect(api.listSourceAuditEvents({ sourceKind: 'browser' })).resolves.toEqual([
+      auditEvent,
+    ]);
+    await expect(api.listSourceInstanceSummaries()).resolves.toEqual([
+      expect.objectContaining({
+        sourceKind: 'browser',
+        sourceInstanceId: 'chrome-main',
+      }),
+    ]);
+
+    expect(importSourceLedgers).toHaveBeenCalledWith(
+      {
+        authorizationScopeId: 'scope-source-ledger',
+        importedAt: '2026-05-12T10:31:00.000Z',
+        workspaceDir: '/tmp/mirrorbrain-workspace',
+      },
+      expect.objectContaining({
+        readCheckpoint: stateStore.readCheckpoint,
+        writeCheckpoint: stateStore.writeCheckpoint,
+        writeSourceAuditEvent: stateStore.writeSourceAuditEvent,
+        writeMemoryEvent: expect.any(Function),
+      }),
+    );
+    expect(writeMemoryEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recordType: 'memory-event',
+        recordId: 'ledger:browser:event-1',
+        payload: memoryEvent,
+      }),
+    );
+    expect(stateStore.listSourceAuditEvents).toHaveBeenCalledWith({
+      sourceKind: 'browser',
+    });
   });
 
   it('returns only the most recent imported browser events in explicit sync responses', async () => {

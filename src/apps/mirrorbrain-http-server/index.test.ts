@@ -16,6 +16,7 @@ import type {
   ReviewedMemory,
   SkillArtifact,
 } from '../../shared/types/index.js';
+import type { SourceAuditEvent } from '../../modules/source-ledger-importer/index.js';
 import { startMirrorBrainHttpServer } from './index.js';
 
 function createCandidateMemoryFixture(input: {
@@ -279,6 +280,134 @@ describe('mirrorbrain http server', () => {
         importedCount: 2,
         lastSyncedAt: '2026-03-20T09:05:00.000Z',
       },
+    });
+  });
+
+  it('exposes Phase 4 source import, audit, and status endpoints', async () => {
+    const auditEvent: SourceAuditEvent = {
+      id: 'source-audit:entry-1',
+      eventType: 'entry-imported',
+      sourceKind: 'browser',
+      sourceInstanceId: 'chrome-main',
+      ledgerPath: 'ledgers/2026-05-12/browser.jsonl',
+      lineNumber: 1,
+      occurredAt: '2026-05-12T10:31:00.000Z',
+      severity: 'info',
+      message: 'Imported browser ledger entry.',
+    };
+    const importSourceLedgers = vi.fn(async () => ({
+      importedCount: 1,
+      skippedCount: 0,
+      scannedLedgerCount: 1,
+      changedLedgerCount: 1,
+      ledgerResults: [
+        {
+          ledgerPath: 'ledgers/2026-05-12/browser.jsonl',
+          importedCount: 1,
+          skippedCount: 0,
+          checkpoint: {
+            ledgerPath: 'ledgers/2026-05-12/browser.jsonl',
+            nextLineNumber: 2,
+            updatedAt: '2026-05-12T10:31:00.000Z',
+          },
+        },
+      ],
+    }));
+    const listSourceAuditEvents = vi.fn(async () => [auditEvent]);
+    const listSourceInstanceSummaries = vi.fn(async () => [
+      {
+        sourceKind: 'browser' as const,
+        sourceInstanceId: 'chrome-main',
+        lifecycleStatus: 'enabled' as const,
+        recorderStatus: 'unknown' as const,
+        importedCount: 1,
+        skippedCount: 0,
+        checkpointSummary: 'ledgers/2026-05-12/browser.jsonl next line 2',
+      },
+    ]);
+    const service = {
+      service: {
+        status: 'running' as const,
+        config: getMirrorBrainConfig(),
+        stop: vi.fn(),
+      },
+      syncBrowserMemory: vi.fn(),
+      syncShellMemory: vi.fn(),
+      listMemoryEvents: vi.fn(),
+      queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
+      listKnowledge: vi.fn(async () => []),
+      listSkillDrafts: vi.fn(async () => []),
+      createDailyCandidateMemories: vi.fn(),
+      suggestCandidateReviews: vi.fn(),
+      reviewCandidateMemory: vi.fn(),
+      undoCandidateReview: vi.fn(),
+      deleteCandidateMemory: vi.fn(),
+      generateKnowledgeFromReviewedMemories: vi.fn(),
+      generateSkillDraftFromReviewedMemories: vi.fn(),
+      publishKnowledge: vi.fn(),
+      publishSkillDraft: vi.fn(),
+      importSourceLedgers,
+      listSourceAuditEvents,
+      listSourceInstanceSummaries,
+    };
+
+    const server = await startMirrorBrainHttpServer({
+      service,
+      port: 0,
+    });
+    servers.push(server);
+
+    const importResponse = await fetch(`${server.origin}/sources/import`, {
+      method: 'POST',
+    });
+    const importBody = await importResponse.json();
+    const auditResponse = await fetch(`${server.origin}/sources/audit?sourceKind=browser`);
+    const auditBody = await auditResponse.json();
+    const statusResponse = await fetch(`${server.origin}/sources/status`);
+    const statusBody = await statusResponse.json();
+
+    expect(importResponse.status).toBe(202);
+    expect(importBody).toEqual({
+      import: {
+        importedCount: 1,
+        skippedCount: 0,
+        scannedLedgerCount: 1,
+        changedLedgerCount: 1,
+        ledgerResults: [
+          {
+            ledgerPath: 'ledgers/2026-05-12/browser.jsonl',
+            importedCount: 1,
+            skippedCount: 0,
+            checkpoint: {
+              ledgerPath: 'ledgers/2026-05-12/browser.jsonl',
+              nextLineNumber: 2,
+              updatedAt: '2026-05-12T10:31:00.000Z',
+            },
+          },
+        ],
+      },
+    });
+    expect(auditResponse.status).toBe(200);
+    expect(auditBody).toEqual({
+      items: [auditEvent],
+    });
+    expect(statusResponse.status).toBe(200);
+    expect(statusBody).toEqual({
+      items: [
+        {
+          sourceKind: 'browser',
+          sourceInstanceId: 'chrome-main',
+          lifecycleStatus: 'enabled',
+          recorderStatus: 'unknown',
+          importedCount: 1,
+          skippedCount: 0,
+          checkpointSummary: 'ledgers/2026-05-12/browser.jsonl next line 2',
+        },
+      ],
+    });
+    expect(listSourceAuditEvents).toHaveBeenCalledWith({
+      sourceKind: 'browser',
+      sourceInstanceId: undefined,
     });
   });
 

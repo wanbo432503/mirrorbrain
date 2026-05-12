@@ -13,6 +13,16 @@ import {
 } from '../../shared/api-contracts/index.js';
 import { ValidationError } from '../mirrorbrain-service/errors.js';
 import type {
+  SourceAuditEvent,
+  SourceLedgerKind,
+} from '../../modules/source-ledger-importer/index.js';
+import type {
+  SourceInstanceSummary,
+} from '../../integrations/source-ledger-state-store/index.js';
+import type {
+  SourceLedgerImportResult,
+} from '../../workflows/source-ledger-import/index.js';
+import type {
   CandidateMemory,
   CandidateReviewSuggestion,
   KnowledgeArtifact,
@@ -31,6 +41,12 @@ interface MirrorBrainHttpService {
   };
   syncBrowserMemory(): Promise<unknown>;
   syncShellMemory(): Promise<unknown>;
+  importSourceLedgers?(): Promise<SourceLedgerImportResult>;
+  listSourceAuditEvents?(filter: {
+    sourceKind?: SourceLedgerKind;
+    sourceInstanceId?: string;
+  }): Promise<SourceAuditEvent[]>;
+  listSourceInstanceSummaries?(): Promise<SourceInstanceSummary[]>;
   listMemoryEvents(input?: {
     page?: number;
     pageSize?: number;
@@ -418,6 +434,95 @@ const browserSyncSummarySchema = {
     },
   },
   required: ['sourceKey', 'strategy', 'importedCount', 'lastSyncedAt'],
+} as const;
+
+const sourceLedgerCheckpointSchema = {
+  type: 'object',
+  properties: {
+    ledgerPath: { type: 'string' },
+    nextLineNumber: { type: 'number' },
+    updatedAt: { type: 'string' },
+  },
+  required: ['ledgerPath', 'nextLineNumber', 'updatedAt'],
+} as const;
+
+const sourceLedgerImportResultSchema = {
+  type: 'object',
+  properties: {
+    importedCount: { type: 'number' },
+    skippedCount: { type: 'number' },
+    scannedLedgerCount: { type: 'number' },
+    changedLedgerCount: { type: 'number' },
+    ledgerResults: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          ledgerPath: { type: 'string' },
+          importedCount: { type: 'number' },
+          skippedCount: { type: 'number' },
+          checkpoint: sourceLedgerCheckpointSchema,
+        },
+        required: ['ledgerPath', 'importedCount', 'skippedCount', 'checkpoint'],
+      },
+    },
+  },
+  required: [
+    'importedCount',
+    'skippedCount',
+    'scannedLedgerCount',
+    'changedLedgerCount',
+    'ledgerResults',
+  ],
+} as const;
+
+const sourceAuditEventSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    eventType: { type: 'string' },
+    sourceKind: { type: 'string' },
+    sourceInstanceId: { type: 'string' },
+    ledgerPath: { type: 'string' },
+    lineNumber: { type: 'number' },
+    occurredAt: { type: 'string' },
+    severity: { type: 'string', enum: ['info', 'warning', 'error'] },
+    message: { type: 'string' },
+    metadata: { type: 'object', additionalProperties: true },
+  },
+  required: [
+    'id',
+    'eventType',
+    'ledgerPath',
+    'lineNumber',
+    'occurredAt',
+    'severity',
+    'message',
+  ],
+} as const;
+
+const sourceInstanceSummarySchema = {
+  type: 'object',
+  properties: {
+    sourceKind: { type: 'string' },
+    sourceInstanceId: { type: 'string' },
+    lifecycleStatus: { type: 'string' },
+    recorderStatus: { type: 'string' },
+    lastImporterScanAt: { type: 'string' },
+    lastImportedAt: { type: 'string' },
+    importedCount: { type: 'number' },
+    skippedCount: { type: 'number' },
+    latestWarning: { type: 'string' },
+    checkpointSummary: { type: 'string' },
+  },
+  required: [
+    'sourceKind',
+    'sourceInstanceId',
+    'lifecycleStatus',
+    'recorderStatus',
+    'importedCount',
+    'skippedCount',
+  ],
 } as const;
 
 function createItemsResponseSchema(itemSchema: Record<string, unknown>) {
@@ -887,6 +992,115 @@ export async function startMirrorBrainHttpServer(
       reply.code(202);
       return {
         sync: await input.service.syncShellMemory(),
+      };
+    },
+  );
+
+  app.post(
+    '/sources/import',
+    {
+      schema: {
+        summary: 'Import changed Phase 4 source ledgers',
+        response: {
+          202: createArtifactResponseSchema('import', sourceLedgerImportResultSchema),
+          501: {
+            type: 'object',
+            properties: {
+              message: { type: 'string' },
+            },
+            required: ['message'],
+          },
+        },
+      },
+    },
+    async (_request, reply) => {
+      if (input.service.importSourceLedgers === undefined) {
+        reply.code(501);
+        return {
+          message: 'Source ledger import is not available.',
+        };
+      }
+
+      reply.code(202);
+      return {
+        import: await input.service.importSourceLedgers(),
+      };
+    },
+  );
+
+  app.get<{
+    Querystring: {
+      sourceKind?: SourceLedgerKind;
+      sourceInstanceId?: string;
+    };
+  }>(
+    '/sources/audit',
+    {
+      schema: {
+        summary: 'List Phase 4 source audit events',
+        querystring: {
+          type: 'object',
+          properties: {
+            sourceKind: { type: 'string' },
+            sourceInstanceId: { type: 'string' },
+          },
+        },
+        response: {
+          200: createItemsResponseSchema(sourceAuditEventSchema),
+          501: {
+            type: 'object',
+            properties: {
+              message: { type: 'string' },
+            },
+            required: ['message'],
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      if (input.service.listSourceAuditEvents === undefined) {
+        reply.code(501);
+        return {
+          message: 'Source audit listing is not available.',
+        };
+      }
+
+      return {
+        items: await input.service.listSourceAuditEvents({
+          sourceKind: request.query.sourceKind,
+          sourceInstanceId: request.query.sourceInstanceId,
+        }),
+      };
+    },
+  );
+
+  app.get(
+    '/sources/status',
+    {
+      schema: {
+        summary: 'List Phase 4 source instance status summaries',
+        response: {
+          200: createItemsResponseSchema(sourceInstanceSummarySchema),
+          501: {
+            type: 'object',
+            properties: {
+              message: { type: 'string' },
+            },
+            required: ['message'],
+          },
+        },
+      },
+    },
+    async (_request, reply) => {
+      if (input.service.listSourceInstanceSummaries === undefined) {
+        reply.code(501);
+        return {
+          message: 'Source status listing is not available.',
+        };
+      }
+
+      return {
+        items: await input.service.listSourceInstanceSummaries(),
       };
     },
   );

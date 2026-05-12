@@ -8,6 +8,13 @@ import {
   type SyncCheckpointStore,
 } from '../../integrations/file-sync-checkpoint-store/index.js';
 import {
+  createFileSourceLedgerStateStore,
+  type SourceAuditEventFilter,
+  type SourceInstanceSummary,
+  type SourceLedgerStateStore,
+} from '../../integrations/source-ledger-state-store/index.js';
+import {
+  createOpenVikingMemoryEventRecord,
   ingestCandidateMemoryToOpenViking,
   deleteCandidateMemoryFromOpenViking,
   ingestMemoryEventToOpenViking,
@@ -62,6 +69,10 @@ import {
   buildTopicKnowledgeCandidates,
   mergeDailyReviewIntoTopicKnowledge,
 } from '../../workflows/topic-knowledge-merge/index.js';
+import {
+  importChangedSourceLedgers,
+  type SourceLedgerImportResult,
+} from '../../workflows/source-ledger-import/index.js';
 import {
   lintKnowledgeArtifacts,
   type KnowledgeLintInput,
@@ -194,6 +205,15 @@ interface CreateMirrorBrainServiceDependencies {
   suggestCandidateReviews?: typeof suggestCandidateReviews;
   loadBrowserPageContentArtifactFromWorkspace?: typeof loadBrowserPageContentArtifactFromWorkspace;
   analyzeKnowledge?: typeof analyzeKnowledgeWithConfiguredLLM;
+  createMemoryEventWriter?: (input: {
+    config: ReturnType<typeof getMirrorBrainConfig>;
+    workspaceDir: string;
+  }) => OpenVikingMemoryEventWriter;
+  createSourceLedgerStateStore?: (input: {
+    workspaceDir: string;
+  }) => SourceLedgerStateStore;
+  importSourceLedgers?: typeof importChangedSourceLedgers;
+  now?: () => string;
 }
 
 function normalizeMemoryEventReadResult(result: MemoryEventReadResult): MemoryEvent[] {
@@ -468,6 +488,7 @@ export function createMirrorBrainService(
   const baseUrl =
     input.service.config?.openViking.baseUrl ?? getMirrorBrainConfig().openViking.baseUrl;
   const workspaceDir = input.workspaceDir ?? process.cwd();
+  const now = dependencies.now ?? (() => new Date().toISOString());
   const queryMemory = dependencies.queryMemory ?? queryMemoryFromPluginApi;
   const listMemoryEvents =
     dependencies.listMemoryEvents ?? listMirrorBrainMemoryEventsFromOpenViking;
@@ -496,6 +517,19 @@ export function createMirrorBrainService(
     dependencies.publishReviewedMemory ?? ingestReviewedMemoryToOpenViking;
   const deleteCandidateMemoryResource =
     dependencies.deleteCandidateMemoryResource ?? deleteCandidateMemoryFromOpenViking;
+  const memoryEventWriter = (
+    dependencies.createMemoryEventWriter ?? createOpenVikingMemoryEventWriter
+  )({
+    config: input.service.config ?? getMirrorBrainConfig(),
+    workspaceDir,
+  });
+  const sourceLedgerStateStore = (
+    dependencies.createSourceLedgerStateStore ?? createFileSourceLedgerStateStore
+  )({
+    workspaceDir,
+  });
+  const importSourceLedgers =
+    dependencies.importSourceLedgers ?? importChangedSourceLedgers;
   const undoReviewedMemory =
     dependencies.undoReviewedMemory ??
     (async (reviewedMemoryId: string, workspaceDir: string) => {
@@ -1087,6 +1121,29 @@ export function createMirrorBrainService(
 
       return summarizeImportedEvents(sync) as ShellMemorySyncResult;
     },
+    importSourceLedgers: (): Promise<SourceLedgerImportResult> =>
+      importSourceLedgers(
+        {
+          authorizationScopeId: 'scope-source-ledger',
+          importedAt: now(),
+          workspaceDir,
+        },
+        {
+          readCheckpoint: sourceLedgerStateStore.readCheckpoint,
+          writeCheckpoint: sourceLedgerStateStore.writeCheckpoint,
+          writeMemoryEvent: async (event) => {
+            await memoryEventWriter.writeMemoryEvent(
+              createOpenVikingMemoryEventRecord(event),
+            );
+          },
+          writeSourceAuditEvent: sourceLedgerStateStore.writeSourceAuditEvent,
+        },
+      ),
+    listSourceAuditEvents: (
+      filter: SourceAuditEventFilter = {},
+    ) => sourceLedgerStateStore.listSourceAuditEvents(filter),
+    listSourceInstanceSummaries: (): Promise<SourceInstanceSummary[]> =>
+      sourceLedgerStateStore.listSourceInstanceSummaries(),
     listMemoryEvents: async (input?: { page?: number; pageSize?: number }) => {
       const page = input?.page ?? 1;
       const pageSize = input?.pageSize ?? 10;

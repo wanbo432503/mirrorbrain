@@ -2,7 +2,7 @@
 
 ## Summary
 
-This component is the runnable service entrypoint for MirrorBrain. It starts the browser sync polling workflow, wires memory-source sync workflows to the checkpoint store and OpenViking memory ingestion adapter, schedules stored memory narrative rebuilds after explicit browser or shell sync operations, and exposes the `openclaw`-facing service contract for memory retrieval, daily candidate generation, candidate review suggestions, explicit review decisions, and reviewed-memory-driven artifact generation.
+This component is the runnable service entrypoint for MirrorBrain. It starts the browser sync polling workflow, wires memory-source sync workflows to the checkpoint store and OpenViking memory ingestion adapter, schedules stored memory narrative rebuilds after explicit browser or shell sync operations, wires Phase 4 source-ledger import to checkpoint and audit storage, and exposes the `openclaw`-facing service contract for memory retrieval, source management, daily candidate generation, candidate review suggestions, explicit review decisions, and reviewed-memory-driven artifact generation.
 
 ## Responsibility Boundary
 
@@ -10,6 +10,8 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 - starts background browser polling with the configured interval
 - wires browser polling to checkpoint persistence and OpenViking memory ingestion
 - exposes an explicit shell-history sync operation when a shell history path is configured
+- exposes explicit Phase 4 source-ledger import for manual Import Now operations
+- exposes source audit events and source instance summaries as operational state
 - wires runtime memory-source authorization policy into browser and shell sync execution
 - wires separate page-content capture authorization into browser page text backfill
 - exposes the high-level service contract used by `openclaw`
@@ -44,11 +46,14 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 5. Start the browser sync polling workflow with a real `runBrowserMemorySyncOnce(...)` callback plus runtime source and page-content authorization policies.
 6. Optionally expose a shell-history sync operation through `runShellMemorySyncOnce(...)` when a history path is configured, using the same runtime authorization policy.
 7. Return a runtime service handle with `status` and `stop()`.
-8. Expose the `openclaw`-facing service contract around that runtime handle.
-9. After explicit browser or shell sync calls through the service contract, return the sync summary immediately and schedule the corresponding narrative rebuild in the background when new events were imported.
-10. List raw imported memory when review-oriented workflows need event-level records, preferring OpenViking-backed reads and falling back to workspace-cached memory-event files when storage reads fail.
-11. Forward `openclaw` memory retrieval calls through the configured OpenViking base URL and return shaped retrieval results.
-12. Before daily candidate generation or refresh, run an explicit browser-memory sync so the workspace raw-event cache reflects the latest ActivityWatch browser history.
+8. Create the Phase 4 source-ledger state store for per-ledger checkpoints and operational source audit records.
+9. Expose the `openclaw`-facing service contract around that runtime handle.
+10. After explicit browser or shell sync calls through the service contract, return the sync summary immediately and schedule the corresponding narrative rebuild in the background when new events were imported.
+11. When source-ledger import is requested, run the Phase 4 import workflow, persist imported memory events through the memory writer, and persist audit/checkpoint state through the source-ledger state store.
+12. List source audit events and source instance summaries from operational source state without mixing them into memory retrieval.
+13. List raw imported memory when review-oriented workflows need event-level records, preferring OpenViking-backed reads and falling back to workspace-cached memory-event files when storage reads fail.
+14. Forward `openclaw` memory retrieval calls through the configured OpenViking base URL and return shaped retrieval results.
+15. Before daily candidate generation or refresh, run an explicit browser-memory sync so the workspace raw-event cache reflects the latest ActivityWatch browser history.
 13. If candidates already exist for a review date and the sync imports no new browser events, return the existing candidates without rebuilding them.
 14. If candidates already exist for a review date and the sync imports new browser events, rebuild the daily candidates from current raw workspace memory history so late-day URLs are included.
 15. Before rebuilding daily candidates, exclude memory events and browser URLs that are already linked through reviewed memories to published knowledge so previously synthesized work is not clustered again.
@@ -81,6 +86,8 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
 - unit tests verify the service wires an authorized shell history path into shell sync execution
 - unit tests verify explicit browser sync schedules browser theme narrative rebuilds
 - unit tests verify explicit browser sync returns before the background narrative rebuild finishes
+- unit tests verify Phase 4 source-ledger import is wired through the service facade with memory-event writes, audit writes, and checkpoint updates
+- unit tests verify source audit and source instance summary reads remain operational state separate from memory retrieval
 - unit tests verify the service forwards retrieval calls to the plugin API with the configured OpenViking base URL and retrieval input
 - unit tests verify review-oriented flows still use raw memory event listing where needed
 - unit tests verify raw memory reads fall back to workspace-cached events when OpenViking reads fail
@@ -106,6 +113,8 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
 - if no external authorization-scope lookup is injected at startup, the runtime service bootstraps narrow active scopes for the configured browser and shell scope ids; durable scope persistence remains outside this service component
 - if no page-content capture authorization dependency is injected at startup, readable page text backfill is denied by default while browser activity memory capture can still proceed
 - shell sync is currently explicit only; it does not start a shell polling loop or discover shell history paths automatically
+- Phase 4 source-ledger import is currently explicit/manual through the service contract; the 30-minute scheduler wiring belongs to the next runtime slice
+- source-ledger state derives source summaries from checkpoint and audit history; recorder supervision has not yet provided real recorder status
 - the retrieval contract now accepts lightweight query and filter input, but still uses minimal result shaping rather than mature ranking
 - raw memory list endpoints can fall back to workspace-cached memory-event files when OpenViking reads fail, so event history may appear before the corresponding OpenViking-backed retrieval views fully recover
 - stored browser and shell narratives are rebuilt after explicit service sync operations, but the rebuild now happens in the background and may lag slightly behind the returned sync summary
