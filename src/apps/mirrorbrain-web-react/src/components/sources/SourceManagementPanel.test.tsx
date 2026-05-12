@@ -96,6 +96,65 @@ describe('SourceManagementPanel', () => {
     expect(api.listMemory).toHaveBeenCalledWith(1, 10)
   })
 
+  it('keeps all-main memory events in a flex right panel with scrollable list and reachable pagination', async () => {
+    const memoryItems = Array.from({ length: 10 }, (_, index) => ({
+      id: `ledger:browser:global-${index + 1}`,
+      sourceType: 'browser' as const,
+      sourceRef: `browser:chrome-main:global-${index + 1}`,
+      timestamp: `2026-05-12T10:${String(index).padStart(2, '0')}:00.000Z`,
+      authorizationScopeId: 'scope-source-ledger',
+      content: {
+        title: `Global browser memory ${index + 1}`,
+        summary: 'Visible from all main sources.',
+        contentKind: 'browser-page',
+      },
+      captureMetadata: {
+        upstreamSource: 'source-ledger:browser',
+        checkpoint: `ledgers/2026-05-12/browser.jsonl:${index + 1}`,
+      },
+    }))
+    const api = {
+      listSourceStatuses: vi.fn(async () => []),
+      listSourceAuditEvents: vi.fn(async () => []),
+      importSourceLedgers: vi.fn(),
+      updateSourceConfig: vi.fn(),
+      listMemory: vi.fn(async () => ({
+        items: memoryItems,
+        pagination: {
+          total: 24,
+          page: 1,
+          pageSize: 10,
+          totalPages: 3,
+        },
+      })),
+    } as unknown as MirrorBrainWebAppApi
+
+    renderSourceManagementPanel(api)
+
+    expect(await screen.findByText('Global browser memory 1')).not.toBeNull()
+    const detailPanel = screen.getByTestId('memory-sources-detail-panel')
+    const allMainPanel = screen.getByTestId('all-main-memory-panel')
+    const scrollRegion = screen.getByTestId('memory-list-scroll-region')
+    const paginationFooter = screen.getByTestId('memory-pagination-footer')
+
+    expect(detailPanel.className.split(/\s+/)).toEqual(
+      expect.arrayContaining(['flex', 'min-h-0', 'flex-1', 'flex-col', 'overflow-hidden']),
+    )
+    expect(allMainPanel.className.split(/\s+/)).toEqual(
+      expect.arrayContaining(['flex', 'min-h-0', 'flex-1', 'flex-col', 'overflow-hidden']),
+    )
+    expect(scrollRegion.className.split(/\s+/)).toEqual(
+      expect.arrayContaining(['min-h-0', 'flex-1', 'overflow-y-auto']),
+    )
+    expect(paginationFooter.className.split(/\s+/)).toEqual(
+      expect.arrayContaining(['shrink-0', 'border-t']),
+    )
+    expect(screen.getByRole('button', { name: 'First page' })).not.toBeNull()
+    expect(screen.getByRole('button', { name: 'Previous page' })).not.toBeNull()
+    expect(screen.getByRole('button', { name: 'Next page' })).not.toBeNull()
+    expect(screen.getByRole('button', { name: 'Last page' })).not.toBeNull()
+  })
+
   it('shows source overview, audit, settings tabs, and manual import now', async () => {
     const api = {
       listSourceStatuses: vi.fn(async () => [

@@ -195,7 +195,7 @@ export default function SourceManagementPanel({
   }
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col gap-4 p-4 md:flex-row">
+    <section className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden p-4 md:flex-row">
       <aside className="shrink-0 border-b border-hairline pb-4 md:w-72 md:border-b-0 md:border-r md:pb-0 md:pr-4">
         <h2 className="font-heading text-xl font-semibold">Memory Sources</h2>
         <div className="mt-4 flex flex-col gap-2">
@@ -235,30 +235,36 @@ export default function SourceManagementPanel({
         </div>
       </aside>
 
-      <div className="min-w-0 flex-1">
+      <div
+        data-testid="memory-sources-detail-panel"
+        className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+      >
         {feedback && (
           <div
             role="status"
-            className="mb-3 rounded-sm border border-green-300 bg-green-100 p-3 text-sm text-green-700"
+            className="mb-3 shrink-0 rounded-sm border border-green-300 bg-green-100 p-3 text-sm text-green-700"
           >
             {feedback}
           </div>
         )}
 
         {selectedSourceKey === ALL_MAIN_SOURCES_KEY && (
-          <div className="flex min-h-0 flex-1 flex-col">
+          <div
+            data-testid="all-main-memory-panel"
+            className="flex min-h-0 flex-1 flex-col overflow-hidden"
+          >
             <MemoryPanel api={sourceApi} actionMode="import-only" />
           </div>
         )}
 
         {selectedSourceKey !== ALL_MAIN_SOURCES_KEY && selectedSource === null && (
-          <div className="rounded-sm border border-hairline p-4 text-sm text-inkMuted-80">
+          <div className="shrink-0 rounded-sm border border-hairline p-4 text-sm text-inkMuted-80">
             Selected source is no longer available.
           </div>
         )}
 
         {selectedSource && (
-          <>
+          <div className="min-h-0 flex-1 overflow-y-auto pr-2">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h3 className="font-heading text-lg font-semibold">
@@ -380,7 +386,7 @@ export default function SourceManagementPanel({
                 </div>
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
     </section>

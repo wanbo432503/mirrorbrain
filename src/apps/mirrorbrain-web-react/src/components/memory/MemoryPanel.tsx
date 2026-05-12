@@ -150,7 +150,7 @@ export default function MemoryPanel({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       {actionMode === 'import-only' ? (
         <div data-testid="memory-import-actions" className="mb-3 flex items-stretch gap-2">
           {visibleFeedback ? (
