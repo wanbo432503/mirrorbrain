@@ -411,6 +411,7 @@ Purpose: start built-in Phase 4 source recorders that write daily JSONL ledgers.
 Responsibilities:
 
 - Provide a recorder starter compatible with the source recorder supervisor.
+- Serve as the recorder starter wired by the MirrorBrain runtime service.
 - Call injected built-in source capture functions.
 - Wrap captured payloads in `SourceLedgerEntry` envelopes.
 - Append entries to `<workspaceDir>/mirrorbrain/ledgers/YYYY-MM-DD/<kind>.jsonl`.
@@ -1133,11 +1134,13 @@ Responsibilities:
 - Skip disabled source instances.
 - Stop running recorder handles.
 - Write recorder lifecycle audit events.
+- Provide the built-in source-ledger supervisor helper used by service startup.
 
 Inputs:
 
-- Source instances with enablement state, a recorder-start dependency, an audit
-  writer, and a clock.
+- Source instances with enablement state, a recorder-start dependency or
+  built-in capture dependency, an audit writer, workspace directory, and a
+  clock.
 
 Outputs:
 

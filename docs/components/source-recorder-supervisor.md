@@ -13,6 +13,10 @@ implementations remain responsible for writing daily JSONL ledgers. The
 the built-in source-ledger recorder starter while keeping acquisition and import
 behind the ledger boundary.
 
+The MirrorBrain runtime service starts this helper for the default Phase 4
+source instances and overlays persisted source enablement configuration before
+recorders start.
+
 ## Responsibility Boundary
 
 This component is responsible for:
@@ -54,6 +58,7 @@ be added without changing the supervisor lifecycle contract.
 - Disabled sources must not start recorder acquisition.
 - Audit events are operational metadata and do not become memory evidence.
 - Restart/backoff policy is not implemented in this first supervisor slice.
+- The service owns which default source instances are supplied at runtime.
 
 ## Test Strategy
 
@@ -64,4 +69,5 @@ pnpm vitest run src/workflows/source-recorder-supervisor/index.test.ts
 ```
 
 The tests cover enabled recorder startup, disabled-source skipping, lifecycle
-audit events, built-in source-ledger recorder wiring, and stop behavior.
+audit events, built-in source-ledger recorder wiring, and stop behavior. Service
+tests verify runtime startup supplies the default Phase 4 source instances.

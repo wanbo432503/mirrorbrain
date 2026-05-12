@@ -78,6 +78,12 @@ import {
   type SourceLedgerImportResult,
 } from '../../workflows/source-ledger-import/index.js';
 import {
+  startBuiltInSourceLedgerRecorderSupervisor,
+  type SourceRecorderSupervisor,
+  type SupervisedSourceInstance,
+} from '../../workflows/source-recorder-supervisor/index.js';
+import type { CapturedSourceRecord } from '../../integrations/source-ledger-recorders/index.js';
+import {
   analyzeWorkSessionCandidates,
   type AnalysisWindowPreset,
   type WorkSessionAnalysisResult,
@@ -157,6 +163,10 @@ interface StartMirrorBrainServiceDependencies {
     workspaceDir: string;
   }) => SourceLedgerStateStore;
   importSourceLedgers?: typeof importChangedSourceLedgers;
+  startSourceRecorderSupervisor?: typeof startBuiltInSourceLedgerRecorderSupervisor;
+  captureSourceRecord?(
+    source: SupervisedSourceInstance,
+  ): Promise<CapturedSourceRecord | null>;
   fetchActivityWatchBuckets?: typeof fetchActivityWatchBuckets;
   runBrowserMemorySyncOnce?: typeof runBrowserMemorySyncOnce;
   runShellMemorySyncOnce?: typeof runShellMemorySyncOnce;
@@ -172,6 +182,22 @@ interface MirrorBrainRuntimeService {
   syncShellMemory(): Promise<ShellMemorySyncResult>;
   stop(): void;
 }
+
+const DEFAULT_SUPERVISED_SOURCE_INSTANCES: SupervisedSourceInstance[] = [
+  { sourceKind: 'browser', sourceInstanceId: 'chrome-main', enabled: true },
+  {
+    sourceKind: 'file-activity',
+    sourceInstanceId: 'filesystem-main',
+    enabled: true,
+  },
+  { sourceKind: 'screenshot', sourceInstanceId: 'desktop-main', enabled: true },
+  { sourceKind: 'shell', sourceInstanceId: 'shell-main', enabled: true },
+  {
+    sourceKind: 'agent-transcript',
+    sourceInstanceId: 'openclaw-main',
+    enabled: true,
+  },
+];
 
 interface CreateMirrorBrainServiceInput {
   service: MirrorBrainRuntimeService;
@@ -421,6 +447,11 @@ export function startMirrorBrainService(
     dependencies.startBrowserSyncPolling ?? startBrowserMemorySyncPolling;
   const startSourceImportPolling =
     dependencies.startSourceLedgerImportPolling ?? startSourceLedgerImportPolling;
+  const startRecorderSupervisor =
+    dependencies.startSourceRecorderSupervisor ??
+    startBuiltInSourceLedgerRecorderSupervisor;
+  const captureSourceRecord =
+    dependencies.captureSourceRecord ?? (async () => null);
   const checkpointStore = (
     dependencies.createCheckpointStore ?? createFileSyncCheckpointStore
   )({
@@ -554,8 +585,37 @@ export function startMirrorBrainService(
           );
         },
         writeSourceAuditEvent: sourceLedgerStateStore.writeSourceAuditEvent,
+        isSourceImportAllowed: async ({ sourceKind, sourceInstanceId }) => {
+          const configs = await sourceLedgerStateStore.listSourceInstanceConfigs();
+          const sourceConfig = configs.find(
+            (item) =>
+              item.sourceKind === sourceKind &&
+              item.sourceInstanceId === sourceInstanceId,
+          );
+
+          return sourceConfig?.enabled !== false;
+        },
       },
     );
+  const resolveSupervisedSources = async (): Promise<SupervisedSourceInstance[]> => {
+    const configs = await sourceLedgerStateStore.listSourceInstanceConfigs();
+    const sourceByKey = new Map(
+      DEFAULT_SUPERVISED_SOURCE_INSTANCES.map((source) => [
+        `${source.sourceKind}:${source.sourceInstanceId}`,
+        { ...source },
+      ]),
+    );
+
+    for (const config of configs) {
+      sourceByKey.set(`${config.sourceKind}:${config.sourceInstanceId}`, {
+        sourceKind: config.sourceKind,
+        sourceInstanceId: config.sourceInstanceId,
+        enabled: config.enabled,
+      });
+    }
+
+    return Array.from(sourceByKey.values());
+  };
   const sourceImportPolling = startSourceImportPolling(
     {
       schedule: getSourceLedgerImportSchedule(),
@@ -564,6 +624,30 @@ export function startMirrorBrainService(
       runImportOnce: importSourceLedgersOnce,
     },
   );
+  let recorderSupervisor: SourceRecorderSupervisor | null = null;
+  let shouldStopRecorderSupervisor = false;
+  const recorderSupervisorPromise = resolveSupervisedSources()
+    .then((sources) =>
+      startRecorderSupervisor(
+        {
+          workspaceDir,
+          sources,
+          now,
+        },
+        {
+          captureSourceRecord,
+          writeSourceAuditEvent: sourceLedgerStateStore.writeSourceAuditEvent,
+        },
+      ),
+    )
+    .then((supervisor) => {
+      recorderSupervisor = supervisor;
+      if (shouldStopRecorderSupervisor) {
+        void supervisor.stop();
+      }
+      return supervisor;
+    })
+    .catch(() => null);
   let status: 'running' | 'stopped' = 'running';
 
   return {
@@ -575,6 +659,10 @@ export function startMirrorBrainService(
     syncShellMemory,
     stop() {
       sourceImportPolling.stop();
+      shouldStopRecorderSupervisor = true;
+      if (recorderSupervisor !== null) {
+        void recorderSupervisor.stop();
+      }
       status = 'stopped';
     },
   };

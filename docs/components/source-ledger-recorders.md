@@ -3,8 +3,9 @@
 ## Summary
 
 `src/integrations/source-ledger-recorders` provides the concrete Phase 4
-recorder starter used by the source recorder supervisor. It writes captured
-built-in source records to daily JSONL ledgers under
+recorder starter used by the source recorder supervisor and wired by the
+MirrorBrain runtime service. It writes captured built-in source records to daily
+JSONL ledgers under
 `<workspaceDir>/mirrorbrain/ledgers/YYYY-MM-DD/<source-kind>.jsonl`.
 
 ## Responsibility Boundary
@@ -45,12 +46,14 @@ Output:
 
 ## Data Flow
 
-1. The supervisor starts an enabled source instance.
-2. The built-in starter calls `captureSourceRecord(source)`.
-3. If capture returns `null`, no ledger entry is written.
-4. If capture returns a record, the starter wraps it in `SourceLedgerEntry`.
-5. The entry is appended to the daily JSONL ledger for the source kind.
-6. Later importer workflows turn ledger entries into normalized `MemoryEvent`
+1. The MirrorBrain service resolves enabled source instances from defaults plus
+   persisted source configuration.
+2. The supervisor starts an enabled source instance.
+3. The built-in starter calls `captureSourceRecord(source)`.
+4. If capture returns `null`, no ledger entry is written.
+5. If capture returns a record, the starter wraps it in `SourceLedgerEntry`.
+6. The entry is appended to the daily JSONL ledger for the source kind.
+7. Later importer workflows turn ledger entries into normalized `MemoryEvent`
    records.
 
 ## Failure Modes And Constraints

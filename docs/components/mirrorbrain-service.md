@@ -2,12 +2,14 @@
 
 ## Summary
 
-This component is the runnable service entrypoint for MirrorBrain. It starts the Phase 4 source-ledger import scheduler, wires source-ledger import to checkpoint and audit storage, keeps legacy explicit browser and shell sync methods available for service-internal workflows, schedules stored memory narrative rebuilds after explicit browser or shell sync operations, and exposes the `openclaw`-facing service contract for memory retrieval, source management, user-triggered work-session analysis, daily candidate generation, candidate review suggestions, explicit review decisions, and reviewed-memory-driven artifact generation.
+This component is the runnable service entrypoint for MirrorBrain. It starts the Phase 4 source-ledger recorder supervisor and import scheduler, wires source-ledger import to checkpoint and audit storage, keeps legacy explicit browser and shell sync methods available for service-internal workflows, schedules stored memory narrative rebuilds after explicit browser or shell sync operations, and exposes the `openclaw`-facing service contract for memory retrieval, source management, user-triggered work-session analysis, daily candidate generation, candidate review suggestions, explicit review decisions, and reviewed-memory-driven artifact generation.
 
 ## Responsibility Boundary
 
 - owns service startup and shutdown lifecycle
 - starts background source-ledger import polling with the configured interval
+- starts the built-in source-ledger recorder supervisor for browser, file,
+  screenshot, shell, and agent-transcript source instances
 - wires source-ledger import to checkpoint persistence, source audit persistence, source enablement checks, and OpenViking memory ingestion
 - exposes an explicit shell-history sync operation when a shell history path is configured
 - exposes explicit Phase 4 source-ledger import for manual Import Sources operations
@@ -46,8 +48,9 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 2. Create a file-backed sync checkpoint store and an OpenViking-backed memory writer.
 3. Build a runtime source authorization policy from `getAuthorizationScope(...)`.
 4. Build a separate page-content capture authorization callback, using the injected dependency when present and denying readable page text capture by default.
-5. Start the source-ledger import polling workflow, using persisted source-instance configuration to skip disabled source instances before memory writes.
-6. Keep explicit browser and shell sync methods available through the service contract for review flows that still call them directly, using runtime source and page-content authorization policies.
+5. Start the built-in source-ledger recorder supervisor with the default Phase 4 source instances, using persisted source-instance configuration to disable configured sources.
+6. Start the source-ledger import polling workflow, using persisted source-instance configuration to skip disabled source instances before memory writes.
+7. Keep explicit browser and shell sync methods available through the service contract for review flows that still call them directly, using runtime source and page-content authorization policies.
 7. Return a runtime service handle with `status` and `stop()`.
 8. Create the Phase 4 source-ledger state store for per-ledger checkpoints and operational source audit records.
 9. Expose the `openclaw`-facing service contract around that runtime handle.
@@ -88,6 +91,8 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
 
 - unit tests verify source-ledger import polling starts during service startup without starting legacy browser sync polling by default
 - unit tests verify `stop()` stops the background polling lifecycle
+- unit tests verify startup wires the built-in source-ledger recorder supervisor
+  with default Phase 4 sources and configured disabled-source state
 - unit tests verify the service wires workspace, bucket, scope, checkpoint store, and memory writer into browser sync execution
 - unit tests verify the service forwards runtime source authorization into browser sync execution and revoked scopes deny sync
 - unit tests verify the service forwards page-content capture authorization into browser sync execution and keeps it independent from browser source authorization
@@ -126,8 +131,8 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
 - if no page-content capture authorization dependency is injected at startup, readable page text backfill is denied by default while browser activity memory capture can still proceed
 - shell sync is currently explicit only; it does not start a shell polling loop or discover shell history paths automatically
 - Phase 4 source-ledger import is available manually through the service contract and runs on the runtime scheduler every 30 minutes by default
-- source enable/disable updates are persisted and audited; source-ledger import enforces disabled source instances, while recorder supervision enforcement is covered by the recorder supervisor component
-- source-ledger state derives source summaries from checkpoint and audit history; recorder supervision has not yet provided real recorder status
+- source enable/disable updates are persisted and audited; both recorder startup and source-ledger import enforce disabled source instances
+- source-ledger state derives source summaries from checkpoint and audit history; richer live recorder health reporting is still a later operational improvement
 - the retrieval contract now accepts lightweight query and filter input, but still uses minimal result shaping rather than mature ranking
 - raw memory list endpoints can fall back to workspace-cached memory-event files when OpenViking reads fail, so event history may appear before the corresponding OpenViking-backed retrieval views fully recover
 - stored browser and shell narratives are rebuilt after explicit service sync operations, but the rebuild now happens in the background and may lag slightly behind the returned sync summary

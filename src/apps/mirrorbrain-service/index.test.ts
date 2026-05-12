@@ -163,6 +163,83 @@ describe('mirrorbrain service', () => {
     );
   });
 
+  it('starts built-in source ledger recorder supervision for enabled runtime sources', async () => {
+    const stopSourceImportPolling = vi.fn();
+    const stopRecorderSupervisor = vi.fn(async () => undefined);
+    const stateStore = {
+      readCheckpoint: vi.fn(async () => null),
+      writeCheckpoint: vi.fn(async () => undefined),
+      writeSourceAuditEvent: vi.fn(async () => undefined),
+      listSourceAuditEvents: vi.fn(async () => []),
+      listSourceInstanceSummaries: vi.fn(async () => []),
+      writeSourceInstanceConfig: vi.fn(async () => undefined),
+      listSourceInstanceConfigs: vi.fn(async () => [
+        {
+          sourceKind: 'shell' as const,
+          sourceInstanceId: 'shell-main',
+          enabled: false,
+          updatedAt: '2026-05-12T12:00:00.000Z',
+          updatedBy: 'user',
+        },
+      ]),
+    };
+    const startSourceLedgerImportPolling = vi.fn(() => ({
+      stop: stopSourceImportPolling,
+    }));
+    const startSourceRecorderSupervisor = vi.fn(async () => ({
+      stop: stopRecorderSupervisor,
+    }));
+    const captureSourceRecord = vi.fn(async () => null);
+
+    const service = startMirrorBrainService(
+      {
+        workspaceDir: '/tmp/mirrorbrain-workspace',
+      },
+      {
+        createSourceLedgerStateStore: vi.fn(() => stateStore),
+        startSourceLedgerImportPolling,
+        startSourceRecorderSupervisor,
+        captureSourceRecord,
+        now: () => '2026-05-12T12:00:00.000Z',
+      },
+    );
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(startSourceRecorderSupervisor).toHaveBeenCalledWith(
+      {
+        workspaceDir: '/tmp/mirrorbrain-workspace',
+        now: expect.any(Function),
+        sources: [
+          { sourceKind: 'browser', sourceInstanceId: 'chrome-main', enabled: true },
+          {
+            sourceKind: 'file-activity',
+            sourceInstanceId: 'filesystem-main',
+            enabled: true,
+          },
+          { sourceKind: 'screenshot', sourceInstanceId: 'desktop-main', enabled: true },
+          { sourceKind: 'shell', sourceInstanceId: 'shell-main', enabled: false },
+          {
+            sourceKind: 'agent-transcript',
+            sourceInstanceId: 'openclaw-main',
+            enabled: true,
+          },
+        ],
+      },
+      {
+        captureSourceRecord,
+        writeSourceAuditEvent: stateStore.writeSourceAuditEvent,
+      },
+    );
+
+    service.stop();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(stopRecorderSupervisor).toHaveBeenCalledTimes(1);
+    expect(stopSourceImportPolling).toHaveBeenCalledTimes(1);
+  });
+
   it('analyzes a user-selected work-session window from stored memory events', async () => {
     const memoryEvents: MemoryEvent[] = [
       {
