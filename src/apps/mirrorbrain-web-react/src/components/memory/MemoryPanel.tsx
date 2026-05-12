@@ -36,13 +36,13 @@ export default function MemoryPanel() {
     []
   )
 
-  const { feedback, isSyncingBrowser, isSyncingShell, syncBrowser, syncShell } =
-    useSyncOperations(api)
+  const { feedback, isSyncingShell, syncShell } = useSyncOperations(api)
 
   const [isLoading, setIsLoading] = useState(true)
+  const [isImportingSources, setIsImportingSources] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [localFeedback, setLocalFeedback] = useState<{
-    kind: 'info'
+    kind: 'success' | 'error' | 'info'
     message: string
   } | null>(null)
   const totalPages = state.memoryPagination?.totalPages ?? 1
@@ -83,18 +83,24 @@ export default function MemoryPanel() {
     }
   }
 
-  // Update sync operations to also dispatch to global state
-  const handleSyncBrowser = async () => {
+  const handleImportSources = async () => {
     setLocalFeedback(null)
-    try {
-      const summary = await syncBrowser()
-      dispatch({ type: 'SYNC_BROWSER', payload: summary })
+    setIsImportingSources(true)
 
-      // Reload memory events after successful sync
-      const result = await api.listMemory(currentPage, MEMORY_PAGE_SIZE)
-      dispatch({ type: 'LOAD_MEMORY_EVENTS', payload: result })
+    try {
+      const importResult = await api.importSourceLedgers()
+
+      const memoryResult = await api.listMemory(currentPage, MEMORY_PAGE_SIZE)
+      dispatch({ type: 'LOAD_MEMORY_EVENTS', payload: memoryResult })
+      setLocalFeedback({
+        kind: 'success',
+        message: `Source import completed: ${importResult.importedCount} events imported from ${importResult.scannedLedgerCount} ledgers`,
+      })
     } catch (error) {
-      // Error already handled by useSyncOperations
+      const message = error instanceof Error ? error.message : 'Source import failed'
+      setLocalFeedback({ kind: 'error', message })
+    } finally {
+      setIsImportingSources(false)
     }
   }
 
@@ -153,11 +159,11 @@ export default function MemoryPanel() {
 
       {/* Sync Actions */}
       <SyncActions
-        onSyncBrowser={handleSyncBrowser}
+        onImportSources={handleImportSources}
         onSyncShell={handleSyncShell}
         onSyncFilesystems={() => handleSyncUnavailable('Filesystem')}
         onSyncScreenshot={() => handleSyncUnavailable('Screenshot')}
-        isSyncingBrowser={isSyncingBrowser}
+        isImportingSources={isImportingSources}
         isSyncingShell={isSyncingShell}
       />
 

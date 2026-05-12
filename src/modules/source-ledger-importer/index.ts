@@ -12,6 +12,7 @@ export type SourceLedgerKind =
 export type SourceAuditEventType =
   | 'entry-imported'
   | 'schema-validation-failed'
+  | 'entry-skipped'
   | 'source-enabled'
   | 'source-disabled'
   | 'recorder-started'

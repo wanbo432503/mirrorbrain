@@ -102,7 +102,7 @@ Key endpoints:
 
 - `GET /health`
 - `GET /memory`, `POST /memory/query`
-- `POST /sync/browser`, `POST /sync/shell`
+- `POST /sources/import`, `POST /sync/shell`
 - `GET /candidate-memories`, `POST /candidate-memories/daily`,
   `DELETE /candidate-memories/:id`
 - `POST /candidate-reviews/suggestions`

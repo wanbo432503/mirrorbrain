@@ -5,6 +5,7 @@ import {
   importSourceLedgerText,
   type SourceAuditEvent,
   type SourceLedgerImportCheckpoint,
+  type SourceLedgerKind,
 } from '../../modules/source-ledger-importer/index.js';
 import type { MemoryEvent } from '../../shared/types/index.js';
 
@@ -42,6 +43,10 @@ interface ImportChangedSourceLedgersDependencies {
   writeCheckpoint(checkpoint: SourceLedgerImportCheckpoint): Promise<void>;
   writeMemoryEvent(event: MemoryEvent): Promise<void>;
   writeSourceAuditEvent(event: SourceAuditEvent): Promise<void>;
+  isSourceImportAllowed?(source: {
+    sourceKind: SourceLedgerKind;
+    sourceInstanceId: string;
+  }): Promise<boolean>;
 }
 
 interface StartSourceLedgerImportPollingInput {
@@ -103,6 +108,55 @@ function toLedgerPath(input: {
     .replaceAll(sep, '/');
 }
 
+function getEventSource(input: MemoryEvent): {
+  sourceKind: SourceLedgerKind;
+  sourceInstanceId: string;
+} | null {
+  const [sourceKind, sourceInstanceId] = input.sourceRef.split(':');
+
+  if (
+    sourceInstanceId === undefined ||
+    !(
+      sourceKind === 'browser' ||
+      sourceKind === 'file-activity' ||
+      sourceKind === 'screenshot' ||
+      sourceKind === 'shell' ||
+      sourceKind === 'agent-transcript'
+    )
+  ) {
+    return null;
+  }
+
+  return {
+    sourceKind,
+    sourceInstanceId,
+  };
+}
+
+function createSkippedAuditEvent(input: {
+  event: MemoryEvent;
+  ledgerPath: string;
+  importedAt: string;
+}): SourceAuditEvent {
+  const source = getEventSource(input.event);
+
+  return {
+    id: `source-audit:entry-skipped:${input.event.id}:${input.importedAt}`,
+    eventType: 'entry-skipped',
+    sourceKind: source?.sourceKind,
+    sourceInstanceId: source?.sourceInstanceId,
+    ledgerPath: input.ledgerPath,
+    lineNumber: Number(input.event.captureMetadata.checkpoint.split(':').at(-1) ?? 0),
+    occurredAt: input.importedAt,
+    severity: 'info',
+    message: 'Skipped ledger entry because the source instance is disabled.',
+    metadata: {
+      memoryEventId: input.event.id,
+      sourceRef: input.event.sourceRef,
+    },
+  };
+}
+
 async function listLedgerFiles(ledgersRoot: string): Promise<string[]> {
   let dateDirectories: string[];
 
@@ -154,8 +208,9 @@ export async function importChangedSourceLedgers(
       ledgerPath,
       ledgerText,
     });
-    const ledgerImportedCount = importResult.importedEvents.length;
-    const ledgerSkippedCount = importResult.auditEvents.filter(
+    let ledgerImportedCount = 0;
+    const filteredAuditEvents = [...importResult.auditEvents];
+    let ledgerSkippedCount = importResult.auditEvents.filter(
       (event) => event.eventType === 'schema-validation-failed',
     ).length;
 
@@ -164,10 +219,29 @@ export async function importChangedSourceLedgers(
     }
 
     for (const event of importResult.importedEvents) {
+      const source = getEventSource(event);
+      const isAllowed =
+        dependencies.isSourceImportAllowed === undefined ||
+        source === null ||
+        await dependencies.isSourceImportAllowed(source);
+
+      if (!isAllowed) {
+        ledgerSkippedCount += 1;
+        filteredAuditEvents.push(
+          createSkippedAuditEvent({
+            event,
+            ledgerPath,
+            importedAt: input.importedAt,
+          }),
+        );
+        continue;
+      }
+
       await dependencies.writeMemoryEvent(event);
+      ledgerImportedCount += 1;
     }
 
-    for (const auditEvent of importResult.auditEvents) {
+    for (const auditEvent of filteredAuditEvents) {
       await dependencies.writeSourceAuditEvent(auditEvent);
     }
 

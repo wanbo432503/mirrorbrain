@@ -122,6 +122,50 @@ describe('source ledger import workflow', () => {
     ]);
   });
 
+  it('skips disabled source instances before writing imported MemoryEvents', async () => {
+    const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-ledgers-'));
+    const ledgerDir = join(workspaceDir, 'mirrorbrain', 'ledgers', '2026-05-12');
+    await mkdir(ledgerDir, { recursive: true });
+    await writeFile(
+      join(ledgerDir, 'browser.jsonl'),
+      '{"schemaVersion":"1","sourceKind":"browser","sourceInstanceId":"chrome-main","occurredAt":"2026-05-12T10:00:00.000Z","payload":{"id":"page-1","title":"Disabled Source","url":"https://example.com/disabled","page_content":"Should not import."}}',
+    );
+    const writtenEvents: MemoryEvent[] = [];
+    const writtenAuditEvents: SourceAuditEvent[] = [];
+
+    const result = await importChangedSourceLedgers(
+      {
+        authorizationScopeId: 'scope-browser',
+        importedAt: '2026-05-12T10:31:00.000Z',
+        workspaceDir,
+      },
+      {
+        readCheckpoint: async () => null,
+        writeCheckpoint: async () => undefined,
+        writeMemoryEvent: async (event) => {
+          writtenEvents.push(event);
+        },
+        writeSourceAuditEvent: async (event) => {
+          writtenAuditEvents.push(event);
+        },
+        isSourceImportAllowed: async ({ sourceKind, sourceInstanceId }) =>
+          !(sourceKind === 'browser' && sourceInstanceId === 'chrome-main'),
+      },
+    );
+
+    expect(result.importedCount).toBe(0);
+    expect(result.skippedCount).toBe(1);
+    expect(writtenEvents).toEqual([]);
+    expect(writtenAuditEvents).toContainEqual(
+      expect.objectContaining({
+        eventType: 'entry-skipped',
+        sourceKind: 'browser',
+        sourceInstanceId: 'chrome-main',
+        severity: 'info',
+      }),
+    );
+  });
+
   it('documents the default asynchronous scan cadence as 30 minutes', () => {
     expect(getSourceLedgerImportSchedule()).toEqual({
       scanIntervalMs: 30 * 60 * 1000,

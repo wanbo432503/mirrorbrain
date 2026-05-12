@@ -1082,24 +1082,6 @@ export async function startMirrorBrainHttpServer(
   );
 
   app.post(
-    '/sync/browser',
-    {
-      schema: {
-        summary: 'Trigger browser memory sync',
-        response: {
-          202: createArtifactResponseSchema('sync', browserSyncSummarySchema),
-        },
-      },
-    },
-    async (_request, reply) => {
-      reply.code(202);
-      return {
-        sync: await input.service.syncBrowserMemory(),
-      };
-    },
-  );
-
-  app.post(
     '/sync/shell',
     {
       schema: {

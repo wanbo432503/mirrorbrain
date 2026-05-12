@@ -34,7 +34,7 @@ This workflow is responsible for:
 This workflow is not responsible for:
 
 - source recorder execution
-- source authorization or source-instance configuration
+- source-instance configuration storage
 - OpenViking or filesystem persistence details
 - UI presentation
 - work-session analysis, knowledge generation, or skill drafting
@@ -58,9 +58,12 @@ injected so the service layer can choose the durable backend.
 4. The workflow lists date subdirectories and `*.jsonl` ledger files.
 5. The workflow reads each ledger's `SourceLedgerImportCheckpoint`.
 6. The workflow imports only lines after the checkpoint.
-7. The workflow writes imported memory events.
-8. The workflow writes audit events for imported and skipped lines.
-9. The workflow persists the next checkpoint for each scanned ledger.
+7. When the caller provides a source enablement callback, the workflow checks
+   each imported event's source kind and instance before memory writes.
+8. The workflow writes imported memory events for enabled source instances.
+9. The workflow writes audit events for imported lines, malformed skipped
+   lines, and disabled-source skipped events.
+10. The workflow persists the next checkpoint for each scanned ledger.
 
 ## Inputs And Outputs
 
@@ -72,6 +75,7 @@ Inputs:
 - checkpoint reader/writer
 - memory event writer
 - source audit writer
+- optional source enablement callback
 
 Outputs:
 
@@ -91,8 +95,8 @@ Outputs:
 - Scheduled import failures do not stop future polling ticks.
 - Checkpoints are currently line-number based. A later scanner can add
   file-size or mtime prefiltering without changing the workflow contract.
-- The workflow does not decide whether a source is authorized; the caller must
-  pass only an authorization scope that is valid for the import operation.
+- The workflow does not own authorization policy, but it can enforce the
+  caller's per-source-instance enablement callback before any memory write.
 
 ## Test Strategy
 
@@ -103,5 +107,6 @@ pnpm vitest run src/workflows/source-ledger-import/index.test.ts
 ```
 
 The tests cover daily ledger scanning, imported memory-event writes, audit-event
-writes, bad-line continuation, checkpointed manual import behavior, the
-30-minute scan schedule, and polling start/stop behavior.
+writes, disabled source-instance skips before memory writes, bad-line
+continuation, checkpointed manual import behavior, the 30-minute scan schedule,
+and polling start/stop behavior.

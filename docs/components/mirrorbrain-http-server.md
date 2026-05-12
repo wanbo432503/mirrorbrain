@@ -12,7 +12,6 @@ lifecycle semantics, see [MirrorBrain HTTP API](./mirrorbrain-http-api.md).
 This component is responsible for:
 
 - reporting service health and effective runtime config
-- exposing a browser sync trigger endpoint
 - exposing a shell sync trigger endpoint
 - exposing Phase 4 source-ledger manual import, audit, and status endpoints
 - exposing Phase 4 manual work-session analysis endpoints
@@ -36,7 +35,6 @@ Those concerns remain in the service, workflow, module, and integration layers.
 - `GET /docs`
 - `GET /openapi.json`
 - `GET /health`
-- `POST /sync/browser`
 - `POST /sync/shell`
 - `POST /sources/import`
 - `GET /sources/audit`
@@ -69,8 +67,8 @@ Those concerns remain in the service, workflow, module, and integration layers.
 2. The server resolves host and port from explicit input or the runtime config.
 3. `Fastify` routes each request to the corresponding service method.
 4. OpenAPI metadata is registered alongside the routes and published through Swagger UI.
-5. `POST /sync/browser` and `POST /sync/shell` trigger explicit source sync operations through the service layer and return the sync summary without waiting for background narrative rebuild work.
-6. `POST /sources/import` runs the Phase 4 source-ledger import workflow through the service layer and returns import counts.
+5. `POST /sync/shell` triggers explicit shell sync through the service layer and returns the sync summary without waiting for background narrative rebuild work.
+6. `POST /sources/import` runs the Phase 4 source-ledger import workflow through the service layer and returns import counts; browser activity enters the HTTP surface through this ledger import path rather than a direct browser sync route.
 7. `GET /sources/audit` and `GET /sources/status` expose operational source state without adding audit records to memory retrieval.
 8. `POST /work-sessions/analyze` runs an explicit 6h, 24h, or 7d analysis window and returns pending work-session candidates.
 9. `POST /work-sessions/reviews` records explicit keep/discard decisions and project assignment inputs.

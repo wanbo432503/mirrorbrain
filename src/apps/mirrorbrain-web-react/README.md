@@ -217,7 +217,7 @@ Core API methods include:
 
 1. `getHealth()` - Service status check
 2. `listMemory()` - Memory events list
-3. `syncBrowser()` - Browser memory sync
+3. `importSourceLedgers()` - Phase 4 source-ledger import
 4. `syncShell()` - Shell memory sync
 5. `createDailyCandidates()` - Create candidates
 6. `suggestCandidateReviews()` - AI suggestions
@@ -230,9 +230,8 @@ Core API methods include:
 13. `generateSkill()` - Generate skill
 14. `saveSkillArtifact()` - Save skill draft
 15. `listReviewedMemories()` - Reviewed memories
-16. `importSourceLedgers()` - Trigger Phase 4 ledger import
-17. `listSourceAuditEvents()` - List operational source audit records
-18. `listSourceStatuses()` - List source instance status summaries
+16. `listSourceAuditEvents()` - List operational source audit records
+17. `listSourceStatuses()` - List source instance status summaries
 
 **API Logic Preservation:** 95% identical to original vanilla TypeScript implementation.
 
@@ -251,7 +250,7 @@ pnpm dev
 
 1. **Memory Tab:**
    - Click "Memory" tab
-   - Click "Sync Browser" to import browser events
+   - Click "Import Sources" to import source-ledger events, including browser events recorded as daily JSONL ledgers
    - Click "Sync Shell" to import shell events
    - Navigate through pagination
 

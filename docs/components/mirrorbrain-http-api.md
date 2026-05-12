@@ -356,31 +356,9 @@ Notes:
 
 ## Sync Endpoints
 
-### `POST /sync/browser`
-
-Triggers explicit browser memory sync.
-
-Response status: `202`
-
-Response:
-
-```json
-{
-  "sync": {
-    "sourceKey": "activitywatch-browser:aw-watcher-web",
-    "strategy": "incremental",
-    "importedCount": 12,
-    "lastSyncedAt": "2026-05-11T09:00:00.000Z",
-    "importedEvents": []
-  }
-}
-```
-
-Notes:
-
-- The response can include a bounded preview of imported events.
-- Browser page-content fetching and narrative refresh may continue
-  asynchronously after the sync response.
+Browser activity enters the HTTP API through `POST /sources/import`, which
+imports daily JSONL source ledgers. The legacy direct browser sync route is not
+part of the HTTP contract.
 
 ### `POST /sync/shell`
 
@@ -388,7 +366,19 @@ Triggers explicit shell history sync.
 
 Response status: `202`
 
-Response shape is the same as `/sync/browser`.
+Response shape:
+
+```json
+{
+  "sync": {
+    "sourceKey": "shell:local-history",
+    "strategy": "incremental",
+    "importedCount": 12,
+    "lastSyncedAt": "2026-05-11T09:00:00.000Z",
+    "importedEvents": []
+  }
+}
+```
 
 Failure mode:
 
@@ -1313,10 +1303,10 @@ curl -s http://127.0.0.1:3007/memory/query \
   }'
 ```
 
-### Sync Browser Memory
+### Import Source Ledgers
 
 ```bash
-curl -s -X POST http://127.0.0.1:3007/sync/browser
+curl -s -X POST http://127.0.0.1:3007/sources/import
 ```
 
 ### Create Daily Candidates

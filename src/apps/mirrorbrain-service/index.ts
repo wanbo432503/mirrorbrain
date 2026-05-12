@@ -542,14 +542,6 @@ export function startMirrorBrainService(
         writeSourceAuditEvent: sourceLedgerStateStore.writeSourceAuditEvent,
       },
     );
-  const polling = startPolling(
-    {
-      config,
-    },
-    {
-      runSyncOnce: syncBrowserMemory,
-    },
-  );
   const sourceImportPolling = startSourceImportPolling(
     {
       schedule: getSourceLedgerImportSchedule(),
@@ -568,7 +560,6 @@ export function startMirrorBrainService(
     syncBrowserMemory,
     syncShellMemory,
     stop() {
-      polling.stop();
       sourceImportPolling.stop();
       status = 'stopped';
     },
@@ -1272,6 +1263,16 @@ export function createMirrorBrainService(
             );
           },
           writeSourceAuditEvent: sourceLedgerStateStore.writeSourceAuditEvent,
+          isSourceImportAllowed: async ({ sourceKind, sourceInstanceId }) => {
+            const configs = await sourceLedgerStateStore.listSourceInstanceConfigs();
+            const config = configs.find(
+              (item) =>
+                item.sourceKind === sourceKind &&
+                item.sourceInstanceId === sourceInstanceId,
+            );
+
+            return config?.enabled !== false;
+          },
         },
       ),
     listSourceAuditEvents: (

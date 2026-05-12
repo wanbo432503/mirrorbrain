@@ -63,7 +63,7 @@ describe('MemoryPanel sync actions', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Sync Browser' })).not.toBeNull()
+      expect(screen.getByRole('button', { name: 'Import Sources' })).not.toBeNull()
     })
 
     await user.click(screen.getByRole('button', { name: 'Sync Filesystems' }))

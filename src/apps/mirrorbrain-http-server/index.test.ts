@@ -184,10 +184,9 @@ describe('mirrorbrain http server', () => {
     const knowledgeBody = await knowledgeResponse.json();
     const skillsResponse = await fetch(`${server.origin}/skills`);
     const skillsBody = await skillsResponse.json();
-    const syncResponse = await fetch(`${server.origin}/sync/browser`, {
+    const legacyBrowserSyncResponse = await fetch(`${server.origin}/sync/browser`, {
       method: 'POST',
     });
-    const syncBody = await syncResponse.json();
     const shellSyncResponse = await fetch(`${server.origin}/sync/shell`, {
       method: 'POST',
     });
@@ -275,15 +274,7 @@ describe('mirrorbrain http server', () => {
         },
       ],
     });
-    expect(syncResponse.status).toBe(202);
-    expect(syncBody).toEqual({
-      sync: {
-        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
-        strategy: 'incremental',
-        importedCount: 1,
-        lastSyncedAt: '2026-03-20T09:00:00.000Z',
-      },
-    });
+    expect(legacyBrowserSyncResponse.status).toBe(404);
     expect(shellSyncResponse.status).toBe(202);
     expect(shellSyncBody).toEqual({
       sync: {
@@ -1558,7 +1549,7 @@ describe('mirrorbrain http server', () => {
     expect(schemaResponse.status).toBe(200);
     expect(schemaBody.openapi).toBe('3.0.3');
     expect(schemaBody.paths['/health']).toBeDefined();
-    expect(schemaBody.paths['/sync/browser']).toBeDefined();
+    expect(schemaBody.paths['/sync/browser']).toBeUndefined();
     expect(schemaBody.paths['/candidate-memories/daily']).toBeDefined();
     expect(schemaBody.paths['/candidate-reviews/suggestions']).toBeDefined();
   });

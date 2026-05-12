@@ -69,7 +69,7 @@ function createReviewedMemoryFixture(input?: {
 describe('mirrorbrain service', () => {
   const expectedOpenVikingBaseUrl = getMirrorBrainConfig().openViking.baseUrl;
 
-  it('starts browser sync polling and stops it through the service lifecycle', () => {
+  it('starts ledger import polling without starting legacy browser sync polling by default', () => {
     const stopPolling = vi.fn();
     const stopSourceImportPolling = vi.fn();
     const startBrowserSyncPolling = vi.fn(() => ({
@@ -89,13 +89,13 @@ describe('mirrorbrain service', () => {
       },
     );
 
-    expect(startBrowserSyncPolling).toHaveBeenCalledTimes(1);
+    expect(startBrowserSyncPolling).not.toHaveBeenCalled();
     expect(startSourceLedgerImportPolling).toHaveBeenCalledTimes(1);
     expect(service.status).toBe('running');
 
     service.stop();
 
-    expect(stopPolling).toHaveBeenCalledTimes(1);
+    expect(stopPolling).not.toHaveBeenCalled();
     expect(stopSourceImportPolling).toHaveBeenCalledTimes(1);
     expect(service.status).toBe('stopped');
   });
@@ -358,7 +358,7 @@ describe('mirrorbrain service', () => {
     await rm(workspaceDir, { recursive: true, force: true });
   });
 
-  it('wires real browser sync execution into the polling lifecycle', async () => {
+  it('keeps legacy browser sync execution explicit instead of starting it during polling', async () => {
     const config = getMirrorBrainConfig();
     const checkpointStore = {
       readCheckpoint: vi.fn(async () => null),
@@ -375,15 +375,7 @@ describe('mirrorbrain service', () => {
       importedCount: 0,
       lastSyncedAt: '2026-03-20T10:00:00.000Z',
     }));
-    const startBrowserSyncPolling = vi.fn((_input, dependencies) => {
-      void dependencies.runSyncOnce();
-
-      return {
-        stop: vi.fn(),
-      };
-    });
-
-    startMirrorBrainService(
+    const service = startMirrorBrainService(
       {
         config,
         workspaceDir: '/tmp/mirrorbrain-workspace',
@@ -394,13 +386,13 @@ describe('mirrorbrain service', () => {
         createCheckpointStore,
         createMemoryEventWriter,
         runBrowserMemorySyncOnce,
-        startBrowserSyncPolling,
         now: () => '2026-03-20T10:00:00.000Z',
       },
     );
 
-    await Promise.resolve();
-    await Promise.resolve();
+    expect(runBrowserMemorySyncOnce).not.toHaveBeenCalled();
+
+    await service.syncBrowserMemory();
 
     expect(createCheckpointStore).toHaveBeenCalledWith({
       workspaceDir: '/tmp/mirrorbrain-workspace',
@@ -427,7 +419,7 @@ describe('mirrorbrain service', () => {
     );
   });
 
-  it('auto-discovers the most recent ActivityWatch browser bucket for browser sync', async () => {
+  it('auto-discovers the most recent ActivityWatch browser bucket for explicit browser sync', async () => {
     const config = getMirrorBrainConfig();
     const checkpointStore = {
       readCheckpoint: vi.fn(async () => null),
@@ -457,15 +449,7 @@ describe('mirrorbrain service', () => {
       lastSyncedAt: '2026-04-13T03:53:00.000Z',
       importedEvents: [],
     }));
-    const startBrowserSyncPolling = vi.fn((_input, dependencies) => {
-      void dependencies.runSyncOnce();
-
-      return {
-        stop: vi.fn(),
-      };
-    });
-
-    startMirrorBrainService(
+    const service = startMirrorBrainService(
       {
         config,
         workspaceDir: '/tmp/mirrorbrain-workspace',
@@ -476,13 +460,13 @@ describe('mirrorbrain service', () => {
         createMemoryEventWriter,
         fetchActivityWatchBuckets,
         runBrowserMemorySyncOnce,
-        startBrowserSyncPolling,
         now: () => '2026-04-13T03:53:51.918Z',
       },
     );
 
-    await Promise.resolve();
-    await Promise.resolve();
+    expect(fetchActivityWatchBuckets).not.toHaveBeenCalled();
+
+    await service.syncBrowserMemory();
 
     expect(fetchActivityWatchBuckets).toHaveBeenCalledWith({
       baseUrl: config.activityWatch.baseUrl,
@@ -816,6 +800,12 @@ describe('mirrorbrain service', () => {
     };
     const writeMemoryEvent = vi.fn(async () => undefined);
     const importSourceLedgers = vi.fn(async (_input, dependencies) => {
+      await expect(
+        dependencies.isSourceImportAllowed({
+          sourceKind: 'browser',
+          sourceInstanceId: 'chrome-main',
+        }),
+      ).resolves.toBe(true);
       await dependencies.writeMemoryEvent(memoryEvent);
       await dependencies.writeSourceAuditEvent(auditEvent);
       await dependencies.writeCheckpoint({
