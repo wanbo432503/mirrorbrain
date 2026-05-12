@@ -506,6 +506,49 @@ Verification:
 
 - `src/modules/memory-capture/index.test.ts`
 
+### `src/modules/source-ledger-importer`
+
+Purpose: implement the Phase 4 JSONL ledger import boundary between built-in
+recorders and normalized MirrorBrain memory evidence.
+
+Responsibilities:
+
+- Parse daily source ledger lines after the current checkpoint.
+- Validate the common source ledger envelope and supported source-specific
+  payloads.
+- Normalize valid browser ledger entries into source-attributed `MemoryEvent`
+  records with `content.contentKind = "browser-page"`.
+- Emit `SourceAuditEvent` operational records for imported entries and skipped
+  invalid lines.
+- Advance line-number checkpoints so manual re-import handles only new lines.
+
+Inputs:
+
+- Ledger path, ledger text, authorization scope id, import timestamp, and an
+  optional source-ledger checkpoint.
+
+Outputs:
+
+- Imported `MemoryEvent` records, `SourceAuditEvent` records, and the next
+  `SourceLedgerImportCheckpoint`.
+
+Dependencies:
+
+- Shared `MemoryEvent` type and Node `crypto` hashing.
+
+Failure modes and constraints:
+
+- Malformed or schema-invalid lines are skipped with warning audit events.
+- One bad ledger line does not block later valid lines.
+- The current module supports browser ledgers only; additional Phase 4 source
+  kinds require new built-in normalization branches or plugins.
+- The module does not read files, schedule scans, persist outputs, or authorize
+  source import.
+
+Verification:
+
+- `src/modules/source-ledger-importer/index.test.ts`
+
 ### `src/modules/memory-review`
 
 Purpose: turn daily memory events into reviewable candidate streams and record

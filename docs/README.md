@@ -56,6 +56,9 @@ these boundaries as part of the current architecture:
   runtime source-category authorization and revocation decisions.
 - [Memory Source Sync](./components/memory-source-sync.md): generic
   source-plugin ingestion workflow and authorization checkpoints.
+- [Source Ledger Importer](./components/source-ledger-importer.md): Phase 4
+  JSONL ledger-to-`MemoryEvent` import boundary with audit warnings and
+  checkpointed manual re-import.
 - [OpenClaw Plugin API](./components/openclaw-plugin-api.md): host-facing
   memory, knowledge, and skill capability helpers.
 - [Current Project Status](./features/current-project-status.md): concise
@@ -108,6 +111,8 @@ The local workspace stores MirrorBrain-owned records under
 subdirectories:
 
 - `memory-events/`: normalized raw memory events.
+- `ledgers/YYYY-MM-DD/*.jsonl`: Phase 4 source-recorder acquisition ledgers
+  before importer normalization.
 - `browser-page-content/`: captured readable browser page text. Runtime page
   text capture requires a separate page-content authorization policy.
 - `candidate-memories/`: generated review candidates.
