@@ -14,6 +14,7 @@ import type { MirrorBrainConfig } from '../src/shared/types/index.js';
 
 interface MirrorBrainDevConfigResult {
   workspaceDir: string;
+  browserBucketId?: string;
   config: MirrorBrainConfig;
 }
 
@@ -175,9 +176,15 @@ export function getMirrorBrainDevConfig(
   env: NodeJS.ProcessEnv = process.env,
 ): MirrorBrainDevConfigResult {
   const defaultConfig = getMirrorBrainConfig();
+  const browserBucketId =
+    env.MIRRORBRAIN_BROWSER_BUCKET_ID !== undefined &&
+    env.MIRRORBRAIN_BROWSER_BUCKET_ID.length > 0
+      ? env.MIRRORBRAIN_BROWSER_BUCKET_ID
+      : undefined;
 
   return {
     workspaceDir: env.MIRRORBRAIN_WORKSPACE_DIR ?? process.cwd(),
+    ...(browserBucketId === undefined ? {} : { browserBucketId }),
     config: {
       service: {
         host: env.MIRRORBRAIN_HTTP_HOST ?? defaultConfig.service.host,
@@ -508,7 +515,8 @@ export async function startMirrorBrainDevRuntime(
     ...projectEnv,
     ...input.env,
   };
-  const { workspaceDir, config } = getMirrorBrainDevConfig(mergedEnv);
+  const { workspaceDir, config, browserBucketId } =
+    getMirrorBrainDevConfig(mergedEnv);
   const assertDependenciesReachable =
     dependencies.assertDependenciesReachable ??
     assertMirrorBrainDependenciesReachable;
@@ -520,6 +528,7 @@ export async function startMirrorBrainDevRuntime(
     dependencies.createMirrorBrainService ?? createMirrorBrainService;
   const startHttpServer =
     dependencies.startMirrorBrainHttpServer ?? startMirrorBrainHttpServer;
+  const shellHistoryPath = mergedEnv.MIRRORBRAIN_SHELL_HISTORY_PATH;
 
   await assertDependenciesReachable(config);
 
@@ -529,11 +538,15 @@ export async function startMirrorBrainDevRuntime(
   const runtimeService = startRuntimeService({
     config,
     workspaceDir,
-    shellHistoryPath: mergedEnv.MIRRORBRAIN_SHELL_HISTORY_PATH,
+    ...(browserBucketId === undefined ? {} : { browserBucketId }),
+    ...(shellHistoryPath === undefined || shellHistoryPath.length === 0
+      ? {}
+      : { shellHistoryPath }),
   });
   const api = createRuntimeApi({
     service: runtimeService,
     workspaceDir,
+    ...(browserBucketId === undefined ? {} : { browserBucketId }),
   });
   const httpServer = await startHttpServer({
     service: api,

@@ -3066,6 +3066,13 @@ describe('mirrorbrain service', () => {
         listRawWorkspaceMemoryEvents: vi.fn(async () => memoryEvents),
         listKnowledge: vi.fn(async () => []),
         listReviewedMemories: vi.fn(async () => []),
+        importSourceLedgers: vi.fn(async () => ({
+          importedCount: 0,
+          skippedCount: 0,
+          scannedLedgerCount: 0,
+          changedLedgerCount: 0,
+          ledgerResults: [],
+        })),
         createCandidateMemories,
         publishCandidateMemory,
         loadBrowserPageContentArtifactFromWorkspace: vi.fn(async () => null),

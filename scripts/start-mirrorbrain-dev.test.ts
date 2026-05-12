@@ -24,6 +24,7 @@ describe('start mirrorbrain dev runtime', () => {
     expect(envExample).toContain('MIRRORBRAIN_EMBEDDING_API_KEY=');
     expect(envExample).toContain('MIRRORBRAIN_EMBEDDING_MODEL=');
     expect(envExample).toContain('MIRRORBRAIN_EMBEDDING_DIMENSION=');
+    expect(envExample).toContain('MIRRORBRAIN_BROWSER_BUCKET_ID=');
   });
 
   it('parses environment overrides and sensible defaults for the local MVP runtime', () => {
@@ -438,6 +439,7 @@ describe('start mirrorbrain dev runtime', () => {
       {
         env: {
           MIRRORBRAIN_WORKSPACE_DIR: '/tmp/mirrorbrain-workspace',
+          MIRRORBRAIN_BROWSER_BUCKET_ID: '',
         },
       },
       {
@@ -495,6 +497,7 @@ describe('start mirrorbrain dev runtime', () => {
       {
         env: {
           MIRRORBRAIN_WORKSPACE_DIR: '/tmp/mirrorbrain-workspace',
+          MIRRORBRAIN_BROWSER_BUCKET_ID: '',
           MIRRORBRAIN_SHELL_HISTORY_PATH: '/tmp/.zsh_history',
         },
       },
@@ -656,6 +659,102 @@ describe('start mirrorbrain dev runtime', () => {
       config: config.config,
       workspaceDir: '/tmp/mirrorbrain-workspace',
       shellHistoryPath: '/tmp/.zsh_history',
+    });
+  });
+
+  it('passes the configured ActivityWatch browser bucket id into service startup and API facade', async () => {
+    const config = getMirrorBrainDevConfig({
+      MIRRORBRAIN_WORKSPACE_DIR: '/tmp/mirrorbrain-workspace',
+      MIRRORBRAIN_BROWSER_BUCKET_ID: 'aw-watcher-web-chrome_laptop',
+    });
+    const runtimeService = {
+      status: 'running' as const,
+      config: config.config,
+      syncBrowserMemory: vi.fn(async () => ({
+        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome_laptop',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-05-12T10:00:00.000Z',
+      })),
+      syncShellMemory: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-05-12T10:00:00.000Z',
+      })),
+      stop: vi.fn(),
+    };
+    const startMirrorBrainService = vi.fn(() => runtimeService);
+    const createMirrorBrainService = vi.fn(() => ({
+      service: runtimeService,
+      syncBrowserMemory: runtimeService.syncBrowserMemory,
+      syncShellMemory: runtimeService.syncShellMemory,
+      listMemoryEvents: vi.fn(async () => ({
+        items: [],
+        pagination: { total: 0, page: 1, pageSize: 10, totalPages: 1 },
+      })),
+      listMemoryNarratives: vi.fn(async () => []),
+      queryMemory: vi.fn(async () => ({ items: [] })),
+      listKnowledge: vi.fn(async () => []),
+      listSkillDrafts: vi.fn(async () => []),
+      importSourceLedgers: vi.fn(async () => ({
+        importedCount: 0,
+        skippedCount: 0,
+        scannedLedgerCount: 0,
+        changedLedgerCount: 0,
+        ledgerResults: [],
+      })),
+      createDailyCandidateMemories: vi.fn(async () => []),
+      suggestCandidateReviews: vi.fn(async () => []),
+      reviewCandidateMemory: vi.fn(),
+      undoCandidateReview: vi.fn(),
+      deleteCandidateMemory: vi.fn(),
+      generateKnowledgeFromReviewedMemories: vi.fn(),
+      generateSkillDraftFromReviewedMemories: vi.fn(),
+      publishKnowledge: vi.fn(),
+      publishSkillDraft: vi.fn(),
+    }));
+
+    await startMirrorBrainDevRuntime(
+      {
+        env: {
+          MIRRORBRAIN_WORKSPACE_DIR: '/tmp/mirrorbrain-workspace',
+          MIRRORBRAIN_BROWSER_BUCKET_ID: 'aw-watcher-web-chrome_laptop',
+        },
+      },
+      {
+        assertDependenciesReachable: vi.fn(async () => undefined),
+        prepareWebAssets: vi.fn(async () => ({
+          outputDir: '/tmp/mirrorbrain-web',
+          indexHtmlPath: '/tmp/mirrorbrain-web/index.html',
+          stylesPath: '/tmp/mirrorbrain-web/styles.css',
+          scriptPath: '/tmp/mirrorbrain-web/main.js',
+          stop: vi.fn(),
+        })),
+        startMirrorBrainService,
+        createMirrorBrainService:
+          createMirrorBrainService as unknown as NonNullable<
+            Parameters<typeof startMirrorBrainDevRuntime>[1]
+          >['createMirrorBrainService'],
+        startMirrorBrainHttpServer: vi.fn(async () => ({
+          origin: 'http://127.0.0.1:3007',
+          host: '127.0.0.1',
+          port: 3007,
+          stop: vi.fn(async () => undefined),
+        })),
+      },
+    );
+
+    expect(config.browserBucketId).toBe('aw-watcher-web-chrome_laptop');
+    expect(startMirrorBrainService).toHaveBeenCalledWith({
+      config: config.config,
+      workspaceDir: '/tmp/mirrorbrain-workspace',
+      browserBucketId: 'aw-watcher-web-chrome_laptop',
+    });
+    expect(createMirrorBrainService).toHaveBeenCalledWith({
+      service: runtimeService,
+      workspaceDir: '/tmp/mirrorbrain-workspace',
+      browserBucketId: 'aw-watcher-web-chrome_laptop',
     });
   });
 

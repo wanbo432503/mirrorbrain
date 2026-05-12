@@ -197,6 +197,7 @@ Set local values in `.env`:
 
 ```bash
 MIRRORBRAIN_ACTIVITYWATCH_BASE_URL=http://127.0.0.1:5600
+MIRRORBRAIN_BROWSER_BUCKET_ID=aw-watcher-web-chrome_laptop
 MIRRORBRAIN_OPENVIKING_BASE_URL=http://127.0.0.1:1933
 MIRRORBRAIN_WORKSPACE_DIR=/path_to_workspace/mirrorbrain-workspace
 MIRRORBRAIN_SHELL_HISTORY_PATH=/path_to_workspace/.zsh_history
