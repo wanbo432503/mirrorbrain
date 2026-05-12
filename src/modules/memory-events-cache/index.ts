@@ -9,7 +9,6 @@ import {
 } from '../../integrations/openviking-store/index.js';
 import {
   evaluateMemoryEventsForIngestion,
-  type ScoredMemoryEvent,
 } from './memory-event-evaluator.js';
 
 export interface MemoryEventsCache {
@@ -44,6 +43,10 @@ export interface MemoryEventsCache {
 export interface MemoryEventSourceFilter {
   sourceKind?: string;
   sourceInstanceId?: string;
+}
+
+interface BrowserSourceSpecificContent {
+  url?: unknown;
 }
 
 const CACHE_VERSION = 1;
@@ -122,15 +125,13 @@ export async function initializeCacheFromOpenViking(
 
     // If workspace has data, use it
     if (allEvents.length > 0) {
-      const sortedEvents = [...allEvents].sort((left, right) =>
-        right.timestamp.localeCompare(left.timestamp),
-      );
+      const displayEvents = prepareMemoryEventsForDisplay(allEvents);
 
       const cache: MemoryEventsCache = {
         version: CACHE_VERSION,
         updatedAt: new Date().toISOString(),
-        total: sortedEvents.length,
-        events: sortedEvents,
+        total: displayEvents.length,
+        events: displayEvents,
         lastSyncSummary: {},
       };
 
@@ -149,15 +150,13 @@ export async function initializeCacheFromOpenViking(
     allEvents = [];
   }
 
-  const sortedEvents = [...allEvents].sort((left, right) =>
-    right.timestamp.localeCompare(left.timestamp),
-  );
+  const displayEvents = prepareMemoryEventsForDisplay(allEvents);
 
   const cache: MemoryEventsCache = {
     version: CACHE_VERSION,
     updatedAt: new Date().toISOString(),
-    total: sortedEvents.length,
-    events: sortedEvents,
+    total: displayEvents.length,
+    events: displayEvents,
     lastSyncSummary: {},
   };
 
@@ -170,19 +169,96 @@ function deduplicateById<T extends { id: string }>(items: T[]): T[] {
 }
 
 function isBrowserUrlMemoryEvent(event: MemoryEvent): boolean {
-  return (
-    event.sourceType === 'activitywatch-browser' &&
-    typeof event.content.url === 'string' &&
-    event.content.url.length > 0
-  );
+  return getBrowserMemoryEventUrl(event) !== null;
+}
+
+function getBrowserMemoryEventUrl(event: MemoryEvent): string | null {
+  if (
+    event.sourceType !== 'activitywatch-browser' &&
+    event.sourceType !== 'browser'
+  ) {
+    return null;
+  }
+
+  if (typeof event.content.url === 'string' && event.content.url.length > 0) {
+    return event.content.url;
+  }
+
+  const sourceSpecific = event.content.sourceSpecific as
+    | BrowserSourceSpecificContent
+    | undefined;
+  if (typeof sourceSpecific?.url === 'string' && sourceSpecific.url.length > 0) {
+    return sourceSpecific.url;
+  }
+
+  const urlEntity = Array.isArray(event.content.entities)
+    ? event.content.entities.find(
+        (entity): entity is { ref: string } =>
+          typeof entity === 'object' &&
+          entity !== null &&
+          'kind' in entity &&
+          entity.kind === 'url' &&
+          'ref' in entity &&
+          typeof entity.ref === 'string' &&
+          entity.ref.length > 0,
+      )
+    : undefined;
+
+  return urlEntity?.ref ?? null;
+}
+
+function normalizeBrowserMemoryEventUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    parsed.hash = '';
+
+    return parsed.toString();
+  } catch {
+    return url.trim();
+  }
+}
+
+function isBlacklistedBrowserUrl(url: string): boolean {
+  const trimmedUrl = url.trim();
+
+  if (trimmedUrl.length === 0) {
+    return true;
+  }
+
+  try {
+    const parsed = new URL(trimmedUrl);
+    const protocol = parsed.protocol.toLowerCase();
+    const hostname = parsed.hostname.toLowerCase();
+
+    return (
+      protocol === 'chrome:' ||
+      protocol === 'chrome-extension:' ||
+      hostname === 'localhost' ||
+      hostname.endsWith('.localhost') ||
+      hostname === '127.0.0.1' ||
+      hostname === '0.0.0.0' ||
+      hostname === '::1' ||
+      hostname === '[::1]'
+    );
+  } catch {
+    return false;
+  }
+}
+
+function isBlacklistedMemoryEvent(event: MemoryEvent): boolean {
+  const url = getBrowserMemoryEventUrl(event);
+
+  return url !== null && isBlacklistedBrowserUrl(url);
 }
 
 function createMemoryEventDisplaySignature(event: MemoryEvent): string {
-  if (isBrowserUrlMemoryEvent(event)) {
+  const browserUrl = getBrowserMemoryEventUrl(event);
+
+  if (browserUrl !== null) {
     return [
       event.sourceType,
       event.authorizationScopeId,
-      String(event.content.url),
+      normalizeBrowserMemoryEventUrl(browserUrl),
     ].join('|');
   }
 
@@ -230,6 +306,32 @@ function mergeMemoryEventsForDisplay(
   };
 }
 
+function prepareMemoryEventsForDisplay(events: MemoryEvent[]): MemoryEvent[] {
+  const deduplicatedById = deduplicateById(
+    events.filter((event) => !isBlacklistedMemoryEvent(event)),
+  );
+  const latestBySignature = new Map<string, MemoryEvent>();
+
+  for (const event of deduplicatedById) {
+    const signature = createMemoryEventDisplaySignature(event);
+    const previousEvent = latestBySignature.get(signature);
+
+    if (previousEvent === undefined) {
+      latestBySignature.set(signature, event);
+      continue;
+    }
+
+    latestBySignature.set(
+      signature,
+      mergeMemoryEventsForDisplay(previousEvent, event),
+    );
+  }
+
+  return [...latestBySignature.values()].sort((left, right) =>
+    right.timestamp.localeCompare(left.timestamp),
+  );
+}
+
 function mergeNewEventsToCache(
   cachedEvents: MemoryEvent[],
   newEvents: MemoryEvent[],
@@ -243,33 +345,28 @@ function mergeNewEventsToCache(
   };
 } {
   // Evaluate new events BEFORE merging (OpenWiki-style first-stage assessment)
-  const { scoredEvents, stats } = evaluateMemoryEventsForIngestion(newEvents);
+  const newEventsAfterBlacklist = newEvents.filter(
+    (event) => !isBlacklistedMemoryEvent(event),
+  ).sort((left, right) => right.timestamp.localeCompare(left.timestamp));
+  const { scoredEvents, stats } =
+    evaluateMemoryEventsForIngestion(newEventsAfterBlacklist);
 
   // Only merge events that passed evaluation
   const evaluatedEvents = scoredEvents.map((s) => s.event);
-  const deduplicatedById = deduplicateById([...cachedEvents, ...evaluatedEvents]);
-  const latestBySignature = new Map<string, MemoryEvent>();
-
-  for (const event of deduplicatedById) {
-    const signature = createMemoryEventDisplaySignature(event);
-    const previousEvent = latestBySignature.get(signature);
-
-    if (previousEvent === undefined) {
-      latestBySignature.set(signature, mergeMemoryEventsForDisplay(event, event));
-      continue;
-    }
-
-    latestBySignature.set(
-      signature,
-      mergeMemoryEventsForDisplay(previousEvent, event),
-    );
-  }
+  const mergedEvents = prepareMemoryEventsForDisplay([
+    ...cachedEvents,
+    ...evaluatedEvents,
+  ]);
 
   return {
-    mergedEvents: [...latestBySignature.values()].sort((left, right) =>
-      right.timestamp.localeCompare(left.timestamp),
-    ),
-    evaluationStats: stats,
+    mergedEvents,
+    evaluationStats: {
+      ...stats,
+      total: newEvents.length,
+      basicFiltered:
+        stats.basicFiltered + (newEvents.length - newEventsAfterBlacklist.length),
+      finalKept: mergedEvents.length,
+    },
   };
 }
 

@@ -46,6 +46,11 @@ export interface ScoredMemoryEvent {
   reasons: string[];
 }
 
+interface BrowserSourceSpecificContent {
+  pageContent?: unknown;
+  url?: unknown;
+}
+
 /**
  * Smart pre-filtering pipeline for memory event ingestion.
  *
@@ -127,8 +132,8 @@ function basicFilter(events: MemoryEvent[]): {
 
   for (const event of events) {
     // Always keep browser events with URL (they will be evaluated for page content quality later)
-    if (event.sourceType === 'activitywatch-browser') {
-      const url = typeof event.content.url === 'string' ? event.content.url : null;
+    if (isBrowserMemoryEvent(event)) {
+      const url = getBrowserMemoryEventUrl(event);
 
       // Skip browser events without URL
       if (!url) {
@@ -182,7 +187,7 @@ function computeImportance(event: MemoryEvent): number {
   // --- Factor 1: Source type weight (0–0.25) ---
   // Browser events have URL + title + possibly page content, most valuable
   // Shell events are command history, moderate value
-  const typeWeight = event.sourceType === 'activitywatch-browser' ? 0.25 : 0.15;
+  const typeWeight = isBrowserMemoryEvent(event) ? 0.25 : 0.15;
   score += typeWeight;
 
   // --- Factor 2: Text richness (0–0.30) ---
@@ -205,7 +210,7 @@ function computeImportance(event: MemoryEvent): number {
 
   // --- Factor 3: Page content quality for browser events (0–0.35) ---
   // This is the key factor: evaluate the actual page content
-  if (event.sourceType === 'activitywatch-browser') {
+  if (isBrowserMemoryEvent(event)) {
     const pageQualityScore = evaluatePageContentQuality(event);
     score += pageQualityScore;
   }
@@ -213,9 +218,8 @@ function computeImportance(event: MemoryEvent): number {
   // --- Factor 4: URL with title bonus (0 or 0.10) ---
   // Browser event with both URL and title indicates meaningful navigation
   if (
-    event.sourceType === 'activitywatch-browser' &&
-    typeof event.content.url === 'string' &&
-    event.content.url.length > 0 &&
+    isBrowserMemoryEvent(event) &&
+    getBrowserMemoryEventUrl(event) !== null &&
     typeof event.content.title === 'string' &&
     event.content.title.length > 10
   ) {
@@ -253,7 +257,7 @@ function computeImportance(event: MemoryEvent): number {
 function isVeryLowQuality(scored: ScoredMemoryEvent): boolean {
   // Browser events with junk page content get penalty scores
   // If total score < 0.25, it means the page is junk even after all bonuses
-  if (scored.event.sourceType === 'activitywatch-browser' && scored.importance < 0.25) {
+  if (isBrowserMemoryEvent(scored.event) && scored.importance < 0.25) {
     return true;
   }
 
@@ -279,7 +283,7 @@ function getImportanceReasons(event: MemoryEvent): string[] {
   }
 
   // Page content quality reasons
-  if (event.sourceType === 'activitywatch-browser') {
+  if (isBrowserMemoryEvent(event)) {
     const pageText = getPageTextContent(event);
     if (pageText) {
       if (pageText.length > 500) {
@@ -375,6 +379,13 @@ function getPageTextContent(event: MemoryEvent): string | null {
   // 3. pageText field (alternative naming)
   if (typeof event.content.pageText === 'string') {
     candidates.push(event.content.pageText);
+  }
+
+  const sourceSpecific = event.content.sourceSpecific as
+    | BrowserSourceSpecificContent
+    | undefined;
+  if (typeof sourceSpecific?.pageContent === 'string') {
+    candidates.push(sourceSpecific.pageContent);
   }
 
   // Merge candidates, preferring the longest one
@@ -502,11 +513,16 @@ function hasValuableContentPatterns(text: string): boolean {
 function isSkippableBrowserPageUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
+    const protocol = parsed.protocol.toLowerCase();
     const hostname = parsed.hostname.toLowerCase();
 
     return (
+      protocol === 'chrome:' ||
+      protocol === 'chrome-extension:' ||
       hostname === 'localhost' ||
+      hostname.endsWith('.localhost') ||
       hostname === '127.0.0.1' ||
+      hostname === '0.0.0.0' ||
       hostname === '::1' ||
       hostname === '[::1]'
     );
@@ -622,9 +638,17 @@ function getEventText(event: MemoryEvent): string | null {
     parts.push(event.content.pageText.slice(0, 500));
   }
 
-  if (typeof event.content.url === 'string') {
+  const sourceSpecific = event.content.sourceSpecific as
+    | BrowserSourceSpecificContent
+    | undefined;
+  if (typeof sourceSpecific?.pageContent === 'string') {
+    parts.push(sourceSpecific.pageContent.slice(0, 500));
+  }
+
+  const browserUrl = getBrowserMemoryEventUrl(event);
+  if (browserUrl !== null) {
     // URL contributes less to text semantics
-    parts.push(event.content.url);
+    parts.push(browserUrl);
   }
 
   return parts.join(' ').trim() || null;
@@ -650,7 +674,7 @@ type PageRole =
   | 'web';
 
 function inferPageRole(event: MemoryEvent): PageRole {
-  const url = (typeof event.content.url === 'string' ? event.content.url : '') ?? '';
+  const url = getBrowserMemoryEventUrl(event) ?? '';
   const title = (typeof event.content.title === 'string' ? event.content.title : '') ?? '';
   const normalized = `${url.toLowerCase()} ${title.toLowerCase()}`;
 
@@ -703,6 +727,31 @@ function inferPageRole(event: MemoryEvent): PageRole {
   }
 
   return 'web';
+}
+
+function isBrowserMemoryEvent(event: MemoryEvent): boolean {
+  return (
+    event.sourceType === 'activitywatch-browser' ||
+    event.sourceType === 'browser'
+  );
+}
+
+function getBrowserMemoryEventUrl(event: MemoryEvent): string | null {
+  if (!isBrowserMemoryEvent(event)) {
+    return null;
+  }
+
+  if (typeof event.content.url === 'string' && event.content.url.length > 0) {
+    return event.content.url;
+  }
+
+  const sourceSpecific = event.content.sourceSpecific as
+    | BrowserSourceSpecificContent
+    | undefined;
+
+  return typeof sourceSpecific?.url === 'string' && sourceSpecific.url.length > 0
+    ? sourceSpecific.url
+    : null;
 }
 
 /**

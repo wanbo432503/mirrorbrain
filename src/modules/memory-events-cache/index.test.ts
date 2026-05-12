@@ -68,6 +68,42 @@ function createLedgerMemoryEvent(input: {
   };
 }
 
+function createLedgerBrowserMemoryEvent(input: {
+  id: string;
+  timestamp: string;
+  title?: string;
+  url: string;
+}): MemoryEvent {
+  return {
+    id: input.id,
+    sourceType: 'browser',
+    sourceRef: `browser:chrome-main:${input.id}`,
+    timestamp: input.timestamp,
+    authorizationScopeId: 'scope-source-ledger',
+    content: {
+      title: input.title ?? `Browser Event ${input.id}`,
+      summary: `${input.title ?? input.id} ${input.url}`,
+      contentKind: 'browser-page',
+      entities: [
+        {
+          kind: 'url',
+          label: input.url,
+          ref: input.url,
+        },
+      ],
+      sourceSpecific: {
+        id: input.id,
+        url: input.url,
+        pageContent: `${input.title ?? input.id} ${input.url}`,
+      },
+    },
+    captureMetadata: {
+      upstreamSource: 'source-ledger:browser',
+      checkpoint: `ledgers/2026-05-12/browser.jsonl:1`,
+    },
+  };
+}
+
 describe('memory-events-cache', () => {
   let tempWorkspace: string;
 
@@ -289,6 +325,70 @@ describe('memory-events-cache', () => {
       expect(mockListWorkspace).toHaveBeenCalled();
       expect(mockListOpenViking).not.toHaveBeenCalled(); // Shouldn't call OpenViking if workspace has data
     });
+
+    it('should filter blacklisted browser pages and deduplicate source-ledger browser URLs', async () => {
+      const docsOld = createLedgerBrowserMemoryEvent({
+        id: 'ledger:browser:docs-old',
+        timestamp: '2026-05-12T08:00:00.000Z',
+        title: 'Docs Page Old',
+        url: 'https://docs.example.com/guide',
+      });
+      const docsNew = createLedgerBrowserMemoryEvent({
+        id: 'ledger:browser:docs-new',
+        timestamp: '2026-05-12T09:00:00.000Z',
+        title: 'Docs Page New',
+        url: 'https://docs.example.com/guide',
+      });
+      const localhost = createLedgerBrowserMemoryEvent({
+        id: 'ledger:browser:localhost',
+        timestamp: '2026-05-12T10:00:00.000Z',
+        url: 'http://localhost:3007/',
+      });
+      const loopback = createLedgerBrowserMemoryEvent({
+        id: 'ledger:browser:loopback',
+        timestamp: '2026-05-12T10:01:00.000Z',
+        url: 'http://127.0.0.1:5600/#/settings',
+      });
+      const anyAddress = createLedgerBrowserMemoryEvent({
+        id: 'ledger:browser:any-address',
+        timestamp: '2026-05-12T10:02:00.000Z',
+        url: 'http://0.0.0.0:3007/',
+      });
+      const chromeSettings = createLedgerBrowserMemoryEvent({
+        id: 'ledger:browser:chrome-settings',
+        timestamp: '2026-05-12T10:03:00.000Z',
+        url: 'chrome://settings/',
+      });
+
+      const cache = await initializeCacheFromOpenViking(
+        tempWorkspace,
+        'http://localhost:8080',
+        {
+          listWorkspaceMemoryEvents: async () => [
+            docsOld,
+            docsNew,
+            localhost,
+            loopback,
+            anyAddress,
+            chromeSettings,
+          ],
+          listOpenVikingMemoryEvents: vi.fn(async () => []),
+        },
+      );
+
+      expect(cache.events.map((event) => event.id)).toEqual([
+        'ledger:browser:docs-new',
+      ]);
+      expect(cache.total).toBe(1);
+      expect(cache.events[0].content).toMatchObject({
+        title: 'Docs Page New',
+        latestAccessedAt: '2026-05-12T09:00:00.000Z',
+      });
+      expect((cache.events[0].content as { accessTimes?: string[] }).accessTimes).toEqual([
+        '2026-05-12T09:00:00.000Z',
+        '2026-05-12T08:00:00.000Z',
+      ]);
+    });
   });
 
   describe('updateCacheWithNewEvents', () => {
@@ -373,6 +473,48 @@ describe('memory-events-cache', () => {
 
       expect(result.total).toBe(1);
       expect((result.events[0].content as { accessTimes: string[] }).accessTimes.length).toBe(2);
+    });
+
+    it('should filter blacklisted source-ledger browser events before merging new events', async () => {
+      const existingCache: MemoryEventsCache = {
+        version: 1,
+        updatedAt: '2026-05-12T08:00:00Z',
+        total: 0,
+        events: [],
+        lastSyncSummary: {},
+      };
+
+      await saveMemoryEventsCache(tempWorkspace, existingCache);
+
+      const result = await updateCacheWithNewEvents(
+        tempWorkspace,
+        'http://localhost:8080',
+        [
+          createLedgerBrowserMemoryEvent({
+            id: 'ledger:browser:useful-old',
+            timestamp: '2026-05-12T08:00:00.000Z',
+            title: 'Useful Docs Old',
+            url: 'https://docs.example.com/reference',
+          }),
+          createLedgerBrowserMemoryEvent({
+            id: 'ledger:browser:useful-new',
+            timestamp: '2026-05-12T09:00:00.000Z',
+            title: 'Useful Docs New',
+            url: 'https://docs.example.com/reference',
+          }),
+          createLedgerBrowserMemoryEvent({
+            id: 'ledger:browser:chrome',
+            timestamp: '2026-05-12T10:00:00.000Z',
+            url: 'chrome://extensions/',
+          }),
+        ],
+        'browser'
+      );
+
+      expect(result.events.map((event) => event.id)).toEqual([
+        'ledger:browser:useful-new',
+      ]);
+      expect(result.total).toBe(1);
     });
   });
 });
