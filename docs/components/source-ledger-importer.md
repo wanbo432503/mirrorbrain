@@ -66,7 +66,7 @@ Browser ledger payloads require:
 
 ```ts
 interface BrowserLedgerPayload {
-  id: string;
+  id: string | number;
   title: string;
   url: string;
   page_content: string;
@@ -105,6 +105,9 @@ belong in later workflow or integration layers.
 - Schema-invalid entries are skipped with warning audit events and a truncated
   bad-line sample.
 - A bad line does not block subsequent ledger entries.
+- If a ledger file is truncated or rewritten and the saved checkpoint points
+  beyond the current line count, import restarts from the first line for that
+  ledger instead of skipping the whole file.
 - Unsupported future source kinds are treated as schema failures until their
   built-in normalizers are implemented.
 - Checkpoints are line-number based for the current text importer. A later file

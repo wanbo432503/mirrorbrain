@@ -132,6 +132,49 @@ describe('source ledger importer', () => {
     });
   });
 
+  it('restarts from the first line when the checkpoint is beyond the current ledger length', () => {
+    const checkpoint: SourceLedgerImportCheckpoint = {
+      ledgerPath: 'ledgers/2026-05-12/browser.jsonl',
+      nextLineNumber: 66,
+      updatedAt: '2026-05-12T10:30:00.000Z',
+    };
+
+    const result = importSourceLedgerText({
+      authorizationScopeId: 'scope-browser',
+      checkpoint,
+      importedAt: '2026-05-12T10:31:00.000Z',
+      ledgerPath: 'ledgers/2026-05-12/browser.jsonl',
+      ledgerText:
+        '{"schemaVersion":"1","sourceKind":"browser","sourceInstanceId":"chrome-main","occurredAt":"2026-05-12T10:00:00.000Z","payload":{"id":"page-1","title":"Rewritten Ledger","url":"https://example.com/rewritten","page_content":"Ledger was rewritten with fewer lines."}}',
+    });
+
+    expect(result.importedEvents.map((event) => event.content.title)).toEqual([
+      'Rewritten Ledger',
+    ]);
+    expect(result.checkpoint).toEqual({
+      ledgerPath: 'ledgers/2026-05-12/browser.jsonl',
+      nextLineNumber: 2,
+      updatedAt: '2026-05-12T10:31:00.000Z',
+    });
+  });
+
+  it('accepts numeric ActivityWatch browser payload ids', () => {
+    const result = importSourceLedgerText({
+      authorizationScopeId: 'scope-browser',
+      importedAt: '2026-05-12T10:31:00.000Z',
+      ledgerPath: 'ledgers/2026-05-12/browser.jsonl',
+      ledgerText:
+        '{"schemaVersion":"source-ledger.v1","sourceKind":"browser","sourceInstanceId":"chrome-main","occurredAt":"2026-05-12T10:00:00.000Z","payload":{"id":161,"title":"ActivityWatch Page","url":"https://example.com/activitywatch","page_content":"ActivityWatch can emit numeric ids."}}',
+    });
+
+    expect(result.importedEvents.map((event) => event.content.title)).toEqual([
+      'ActivityWatch Page',
+    ]);
+    expect(result.importedEvents[0]?.content.sourceSpecific).toMatchObject({
+      id: '161',
+    });
+  });
+
   it('normalizes every Phase 4 built-in source kind into MemoryEvent content V2 records', () => {
     const result = importSourceLedgerText({
       authorizationScopeId: 'scope-phase4',

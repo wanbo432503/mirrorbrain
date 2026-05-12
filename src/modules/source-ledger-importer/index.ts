@@ -318,8 +318,17 @@ function parseBrowserLedgerPayload(payload: unknown): BrowserLedgerPayload {
     throw new Error('payload must be an object.');
   }
 
+  const id = payload.id;
+
+  if (
+    (typeof id !== 'string' || id.trim().length === 0) &&
+    typeof id !== 'number'
+  ) {
+    throw new Error('payload.id must be a string or number.');
+  }
+
   return {
-    id: requireStringField(payload, 'id', 'payload.id'),
+    id: String(id),
     title: requireStringField(payload, 'title', 'payload.title'),
     url: requireStringField(payload, 'url', 'payload.url'),
     page_content: requireStringField(
@@ -808,9 +817,13 @@ export function importSourceLedgerText(
   const importedEvents: MemoryEvent[] = [];
   const auditEvents: SourceAuditEvent[] = [];
   const lines = splitLedgerLines(input.ledgerText);
-  const startLineNumber =
+  const checkpointLineNumber =
     input.checkpoint?.ledgerPath === input.ledgerPath
       ? input.checkpoint.nextLineNumber
+      : null;
+  const startLineNumber =
+    checkpointLineNumber !== null && checkpointLineNumber <= lines.length + 1
+      ? checkpointLineNumber
       : 1;
   let nextLineNumber = startLineNumber;
 
