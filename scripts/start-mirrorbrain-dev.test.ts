@@ -405,7 +405,8 @@ describe('start mirrorbrain dev runtime', () => {
       })),
       publishKnowledgeArticleDraft: vi.fn(async () => ({
         article: {
-          id: 'knowledge-article:example:v1',
+          id: 'knowledge-article:article-project-example-topic-example-example:v1',
+          articleId: 'article:project-example:topic-example:example',
           projectId: 'project:example',
           topicId: 'topic:example',
           title: 'Example',
@@ -622,8 +623,9 @@ describe('start mirrorbrain dev runtime', () => {
           })),
           publishKnowledgeArticleDraft: vi.fn(async () => ({
             article: {
-              id: 'knowledge-article:example:v1',
-              projectId: 'project:example',
+              id: 'knowledge-article:article-project-example-topic-example-example:v1',
+          articleId: 'article:project-example:topic-example:example',
+          projectId: 'project:example',
               topicId: 'topic:example',
               title: 'Example',
               summary: '',
@@ -817,8 +819,9 @@ describe('start mirrorbrain dev runtime', () => {
           })),
           publishKnowledgeArticleDraft: vi.fn(async () => ({
             article: {
-              id: 'knowledge-article:example:v1',
-              projectId: 'project:example',
+              id: 'knowledge-article:article-project-example-topic-example-example:v1',
+          articleId: 'article:project-example:topic-example:example',
+          projectId: 'project:example',
               topicId: 'topic:example',
               title: 'Example',
               summary: '',

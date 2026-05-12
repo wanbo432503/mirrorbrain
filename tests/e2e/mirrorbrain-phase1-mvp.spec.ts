@@ -18,7 +18,7 @@ test('runs the phase 1 MVP review flow through the standalone UI', async ({
 
     await page.getByRole('button', { name: 'Import Sources' }).click();
     await expect(
-      page.getByText('Source import completed: 1 events imported from 1 ledgers.'),
+      page.getByText('Source import completed: 1 events imported from 1 ledgers'),
     ).toBeVisible();
 
     await createAndKeepFixtureCandidate(page);
