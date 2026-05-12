@@ -777,6 +777,41 @@ Verification:
 
 - `src/modules/daily-review-knowledge/index.test.ts`
 
+### `src/modules/knowledge-article`
+
+Purpose: implement the Phase 4 Project -> Topic -> Knowledge Article draft and
+publish model.
+
+Responsibilities:
+
+- Generate `KnowledgeArticleDraft` values from reviewed work sessions.
+- Preserve reviewed work-session and memory-event provenance.
+- Carry topic and article operation proposals on drafts.
+- Publish drafts into project/topic article versions.
+- Return superseded prior current-best versions when publishing updates.
+
+Inputs:
+
+- Reviewed work sessions, draft title/summary/body content, topic proposals,
+  article operation proposals, final topic assignment, publisher metadata, and
+  existing article versions for a project/topic.
+
+Outputs:
+
+- `KnowledgeArticleDraft`, published `KnowledgeArticle`, optional `Topic`, and
+  optional superseded article version.
+
+Failure modes and constraints:
+
+- Draft generation rejects discarded sessions and mixed-project inputs.
+- Durable topic creation requires confirmed publish-time assignment.
+- The module does not own persistence, UI correction, LLM generation, or skill
+  generation.
+
+Verification:
+
+- `src/modules/knowledge-article/index.test.ts`
+
 ### `src/modules/knowledge-generation-llm`
 
 Purpose: synthesize richer knowledge drafts using reviewed memories and page
