@@ -17,6 +17,7 @@ import type {
   SourceLedgerKind,
 } from '../../modules/source-ledger-importer/index.js';
 import type {
+  SourceInstanceConfig,
   SourceInstanceSummary,
 } from '../../integrations/source-ledger-state-store/index.js';
 import type {
@@ -47,6 +48,12 @@ interface MirrorBrainHttpService {
     sourceInstanceId?: string;
   }): Promise<SourceAuditEvent[]>;
   listSourceInstanceSummaries?(): Promise<SourceInstanceSummary[]>;
+  updateSourceInstanceConfig?(config: {
+    sourceKind: SourceLedgerKind;
+    sourceInstanceId: string;
+    enabled: boolean;
+    updatedBy: string;
+  }): Promise<SourceInstanceConfig>;
   listMemoryEvents(input?: {
     page?: number;
     pageSize?: number;
@@ -524,6 +531,24 @@ const sourceInstanceSummarySchema = {
     'recorderStatus',
     'importedCount',
     'skippedCount',
+  ],
+} as const;
+
+const sourceInstanceConfigSchema = {
+  type: 'object',
+  properties: {
+    sourceKind: { type: 'string' },
+    sourceInstanceId: { type: 'string' },
+    enabled: { type: 'boolean' },
+    updatedAt: { type: 'string' },
+    updatedBy: { type: 'string' },
+  },
+  required: [
+    'sourceKind',
+    'sourceInstanceId',
+    'enabled',
+    'updatedAt',
+    'updatedBy',
   ],
 } as const;
 
@@ -1112,6 +1137,54 @@ export async function startMirrorBrainHttpServer(
 
       return {
         items: await input.service.listSourceInstanceSummaries(),
+      };
+    },
+  );
+
+  app.patch<{
+    Body: {
+      sourceKind: SourceLedgerKind;
+      sourceInstanceId: string;
+      enabled: boolean;
+      updatedBy: string;
+    };
+  }>(
+    '/sources/config',
+    {
+      schema: {
+        summary: 'Update Phase 4 source instance configuration',
+        body: {
+          type: 'object',
+          properties: {
+            sourceKind: { type: 'string' },
+            sourceInstanceId: { type: 'string' },
+            enabled: { type: 'boolean' },
+            updatedBy: { type: 'string' },
+          },
+          required: ['sourceKind', 'sourceInstanceId', 'enabled', 'updatedBy'],
+        },
+        response: {
+          200: createArtifactResponseSchema('config', sourceInstanceConfigSchema),
+          501: {
+            type: 'object',
+            properties: {
+              message: { type: 'string' },
+            },
+            required: ['message'],
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      if (input.service.updateSourceInstanceConfig === undefined) {
+        reply.code(501);
+        return {
+          message: 'Source configuration is not available.',
+        };
+      }
+
+      return {
+        config: await input.service.updateSourceInstanceConfig(request.body),
       };
     },
   );

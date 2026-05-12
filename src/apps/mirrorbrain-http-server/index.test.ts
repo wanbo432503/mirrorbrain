@@ -337,6 +337,13 @@ describe('mirrorbrain http server', () => {
         checkpointSummary: 'ledgers/2026-05-12/browser.jsonl next line 2',
       },
     ]);
+    const updateSourceInstanceConfig = vi.fn(async () => ({
+      sourceKind: 'browser' as const,
+      sourceInstanceId: 'chrome-main',
+      enabled: false,
+      updatedAt: '2026-05-12T11:00:00.000Z',
+      updatedBy: 'mirrorbrain-web',
+    }));
     const service = {
       service: {
         status: 'running' as const,
@@ -361,6 +368,7 @@ describe('mirrorbrain http server', () => {
       importSourceLedgers,
       listSourceAuditEvents,
       listSourceInstanceSummaries,
+      updateSourceInstanceConfig,
     };
 
     const server = await startMirrorBrainHttpServer({
@@ -377,6 +385,17 @@ describe('mirrorbrain http server', () => {
     const auditBody = await auditResponse.json();
     const statusResponse = await fetch(`${server.origin}/sources/status`);
     const statusBody = await statusResponse.json();
+    const configResponse = await fetch(`${server.origin}/sources/config`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        sourceKind: 'browser',
+        sourceInstanceId: 'chrome-main',
+        enabled: false,
+        updatedBy: 'mirrorbrain-web',
+      }),
+    });
+    const configBody = await configResponse.json();
 
     expect(importResponse.status).toBe(202);
     expect(importBody).toEqual({
@@ -416,6 +435,22 @@ describe('mirrorbrain http server', () => {
           checkpointSummary: 'ledgers/2026-05-12/browser.jsonl next line 2',
         },
       ],
+    });
+    expect(configResponse.status).toBe(200);
+    expect(configBody).toEqual({
+      config: {
+        sourceKind: 'browser',
+        sourceInstanceId: 'chrome-main',
+        enabled: false,
+        updatedAt: '2026-05-12T11:00:00.000Z',
+        updatedBy: 'mirrorbrain-web',
+      },
+    });
+    expect(updateSourceInstanceConfig).toHaveBeenCalledWith({
+      sourceKind: 'browser',
+      sourceInstanceId: 'chrome-main',
+      enabled: false,
+      updatedBy: 'mirrorbrain-web',
     });
     expect(listSourceAuditEvents).toHaveBeenCalledWith({
       sourceKind: 'browser',

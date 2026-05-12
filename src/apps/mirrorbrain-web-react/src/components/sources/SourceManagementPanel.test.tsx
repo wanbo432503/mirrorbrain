@@ -47,6 +47,13 @@ describe('SourceManagementPanel', () => {
         changedLedgerCount: 1,
         ledgerResults: [],
       })),
+      updateSourceConfig: vi.fn(async () => ({
+        sourceKind: 'browser' as const,
+        sourceInstanceId: 'chrome-main',
+        enabled: false,
+        updatedAt: '2026-05-12T11:00:00.000Z',
+        updatedBy: 'mirrorbrain-web',
+      })),
       listMemory: vi.fn(async () => ({
         items: [
           {
@@ -99,6 +106,18 @@ describe('SourceManagementPanel', () => {
     expect(screen.getByText('Skipped invalid source ledger line.')).not.toBeNull()
 
     await userEvent.click(screen.getByRole('tab', { name: 'Settings' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Disable Source' }))
+
+    await waitFor(() => {
+      expect(api.updateSourceConfig).toHaveBeenCalledWith({
+        sourceKind: 'browser',
+        sourceInstanceId: 'chrome-main',
+        enabled: false,
+        updatedBy: 'mirrorbrain-web',
+      })
+    })
+    expect(await screen.findByText('Source disabled.')).not.toBeNull()
+
     await userEvent.click(screen.getByRole('button', { name: 'Import Now' }))
 
     await waitFor(() => {
@@ -107,7 +126,7 @@ describe('SourceManagementPanel', () => {
     expect(
       await screen.findByText('Imported 1 source ledger event across 1 scanned ledger.')
     ).not.toBeNull()
-    expect(api.listSourceStatuses).toHaveBeenCalledTimes(2)
+    expect(api.listSourceStatuses).toHaveBeenCalledTimes(3)
     expect(api.listSourceAuditEvents).toHaveBeenCalledWith({
       sourceKind: 'browser',
       sourceInstanceId: 'chrome-main',

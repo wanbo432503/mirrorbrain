@@ -347,6 +347,7 @@ describe('start mirrorbrain dev runtime', () => {
       })),
       listSourceAuditEvents: vi.fn(async () => []),
       listSourceInstanceSummaries: vi.fn(async () => []),
+      updateSourceInstanceConfig: vi.fn(),
       generateSkillDraftFromReviewedMemories: vi.fn(async () => ({
         id: 'skill-draft:reviewed:candidate:browser:aw-event-1',
         approvalState: 'draft' as const,
@@ -509,6 +510,7 @@ describe('start mirrorbrain dev runtime', () => {
           })),
           listSourceAuditEvents: vi.fn(async () => []),
           listSourceInstanceSummaries: vi.fn(async () => []),
+          updateSourceInstanceConfig: vi.fn(),
           generateSkillDraftFromReviewedMemories: vi.fn(),
           publishKnowledge: vi.fn(),
           publishSkillDraft: vi.fn(),
@@ -640,6 +642,7 @@ describe('start mirrorbrain dev runtime', () => {
           })),
           listSourceAuditEvents: vi.fn(async () => []),
           listSourceInstanceSummaries: vi.fn(async () => []),
+          updateSourceInstanceConfig: vi.fn(),
           generateSkillDraftFromReviewedMemories: vi.fn(),
           publishKnowledge: vi.fn(),
           publishSkillDraft: vi.fn(),

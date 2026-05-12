@@ -59,6 +59,7 @@ export default function SourceManagementPanel({
   const [recentMemoryEvents, setRecentMemoryEvents] = useState<MemoryEvent[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isImporting, setIsImporting] = useState(false)
+  const [isUpdatingConfig, setIsUpdatingConfig] = useState(false)
   const [feedback, setFeedback] = useState<string | null>(null)
 
   const selectedSource =
@@ -145,6 +146,29 @@ export default function SourceManagementPanel({
       await loadSources()
     } finally {
       setIsImporting(false)
+    }
+  }
+
+  const handleToggleSourceEnabled = async () => {
+    if (selectedSource === null) {
+      return
+    }
+
+    const enabled = selectedSource.lifecycleStatus === 'disabled'
+    setIsUpdatingConfig(true)
+    setFeedback(null)
+
+    try {
+      await sourceApi.updateSourceConfig({
+        sourceKind: selectedSource.sourceKind,
+        sourceInstanceId: selectedSource.sourceInstanceId,
+        enabled,
+        updatedBy: 'mirrorbrain-web',
+      })
+      setFeedback(enabled ? 'Source enabled.' : 'Source disabled.')
+      await loadSources()
+    } finally {
+      setIsUpdatingConfig(false)
     }
   }
 
@@ -294,9 +318,11 @@ export default function SourceManagementPanel({
                   <span>{event.severity}</span>
                 </div>
                 <p className="mt-1 text-inkMuted-80">{event.message}</p>
-                <p className="mt-1 break-words text-xs text-inkMuted-80">
-                  {event.ledgerPath}:{event.lineNumber}
-                </p>
+                {event.ledgerPath.length > 0 && (
+                  <p className="mt-1 break-words text-xs text-inkMuted-80">
+                    {event.ledgerPath}:{event.lineNumber}
+                  </p>
+                )}
               </article>
             ))}
           </div>
@@ -304,6 +330,18 @@ export default function SourceManagementPanel({
 
         {selectedTab === 'Settings' && (
           <div className="mt-4 flex flex-col gap-4 text-sm">
+            <div>
+              <p>Source state</p>
+              <Button
+                variant="default"
+                loading={isUpdatingConfig}
+                onClick={handleToggleSourceEnabled}
+              >
+                {selectedSource.lifecycleStatus === 'disabled'
+                  ? 'Enable Source'
+                  : 'Disable Source'}
+              </Button>
+            </div>
             <div>
               <p>Ledger import</p>
               <Button variant="primary" loading={isImporting} onClick={handleImportNow}>

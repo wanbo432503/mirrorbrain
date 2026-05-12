@@ -138,6 +138,7 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and an
   - Source instance list backed by `/sources/status`
   - Recent memory records backed by `/memory` source filters
   - Source-specific audit events backed by `/sources/audit`
+  - Enable / disable source action backed by `/sources/config`
   - Manual `Import Now` action backed by `/sources/import`
   - Operational source UI remains separate from memory, knowledge, and skill outputs
 

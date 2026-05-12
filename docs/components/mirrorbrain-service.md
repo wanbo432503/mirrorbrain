@@ -113,7 +113,8 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
 - if no external authorization-scope lookup is injected at startup, the runtime service bootstraps narrow active scopes for the configured browser and shell scope ids; durable scope persistence remains outside this service component
 - if no page-content capture authorization dependency is injected at startup, readable page text backfill is denied by default while browser activity memory capture can still proceed
 - shell sync is currently explicit only; it does not start a shell polling loop or discover shell history paths automatically
-- Phase 4 source-ledger import is currently explicit/manual through the service contract; the 30-minute scheduler wiring belongs to the next runtime slice
+- Phase 4 source-ledger import is available manually through the service contract and runs on the runtime scheduler every 30 minutes by default
+- source enable/disable updates are persisted and audited, but recorder supervision has not yet enforced disabled state against live recorder processes
 - source-ledger state derives source summaries from checkpoint and audit history; recorder supervision has not yet provided real recorder status
 - the retrieval contract now accepts lightweight query and filter input, but still uses minimal result shaping rather than mature ranking
 - raw memory list endpoints can fall back to workspace-cached memory-event files when OpenViking reads fail, so event history may appear before the corresponding OpenViking-backed retrieval views fully recover

@@ -495,6 +495,44 @@ Notes:
 - Source audit/status records are operational metadata, not user work memory.
 - Recorder status is `unknown` until recorder supervision is wired.
 
+### `PATCH /sources/config`
+
+Updates source-instance enablement configuration and writes a corresponding
+source audit event.
+
+Request:
+
+```json
+{
+  "sourceKind": "browser",
+  "sourceInstanceId": "chrome-main",
+  "enabled": false,
+  "updatedBy": "mirrorbrain-web"
+}
+```
+
+Response:
+
+```json
+{
+  "config": {
+    "sourceKind": "browser",
+    "sourceInstanceId": "chrome-main",
+    "enabled": false,
+    "updatedAt": "2026-05-12T11:00:00.000Z",
+    "updatedBy": "mirrorbrain-web"
+  }
+}
+```
+
+Notes:
+
+- Disabling a source stops future acquisition once recorder supervision honors
+  the config. It does not delete existing ledgers, imported memory events, or
+  derived artifacts.
+- The update is auditable through `GET /sources/audit` as `source-enabled` or
+  `source-disabled`.
+
 ## Candidate And Review Endpoints
 
 ### `GET /candidate-memories`

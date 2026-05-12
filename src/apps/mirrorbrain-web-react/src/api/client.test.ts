@@ -190,6 +190,18 @@ describe('createMirrorBrainBrowserApi', () => {
             ledgerResults: [],
           },
         }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          config: {
+            sourceKind: 'browser',
+            sourceInstanceId: 'chrome-main',
+            enabled: false,
+            updatedAt: '2026-05-12T11:00:00.000Z',
+            updatedBy: 'mirrorbrain-web',
+          },
+        }),
       }) as unknown as typeof fetch;
     vi.stubGlobal('fetch', fetchMock);
 
@@ -211,6 +223,17 @@ describe('createMirrorBrainBrowserApi', () => {
       importedCount: 1,
       scannedLedgerCount: 1,
     });
+    await expect(
+      api.updateSourceConfig?.({
+        sourceKind: 'browser',
+        sourceInstanceId: 'chrome-main',
+        enabled: false,
+        updatedBy: 'mirrorbrain-web',
+      }),
+    ).resolves.toMatchObject({
+      enabled: false,
+      updatedBy: 'mirrorbrain-web',
+    });
 
     expect(fetchMock).toHaveBeenNthCalledWith(1, 'http://localhost:3000/sources/status');
     expect(fetchMock).toHaveBeenNthCalledWith(
@@ -221,6 +244,19 @@ describe('createMirrorBrainBrowserApi', () => {
       3,
       'http://localhost:3000/sources/import',
       expect.objectContaining({ method: 'POST' }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      4,
+      'http://localhost:3000/sources/config',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({
+          sourceKind: 'browser',
+          sourceInstanceId: 'chrome-main',
+          enabled: false,
+          updatedBy: 'mirrorbrain-web',
+        }),
+      }),
     );
   });
 

@@ -18,6 +18,7 @@ This component is responsible for:
 - exposing source status summaries from `GET /sources/status`
 - showing recent imported memory records from `GET /memory` with source filters
 - showing source-specific audit records from `GET /sources/audit`
+- enabling or disabling source instances through `PATCH /sources/config`
 - triggering manual source ledger import through `POST /sources/import`
 - keeping the source management experience separate from memory review,
   knowledge review, and skill execution tabs
@@ -39,6 +40,7 @@ Frontend entry points:
 - `MirrorBrainWebAppApi.listMemory`
 - `MirrorBrainWebAppApi.listSourceAuditEvents`
 - `MirrorBrainWebAppApi.listSourceStatuses`
+- `MirrorBrainWebAppApi.updateSourceConfig`
 
 Backend API surfaces consumed by the component:
 
@@ -46,6 +48,7 @@ Backend API surfaces consumed by the component:
 - `GET /memory?sourceKind=...&sourceInstanceId=...`
 - `GET /sources/audit`
 - `GET /sources/status`
+- `PATCH /sources/config`
 
 The API responses use `SourceLedgerImportResult`, `SourceAuditEvent`,
 `SourceInstanceSummary`, and `MemoryEvent` from the shared React type
@@ -61,7 +64,10 @@ declarations.
    id to populate Recent Memory.
 5. The selected source detail panel displays overview, recent memory, audit,
    and settings tabs.
-6. When the user clicks `Import Now`, the app calls `POST /sources/import` and
+6. When the user enables or disables a source, the app calls
+   `PATCH /sources/config`, writes audit-backed config through the service, and
+   reloads source statuses.
+7. When the user clicks `Import Now`, the app calls `POST /sources/import` and
    then reloads source statuses.
 
 ## Failure Modes And Operational Constraints
@@ -70,8 +76,8 @@ declarations.
   source records.
 - Audit events are displayed as operational evidence only; they are not memory
   outputs and must not be used as reviewed memory, knowledge, or skill evidence.
-- Source enablement and recorder status are read-only until recorder supervision
-  and source configuration APIs are added.
+- Source enablement is persisted and audited. Recorder status remains read-only
+  until recorder supervision reports real runtime state.
 - Recent memory shows imported `MemoryEvent` records for the selected source.
   It remains read-only; review and knowledge synthesis still happen through
   their explicit workflows.

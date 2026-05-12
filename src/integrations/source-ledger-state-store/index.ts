@@ -20,6 +20,14 @@ export interface SourceInstanceSummary {
   checkpointSummary?: string;
 }
 
+export interface SourceInstanceConfig {
+  sourceKind: SourceLedgerKind;
+  sourceInstanceId: string;
+  enabled: boolean;
+  updatedAt: string;
+  updatedBy: string;
+}
+
 export interface SourceAuditEventFilter {
   sourceKind?: SourceLedgerKind;
   sourceInstanceId?: string;
@@ -34,6 +42,8 @@ export interface SourceLedgerStateStore {
   listSourceAuditEvents(
     filter: SourceAuditEventFilter,
   ): Promise<SourceAuditEvent[]>;
+  writeSourceInstanceConfig(config: SourceInstanceConfig): Promise<void>;
+  listSourceInstanceConfigs(): Promise<SourceInstanceConfig[]>;
   listSourceInstanceSummaries(): Promise<SourceInstanceSummary[]>;
 }
 
@@ -53,6 +63,10 @@ function getAuditDir(workspaceDir: string): string {
   return join(workspaceDir, 'mirrorbrain', 'source-audit-events');
 }
 
+function getConfigDir(workspaceDir: string): string {
+  return join(workspaceDir, 'mirrorbrain', 'source-instance-configs');
+}
+
 function getCheckpointPath(input: {
   workspaceDir: string;
   ledgerPath: string;
@@ -65,6 +79,17 @@ function getAuditPath(input: {
   eventId: string;
 }): string {
   return join(getAuditDir(input.workspaceDir), `${encodeFileName(input.eventId)}.json`);
+}
+
+function getConfigPath(input: {
+  workspaceDir: string;
+  sourceKind: SourceLedgerKind;
+  sourceInstanceId: string;
+}): string {
+  return join(
+    getConfigDir(input.workspaceDir),
+    `${encodeFileName(getSummaryKey(input))}.json`,
+  );
 }
 
 async function readJsonFiles<T>(directoryPath: string): Promise<T[]> {
@@ -122,6 +147,7 @@ function getSummaryKey(input: {
 function deriveSourceInstanceSummaries(input: {
   auditEvents: SourceAuditEvent[];
   checkpoints: SourceLedgerImportCheckpoint[];
+  configs: SourceInstanceConfig[];
 }): SourceInstanceSummary[] {
   const summaries = new Map<string, SourceInstanceSummary>();
 
@@ -180,6 +206,28 @@ function deriveSourceInstanceSummaries(input: {
           : summary.lastImporterScanAt;
       summary.checkpointSummary = `${checkpoint.ledgerPath} next line ${checkpoint.nextLineNumber}`;
     }
+  }
+
+  for (const config of input.configs) {
+    const key = getSummaryKey(config);
+    const existing = summaries.get(key) ?? {
+      sourceKind: config.sourceKind,
+      sourceInstanceId: config.sourceInstanceId,
+      lifecycleStatus: 'enabled' as const,
+      recorderStatus: 'unknown' as const,
+      importedCount: 0,
+      skippedCount: 0,
+    };
+
+    if (!config.enabled) {
+      existing.lifecycleStatus = 'disabled';
+      existing.recorderStatus = 'stopped';
+    } else if (existing.lifecycleStatus === 'disabled') {
+      existing.lifecycleStatus = 'enabled';
+      existing.recorderStatus = 'unknown';
+    }
+
+    summaries.set(key, existing);
   }
 
   return [...summaries.values()].sort((left, right) =>
@@ -248,17 +296,35 @@ export function createFileSourceLedgerStateStore(
         )
         .sort((left, right) => right.occurredAt.localeCompare(left.occurredAt));
     },
+    async writeSourceInstanceConfig(config) {
+      await mkdir(getConfigDir(input.workspaceDir), { recursive: true });
+      await writeFile(
+        getConfigPath({
+          workspaceDir: input.workspaceDir,
+          sourceKind: config.sourceKind,
+          sourceInstanceId: config.sourceInstanceId,
+        }),
+        JSON.stringify(config, null, 2),
+      );
+    },
+    async listSourceInstanceConfigs() {
+      return readJsonFiles<SourceInstanceConfig>(
+        getConfigDir(input.workspaceDir),
+      );
+    },
     async listSourceInstanceSummaries() {
-      const [auditEvents, checkpoints] = await Promise.all([
+      const [auditEvents, checkpoints, configs] = await Promise.all([
         readJsonFiles<SourceAuditEvent>(getAuditDir(input.workspaceDir)),
         readJsonFiles<SourceLedgerImportCheckpoint>(
           getCheckpointDir(input.workspaceDir),
         ),
+        readJsonFiles<SourceInstanceConfig>(getConfigDir(input.workspaceDir)),
       ]);
 
       return deriveSourceInstanceSummaries({
         auditEvents,
         checkpoints,
+        configs,
       });
     },
   };

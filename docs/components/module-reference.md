@@ -153,7 +153,8 @@ Responsibilities:
 - Manage shared UI state with `MirrorBrainContext` and feature hooks.
 - Provide sync controls, paginated memory event listing, daily candidate review,
   knowledge generation/regeneration/approval, knowledge graph visualization,
-  skill draft generation/editing, and operational source ledger inspection.
+  skill draft generation/editing, operational source ledger inspection, and
+  source enablement updates.
 
 Primary modules:
 
@@ -365,8 +366,8 @@ Verification:
 
 ### `src/integrations/source-ledger-state-store`
 
-Purpose: persist Phase 4 source ledger import checkpoints and operational audit
-events in local workspace files.
+Purpose: persist Phase 4 source ledger import checkpoints, operational audit
+events, and source-instance configuration in local workspace files.
 
 Responsibilities:
 
@@ -374,23 +375,28 @@ Responsibilities:
   `mirrorbrain/state/source-ledger-checkpoints/`.
 - Write `SourceAuditEvent` records under `mirrorbrain/source-audit-events/`.
 - List source audit records with source-kind and source-instance filters.
+- Write source-instance config records under
+  `mirrorbrain/source-instance-configs/`.
 - Derive source instance summaries for Source Management surfaces.
 
 Inputs:
 
-- Workspace directory, ledger path, source audit events, and audit filters.
+- Workspace directory, ledger path, source audit events, source config records,
+  and audit filters.
 
 Outputs:
 
-- Source ledger checkpoints, filtered audit records, and source instance
-  summaries.
+- Source ledger checkpoints, filtered audit records, source config records, and
+  source instance summaries.
 
 Failure modes and constraints:
 
-- Missing checkpoint and audit directories are treated as empty state.
+- Missing checkpoint, audit, and config directories are treated as empty state.
 - Corrupt JSON propagates as a read/parse failure.
 - Audit records are operational metadata and must remain separate from
   `MemoryEvent` persistence and retrieval.
+- Disabled source configs affect operational summaries only; they do not delete
+  existing memory evidence.
 
 Verification:
 

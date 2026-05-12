@@ -11,7 +11,9 @@ export type SourceLedgerKind =
 
 export type SourceAuditEventType =
   | 'entry-imported'
-  | 'schema-validation-failed';
+  | 'schema-validation-failed'
+  | 'source-enabled'
+  | 'source-disabled';
 
 export interface SourceLedgerEntry<TPayload = unknown> {
   schemaVersion: string;

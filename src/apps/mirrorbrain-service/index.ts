@@ -10,6 +10,7 @@ import {
 import {
   createFileSourceLedgerStateStore,
   type SourceAuditEventFilter,
+  type SourceInstanceConfig,
   type SourceInstanceSummary,
   type SourceLedgerStateStore,
 } from '../../integrations/source-ledger-state-store/index.js';
@@ -1186,6 +1187,37 @@ export function createMirrorBrainService(
     listSourceAuditEvents: (
       filter: SourceAuditEventFilter = {},
     ) => sourceLedgerStateStore.listSourceAuditEvents(filter),
+    updateSourceInstanceConfig: async (config: {
+      sourceKind: SourceInstanceConfig['sourceKind'];
+      sourceInstanceId: string;
+      enabled: boolean;
+      updatedBy: string;
+    }): Promise<SourceInstanceConfig> => {
+      const updatedAt = now();
+      const updatedConfig: SourceInstanceConfig = {
+        ...config,
+        updatedAt,
+      };
+      const eventType = config.enabled ? 'source-enabled' : 'source-disabled';
+
+      await sourceLedgerStateStore.writeSourceInstanceConfig(updatedConfig);
+      await sourceLedgerStateStore.writeSourceAuditEvent({
+        id: `source-audit:${eventType}:${config.sourceKind}:${config.sourceInstanceId}:${updatedAt}`,
+        eventType,
+        sourceKind: config.sourceKind,
+        sourceInstanceId: config.sourceInstanceId,
+        ledgerPath: '',
+        lineNumber: 0,
+        occurredAt: updatedAt,
+        severity: 'info',
+        message: `Source ${config.sourceKind}:${config.sourceInstanceId} ${config.enabled ? 'enabled' : 'disabled'}.`,
+        metadata: {
+          updatedBy: config.updatedBy,
+        },
+      });
+
+      return updatedConfig;
+    },
     listSourceInstanceSummaries: (): Promise<SourceInstanceSummary[]> =>
       sourceLedgerStateStore.listSourceInstanceSummaries(),
     listMemoryEvents: async (

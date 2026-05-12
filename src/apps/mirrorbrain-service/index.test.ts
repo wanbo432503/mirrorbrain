@@ -106,6 +106,8 @@ describe('mirrorbrain service', () => {
       writeSourceAuditEvent: vi.fn(async () => undefined),
       listSourceAuditEvents: vi.fn(async () => []),
       listSourceInstanceSummaries: vi.fn(async () => []),
+      writeSourceInstanceConfig: vi.fn(async () => undefined),
+      listSourceInstanceConfigs: vi.fn(async () => []),
     };
     const writeMemoryEvent = vi.fn(async () => undefined);
     const importSourceLedgers = vi.fn(async () => ({
@@ -612,6 +614,8 @@ describe('mirrorbrain service', () => {
           skippedCount: 0,
         },
       ]),
+      writeSourceInstanceConfig: vi.fn(async () => undefined),
+      listSourceInstanceConfigs: vi.fn(async () => []),
     };
     const writeMemoryEvent = vi.fn(async () => undefined);
     const importSourceLedgers = vi.fn(async (_input, dependencies) => {
@@ -704,6 +708,82 @@ describe('mirrorbrain service', () => {
     expect(stateStore.listSourceAuditEvents).toHaveBeenCalledWith({
       sourceKind: 'browser',
     });
+  });
+
+  it('updates Phase 4 source instance config with an audit event', async () => {
+    const stateStore = {
+      readCheckpoint: vi.fn(async () => null),
+      writeCheckpoint: vi.fn(async () => undefined),
+      writeSourceAuditEvent: vi.fn(async () => undefined),
+      listSourceAuditEvents: vi.fn(async () => []),
+      listSourceInstanceSummaries: vi.fn(async () => []),
+      writeSourceInstanceConfig: vi.fn(async () => undefined),
+      listSourceInstanceConfigs: vi.fn(async () => []),
+    };
+    const service = {
+      status: 'running' as const,
+      config: getMirrorBrainConfig(),
+      syncBrowserMemory: vi.fn(async () => ({
+        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:00:00.000Z',
+      })),
+      syncShellMemory: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:00:00.000Z',
+      })),
+      stop: vi.fn(),
+    };
+
+    const api = createMirrorBrainService(
+      {
+        service,
+        workspaceDir: '/tmp/mirrorbrain-workspace',
+      },
+      {
+        createSourceLedgerStateStore: vi.fn(() => stateStore),
+        listKnowledge: vi.fn(async () => []),
+        listSkillDrafts: vi.fn(async () => []),
+        now: () => '2026-05-12T11:00:00.000Z',
+      },
+    );
+
+    await expect(
+      api.updateSourceInstanceConfig({
+        sourceKind: 'browser',
+        sourceInstanceId: 'chrome-main',
+        enabled: false,
+        updatedBy: 'mirrorbrain-web',
+      }),
+    ).resolves.toEqual({
+      sourceKind: 'browser',
+      sourceInstanceId: 'chrome-main',
+      enabled: false,
+      updatedAt: '2026-05-12T11:00:00.000Z',
+      updatedBy: 'mirrorbrain-web',
+    });
+
+    expect(stateStore.writeSourceInstanceConfig).toHaveBeenCalledWith({
+      sourceKind: 'browser',
+      sourceInstanceId: 'chrome-main',
+      enabled: false,
+      updatedAt: '2026-05-12T11:00:00.000Z',
+      updatedBy: 'mirrorbrain-web',
+    });
+    expect(stateStore.writeSourceAuditEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'source-disabled',
+        sourceKind: 'browser',
+        sourceInstanceId: 'chrome-main',
+        occurredAt: '2026-05-12T11:00:00.000Z',
+        metadata: {
+          updatedBy: 'mirrorbrain-web',
+        },
+      }),
+    );
   });
 
   it('returns only the most recent imported browser events in explicit sync responses', async () => {

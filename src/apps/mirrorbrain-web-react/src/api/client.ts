@@ -8,6 +8,7 @@ import type {
   BrowserSyncSummary,
   KnowledgeGraphSnapshot,
   SourceAuditEvent,
+  SourceInstanceConfig,
   SourceInstanceSummary,
   SourceLedgerImportResult,
   SourceLedgerKind,
@@ -54,6 +55,12 @@ export interface MirrorBrainWebAppApi {
     sourceInstanceId?: string;
   }): Promise<SourceAuditEvent[]>;
   listSourceStatuses(): Promise<SourceInstanceSummary[]>;
+  updateSourceConfig(config: {
+    sourceKind: SourceLedgerKind;
+    sourceInstanceId: string;
+    enabled: boolean;
+    updatedBy: string;
+  }): Promise<SourceInstanceConfig>;
   createDailyCandidates(
     reviewDate: string,
     reviewTimeZone?: string
@@ -213,6 +220,16 @@ export function createMirrorBrainBrowserApi(
       const response = await fetch(`${baseUrl}/sources/status`);
       const body = await readJson<{ items: SourceInstanceSummary[] }>(response);
       return body.items;
+    },
+
+    async updateSourceConfig(config) {
+      const response = await fetch(`${baseUrl}/sources/config`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(config),
+      });
+      const body = await readJson<{ config: SourceInstanceConfig }>(response);
+      return body.config;
     },
 
     async createDailyCandidates(reviewDate: string, reviewTimeZone?: string) {

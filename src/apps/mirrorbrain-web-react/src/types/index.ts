@@ -58,6 +58,14 @@ export interface SourceInstanceSummary {
   checkpointSummary?: string;
 }
 
+export interface SourceInstanceConfig {
+  sourceKind: SourceLedgerKind;
+  sourceInstanceId: string;
+  enabled: boolean;
+  updatedAt: string;
+  updatedBy: string;
+}
+
 export interface MirrorBrainSyncConfig {
   pollingIntervalMs: number;
   initialBackfillHours: number;

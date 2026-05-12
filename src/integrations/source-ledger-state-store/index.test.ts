@@ -127,4 +127,43 @@ describe('source ledger state store', () => {
       },
     ]);
   });
+
+  it('persists source instance config and applies disabled state to summaries', async () => {
+    const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-state-'));
+    const store = createFileSourceLedgerStateStore({ workspaceDir });
+
+    await store.writeSourceAuditEvent(
+      createAuditEvent({
+        id: 'source-audit:browser-imported',
+        sourceKind: 'browser',
+        sourceInstanceId: 'chrome-main',
+      }),
+    );
+    await store.writeSourceInstanceConfig({
+      sourceKind: 'browser',
+      sourceInstanceId: 'chrome-main',
+      enabled: false,
+      updatedAt: '2026-05-12T11:00:00.000Z',
+      updatedBy: 'mirrorbrain-web',
+    });
+
+    await expect(store.listSourceInstanceConfigs()).resolves.toEqual([
+      {
+        sourceKind: 'browser',
+        sourceInstanceId: 'chrome-main',
+        enabled: false,
+        updatedAt: '2026-05-12T11:00:00.000Z',
+        updatedBy: 'mirrorbrain-web',
+      },
+    ]);
+    await expect(store.listSourceInstanceSummaries()).resolves.toEqual([
+      expect.objectContaining({
+        sourceKind: 'browser',
+        sourceInstanceId: 'chrome-main',
+        lifecycleStatus: 'disabled',
+        recorderStatus: 'stopped',
+        importedCount: 1,
+      }),
+    ]);
+  });
 });
