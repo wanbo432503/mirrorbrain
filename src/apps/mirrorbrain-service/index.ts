@@ -1306,6 +1306,34 @@ export function createMirrorBrainService(
       }
     }
   };
+  const importSourceLedgersForService = (): Promise<SourceLedgerImportResult> =>
+    importSourceLedgers(
+      {
+        authorizationScopeId: 'scope-source-ledger',
+        importedAt: now(),
+        workspaceDir,
+      },
+      {
+        readCheckpoint: sourceLedgerStateStore.readCheckpoint,
+        writeCheckpoint: sourceLedgerStateStore.writeCheckpoint,
+        writeMemoryEvent: async (event) => {
+          await memoryEventWriter.writeMemoryEvent(
+            createOpenVikingMemoryEventRecord(event),
+          );
+        },
+        writeSourceAuditEvent: sourceLedgerStateStore.writeSourceAuditEvent,
+        isSourceImportAllowed: async ({ sourceKind, sourceInstanceId }) => {
+          const configs = await sourceLedgerStateStore.listSourceInstanceConfigs();
+          const config = configs.find(
+            (item) =>
+              item.sourceKind === sourceKind &&
+              item.sourceInstanceId === sourceInstanceId,
+          );
+
+          return config?.enabled !== false;
+        },
+      },
+    );
   const refreshMemoryNarratives = async (
     buildNarratives: (input: { memoryEvents: MemoryEvent[] }) => MemoryNarrative[],
   ) => {
@@ -1389,34 +1417,7 @@ export function createMirrorBrainService(
 
       return summarizeImportedEvents(sync) as ShellMemorySyncResult;
     },
-    importSourceLedgers: (): Promise<SourceLedgerImportResult> =>
-      importSourceLedgers(
-        {
-          authorizationScopeId: 'scope-source-ledger',
-          importedAt: now(),
-          workspaceDir,
-        },
-        {
-          readCheckpoint: sourceLedgerStateStore.readCheckpoint,
-          writeCheckpoint: sourceLedgerStateStore.writeCheckpoint,
-          writeMemoryEvent: async (event) => {
-            await memoryEventWriter.writeMemoryEvent(
-              createOpenVikingMemoryEventRecord(event),
-            );
-          },
-          writeSourceAuditEvent: sourceLedgerStateStore.writeSourceAuditEvent,
-          isSourceImportAllowed: async ({ sourceKind, sourceInstanceId }) => {
-            const configs = await sourceLedgerStateStore.listSourceInstanceConfigs();
-            const config = configs.find(
-              (item) =>
-                item.sourceKind === sourceKind &&
-                item.sourceInstanceId === sourceInstanceId,
-            );
-
-            return config?.enabled !== false;
-          },
-        },
-      ),
+    importSourceLedgers: importSourceLedgersForService,
     listSourceAuditEvents: (
       filter: SourceAuditEventFilter = {},
     ) => sourceLedgerStateStore.listSourceAuditEvents(filter),
@@ -1828,16 +1829,9 @@ export function createMirrorBrainService(
       const candidatesForDate = existingCandidates.filter(
         (candidate) => candidate.reviewDate === reviewDate,
       );
-      const sync = await input.service.syncBrowserMemory();
-      scheduleMemoryNarrativeRefresh(sync, buildBrowserThemeNarratives);
+      const importResult = await importSourceLedgersForService();
 
-      if (sync.importedEvents && sync.importedEvents.length > 0) {
-        void updateCacheWithNewEvents(workspaceDir, baseUrl, sync.importedEvents, 'browser').catch(
-          () => undefined,
-        );
-      }
-
-      if (candidatesForDate.length > 0 && sync.importedCount === 0) {
+      if (candidatesForDate.length > 0 && importResult.importedCount === 0) {
         return candidatesForDate;
       }
 

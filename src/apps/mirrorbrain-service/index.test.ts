@@ -1440,7 +1440,7 @@ describe('mirrorbrain service', () => {
     });
   });
 
-  it('syncs browser memory before building daily candidates', async () => {
+  it('imports source ledgers before building daily candidates', async () => {
     const syncBrowserMemory = vi.fn(async () => ({
       sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
       strategy: 'incremental' as const,
@@ -1448,6 +1448,16 @@ describe('mirrorbrain service', () => {
       lastSyncedAt: '2026-04-15T00:00:00.000Z',
       importedEvents: [],
     }));
+    const importSourceLedgers = vi.fn(async () => {
+      callOrder.push('importSourceLedgers');
+      return {
+        importedCount: 3,
+        skippedCount: 0,
+        scannedLedgerCount: 1,
+        changedLedgerCount: 1,
+        ledgerResults: [],
+      };
+    });
     const service = {
       status: 'running' as const,
       config: getMirrorBrainConfig(),
@@ -1493,17 +1503,6 @@ describe('mirrorbrain service', () => {
       ];
     });
 
-    syncBrowserMemory.mockImplementation(async () => {
-      callOrder.push('syncBrowserMemory');
-      return {
-        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
-        strategy: 'incremental' as const,
-        importedCount: 3,
-        lastSyncedAt: '2026-04-15T00:00:00.000Z',
-        importedEvents: [],
-      };
-    });
-
     const api = createMirrorBrainService(
       {
         service,
@@ -1521,6 +1520,7 @@ describe('mirrorbrain service', () => {
     })),
         listRawWorkspaceMemoryEvents,
         createCandidateMemories,
+        importSourceLedgers,
         publishCandidateMemory: vi.fn(async () => ({
           sourcePath: '/tmp/candidate.json',
           rootUri: 'viking://resources/candidate',
@@ -1532,9 +1532,10 @@ describe('mirrorbrain service', () => {
 
     await api.createDailyCandidateMemories('2026-04-14', 'Asia/Shanghai');
 
-    expect(syncBrowserMemory).toHaveBeenCalledTimes(1);
+    expect(importSourceLedgers).toHaveBeenCalledTimes(1);
+    expect(syncBrowserMemory).not.toHaveBeenCalled();
     expect(callOrder).toEqual([
-      'syncBrowserMemory',
+      'importSourceLedgers',
       'listRawWorkspaceMemoryEvents',
       'createCandidateMemories',
     ]);
@@ -2379,6 +2380,13 @@ describe('mirrorbrain service', () => {
     const listCandidateMemories = vi.fn(async () => existingCandidates);
     const listRawWorkspaceMemoryEvents = vi.fn(async () => []);
     const createCandidateMemories = vi.fn(() => []);
+    const importSourceLedgers = vi.fn(async () => ({
+      importedCount: 0,
+      skippedCount: 0,
+      scannedLedgerCount: 0,
+      changedLedgerCount: 0,
+      ledgerResults: [],
+    }));
 
     const api = createMirrorBrainService(
       {
@@ -2398,6 +2406,7 @@ describe('mirrorbrain service', () => {
         listCandidateMemories,
         listRawWorkspaceMemoryEvents,
         createCandidateMemories,
+        importSourceLedgers,
         publishCandidateMemory: vi.fn(async () => ({
           sourcePath: '/tmp/candidate.json',
           rootUri: 'viking://resources/candidate',
@@ -2410,13 +2419,14 @@ describe('mirrorbrain service', () => {
     const result = await api.createDailyCandidateMemories('2026-04-12', 'Asia/Shanghai');
 
     expect(result).toEqual(existingCandidates);
-    expect(service.syncBrowserMemory).toHaveBeenCalledTimes(1);
+    expect(importSourceLedgers).toHaveBeenCalledTimes(1);
+    expect(service.syncBrowserMemory).not.toHaveBeenCalled();
 
     expect(listRawWorkspaceMemoryEvents).not.toHaveBeenCalled();
     expect(createCandidateMemories).not.toHaveBeenCalled();
   });
 
-  it('regenerates existing daily candidates after browser sync imports newer events', async () => {
+  it('regenerates existing daily candidates after source ledger import adds newer events', async () => {
     const service = {
       status: 'running' as const,
       config: getMirrorBrainConfig(),
@@ -2509,6 +2519,13 @@ describe('mirrorbrain service', () => {
     const listCandidateMemories = vi.fn(async () => [existingCandidate]);
     const listRawWorkspaceMemoryEvents = vi.fn(async () => memoryEvents);
     const createCandidateMemories = vi.fn(() => regeneratedCandidates);
+    const importSourceLedgers = vi.fn(async () => ({
+      importedCount: 1,
+      skippedCount: 0,
+      scannedLedgerCount: 1,
+      changedLedgerCount: 1,
+      ledgerResults: [],
+    }));
     const publishCandidateMemory = vi.fn(async () => ({
       sourcePath: '/tmp/candidate.json',
       rootUri: 'viking://resources/candidate',
@@ -2532,6 +2549,7 @@ describe('mirrorbrain service', () => {
         listCandidateMemories,
         listRawWorkspaceMemoryEvents,
         createCandidateMemories,
+        importSourceLedgers,
         publishCandidateMemory,
         listKnowledge: vi.fn(async () => []),
         listSkillDrafts: vi.fn(async () => []),
@@ -2541,7 +2559,8 @@ describe('mirrorbrain service', () => {
     const result = await api.createDailyCandidateMemories('2026-05-10', 'Asia/Shanghai');
 
     expect(result).toEqual(regeneratedCandidates);
-    expect(service.syncBrowserMemory).toHaveBeenCalledTimes(1);
+    expect(importSourceLedgers).toHaveBeenCalledTimes(1);
+    expect(service.syncBrowserMemory).not.toHaveBeenCalled();
     expect(listRawWorkspaceMemoryEvents).toHaveBeenCalledTimes(1);
     expect(createCandidateMemories).toHaveBeenCalledWith({
       reviewDate: '2026-05-10',
@@ -2669,6 +2688,13 @@ describe('mirrorbrain service', () => {
         reviewDate: '2026-05-10',
       }),
     ]);
+    const importSourceLedgers = vi.fn(async () => ({
+      importedCount: 1,
+      skippedCount: 0,
+      scannedLedgerCount: 1,
+      changedLedgerCount: 1,
+      ledgerResults: [],
+    }));
 
     const api = createMirrorBrainService(
       {
@@ -2687,6 +2713,7 @@ describe('mirrorbrain service', () => {
         listKnowledge: vi.fn(async () => [publishedKnowledge]),
         listReviewedMemories: vi.fn(async () => [reviewedMemory]),
         createCandidateMemories,
+        importSourceLedgers,
         publishCandidateMemory: vi.fn(async () => ({
           sourcePath: '/tmp/candidate.json',
           rootUri: 'viking://resources/candidate',

@@ -64,9 +64,9 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 17. List Knowledge Article history for a project/topic pair.
 18. List raw imported memory when review-oriented workflows need event-level records, preferring OpenViking-backed reads and falling back to workspace-cached memory-event files when storage reads fail.
 19. Forward `openclaw` memory retrieval calls through the configured OpenViking base URL and return shaped retrieval results.
-20. Before daily candidate generation or refresh, run an explicit browser-memory sync so the workspace raw-event cache reflects the latest ActivityWatch browser history.
+20. Before daily candidate generation or refresh, run Phase 4 source-ledger import so the workspace raw-event cache reflects newly recorded daily JSONL ledgers.
 13. If candidates already exist for a review date and the sync imports no new browser events, return the existing candidates without rebuilding them.
-14. If candidates already exist for a review date and the sync imports new browser events, rebuild the daily candidates from current raw workspace memory history so late-day URLs are included.
+14. If candidates already exist for a review date and source-ledger import adds new memory events, rebuild the daily candidates from current raw workspace memory history so late-day activity is included.
 15. Before rebuilding daily candidates, exclude memory events and browser URLs that are already linked through reviewed memories to published knowledge so previously synthesized work is not clustered again.
 16. Generate daily task-oriented candidate streams for a requested review date, using raw workspace memory history rather than the UI display list.
 17. Before candidate generation, enrich browser events with stored `browser-page-content` text when a page artifact is available in the workspace so review grouping can use page semantics instead of URL/title alone.
@@ -109,8 +109,8 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
 - unit tests verify review-oriented flows still use raw memory event listing where needed
 - unit tests verify raw memory reads fall back to workspace-cached events when OpenViking reads fail
 - unit and integration tests verify daily candidate memories can be created and published through the service contract
-- unit tests verify daily candidate generation syncs browser history before reading workspace raw events
-- unit tests verify existing daily candidates are reused when sync imports no new browser events and regenerated when sync imports new browser events
+- unit tests verify daily candidate generation imports source ledgers before reading workspace raw events
+- unit tests verify existing daily candidates are reused when source-ledger import adds no new events and regenerated when source-ledger import adds new events
 - unit tests verify daily candidate regeneration excludes memory events and URLs already consumed by published knowledge
 - unit and integration tests verify candidate review suggestions stay suggestion-only
 - unit and integration tests verify explicit keep and discard review decisions publish reviewed memory artifacts through the service contract
