@@ -131,4 +131,101 @@ describe('source ledger importer', () => {
       updatedAt: '2026-05-12T10:31:00.000Z',
     });
   });
+
+  it('normalizes every Phase 4 built-in source kind into MemoryEvent content V2 records', () => {
+    const result = importSourceLedgerText({
+      authorizationScopeId: 'scope-phase4',
+      importedAt: '2026-05-12T11:00:00.000Z',
+      ledgerPath: 'ledgers/2026-05-12/mixed.jsonl',
+      ledgerText: [
+        '{"schemaVersion":"1","sourceKind":"file-activity","sourceInstanceId":"finder-main","occurredAt":"2026-05-12T10:10:00.000Z","payload":{"filePath":"/Users/wanbo/Notes/phase4.md","fileName":"phase4.md","fileType":"markdown","mimeType":"text/markdown","openedByApp":"Cursor","sizeBytes":1200,"modifiedAt":"2026-05-12T10:09:00.000Z","contentSummary":"Phase 4 ledger architecture notes.","fullContentRef":"workspace-file:///Users/wanbo/Notes/phase4.md"}}',
+        '{"schemaVersion":"1","sourceKind":"screenshot","sourceInstanceId":"desktop","occurredAt":"2026-05-12T10:11:00.000Z","payload":{"title":"Architecture Diagram","appName":"Preview","windowTitle":"phase4.png","imagePath":"/tmp/phase4.png","imageRetained":true,"imageSize":{"width":1440,"height":900},"ocrSummary":"Phase 4 ledgers and importer","visionSummary":"A diagram showing recorders writing ledgers into MirrorBrain."}}',
+        '{"schemaVersion":"1","sourceKind":"shell","sourceInstanceId":"iterm-main","occurredAt":"2026-05-12T10:12:00.000Z","payload":{"sessionId":"shell-session-1","commandIndex":7,"command":"pnpm test","cwd":"/Users/wanbo/Workspace/mirrorbrain","exitCode":0,"shellType":"zsh","terminalApp":"iTerm2","redactionStatus":"none"}}',
+        '{"schemaVersion":"1","sourceKind":"agent-transcript","sourceInstanceId":"codex-local","occurredAt":"2026-05-12T10:13:00.000Z","payload":{"transcriptPath":"/Users/wanbo/.codex/sessions/session.jsonl","sessionId":"codex-1","agentIdentity":"Codex","userTask":"Implement Phase 4 importer","messageRange":{"start":3,"end":42},"toolCallSummary":"Read files, edited importer, ran tests.","finalResultSummary":"Importer implemented and verified.","redactionStatus":"none","updatedAt":"2026-05-12T10:13:30.000Z"}}',
+      ].join('\n'),
+    });
+
+    expect(result.importedEvents).toEqual([
+      expect.objectContaining({
+        sourceType: 'file-activity',
+        content: expect.objectContaining({
+          title: 'phase4.md',
+          summary: 'Phase 4 ledger architecture notes.',
+          contentKind: 'file-activity',
+          bodyRef: {
+            kind: 'workspace-file',
+            uri: 'workspace-file:///Users/wanbo/Notes/phase4.md',
+            mediaType: 'text/markdown',
+            sizeBytes: 1200,
+          },
+          entities: expect.arrayContaining([
+            {
+              kind: 'file',
+              label: '/Users/wanbo/Notes/phase4.md',
+              ref: '/Users/wanbo/Notes/phase4.md',
+            },
+          ]),
+        }),
+      }),
+      expect.objectContaining({
+        sourceType: 'screenshot',
+        content: expect.objectContaining({
+          title: 'Architecture Diagram',
+          summary: 'A diagram showing recorders writing ledgers into MirrorBrain.',
+          contentKind: 'screenshot',
+          bodyRef: {
+            kind: 'workspace-file',
+            uri: '/tmp/phase4.png',
+          },
+          entities: expect.arrayContaining([
+            {
+              kind: 'app',
+              label: 'Preview',
+              ref: 'Preview',
+            },
+          ]),
+        }),
+      }),
+      expect.objectContaining({
+        sourceType: 'shell',
+        content: expect.objectContaining({
+          title: 'pnpm test',
+          summary: 'zsh command in /Users/wanbo/Workspace/mirrorbrain exited with code 0.',
+          contentKind: 'shell-command',
+          entities: expect.arrayContaining([
+            {
+              kind: 'command',
+              label: 'pnpm test',
+              ref: 'pnpm test',
+            },
+            {
+              kind: 'file',
+              label: '/Users/wanbo/Workspace/mirrorbrain',
+              ref: '/Users/wanbo/Workspace/mirrorbrain',
+            },
+          ]),
+        }),
+      }),
+      expect.objectContaining({
+        sourceType: 'agent-transcript',
+        content: expect.objectContaining({
+          title: 'Implement Phase 4 importer',
+          summary: 'Importer implemented and verified.',
+          contentKind: 'agent-transcript',
+          bodyRef: {
+            kind: 'workspace-file',
+            uri: '/Users/wanbo/.codex/sessions/session.jsonl',
+          },
+          entities: expect.arrayContaining([
+            {
+              kind: 'agent',
+              label: 'Codex',
+              ref: 'codex-1',
+            },
+          ]),
+        }),
+      }),
+    ]);
+    expect(result.auditEvents).toHaveLength(4);
+  });
 });

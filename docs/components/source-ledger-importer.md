@@ -5,7 +5,8 @@
 The source ledger importer is the first Phase 4 acquisition boundary. It reads
 MirrorBrain-owned daily JSONL ledger text, validates ledger entry envelopes, and
 normalizes valid entries into source-attributed `MemoryEvent` records. The
-initial implementation supports the built-in `browser` source kind.
+implementation supports the initial Phase 4 built-in source kinds: `browser`,
+`file-activity`, `screenshot`, `shell`, and `agent-transcript`.
 
 This component is intentionally downstream of recorders. It does not collect
 browser, file, shell, screenshot, or agent activity. Recorders write ledgers;
@@ -20,8 +21,9 @@ This component is responsible for:
 - validating source-specific payloads for supported built-in source kinds
 - deriving deterministic `sourceRef` and `MemoryEvent.id` values from stable
   source fields
-- normalizing browser ledger entries into `MemoryEvent.content.contentKind =
-  "browser-page"`
+- normalizing source ledger entries into `MemoryEvent.content.contentKind`
+  values such as `browser-page`, `file-activity`, `screenshot`,
+  `shell-command`, and `agent-transcript`
 - emitting `SourceAuditEvent` records for imported entries and skipped bad
   lines
 - advancing a line-number checkpoint so manual re-import can process only new
@@ -60,7 +62,7 @@ records, operational audit events, and the next checkpoint.
 
 ## Key Data Structures
 
-Browser ledger payloads currently require:
+Browser ledger payloads require:
 
 ```ts
 interface BrowserLedgerPayload {
@@ -79,6 +81,16 @@ Imported browser entries become memory events with:
 - URL entity attribution in `content.entities`
 - browser payload details under `content.sourceSpecific`
 
+Other supported payloads map into the same V2 content shape:
+
+- file activity: file entity, optional full-content `bodyRef`, and
+  `contentKind = "file-activity"`
+- screenshot: app entity, optional retained-image `bodyRef`, and
+  `contentKind = "screenshot"`
+- shell: command/cwd entities and `contentKind = "shell-command"`
+- agent transcript: agent entity, transcript `bodyRef`, and
+  `contentKind = "agent-transcript"`
+
 ## Dependencies
 
 - Node `crypto` for deterministic SHA-256 based identity hashes.
@@ -93,8 +105,8 @@ belong in later workflow or integration layers.
 - Schema-invalid entries are skipped with warning audit events and a truncated
   bad-line sample.
 - A bad line does not block subsequent ledger entries.
-- Unsupported source kinds are treated as schema failures until their built-in
-  plugins are implemented.
+- Unsupported future source kinds are treated as schema failures until their
+  built-in normalizers are implemented.
 - Checkpoints are line-number based for the current text importer. A later file
   scanner may add file size, mtime, or byte-offset checks without changing this
   module's memory-event boundary.
@@ -107,5 +119,6 @@ Unit tests live beside the implementation:
 pnpm vitest run src/modules/source-ledger-importer/index.test.ts
 ```
 
-The tests cover browser ledger normalization, warning audit behavior for bad
-lines, continuation after invalid input, and checkpointed manual re-import.
+The tests cover all initial built-in source normalizers, warning audit behavior
+for bad lines, continuation after invalid input, and checkpointed manual
+re-import.

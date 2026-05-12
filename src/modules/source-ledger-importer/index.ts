@@ -48,6 +48,61 @@ interface BrowserLedgerPayload {
   page_content: string;
 }
 
+interface FileActivityLedgerPayload {
+  filePath: string;
+  fileName: string;
+  fileType: string;
+  mimeType?: string;
+  openedByApp?: string;
+  sizeBytes?: number;
+  modifiedAt?: string;
+  contentSummary: string;
+  summaryModel?: string;
+  fullContentRef?: string;
+}
+
+interface ScreenshotLedgerPayload {
+  title?: string;
+  appName?: string;
+  windowTitle?: string;
+  imagePath?: string;
+  imageRetained: boolean;
+  imageSize?: {
+    width: number;
+    height: number;
+  };
+  ocrSummary?: string;
+  visionSummary: string;
+  ocrModel?: string;
+  visionModel?: string;
+}
+
+interface ShellLedgerPayload {
+  sessionId: string;
+  commandIndex: number;
+  command: string;
+  cwd?: string;
+  exitCode?: number;
+  shellType?: string;
+  terminalApp?: string;
+  redactionStatus?: string;
+}
+
+interface AgentTranscriptLedgerPayload {
+  transcriptPath: string;
+  sessionId: string;
+  agentIdentity: string;
+  userTask: string;
+  messageRange: {
+    start: number;
+    end: number;
+  };
+  toolCallSummary?: string;
+  finalResultSummary: string;
+  redactionStatus?: string;
+  updatedAt: string;
+}
+
 interface SourceLedgerImporterInput {
   authorizationScopeId: string;
   checkpoint?: SourceLedgerImportCheckpoint | null;
@@ -171,6 +226,56 @@ function requireStringField(
   return fieldValue;
 }
 
+function optionalStringField(
+  value: Record<string, unknown>,
+  fieldName: string,
+): string | undefined {
+  const fieldValue = value[fieldName];
+
+  return typeof fieldValue === 'string' && fieldValue.length > 0
+    ? fieldValue
+    : undefined;
+}
+
+function optionalNumberField(
+  value: Record<string, unknown>,
+  fieldName: string,
+): number | undefined {
+  const fieldValue = value[fieldName];
+
+  return typeof fieldValue === 'number' && Number.isFinite(fieldValue)
+    ? fieldValue
+    : undefined;
+}
+
+function requireNumberField(
+  value: Record<string, unknown>,
+  fieldName: string,
+  displayPath: string,
+): number {
+  const fieldValue = value[fieldName];
+
+  if (typeof fieldValue !== 'number' || !Number.isFinite(fieldValue)) {
+    throw new Error(`${displayPath} must be a number.`);
+  }
+
+  return fieldValue;
+}
+
+function requireBooleanField(
+  value: Record<string, unknown>,
+  fieldName: string,
+  displayPath: string,
+): boolean {
+  const fieldValue = value[fieldName];
+
+  if (typeof fieldValue !== 'boolean') {
+    throw new Error(`${displayPath} must be a boolean.`);
+  }
+
+  return fieldValue;
+}
+
 function parseLedgerEntry(line: string): SourceLedgerEntry {
   const parsed = JSON.parse(line) as unknown;
 
@@ -219,12 +324,163 @@ function parseBrowserLedgerPayload(payload: unknown): BrowserLedgerPayload {
   };
 }
 
+function parseFileActivityLedgerPayload(
+  payload: unknown,
+): FileActivityLedgerPayload {
+  if (!isRecord(payload)) {
+    throw new Error('payload must be an object.');
+  }
+
+  return {
+    filePath: requireStringField(payload, 'filePath', 'payload.filePath'),
+    fileName: requireStringField(payload, 'fileName', 'payload.fileName'),
+    fileType: requireStringField(payload, 'fileType', 'payload.fileType'),
+    mimeType: optionalStringField(payload, 'mimeType'),
+    openedByApp: optionalStringField(payload, 'openedByApp'),
+    sizeBytes: optionalNumberField(payload, 'sizeBytes'),
+    modifiedAt: optionalStringField(payload, 'modifiedAt'),
+    contentSummary: requireStringField(
+      payload,
+      'contentSummary',
+      'payload.contentSummary',
+    ),
+    summaryModel: optionalStringField(payload, 'summaryModel'),
+    fullContentRef: optionalStringField(payload, 'fullContentRef'),
+  };
+}
+
+function parseScreenshotLedgerPayload(
+  payload: unknown,
+): ScreenshotLedgerPayload {
+  if (!isRecord(payload)) {
+    throw new Error('payload must be an object.');
+  }
+
+  const rawImageSize = payload.imageSize;
+  const imageSize = isRecord(rawImageSize)
+    ? {
+        width: requireNumberField(rawImageSize, 'width', 'payload.imageSize.width'),
+        height: requireNumberField(
+          rawImageSize,
+          'height',
+          'payload.imageSize.height',
+        ),
+      }
+    : undefined;
+
+  return {
+    title: optionalStringField(payload, 'title'),
+    appName: optionalStringField(payload, 'appName'),
+    windowTitle: optionalStringField(payload, 'windowTitle'),
+    imagePath: optionalStringField(payload, 'imagePath'),
+    imageRetained: requireBooleanField(
+      payload,
+      'imageRetained',
+      'payload.imageRetained',
+    ),
+    imageSize,
+    ocrSummary: optionalStringField(payload, 'ocrSummary'),
+    visionSummary: requireStringField(
+      payload,
+      'visionSummary',
+      'payload.visionSummary',
+    ),
+    ocrModel: optionalStringField(payload, 'ocrModel'),
+    visionModel: optionalStringField(payload, 'visionModel'),
+  };
+}
+
+function parseShellLedgerPayload(payload: unknown): ShellLedgerPayload {
+  if (!isRecord(payload)) {
+    throw new Error('payload must be an object.');
+  }
+
+  return {
+    sessionId: requireStringField(payload, 'sessionId', 'payload.sessionId'),
+    commandIndex: requireNumberField(
+      payload,
+      'commandIndex',
+      'payload.commandIndex',
+    ),
+    command: requireStringField(payload, 'command', 'payload.command'),
+    cwd: optionalStringField(payload, 'cwd'),
+    exitCode: optionalNumberField(payload, 'exitCode'),
+    shellType: optionalStringField(payload, 'shellType'),
+    terminalApp: optionalStringField(payload, 'terminalApp'),
+    redactionStatus: optionalStringField(payload, 'redactionStatus'),
+  };
+}
+
+function parseAgentTranscriptLedgerPayload(
+  payload: unknown,
+): AgentTranscriptLedgerPayload {
+  if (!isRecord(payload)) {
+    throw new Error('payload must be an object.');
+  }
+
+  if (!isRecord(payload.messageRange)) {
+    throw new Error('payload.messageRange must be an object.');
+  }
+
+  return {
+    transcriptPath: requireStringField(
+      payload,
+      'transcriptPath',
+      'payload.transcriptPath',
+    ),
+    sessionId: requireStringField(payload, 'sessionId', 'payload.sessionId'),
+    agentIdentity: requireStringField(
+      payload,
+      'agentIdentity',
+      'payload.agentIdentity',
+    ),
+    userTask: requireStringField(payload, 'userTask', 'payload.userTask'),
+    messageRange: {
+      start: requireNumberField(
+        payload.messageRange,
+        'start',
+        'payload.messageRange.start',
+      ),
+      end: requireNumberField(
+        payload.messageRange,
+        'end',
+        'payload.messageRange.end',
+      ),
+    },
+    toolCallSummary: optionalStringField(payload, 'toolCallSummary'),
+    finalResultSummary: requireStringField(
+      payload,
+      'finalResultSummary',
+      'payload.finalResultSummary',
+    ),
+    redactionStatus: optionalStringField(payload, 'redactionStatus'),
+    updatedAt: requireStringField(payload, 'updatedAt', 'payload.updatedAt'),
+  };
+}
+
 function summarizeText(text: string): string {
   const normalized = text.replace(/\s+/gu, ' ').trim();
 
   return normalized.length > 240
     ? `${normalized.slice(0, 237)}...`
     : normalized;
+}
+
+function createMemoryEventId(input: {
+  sourceKind: SourceLedgerKind;
+  sourceInstanceId: string;
+  identity: Record<string, unknown>;
+}): { id: string; sourceRef: string } {
+  const identityHash = hashValue({
+    sourceKind: input.sourceKind,
+    sourceInstanceId: input.sourceInstanceId,
+    ...input.identity,
+  });
+
+  return {
+    id: `ledger:${input.sourceKind}:${identityHash}`,
+    sourceRef: `${input.sourceKind}:${input.sourceInstanceId}:${identityHash}`,
+  };
 }
 
 function normalizeBrowserLedgerEntry(input: {
@@ -234,22 +490,21 @@ function normalizeBrowserLedgerEntry(input: {
   lineNumber: number;
 }): MemoryEvent {
   const payload = parseBrowserLedgerPayload(input.entry.payload);
-  const pageContentHash = hashValue(payload.page_content);
-  const identity = {
+  const identifiers = createMemoryEventId({
     sourceKind: input.entry.sourceKind,
     sourceInstanceId: input.entry.sourceInstanceId,
-    occurredAt: input.entry.occurredAt,
-    pageId: payload.id,
-    url: payload.url,
-    pageContentHash,
-  };
-  const identityHash = hashValue(identity);
-  const sourceRef = `browser:${input.entry.sourceInstanceId}:${identityHash}`;
+    identity: {
+      occurredAt: input.entry.occurredAt,
+      pageId: payload.id,
+      url: payload.url,
+      pageContentHash: hashValue(payload.page_content),
+    },
+  });
 
   return {
-    id: `ledger:browser:${identityHash}`,
+    id: identifiers.id,
     sourceType: 'browser',
-    sourceRef,
+    sourceRef: identifiers.sourceRef,
     timestamp: input.entry.occurredAt,
     authorizationScopeId: input.authorizationScopeId,
     content: {
@@ -277,19 +532,254 @@ function normalizeBrowserLedgerEntry(input: {
   };
 }
 
+function normalizeFileActivityLedgerEntry(input: {
+  authorizationScopeId: string;
+  entry: SourceLedgerEntry;
+  ledgerPath: string;
+  lineNumber: number;
+}): MemoryEvent {
+  const payload = parseFileActivityLedgerPayload(input.entry.payload);
+  const identifiers = createMemoryEventId({
+    sourceKind: 'file-activity',
+    sourceInstanceId: input.entry.sourceInstanceId,
+    identity: {
+      occurredAt: input.entry.occurredAt,
+      filePath: payload.filePath,
+      contentSummaryHash: hashValue(payload.contentSummary),
+      fileMetadataHash: hashValue({
+        fileName: payload.fileName,
+        fileType: payload.fileType,
+        mimeType: payload.mimeType,
+        modifiedAt: payload.modifiedAt,
+        sizeBytes: payload.sizeBytes,
+      }),
+    },
+  });
+
+  return {
+    id: identifiers.id,
+    sourceType: 'file-activity',
+    sourceRef: identifiers.sourceRef,
+    timestamp: input.entry.occurredAt,
+    authorizationScopeId: input.authorizationScopeId,
+    content: {
+      title: payload.fileName,
+      summary: summarizeText(payload.contentSummary),
+      contentKind: 'file-activity',
+      bodyRef: payload.fullContentRef
+        ? {
+            kind: 'workspace-file',
+            uri: payload.fullContentRef,
+            mediaType: payload.mimeType,
+            sizeBytes: payload.sizeBytes,
+          }
+        : undefined,
+      entities: [
+        {
+          kind: 'file',
+          label: payload.filePath,
+          ref: payload.filePath,
+        },
+        ...(payload.openedByApp
+          ? [
+              {
+                kind: 'app',
+                label: payload.openedByApp,
+                ref: payload.openedByApp,
+              },
+            ]
+          : []),
+      ],
+      sourceSpecific: payload,
+    },
+    captureMetadata: {
+      upstreamSource: 'source-ledger:file-activity',
+      checkpoint: `${input.ledgerPath}:${input.lineNumber}`,
+    },
+  };
+}
+
+function normalizeScreenshotLedgerEntry(input: {
+  authorizationScopeId: string;
+  entry: SourceLedgerEntry;
+  ledgerPath: string;
+  lineNumber: number;
+}): MemoryEvent {
+  const payload = parseScreenshotLedgerPayload(input.entry.payload);
+  const title =
+    payload.title ?? payload.windowTitle ?? payload.appName ?? 'Screenshot';
+  const identifiers = createMemoryEventId({
+    sourceKind: 'screenshot',
+    sourceInstanceId: input.entry.sourceInstanceId,
+    identity: {
+      occurredAt: input.entry.occurredAt,
+      visionSummaryHash: hashValue(payload.visionSummary),
+      imagePath: payload.imagePath,
+    },
+  });
+
+  return {
+    id: identifiers.id,
+    sourceType: 'screenshot',
+    sourceRef: identifiers.sourceRef,
+    timestamp: input.entry.occurredAt,
+    authorizationScopeId: input.authorizationScopeId,
+    content: {
+      title,
+      summary: summarizeText(payload.visionSummary),
+      contentKind: 'screenshot',
+      bodyRef:
+        payload.imageRetained && payload.imagePath
+          ? {
+              kind: 'workspace-file',
+              uri: payload.imagePath,
+            }
+          : undefined,
+      entities: [
+        ...(payload.appName
+          ? [
+              {
+                kind: 'app',
+                label: payload.appName,
+                ref: payload.appName,
+              },
+            ]
+          : []),
+      ],
+      sourceSpecific: payload,
+    },
+    captureMetadata: {
+      upstreamSource: 'source-ledger:screenshot',
+      checkpoint: `${input.ledgerPath}:${input.lineNumber}`,
+    },
+  };
+}
+
+function normalizeShellLedgerEntry(input: {
+  authorizationScopeId: string;
+  entry: SourceLedgerEntry;
+  ledgerPath: string;
+  lineNumber: number;
+}): MemoryEvent {
+  const payload = parseShellLedgerPayload(input.entry.payload);
+  const shellLabel = payload.shellType ?? 'shell';
+  const exitSummary =
+    payload.exitCode === undefined
+      ? `${shellLabel} command${payload.cwd ? ` in ${payload.cwd}` : ''}.`
+      : `${shellLabel} command${payload.cwd ? ` in ${payload.cwd}` : ''} exited with code ${payload.exitCode}.`;
+  const identifiers = createMemoryEventId({
+    sourceKind: 'shell',
+    sourceInstanceId: input.entry.sourceInstanceId,
+    identity: {
+      occurredAt: input.entry.occurredAt,
+      sessionId: payload.sessionId,
+      commandIndex: payload.commandIndex,
+      cwd: payload.cwd,
+      redactedCommandHash: hashValue(payload.command),
+    },
+  });
+
+  return {
+    id: identifiers.id,
+    sourceType: 'shell',
+    sourceRef: identifiers.sourceRef,
+    timestamp: input.entry.occurredAt,
+    authorizationScopeId: input.authorizationScopeId,
+    content: {
+      title: payload.command,
+      summary: exitSummary,
+      contentKind: 'shell-command',
+      entities: [
+        {
+          kind: 'command',
+          label: payload.command,
+          ref: payload.command,
+        },
+        ...(payload.cwd
+          ? [
+              {
+                kind: 'file',
+                label: payload.cwd,
+                ref: payload.cwd,
+              },
+            ]
+          : []),
+      ],
+      sourceSpecific: payload,
+    },
+    captureMetadata: {
+      upstreamSource: 'source-ledger:shell',
+      checkpoint: `${input.ledgerPath}:${input.lineNumber}`,
+    },
+  };
+}
+
+function normalizeAgentTranscriptLedgerEntry(input: {
+  authorizationScopeId: string;
+  entry: SourceLedgerEntry;
+  ledgerPath: string;
+  lineNumber: number;
+}): MemoryEvent {
+  const payload = parseAgentTranscriptLedgerPayload(input.entry.payload);
+  const identifiers = createMemoryEventId({
+    sourceKind: 'agent-transcript',
+    sourceInstanceId: input.entry.sourceInstanceId,
+    identity: {
+      transcriptPath: payload.transcriptPath,
+      sessionId: payload.sessionId,
+      messageRange: payload.messageRange,
+      updatedAt: payload.updatedAt,
+    },
+  });
+
+  return {
+    id: identifiers.id,
+    sourceType: 'agent-transcript',
+    sourceRef: identifiers.sourceRef,
+    timestamp: input.entry.occurredAt,
+    authorizationScopeId: input.authorizationScopeId,
+    content: {
+      title: payload.userTask,
+      summary: summarizeText(payload.finalResultSummary),
+      contentKind: 'agent-transcript',
+      bodyRef: {
+        kind: 'workspace-file',
+        uri: payload.transcriptPath,
+      },
+      entities: [
+        {
+          kind: 'agent',
+          label: payload.agentIdentity,
+          ref: payload.sessionId,
+        },
+      ],
+      sourceSpecific: payload,
+    },
+    captureMetadata: {
+      upstreamSource: 'source-ledger:agent-transcript',
+      checkpoint: `${input.ledgerPath}:${input.lineNumber}`,
+    },
+  };
+}
+
 function normalizeLedgerEntry(input: {
   authorizationScopeId: string;
   entry: SourceLedgerEntry;
   ledgerPath: string;
   lineNumber: number;
 }): MemoryEvent {
-  if (input.entry.sourceKind !== 'browser') {
-    throw new Error(
-      `Source ledger kind ${input.entry.sourceKind} is not supported yet.`,
-    );
+  switch (input.entry.sourceKind) {
+    case 'browser':
+      return normalizeBrowserLedgerEntry(input);
+    case 'file-activity':
+      return normalizeFileActivityLedgerEntry(input);
+    case 'screenshot':
+      return normalizeScreenshotLedgerEntry(input);
+    case 'shell':
+      return normalizeShellLedgerEntry(input);
+    case 'agent-transcript':
+      return normalizeAgentTranscriptLedgerEntry(input);
   }
-
-  return normalizeBrowserLedgerEntry(input);
 }
 
 function splitLedgerLines(ledgerText: string): string[] {

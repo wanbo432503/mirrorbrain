@@ -30,7 +30,8 @@ owning MirrorBrain's internal workflows.
 - ActivityWatch browser source integration.
 - Shell history source integration.
 - Generic source-plugin sync workflow with file checkpoints.
-- Initial Phase 4 source-ledger importer for browser JSONL ledgers, including
+- Initial Phase 4 source-ledger importer for browser, file activity,
+  screenshot, shell, and agent transcript JSONL ledgers, including
   deterministic memory-event normalization, bad-line audit warnings, and
   checkpointed manual re-import behavior.
 - Initial Phase 4 source-ledger import workflow that scans daily JSONL ledgers,
@@ -86,9 +87,8 @@ owning MirrorBrain's internal workflows.
 ## Not Yet Implemented
 
 - Document ingestion.
-- Phase 4 recorder supervision, scheduled ledger scanning, source management
-  UI, and non-browser ledger plugins for file activity, screenshots, shell
-  sessions, and agent transcripts.
+- Phase 4 recorder supervision, scheduled ledger scanning, and source
+  management UI.
 - `openclaw` conversation capture.
 - Durable authorization and revocation UX across source instances.
 - Source-instance and domain/path allowlists beyond the current injected
