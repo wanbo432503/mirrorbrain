@@ -78,6 +78,9 @@ these boundaries as part of the current architecture:
 - [Phase 4 Design Draft](./plans/2026-05-12-mirrorbrain-phase4-design.md):
   draft direction for multi-source ledgers, work sessions, projects, and
   atomic knowledge articles.
+- [Phase 5 Design Draft](./plans/2026-05-12-mirrorbrain-phase5-design.md):
+  draft direction for high-precision WorkSession Candidate clustering and the
+  public current-best knowledge Memory API.
 
 ## Component Documentation Policy
 
