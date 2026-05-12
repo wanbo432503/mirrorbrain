@@ -1,13 +1,22 @@
 import { KeyboardEvent } from 'react'
 
-type TabType = 'memory' | 'review' | 'knowledge' | 'skill' | 'sources'
+type TabType = 'memory' | 'review' | 'knowledge' | 'skill' | 'sources' | 'work-sessions'
 
 interface TabNavigationProps {
   activeTab: TabType
   onTabChange: (tab: TabType) => void
 }
 
-const TABS: TabType[] = ['memory', 'review', 'knowledge', 'skill', 'sources']
+const TABS: TabType[] = ['memory', 'review', 'knowledge', 'skill', 'sources', 'work-sessions']
+
+const TAB_LABELS: Record<TabType, string> = {
+  memory: 'memory',
+  review: 'review',
+  knowledge: 'knowledge',
+  skill: 'skill',
+  sources: 'sources',
+  'work-sessions': 'work sessions',
+}
 
 export default function TabNavigation({ activeTab, onTabChange }: TabNavigationProps) {
   const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
@@ -52,7 +61,7 @@ export default function TabNavigation({ activeTab, onTabChange }: TabNavigationP
               }
             `}
           >
-            {tab}
+            {TAB_LABELS[tab]}
           </button>
         )
       })}

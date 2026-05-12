@@ -312,4 +312,59 @@ describe('createMirrorBrainBrowserApi', () => {
       'http://localhost:3000/memory?page=1&pageSize=5&sourceKind=browser&sourceInstanceId=chrome-main',
     );
   });
+
+  it('calls the Phase 4 manual work-session analysis endpoint', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        analysis: {
+          analysisWindow: {
+            preset: 'last-6-hours',
+            startAt: '2026-05-12T06:00:00.000Z',
+            endAt: '2026-05-12T12:00:00.000Z',
+          },
+          generatedAt: '2026-05-12T12:00:00.000Z',
+          candidates: [
+            {
+              id: 'work-session-candidate:mirrorbrain:2026-05-12T12:00:00.000Z',
+              projectHint: 'mirrorbrain',
+              title: 'mirrorbrain work session',
+              summary: 'Imported source ledgers.',
+              memoryEventIds: ['browser-1', 'shell-1'],
+              sourceTypes: ['browser', 'shell'],
+              timeRange: {
+                startAt: '2026-05-12T10:00:00.000Z',
+                endAt: '2026-05-12T10:30:00.000Z',
+              },
+              relationHints: ['Phase 4 design', 'Run tests'],
+              reviewState: 'pending',
+            },
+          ],
+          excludedMemoryEventIds: [],
+        },
+      }),
+    })) as unknown as typeof fetch;
+    vi.stubGlobal('fetch', fetchMock);
+
+    const api = createMirrorBrainBrowserApi('http://localhost:3000');
+
+    await expect(api.analyzeWorkSessions('last-6-hours')).resolves.toMatchObject({
+      analysisWindow: {
+        preset: 'last-6-hours',
+      },
+      candidates: [
+        expect.objectContaining({
+          projectHint: 'mirrorbrain',
+          memoryEventIds: ['browser-1', 'shell-1'],
+        }),
+      ],
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://localhost:3000/work-sessions/analyze',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ preset: 'last-6-hours' }),
+      }),
+    );
+  });
 });

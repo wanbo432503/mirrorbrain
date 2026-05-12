@@ -118,6 +118,34 @@ export interface MemoryTimeRange {
   endAt: string;
 }
 
+export type AnalysisWindowPreset =
+  | 'last-6-hours'
+  | 'last-24-hours'
+  | 'last-7-days';
+
+export interface WorkSessionAnalysisWindow extends MemoryTimeRange {
+  preset: AnalysisWindowPreset;
+}
+
+export interface WorkSessionCandidate {
+  id: string;
+  projectHint: string;
+  title: string;
+  summary: string;
+  memoryEventIds: string[];
+  sourceTypes: string[];
+  timeRange: MemoryTimeRange;
+  relationHints: string[];
+  reviewState: 'pending';
+}
+
+export interface WorkSessionAnalysisResult {
+  analysisWindow: WorkSessionAnalysisWindow;
+  generatedAt: string;
+  candidates: WorkSessionCandidate[];
+  excludedMemoryEventIds: string[];
+}
+
 export interface MemoryQueryInput {
   query: string;
   timeRange?: MemoryTimeRange;

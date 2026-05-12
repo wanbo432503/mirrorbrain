@@ -170,6 +170,8 @@ Primary modules:
   rendering, topic modal, graph panel, and wikilink hover cards.
 - `components/sources/*`: Phase 4 source status, audit, and manual import
   controls.
+- `components/work-sessions/*`: Phase 4 manual work-session analysis controls
+  and pending candidate display.
 - `components/common`, `components/forms`, `components/layout`: local design
   system primitives.
 

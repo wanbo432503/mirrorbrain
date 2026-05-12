@@ -193,6 +193,24 @@ describe('App', () => {
         )
       }
 
+      if (url.endsWith('/work-sessions/analyze')) {
+        return new Response(
+          JSON.stringify({
+            analysis: {
+              analysisWindow: {
+                preset: 'last-6-hours',
+                startAt: '2026-05-12T06:00:00.000Z',
+                endAt: '2026-05-12T12:00:00.000Z',
+              },
+              generatedAt: '2026-05-12T12:00:00.000Z',
+              candidates: [],
+              excludedMemoryEventIds: [],
+            },
+          }),
+          { status: 201, headers: { 'Content-Type': 'application/json' } }
+        )
+      }
+
       if (url.includes('/candidate-memories/daily')) {
         return new Response(JSON.stringify({ candidates: [] }), {
           status: 200,
@@ -313,6 +331,30 @@ describe('App', () => {
     expect(
       fetchMock.mock.calls.map((call) => String(call[0]))
     ).toContain(`${window.location.origin}/sources/status`)
+  })
+
+  it('shows Phase 4 work sessions as a top-level manual analysis tab', async () => {
+    const user = userEvent.setup()
+    const fetchMock = stubInitialAppFetch()
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls.map((call) => String(call[0]))
+      ).toContain(`${window.location.origin}/memory?page=1&pageSize=10`)
+    })
+
+    await user.click(screen.getByRole('tab', { name: /work sessions/i }))
+
+    expect(document.getElementById('work-sessions-panel')).not.toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Last 6h' }))
+
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls.map((call) => String(call[0]))
+      ).toContain(`${window.location.origin}/work-sessions/analyze`)
+    })
   })
 
   it('creates a continuous flex height chain for tab panels', async () => {
