@@ -6,6 +6,8 @@ The local runtime packages MirrorBrain into a single MVP entrypoint that:
 
 - validates required local configuration and dependency readiness
 - prepares standalone web assets from TypeScript source
+- supports isolated web asset output directories for test fixtures and other
+  local callers
 - can launch MirrorBrain through a startup-oriented CLI flow
 - starts the MirrorBrain service runtime
 - starts the local HTTP server that serves both APIs and the standalone UI
@@ -36,7 +38,9 @@ It is not responsible for:
 1. The startup flow loads the project-root `.env` file when present and then overlays explicit shell environment variables on top of it.
 2. The CLI checks required local configuration, ActivityWatch browser-data availability, and OpenViking reachability.
 3. If checks pass, the CLI launches MirrorBrain as a detached child process and prints a startup summary with service address, pid, and log path.
-4. Inside the child process, the web app TypeScript entrypoint is transpiled into a local served asset directory.
+4. Inside the child process, the React web app is built by a Vite watcher into
+   the default app `dist/` directory or a caller-provided isolated output
+   directory.
 5. The MirrorBrain service runtime starts, including optional shell-history sync wiring when `MIRRORBRAIN_SHELL_HISTORY_PATH` is set.
 6. The HTTP server starts and serves both JSON APIs and static MVP UI assets.
 

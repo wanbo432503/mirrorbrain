@@ -109,6 +109,7 @@ interface WaitForFileToExistInput {
 
 interface SpawnReactWebBuildWatcherInput {
   projectDir: string;
+  outputDir?: string;
 }
 
 function parseInteger(value: string | undefined, fallback: number): number {
@@ -477,12 +478,12 @@ export async function prepareMirrorBrainWebAssets(
 ): Promise<PreparedMirrorBrainWebAssets> {
   const projectDir = input.projectDir ?? process.cwd();
   const reactAppDir = join(projectDir, 'src', 'apps', 'mirrorbrain-web-react');
-  const outputDir = join(reactAppDir, 'dist');
+  const outputDir = input.outputDir ?? join(reactAppDir, 'dist');
   const indexHtmlPath = join(outputDir, 'index.html');
   const spawnWebBuildWatcher =
     input.spawnWebBuildWatcher ?? spawnReactWebBuildWatcher;
   const waitForFile = input.waitForFile ?? waitForFileToExist;
-  const watcher = await spawnWebBuildWatcher({ projectDir });
+  const watcher = await spawnWebBuildWatcher({ projectDir, outputDir });
 
   if (!existsSync(indexHtmlPath)) {
     await waitForFile(indexHtmlPath);
@@ -575,7 +576,13 @@ export async function spawnReactWebBuildWatcher(
 ): Promise<ReactWebBuildWatcher> {
   const reactAppDir = join(input.projectDir, 'src', 'apps', 'mirrorbrain-web-react');
   const vitePath = join(reactAppDir, 'node_modules', '.bin', 'vite');
-  const child = spawn(vitePath, ['build', '--watch'], {
+  const args = ['build', '--watch'];
+
+  if (input.outputDir !== undefined) {
+    args.push('--outDir', input.outputDir, '--emptyOutDir');
+  }
+
+  const child = spawn(vitePath, args, {
     cwd: reactAppDir,
     env: {
       ...process.env,

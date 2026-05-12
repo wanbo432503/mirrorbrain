@@ -18,8 +18,8 @@ This component owns shared runtime schemas for MirrorBrain HTTP transport DTOs. 
 
 ## Data Flow
 
-1. Domain services return internal `KnowledgeArtifact` values.
-2. HTTP routes reference the shared DTO schema for response serialization.
+1. Domain services return internal `KnowledgeArtifact` and `SkillArtifact` values.
+2. HTTP routes reference the shared DTO schemas for response serialization.
 3. Contract tests send example service values through the HTTP server and verify the serialized shape.
 4. Frontend and plugin clients can later import or generate types from the same contract source.
 
@@ -27,6 +27,7 @@ This component owns shared runtime schemas for MirrorBrain HTTP transport DTOs. 
 
 - unit tests in [src/shared/api-contracts/index.test.ts](/Users/wanbo/Workspace/mirrorbrain/src/shared/api-contracts/index.test.ts) verify the schema required fields match the domain required fields
 - HTTP contract coverage in [src/apps/mirrorbrain-http-server/index.test.ts](/Users/wanbo/Workspace/mirrorbrain/src/apps/mirrorbrain-http-server/index.test.ts) verifies minimal valid knowledge artifacts serialize through `/knowledge` while preserving optional enrichment fields such as `tags`, `relatedKnowledgeIds`, and `compilationMetadata`
+- HTTP contract coverage also verifies `/skills` preserves optional skill review timestamps such as `updatedAt` and `reviewedAt`
 
 ## Known Risks Or Limitations
 

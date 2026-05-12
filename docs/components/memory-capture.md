@@ -2,13 +2,14 @@
 
 ## Summary
 
-This component defines the normalized `MemoryEvent` boundary for MirrorBrain ingestion. In Phase 1 it still normalizes authorized ActivityWatch browser events, but it now also exposes the source-plugin registry and deduplication helpers used to expand memory ingestion beyond the browser source.
+This component defines the normalized `MemoryEvent` boundary and generic source-plugin registry for MirrorBrain ingestion. Concrete source plugins now live in integrations, including ActivityWatch browser events and configured shell history files.
 
 ## Responsibility Boundary
 
 This component is responsible for:
 
-- converting upstream browser events into MirrorBrain-owned `MemoryEvent` records
+- defining the source-plugin contract used by browser and shell source adapters
+- converting upstream source events into MirrorBrain-owned `MemoryEvent` records
 - registering source plugins behind a stable registry lookup by source key
 - providing source-specific pre-persistence deduplication helpers
 - attaching source attribution and checkpoint metadata
@@ -23,8 +24,11 @@ This component is not responsible for:
 
 ## Key Interfaces
 
-- `normalizeActivityWatchBrowserEvent(...)`
 - `createMemorySourceRegistry(...)`
+- `MemorySourceSyncPlan`
+- `MemorySourcePlugin`
+- `MemorySourceRegistry`
+- `normalizeActivityWatchBrowserEvent(...)`
 - `deduplicateMemoryEvents(...)`
 - `persistMemoryEvent(...)`
 
@@ -38,9 +42,10 @@ This component is not responsible for:
 ## Test Strategy
 
 - unit coverage in `src/modules/memory-capture/index.test.ts`
-- broader sync coverage in `src/workflows/memory-source-sync/index.test.ts` and `tests/integration/browser-memory-sync.test.ts`
+- broader sync coverage in `src/workflows/memory-source-sync/index.test.ts`, `src/workflows/browser-memory-sync/index.test.ts`, `src/workflows/shell-memory-sync/index.test.ts`, and `tests/integration/browser-memory-sync.test.ts`
 
 ## Known Risks Or Limitations
 
-- the current implementation only ships one concrete source plugin, for ActivityWatch browser events
+- this module still owns the legacy ActivityWatch browser event normalizer while
+  newer concrete source plugins are implemented in source-specific integrations
 - persistence depends on the configured writer and does not retry failed writes itself

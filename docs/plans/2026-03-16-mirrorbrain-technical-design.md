@@ -65,8 +65,13 @@ For the first browser source:
 
 Current repository status:
 
-- the implemented MVP slice currently includes only the browser source adapter
-- shell and `openclaw` conversation adapters remain planned but are not implemented in this repository yet
+- the original MVP slice started with the browser source adapter
+- the current repository also includes a configured shell-history source adapter,
+  shell sync workflow, and shell retrieval/narrative surfaces
+- `openclaw` conversation capture remains planned but is not the current source
+  expansion priority
+- for the up-to-date implemented baseline, see
+  `docs/features/current-project-status.md`
 
 Document observation adapters should come later unless they are required to complete the first end-to-end slice.
 

@@ -110,8 +110,13 @@ For the first browser slice:
 
 Current repository status:
 
-- the implemented MVP slice currently supports the browser source only
-- shell history and `openclaw` conversation history remain part of the broader Phase 1 plan but are not implemented in this repository yet
+- the original MVP slice supported the browser source first
+- the current repository also supports configured shell-history sync and
+  shell-oriented recall surfaces
+- `openclaw` conversation history remains part of the broader product plan but
+  is not the current source expansion priority
+- for the up-to-date implemented baseline, see
+  `docs/features/current-project-status.md`
 
 Document viewing or import support is in-scope for the broader product, but should default to a later increment unless it is needed to complete the first vertical slice.
 

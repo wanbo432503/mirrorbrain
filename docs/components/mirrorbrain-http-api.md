@@ -60,8 +60,8 @@ and deployment hardening.
 
 The canonical domain TypeScript definitions live in `src/shared/types/index.ts`.
 Runtime HTTP DTO schemas are moving into `src/shared/api-contracts/`; in the
-current slice, `KnowledgeArtifact` response serialization uses that shared
-contract.
+current slice, `KnowledgeArtifact` and `SkillArtifact` response serialization
+use that shared contract.
 
 ### Source Category
 

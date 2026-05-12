@@ -145,11 +145,38 @@ describe('start mirrorbrain dev runtime', () => {
 
     expect(spawnWebBuildWatcher).toHaveBeenCalledWith({
       projectDir: '/tmp/mirrorbrain-project',
+      outputDir: '/tmp/mirrorbrain-project/src/apps/mirrorbrain-web-react/dist',
     });
     expect(result.outputDir).toBe(
       '/tmp/mirrorbrain-project/src/apps/mirrorbrain-web-react/dist',
     );
     expect(typeof result.stop).toBe('function');
+  });
+
+  it('honors a custom React asset output directory for isolated fixtures', async () => {
+    const spawnWebBuildWatcher = vi.fn(async () => ({
+      stop: vi.fn(),
+    }));
+    const waitForFile = vi.fn(async () => undefined);
+
+    const result = await prepareMirrorBrainWebAssets({
+      projectDir: '/tmp/mirrorbrain-project',
+      outputDir: '/tmp/mirrorbrain-static-fixture',
+      waitForFile,
+      spawnWebBuildWatcher,
+    });
+
+    expect(spawnWebBuildWatcher).toHaveBeenCalledWith({
+      projectDir: '/tmp/mirrorbrain-project',
+      outputDir: '/tmp/mirrorbrain-static-fixture',
+    });
+    expect(waitForFile).toHaveBeenCalledWith(
+      '/tmp/mirrorbrain-static-fixture/index.html',
+    );
+    expect(result.outputDir).toBe('/tmp/mirrorbrain-static-fixture');
+    expect(result.indexHtmlPath).toBe(
+      '/tmp/mirrorbrain-static-fixture/index.html',
+    );
   });
 
   it('passes the parent PATH into the detached dev child process environment', async () => {

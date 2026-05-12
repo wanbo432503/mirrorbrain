@@ -20,6 +20,8 @@ owning MirrorBrain's internal workflows.
 - Runtime service composition in `src/apps/mirrorbrain-service`.
 - Fastify HTTP server in `src/apps/mirrorbrain-http-server`.
 - OpenAPI JSON and Swagger UI at `/openapi.json` and `/docs`.
+- Shared runtime DTO schemas for knowledge and skill artifact HTTP responses in
+  `src/shared/api-contracts`.
 - React UI served by the local HTTP server.
 - Developer startup CLI through `pnpm dev`.
 
@@ -28,7 +30,12 @@ owning MirrorBrain's internal workflows.
 - ActivityWatch browser source integration.
 - Shell history source integration.
 - Generic source-plugin sync workflow with file checkpoints.
-- Browser page-content capture and workspace/OpenViking storage.
+- Runtime source authorization checks before source fetch and before
+  persistence.
+- Best-effort shell command secret redaction before MirrorBrain storage,
+  including command-derived shell memory identifiers.
+- Browser page-content capture and workspace/OpenViking storage, gated by a
+  separate page-content authorization dependency.
 - OpenViking-backed artifact persistence and workspace fallback reads.
 - Memory event display cache with filtering, deduplication, and pagination.
 - Daily candidate memory generation.
@@ -74,7 +81,9 @@ owning MirrorBrain's internal workflows.
 
 - Document ingestion.
 - `openclaw` conversation capture.
-- Full authorization and revocation UX across source instances.
+- Durable authorization and revocation UX across source instances.
+- Source-instance and domain/path allowlists beyond the current injected
+  runtime policies.
 - Direct `openclaw` helpers for topic list/detail/history consumption.
 - Stronger storage-level current-best consistency guarantees.
 - Production deployment, retention, deletion policy, and operations runbooks.
@@ -105,6 +114,9 @@ Use it for:
 
 - Module reference: `docs/components/module-reference.md`
 - HTTP API contract: `docs/components/mirrorbrain-http-api.md`
+- API contracts: `docs/components/api-contracts.md`
+- Authorization scope policy: `docs/components/authorization-scope-policy.md`
+- Memory source sync: `docs/components/memory-source-sync.md`
 - Topic knowledge merge: `docs/components/topic-knowledge-merge.md`
 - Topic knowledge read surface: `docs/components/topic-knowledge-read.md`
 - Topic knowledge quality: `docs/components/topic-knowledge-quality.md`

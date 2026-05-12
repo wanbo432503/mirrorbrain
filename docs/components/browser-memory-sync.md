@@ -12,7 +12,8 @@ This workflow executes the live browser ingestion loop for Phase 1. It now acts 
 - checks a separate page-content authorization policy before exposing stored page
   text references or fetching readable page text
 - groups repeated visits by URL and keeps per-URL access history on persisted browser memory events
-- schedules shared page-content backfill after raw browser memory events have already been persisted
+- schedules shared page-content fetch/index backfill after browser memory events
+  have already been persisted
 - does not own candidate memory review, knowledge generation, or skill generation
 
 ## Key Interfaces
@@ -32,13 +33,15 @@ This workflow executes the live browser ingestion loop for Phase 1. It now acts 
 7. Normalize events, discard local development pages filtered by the browser source adapter, and suppress near-duplicate browser page records.
 8. Group retained browser events by URL.
 9. Build URL-level `accessTimes` and `latestAccessedAt` metadata for the retained browser events before persistence.
-10. Let the generic workflow check authorization again before persistence.
-11. Persist the browser memory events first so large historical backfills can make `/memory` visible quickly.
-12. Check page-content authorization separately before adding existing
-    `textStorage` references to browser events.
+10. Check page-content authorization separately before attaching any existing
+    shared `textStorage` references to browser events.
+11. Let the generic workflow check source authorization again before
+    persistence.
+12. Persist the browser memory events so `/memory` can become visible before
+    large readable-page backfills complete.
 13. In a follow-up background step, check page-content authorization again,
-    then either reuse an existing shared page artifact or fetch readable page
-    text once per URL and update the page-content artifact in OpenViking.
+    then either reuse an existing shared page artifact or fetch/index readable
+    page text once per URL in OpenViking.
 14. Repeat on the configured polling interval when polling is enabled.
 
 ## Test Strategy
@@ -58,3 +61,7 @@ This workflow executes the live browser ingestion loop for Phase 1. It now acts 
 - page-content authorization currently decides at URL level through an injected
   dependency; durable domain/path allowlists and visible UI state belong to a
   later authorization-management slice
+- the low-level workflow treats a missing `authorizePageContentCapture`
+  dependency as allowed for compatibility with direct tests and specialized
+  callers; `mirrorbrain-service` always injects a deny-by-default callback
+  unless configured otherwise

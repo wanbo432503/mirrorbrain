@@ -24,9 +24,13 @@ three explicit product outputs:
 - `skill`: draft or approved Agent Skill artifacts derived from repeatable
   workflow evidence, with confirmation boundaries preserved before execution.
 
-Phase 1 proved the local vertical slice. The current project direction is Phase
-2 `openclaw` integration, followed by stronger memory retrieval quality and
-topic-oriented knowledge quality.
+Phase 1 proved the local vertical slice. The repository now has a runnable
+Phase 2 / Phase 3 baseline: browser and shell memory sync, review workflows,
+topic-oriented knowledge, knowledge graph views, skill draft flows, a local
+HTTP API, and a React control UI. The current product direction remains
+`openclaw` integration first, followed by stronger retrieval quality,
+authorization UX, and topic knowledge quality. For the current status snapshot,
+see [Current Project Status](./docs/features/current-project-status.md).
 
 ## Philosophy
 
@@ -50,8 +54,11 @@ topic-oriented knowledge quality.
 ### Memory
 
 - Sync authorized browser activity from ActivityWatch and `aw-watcher-web`.
-- Sync authorized shell history files when configured.
-- Capture browser page text to improve review and synthesis quality.
+- Sync authorized shell history files when configured, with best-effort command
+  secret redaction before MirrorBrain persistence.
+- Keep browser activity capture and readable page text capture as separate
+  authorization decisions. The runtime service denies page text backfill by
+  default unless a page-content authorization dependency is explicitly wired.
 - Generate daily candidate memories for human review.
 - Store reviewed memories with source references and review decisions.
 - Query memory through the local HTTP API and an `openclaw`-oriented helper.
@@ -80,11 +87,26 @@ topic-oriented knowledge quality.
   inspection.
 - Local workspace artifacts for inspectable records and fallback reads.
 - OpenViking-backed indexing and retrieval for local search.
+- Shared API contract schemas for public knowledge and skill artifact DTOs.
+
+### Safety And Contract Baselines
+
+- Generic memory-source sync checks runtime authorization before upstream fetch
+  and again before persistence.
+- Shell memory stores redacted command content and redacted command-derived
+  identifiers; it does not modify the user's original shell history file.
+- Browser page text capture is URL-level, separately authorized, and best
+  effort. Browser event capture can proceed without page text capture.
+- HTTP response schemas for knowledge and skill artifacts live in
+  `src/shared/api-contracts/` so transport optionality does not silently drift
+  from domain types.
 
 ### Current Non-Goals
 
 - Document import is not implemented yet.
 - `openclaw` conversation capture is not the current priority.
+- Durable authorization-scope management UI, source-instance allowlists, and
+  revocation workflows are not complete yet.
 - Production deployment, multi-user auth, retention policy, and network
   hardening are outside the current local-first baseline.
 - Autonomous skill execution beyond draft generation and safety metadata is not
@@ -167,6 +189,7 @@ MirrorBrain expects OpenViking to be reachable before the local service starts.
 
 ```bash
 pnpm install
+pnpm --dir src/apps/mirrorbrain-web-react install
 cp .env.example .env
 ```
 
@@ -189,6 +212,10 @@ MIRRORBRAIN_EMBEDDING_DIMENSION=1024
 MirrorBrain reads `MIRRORBRAIN_LLM_*` directly for knowledge and title
 generation. OpenViking reads embedding configuration from
 `~/.openviking/ov.conf`, so keep both configurations aligned.
+
+The React UI is a nested app rather than a root `pnpm` workspace package today.
+Install its dependencies before running `pnpm dev`; the dev command invokes the
+nested Vite build watcher directly.
 
 ### 5. Run MirrorBrain
 
@@ -239,26 +266,52 @@ Architecture details live in `docs/components/` instead of this README.
 
 Start with:
 
+- [Documentation index](./docs/README.md)
 - [Module reference](./docs/components/module-reference.md)
 - [MirrorBrain HTTP API](./docs/components/mirrorbrain-http-api.md)
+- [API contracts](./docs/components/api-contracts.md)
 - [MirrorBrain service](./docs/components/mirrorbrain-service.md)
 - [MirrorBrain HTTP server](./docs/components/mirrorbrain-http-server.md)
+- [Local runtime](./docs/components/local-runtime.md)
+- [Authorization scope policy](./docs/components/authorization-scope-policy.md)
+- [Memory source sync](./docs/components/memory-source-sync.md)
+- [Memory review storage](./docs/components/memory-review-storage.md)
+- [Browser memory sync](./docs/components/browser-memory-sync.md)
+- [Browser page content](./docs/components/browser-page-content.md)
 - [OpenClaw plugin API](./docs/components/openclaw-plugin-api.md)
 - [OpenViking store](./docs/components/openviking-store.md)
 - [ActivityWatch browser source](./docs/components/activitywatch-browser-source.md)
 - [Shell history source](./docs/components/shell-history-source.md)
 - [Memory review](./docs/components/memory-review.md)
+- [Knowledge generation LLM](./docs/components/knowledge-generation-llm.md)
+- [Knowledge lint](./docs/components/knowledge-lint.md)
+- [Knowledge compilation system](./docs/components/knowledge-compilation-system.md)
 - [Topic knowledge merge](./docs/components/topic-knowledge-merge.md)
 - [Topic knowledge read](./docs/components/topic-knowledge-read.md)
+- [Topic knowledge quality](./docs/components/topic-knowledge-quality.md)
 - [Skill draft builder](./docs/components/skill-draft-builder.md)
-
-The broader documentation index is [docs/README.md](./docs/README.md).
+- [Skill draft management](./docs/components/skill-draft-management.md)
 
 ## Common Commands
 
+Local runtime:
+
 ```bash
 pnpm dev
+```
+
+Root backend/service checks:
+
+```bash
 pnpm test
 pnpm typecheck
 pnpm e2e
+git diff --check
+```
+
+React UI checks:
+
+```bash
+pnpm --dir src/apps/mirrorbrain-web-react exec vitest run
+pnpm --dir src/apps/mirrorbrain-web-react build
 ```

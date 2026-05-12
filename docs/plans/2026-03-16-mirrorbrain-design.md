@@ -67,8 +67,13 @@ This mix is enough to prove cross-context memory value without immediately takin
 
 Current repository status:
 
-- the implemented MVP slice currently covers the browser source only
-- shell and `openclaw` conversation sources remain part of the intended Phase 1 direction but are not implemented in this repository yet
+- the original MVP slice proved the browser source first
+- the current repository also implements configured shell-history sync, shell
+  retrieval shaping, and shell problem narratives
+- `openclaw` conversation capture remains planned but is not the current source
+  expansion priority
+- for the up-to-date implemented baseline, see
+  `docs/features/current-project-status.md`
 
 ### Flow 1: Memory Capture And Review
 

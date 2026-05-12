@@ -31,12 +31,14 @@ This component fetches readable page text for browser URLs, extracts a normalize
 5. HTML is reduced to a readable title and plain-text body, preferring `article` first, then `main`, then a cleaned whole-page fallback.
 6. A shared browser-page artifact is created or updated for that URL, with `accessTimes` sorted from newest to oldest.
 7. The caller persists that shared artifact locally and imports it into OpenViking once per URL.
-8. Each source `MemoryEvent` content is enriched with:
+8. When a stored text artifact is authorized and available, source
+   `MemoryEvent` content is enriched with `textStorage` references containing:
    - local `filePath`
    - OpenViking `openVikingUri`
    - `vectorizationSource` metadata indicating OpenViking-backed indexing
-   - `latestAccessedAt`
-   - shared `accessTimes`
+9. When page-content authorization is denied or no stored text artifact is
+   available yet, browser sync can still attach URL-level `latestAccessedAt`
+   and shared `accessTimes` metadata without any `textStorage` reference.
 
 ## Test Strategy
 

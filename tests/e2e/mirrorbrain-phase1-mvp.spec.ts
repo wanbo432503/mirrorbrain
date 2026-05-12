@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 
 import { startMirrorBrainMvpFixture } from './fixtures/mirrorbrain-mvp-fixture.js';
 
@@ -6,82 +6,56 @@ test('runs the phase 1 MVP review flow through the standalone UI', async ({
   page,
 }) => {
   const fixture = await startMirrorBrainMvpFixture();
-  const expectedReviewWindowDate = getPreviousCalendarDate(new Date());
 
   try {
     await page.goto(fixture.origin);
 
-    await expect(page.getByRole('heading', { name: 'MirrorBrain Phase 1 MVP' })).toBeVisible();
-    await expect(page.getByText('Service Status: running')).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'MirrorBrain' }),
+    ).toBeVisible();
+    await expect(page.getByText('Personal Memory & Knowledge')).toBeVisible();
+    await expect(page.getByText('Showing 1 of 1 unique URLs')).toBeVisible();
 
-    await page.getByRole('button', { name: 'Sync Browser Memory' }).click();
-    await expect(page.getByText('activitywatch-browser:aw-watcher-web-chrome')).toBeVisible();
+    await page.getByRole('button', { name: 'Sync Browser' }).click();
     await expect(
-      page.getByText('Status: Browser sync completed: 1 events imported.'),
-    ).toBeVisible();
-
-    await page.getByRole('button', { name: 'Review' }).click();
-    await page.getByRole('button', { name: 'Create Candidate' }).click();
-    await expect(
-      page.getByRole('button', { name: /Fixture Candidate/ }),
-    ).toBeVisible();
-    await expect(
-      page.getByText(
-        `Status: Generated 1 daily candidates for ${expectedReviewWindowDate}.`,
-      ),
-    ).toBeVisible();
-    await expect(
-      page.getByText('This daily stream has limited evidence and should stay in human review.'),
+      page.getByText('Browser sync completed: 1 events imported'),
     ).toBeVisible();
 
-    await page.getByRole('button', { name: 'Keep Candidate' }).click();
-    await expect(
-      page.getByText('Reviewed ID'),
-    ).toBeVisible();
-    await expect(
-      page.getByText('reviewed:candidate:browser:aw-event-1', { exact: true }),
-    ).toBeVisible();
-    await expect(
-      page.getByText('Status: Candidate kept: reviewed:candidate:browser:aw-event-1'),
-    ).toBeVisible();
+    await createAndKeepFixtureCandidate(page);
 
-    await page.getByRole('button', { name: 'Artifacts' }).click();
     await page.getByRole('button', { name: 'Generate Knowledge' }).click();
     await expect(
-      page.getByText(
-        'knowledge-draft:reviewed:candidate:browser:aw-event-1',
-        { exact: true },
-      ),
+      page.getByRole('heading', { name: 'Knowledge Draft' }),
     ).toBeVisible();
-    await expect(
-      page.getByText(
-        'Status: Knowledge generated: knowledge-draft:reviewed:candidate:browser:aw-event-1',
-      ),
-    ).toBeVisible();
+    await expect(page.getByLabel('Generated Note')).toHaveValue(
+      /Fixture Candidate/,
+    );
+
+    await page.reload();
+    await createAndKeepFixtureCandidate(page);
 
     await page.getByRole('button', { name: 'Generate Skill' }).click();
     await expect(
-      page.getByText(
-        'skill-draft:reviewed:candidate:browser:aw-event-1',
-        { exact: true },
-      ),
+      page.getByRole('heading', { name: 'Skill Draft' }),
     ).toBeVisible();
-    await expect(
-      page.getByText(
-        'Status: Skill generated: skill-draft:reviewed:candidate:browser:aw-event-1',
-      ),
-    ).toBeVisible();
+    await expect(page.getByText('1 references attached')).toBeVisible();
+    await expect(page.locator('input[type="checkbox"]')).toBeChecked();
   } finally {
     await fixture.stop();
   }
 });
 
-function getPreviousCalendarDate(reference: Date): string {
-  const previousDay = new Date(reference);
-  previousDay.setDate(previousDay.getDate() - 1);
-  return [
-    previousDay.getFullYear(),
-    String(previousDay.getMonth() + 1).padStart(2, '0'),
-    String(previousDay.getDate()).padStart(2, '0'),
-  ].join('-');
+async function createAndKeepFixtureCandidate(page: Page) {
+  await page.getByRole('tab', { name: 'review' }).click();
+  await page.getByRole('button', { name: 'Create Daily Candidates' }).click();
+  await expect(page.getByText('Created 1 daily candidates')).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: /Fixture Candidate/ }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: /Fixture Candidate/ }).click();
+  await page.getByRole('button', { name: 'Keep candidate', exact: true }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Kept Candidates (1)' }),
+  ).toBeVisible();
+  await expect(page.getByText('Candidate kept')).toBeVisible();
 }

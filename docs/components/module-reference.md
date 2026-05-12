@@ -255,7 +255,8 @@ Responsibilities:
 - Parse command entries and timestamps where available.
 - Create initial and incremental sync plans.
 - Redact common secret-bearing command fragments before MirrorBrain persistence.
-- Normalize redacted commands into shell `MemoryEvent` records with command metadata.
+- Normalize redacted commands into shell `MemoryEvent` records with command
+  metadata and command-derived identifiers rebuilt from redacted text.
 - Expose a `shell-history:<path>` source key and plugin.
 
 Inputs:
@@ -264,7 +265,9 @@ Inputs:
 
 Outputs:
 
-- Parsed `ShellHistoryEntry[]` and normalized shell memory events with redacted `content.command` values.
+- Parsed `ShellHistoryEntry[]` and normalized shell memory events with redacted
+  `id`, redacted `sourceRef`, redacted `content.command`, `commandName`, and
+  `redactionApplied` when storage content changed.
 
 Dependencies:
 
@@ -819,17 +822,19 @@ Purpose: generic one-shot sync engine for source plugins.
 
 Responsibilities:
 
+- Check runtime source authorization before upstream fetch.
 - Read source checkpoint.
 - Build initial or incremental sync plan.
 - Fetch raw source events.
 - Normalize and sanitize events through the source plugin.
 - Optionally prepare/enrich events before persistence.
+- Check runtime source authorization again before persistence.
 - Persist events and update checkpoint.
 
 Inputs:
 
 - Config, current time, source key, scope id, checkpoint store, source registry,
-  optional preparation function, and writer.
+  source authorization dependency, optional preparation function, and writer.
 
 Outputs:
 
@@ -839,6 +844,9 @@ Outputs:
 Failure modes and constraints:
 
 - Unknown source key throws.
+- Unauthorized source sync throws before upstream fetch or before persistence,
+  depending on when the policy rejects.
+- Checkpoints are not advanced when authorization rejects before persistence.
 - Checkpoint advances to the latest of prior checkpoint, current time, and event
   timestamps.
 
