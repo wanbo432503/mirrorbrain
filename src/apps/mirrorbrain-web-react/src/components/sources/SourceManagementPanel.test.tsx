@@ -11,6 +11,74 @@ afterEach(() => {
 })
 
 describe('SourceManagementPanel', () => {
+  it('defaults to all main sources with source import and global memory events', async () => {
+    const api = {
+      listSourceStatuses: vi.fn(async () => [
+        {
+          sourceKind: 'browser' as const,
+          sourceInstanceId: 'chrome-main',
+          lifecycleStatus: 'enabled' as const,
+          recorderStatus: 'unknown' as const,
+          importedCount: 2,
+          skippedCount: 0,
+        },
+      ]),
+      listSourceAuditEvents: vi.fn(async () => []),
+      importSourceLedgers: vi.fn(async () => ({
+        importedCount: 1,
+        skippedCount: 0,
+        scannedLedgerCount: 1,
+        changedLedgerCount: 1,
+        ledgerResults: [],
+      })),
+      updateSourceConfig: vi.fn(),
+      listMemory: vi.fn(async () => ({
+        items: [
+          {
+            id: 'ledger:browser:global',
+            sourceType: 'browser',
+            sourceRef: 'browser:chrome-main:global',
+            timestamp: '2026-05-12T10:00:00.000Z',
+            authorizationScopeId: 'scope-source-ledger',
+            content: {
+              title: 'Global browser memory',
+              summary: 'Visible from all main sources.',
+              contentKind: 'browser-page',
+            },
+            captureMetadata: {
+              upstreamSource: 'source-ledger:browser',
+              checkpoint: 'ledgers/2026-05-12/browser.jsonl:1',
+            },
+          },
+        ],
+        pagination: {
+          total: 1,
+          page: 1,
+          pageSize: 10,
+          totalPages: 1,
+        },
+      })),
+    } as unknown as MirrorBrainWebAppApi
+
+    render(<SourceManagementPanel api={api} />)
+
+    expect(await screen.findByRole('button', { name: /all-main sources/i })).not.toBeNull()
+    expect(await screen.findByRole('button', { name: 'Import Sources' })).not.toBeNull()
+    expect(await screen.findByText('Global browser memory')).not.toBeNull()
+    expect(api.listMemory).toHaveBeenCalledWith(1, 10)
+    expect(api.listSourceAuditEvents).not.toHaveBeenCalled()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Import Sources' }))
+
+    await waitFor(() => {
+      expect(api.importSourceLedgers).toHaveBeenCalledTimes(1)
+    })
+    expect(
+      await screen.findByText('Imported 1 source ledger event across 1 scanned ledger.')
+    ).not.toBeNull()
+    expect(api.listMemory).toHaveBeenCalledWith(1, 10)
+  })
+
   it('shows source overview, audit, settings tabs, and manual import now', async () => {
     const api = {
       listSourceStatuses: vi.fn(async () => [
@@ -84,9 +152,9 @@ describe('SourceManagementPanel', () => {
 
     render(<SourceManagementPanel api={api} />)
 
-    await waitFor(() => {
-      expect(screen.getAllByText('chrome-main')).toHaveLength(2)
-    })
+    await userEvent.click(await screen.findByRole('button', { name: /chrome-main browser/i }))
+
+    expect(screen.getAllByText('chrome-main')).toHaveLength(2)
     expect(screen.getByText('degraded')).not.toBeNull()
     expect(screen.getByText('Imported')).not.toBeNull()
     expect(screen.getByText('2')).not.toBeNull()

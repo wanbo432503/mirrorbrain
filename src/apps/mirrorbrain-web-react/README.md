@@ -13,7 +13,7 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and an
 
 ### Phase 2: Core Components ✅ (Completed)
 - **Layout Components:**
-  - `TabNavigation.tsx` - Memory/Review/Knowledge/Skill/Sources tabs with keyboard navigation
+  - `TabNavigation.tsx` - Memory Sources/Review/Knowledge/Skill/Work Sessions tabs with keyboard navigation
   - `FeedbackBanner.tsx` - Success/Error/Info messages with auto-dismiss
   - `Header.tsx` - App brand row aligned to the main content container with a light/dark theme toggle
 
@@ -135,7 +135,8 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and an
   - `SourceManagementPanel.tsx` - Source status, audit, recent memory placeholder, and settings surface for Phase 4 ledger imports
 
 - **Features:**
-  - Top-level Sources tab for operational source inspection
+  - Top-level Memory Sources tab that combines global memory events and source inspection
+  - `All-Main Sources` view with a single `Import Sources` action and paginated memory events
   - Source instance list backed by `/sources/status`
   - Recent memory records backed by `/memory` source filters
   - Source-specific audit events backed by `/sources/audit`
@@ -251,10 +252,9 @@ pnpm dev
 
 **Test Workflows:**
 
-1. **Memory Tab:**
-   - Click "Memory" tab
+1. **Memory Sources Tab:**
+   - Click "Memory Sources" tab
    - Click "Import Sources" to import source-ledger events, including browser events recorded as daily JSONL ledgers
-   - Click "Sync Shell" to import shell events
    - Navigate through pagination
 
 2. **Review Tab:**

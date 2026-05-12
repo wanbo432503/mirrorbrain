@@ -41,7 +41,23 @@ describe('App', () => {
       if (url.includes('/memory?page=1&pageSize=10')) {
         return new Response(
           JSON.stringify({
-            items: [],
+            items: [
+              {
+                id: 'ledger:browser:recent',
+                sourceType: 'browser',
+                sourceRef: 'browser:chrome-main:recent',
+                timestamp: '2026-05-12T10:00:00.000Z',
+                authorizationScopeId: 'scope-source-ledger',
+                content: {
+                  title: 'Recent browser memory',
+                  summary: 'Imported browser page.',
+                },
+                captureMetadata: {
+                  upstreamSource: 'source-ledger:browser',
+                  checkpoint: 'ledgers/2026-05-12/browser.jsonl:1',
+                },
+              },
+            ],
             pagination: {
               total: 25,
               page: 1,
@@ -312,7 +328,7 @@ describe('App', () => {
     expect(screen.getByRole('tab', { name: /skill/i })).not.toBeNull()
   })
 
-  it('shows Phase 4 sources as a top-level tab', async () => {
+  it('unifies memory and sources into a Phase 4 memory sources tab', async () => {
     const user = userEvent.setup()
     const fetchMock = stubInitialAppFetch()
 
@@ -324,10 +340,15 @@ describe('App', () => {
       ).toContain(`${window.location.origin}/memory?page=1&pageSize=10`)
     })
 
-    await user.click(screen.getByRole('tab', { name: /sources/i }))
+    expect(screen.queryByRole('tab', { name: /^memory$/i })).toBeNull()
+    expect(screen.queryByRole('tab', { name: /^sources$/i })).toBeNull()
 
-    expect(await screen.findAllByText('chrome-main')).toHaveLength(2)
-    expect(document.getElementById('sources-panel')).not.toBeNull()
+    await user.click(screen.getByRole('tab', { name: /memory sources/i }))
+
+    expect(await screen.findByRole('button', { name: /all-main sources/i })).not.toBeNull()
+    expect(await screen.findByRole('button', { name: 'Import Sources' })).not.toBeNull()
+    expect(await screen.findByText('Recent browser memory')).not.toBeNull()
+    expect(document.getElementById('memory-sources-panel')).not.toBeNull()
     expect(
       fetchMock.mock.calls.map((call) => String(call[0]))
     ).toContain(`${window.location.origin}/sources/status`)
@@ -374,7 +395,7 @@ describe('App', () => {
     expect(mainClassName).toContain('flex-1')
     expect(mainClassName).toContain('flex-col')
 
-    const memoryPanel = document.getElementById('memory-panel')
+    const memoryPanel = document.getElementById('memory-sources-panel')
     expect(memoryPanel).not.toBeNull()
     const memoryPanelClassName = memoryPanel?.className ?? ''
     expect(memoryPanelClassName).toContain('flex')
@@ -392,7 +413,7 @@ describe('App', () => {
     expect(paginationFooterClassName).toContain('border-t')
   })
 
-  it('aligns the header brand with the memory tab content and uses readable light-mode text', async () => {
+  it('aligns the header brand with the memory sources tab content and uses readable light-mode text', async () => {
     const fetchMock = stubInitialAppFetch()
 
     render(<App />)

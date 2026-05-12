@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import AppShell from './components/layout/AppShell'
 import TabNavigation from './components/layout/TabNavigation'
 import FeedbackBanner from './components/layout/FeedbackBanner'
-import MemoryPanel from './components/memory/MemoryPanel'
 import ReviewPanel from './components/review/ReviewPanel'
 import KnowledgeTabPanel from './components/artifacts/KnowledgeTabPanel'
 import SkillTabPanel from './components/artifacts/SkillTabPanel'
@@ -12,12 +11,12 @@ import { createMirrorBrainBrowserApi } from './api/client'
 import { MirrorBrainProvider } from './contexts/MirrorBrainContext'
 import { useMirrorBrainState } from './hooks/useMirrorBrainState'
 
-type TabType = 'memory' | 'review' | 'knowledge' | 'skill' | 'sources' | 'work-sessions'
+type TabType = 'memory-sources' | 'review' | 'knowledge' | 'skill' | 'work-sessions'
 type FeedbackKind = 'success' | 'error' | 'info'
 type VisitedTabs = Record<TabType, boolean>
 type ThemeMode = 'light' | 'dark'
 
-const TABS: TabType[] = ['memory', 'review', 'knowledge', 'skill', 'sources', 'work-sessions']
+const TABS: TabType[] = ['memory-sources', 'review', 'knowledge', 'skill', 'work-sessions']
 
 interface Feedback {
   kind: FeedbackKind
@@ -29,7 +28,7 @@ function getInitialTheme(): ThemeMode {
 }
 
 function App() {
-  const [activeTab, setActiveTab] = useState<TabType>('memory')
+  const [activeTab, setActiveTab] = useState<TabType>('memory-sources')
   const [feedback, setFeedback] = useState<Feedback | null>(null)
   const [theme, setTheme] = useState<ThemeMode>(getInitialTheme)
 
@@ -72,11 +71,10 @@ function AppContent({
     []
   )
   const [visitedTabs, setVisitedTabs] = useState<VisitedTabs>({
-    memory: true,
+    'memory-sources': true,
     review: false,
     knowledge: false,
     skill: false,
-    sources: false,
     'work-sessions': false,
   })
 
@@ -114,11 +112,10 @@ function AppContent({
             className={`${isActive ? 'flex' : 'hidden'} min-h-0 flex-1 flex-col overflow-y-auto pt-md lg:overflow-hidden`}
             hidden={!isActive}
           >
-            {shouldRenderPanel && tab === 'memory' && <MemoryPanel />}
             {shouldRenderPanel && tab === 'review' && <ReviewPanel />}
             {shouldRenderPanel && tab === 'knowledge' && <KnowledgeTabPanel />}
             {shouldRenderPanel && tab === 'skill' && <SkillTabPanel />}
-            {shouldRenderPanel && tab === 'sources' && <SourceManagementPanel api={api} />}
+            {shouldRenderPanel && tab === 'memory-sources' && <SourceManagementPanel api={api} />}
             {shouldRenderPanel && tab === 'work-sessions' && (
               <WorkSessionAnalysisPanel api={api} />
             )}

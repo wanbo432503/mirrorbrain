@@ -403,6 +403,12 @@ MemoryEvent is user work evidence.
 
 Phase 4 source management belongs in the MirrorBrain UI.
 
+The standalone UI should expose a single top-level `memory sources` tab instead
+of separate `memory` and `sources` tabs. The left rail starts with
+`All-Main Sources`; selecting it shows one `Import Sources` action and the same
+global memory event list that previously lived under the `memory` tab. Selecting
+an individual source keeps the existing source-specific management surface.
+
 Each source instance has a detail page with tabs:
 
 - Overview
@@ -672,7 +678,11 @@ Phase 4 architecture is on track when:
   supports manual import
 - ledger bad lines are skipped with audit warnings rather than blocking import
 - imported records are unified `MemoryEvent` values
+- the standalone UI exposes memory retrieval and source management through one
+  top-level `memory sources` tab
+- `All-Main Sources` exposes manual `Import Sources` and global memory events
 - Source Management UI exposes Overview, Recent Memory, Audit, and Settings
+  for individual source instances
 - users can manually run 6h/24h/7d analysis windows
 - analysis produces multiple WorkSession candidates where appropriate
 - reviewed work sessions can be assigned to projects
