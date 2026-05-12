@@ -3,7 +3,9 @@ import { useState } from 'react'
 import type { MirrorBrainWebAppApi } from '../../api/client'
 import type {
   AnalysisWindowPreset,
+  WorkSessionCandidate,
   WorkSessionAnalysisResult,
+  WorkSessionReviewResult,
 } from '../../types'
 
 interface WorkSessionAnalysisPanelProps {
@@ -29,6 +31,11 @@ export default function WorkSessionAnalysisPanel({
   const [analysis, setAnalysis] = useState<WorkSessionAnalysisResult | null>(null)
   const [runningPreset, setRunningPreset] = useState<AnalysisWindowPreset | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [projectNames, setProjectNames] = useState<Record<string, string>>({})
+  const [reviewingCandidateId, setReviewingCandidateId] = useState<string | null>(null)
+  const [reviewResults, setReviewResults] = useState<
+    Record<string, WorkSessionReviewResult>
+  >({})
 
   const runAnalysis = async (preset: AnalysisWindowPreset) => {
     setRunningPreset(preset)
@@ -37,6 +44,15 @@ export default function WorkSessionAnalysisPanel({
     try {
       const result = await api.analyzeWorkSessions(preset)
       setAnalysis(result)
+      setProjectNames(
+        Object.fromEntries(
+          result.candidates.map((candidate) => [
+            candidate.id,
+            candidate.projectHint,
+          ])
+        )
+      )
+      setReviewResults({})
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
@@ -45,6 +61,45 @@ export default function WorkSessionAnalysisPanel({
       )
     } finally {
       setRunningPreset(null)
+    }
+  }
+
+  const reviewCandidate = async (
+    candidate: WorkSessionCandidate,
+    decision: 'keep' | 'discard'
+  ) => {
+    setReviewingCandidateId(candidate.id)
+    setError(null)
+
+    try {
+      const projectName = projectNames[candidate.id]?.trim() || candidate.projectHint
+      const result = await api.reviewWorkSessionCandidate(candidate, {
+        decision,
+        reviewedBy: 'mirrorbrain-web',
+        title: candidate.title,
+        summary: candidate.summary,
+        ...(decision === 'keep'
+          ? {
+              projectAssignment: {
+                kind: 'confirmed-new-project' as const,
+                name: projectName,
+              },
+            }
+          : {}),
+      })
+
+      setReviewResults((current) => ({
+        ...current,
+        [candidate.id]: result,
+      }))
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : 'Failed to review work session.'
+      )
+    } finally {
+      setReviewingCandidateId(null)
     }
   }
 
@@ -156,6 +211,48 @@ export default function WorkSessionAnalysisPanel({
                     </dd>
                   </div>
                 </dl>
+
+                <div className="mt-3 flex flex-wrap items-end gap-sm border-t border-slate-200 pt-3">
+                  <label className="grid gap-1 text-sm text-inkMuted">
+                    <span>Project name</span>
+                    <input
+                      aria-label={`Project name for ${candidate.title}`}
+                      className="h-9 w-56 rounded border border-slate-300 px-3 text-sm text-ink focus:border-primary focus:outline-none"
+                      value={projectNames[candidate.id] ?? candidate.projectHint}
+                      onChange={(event) =>
+                        setProjectNames((current) => ({
+                          ...current,
+                          [candidate.id]: event.target.value,
+                        }))
+                      }
+                    />
+                  </label>
+
+                  <button
+                    type="button"
+                    className="h-9 rounded border border-primary bg-primary px-3 text-sm font-medium text-white disabled:cursor-wait disabled:opacity-60"
+                    disabled={reviewingCandidateId !== null}
+                    onClick={() => void reviewCandidate(candidate, 'keep')}
+                  >
+                    {reviewingCandidateId === candidate.id ? 'Saving' : 'Keep as project'}
+                  </button>
+                  <button
+                    type="button"
+                    className="h-9 rounded border border-slate-300 px-3 text-sm font-medium text-ink transition-colors hover:border-red-400 hover:text-red-700 disabled:cursor-wait disabled:opacity-60"
+                    disabled={reviewingCandidateId !== null}
+                    onClick={() => void reviewCandidate(candidate, 'discard')}
+                  >
+                    Discard
+                  </button>
+
+                  {reviewResults[candidate.id] && (
+                    <span className="text-sm font-medium text-green-700">
+                      {reviewResults[candidate.id].reviewedWorkSession.projectId
+                        ? `Reviewed into project: ${reviewResults[candidate.id].reviewedWorkSession.projectId}`
+                        : 'Discarded work session'}
+                    </span>
+                  )}
+                </div>
               </article>
             ))}
           </div>

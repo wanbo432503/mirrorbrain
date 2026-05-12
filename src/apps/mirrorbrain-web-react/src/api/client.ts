@@ -13,7 +13,10 @@ import type {
   SourceLedgerImportResult,
   SourceLedgerKind,
   AnalysisWindowPreset,
+  ReviewWorkSessionInput,
   WorkSessionAnalysisResult,
+  WorkSessionCandidate,
+  WorkSessionReviewResult,
 } from '../types/index';
 
 export interface PaginatedMemoryEvents {
@@ -64,6 +67,10 @@ export interface MirrorBrainWebAppApi {
     updatedBy: string;
   }): Promise<SourceInstanceConfig>;
   analyzeWorkSessions(preset: AnalysisWindowPreset): Promise<WorkSessionAnalysisResult>;
+  reviewWorkSessionCandidate(
+    candidate: WorkSessionCandidate,
+    review: ReviewWorkSessionInput
+  ): Promise<WorkSessionReviewResult>;
   createDailyCandidates(
     reviewDate: string,
     reviewTimeZone?: string
@@ -243,6 +250,16 @@ export function createMirrorBrainBrowserApi(
       });
       const body = await readJson<{ analysis: WorkSessionAnalysisResult }>(response);
       return body.analysis;
+    },
+
+    async reviewWorkSessionCandidate(candidate, review) {
+      const response = await fetch(`${baseUrl}/work-sessions/reviews`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ candidate, review }),
+      });
+      const body = await readJson<WorkSessionReviewResult>(response);
+      return body;
     },
 
     async createDailyCandidates(reviewDate: string, reviewTimeZone?: string) {

@@ -232,6 +232,8 @@ Core API methods include:
 15. `listReviewedMemories()` - Reviewed memories
 16. `listSourceAuditEvents()` - List operational source audit records
 17. `listSourceStatuses()` - List source instance status summaries
+18. `analyzeWorkSessions()` - Run Phase 4 manual work-session analysis
+19. `reviewWorkSessionCandidate()` - Keep or discard a work-session candidate with explicit project assignment
 
 **API Logic Preservation:** 95% identical to original vanilla TypeScript implementation.
 
@@ -261,7 +263,12 @@ pnpm dev
    - Review AI suggestions (confidence/priority/rationale)
    - Click "Keep Candidate" or "Discard Candidate"
 
-3. **Knowledge / Skill Tabs:**
+3. **Work Sessions Tab:**
+   - Click an analysis window
+   - Confirm or edit the project name on a candidate
+   - Click "Keep as project" or "Discard"
+
+4. **Knowledge / Skill Tabs:**
    - Click the "Knowledge" tab to browse approved knowledge in List mode or switch to Graph mode
    - In Knowledge Graph mode, leave the list unselected for the global graph or click a knowledge item for a centered graph
    - Click the "Skill" tab to browse generated skills separately

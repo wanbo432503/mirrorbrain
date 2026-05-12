@@ -367,4 +367,72 @@ describe('createMirrorBrainBrowserApi', () => {
       }),
     );
   });
+
+  it('calls the Phase 4 work-session review endpoint with explicit project assignment', async () => {
+    const candidate = {
+      id: 'work-session-candidate:mirrorbrain:2026-05-12T12:00:00.000Z',
+      projectHint: 'mirrorbrain',
+      title: 'mirrorbrain work session',
+      summary: 'Imported source ledgers.',
+      memoryEventIds: ['browser-1', 'shell-1'],
+      sourceTypes: ['browser', 'shell'],
+      timeRange: {
+        startAt: '2026-05-12T10:00:00.000Z',
+        endAt: '2026-05-12T10:30:00.000Z',
+      },
+      relationHints: ['Phase 4 design', 'Run tests'],
+      reviewState: 'pending' as const,
+    };
+    const review = {
+      decision: 'keep' as const,
+      reviewedBy: 'mirrorbrain-web',
+      projectAssignment: {
+        kind: 'confirmed-new-project' as const,
+        name: 'MirrorBrain',
+      },
+    };
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        reviewedWorkSession: {
+          id: 'reviewed-work-session:mirrorbrain',
+          candidateId: candidate.id,
+          projectId: 'project:mirrorbrain',
+          title: candidate.title,
+          summary: candidate.summary,
+          memoryEventIds: candidate.memoryEventIds,
+          sourceTypes: candidate.sourceTypes,
+          timeRange: candidate.timeRange,
+          relationHints: candidate.relationHints,
+          reviewState: 'reviewed',
+          reviewedAt: '2026-05-12T12:05:00.000Z',
+          reviewedBy: 'mirrorbrain-web',
+        },
+        project: {
+          id: 'project:mirrorbrain',
+          name: 'MirrorBrain',
+          status: 'active',
+          createdAt: '2026-05-12T12:05:00.000Z',
+          updatedAt: '2026-05-12T12:05:00.000Z',
+        },
+      }),
+    })) as unknown as typeof fetch;
+    vi.stubGlobal('fetch', fetchMock);
+
+    const api = createMirrorBrainBrowserApi('http://localhost:3000');
+
+    await expect(api.reviewWorkSessionCandidate(candidate, review)).resolves.toMatchObject({
+      reviewedWorkSession: {
+        candidateId: candidate.id,
+        projectId: 'project:mirrorbrain',
+      },
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://localhost:3000/work-sessions/reviews',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ candidate, review }),
+      }),
+    );
+  });
 });

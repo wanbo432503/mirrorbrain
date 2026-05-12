@@ -139,6 +139,54 @@ export interface WorkSessionCandidate {
   reviewState: 'pending';
 }
 
+export type WorkSessionProjectAssignment =
+  | {
+      kind: 'existing-project';
+      projectId: string;
+    }
+  | {
+      kind: 'confirmed-new-project';
+      name: string;
+      description?: string;
+    };
+
+export interface ReviewWorkSessionInput {
+  decision: 'keep' | 'discard';
+  reviewedBy: string;
+  title?: string;
+  summary?: string;
+  projectAssignment?: WorkSessionProjectAssignment;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  description?: string;
+  status: 'active' | 'paused' | 'archived';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReviewedWorkSession {
+  id: string;
+  candidateId: string;
+  projectId: string | null;
+  title: string;
+  summary: string;
+  memoryEventIds: string[];
+  sourceTypes: string[];
+  timeRange: MemoryTimeRange;
+  relationHints: string[];
+  reviewState: 'reviewed' | 'discarded';
+  reviewedAt: string;
+  reviewedBy: string;
+}
+
+export interface WorkSessionReviewResult {
+  reviewedWorkSession: ReviewedWorkSession;
+  project?: Project;
+}
+
 export interface WorkSessionAnalysisResult {
   analysisWindow: WorkSessionAnalysisWindow;
   generatedAt: string;
