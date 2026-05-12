@@ -2,7 +2,7 @@ import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type {
   SourceAuditEvent,
@@ -12,9 +12,14 @@ import type { MemoryEvent } from '../../shared/types/index.js';
 import {
   getSourceLedgerImportSchedule,
   importChangedSourceLedgers,
+  startSourceLedgerImportPolling,
 } from './index.js';
 
 describe('source ledger import workflow', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('scans daily JSONL ledgers and persists imported MemoryEvents with audit output', async () => {
     const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-ledgers-'));
     const ledgerDir = join(workspaceDir, 'mirrorbrain', 'ledgers', '2026-05-12');
@@ -121,5 +126,31 @@ describe('source ledger import workflow', () => {
     expect(getSourceLedgerImportSchedule()).toEqual({
       scanIntervalMs: 30 * 60 * 1000,
     });
+  });
+
+  it('runs source ledger import immediately and then on the configured interval', async () => {
+    vi.useFakeTimers();
+    const runImportOnce = vi.fn(async () => undefined);
+
+    const polling = startSourceLedgerImportPolling(
+      {
+        schedule: {
+          scanIntervalMs: 1_000,
+        },
+      },
+      {
+        runImportOnce,
+      },
+    );
+
+    await Promise.resolve();
+    expect(runImportOnce).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(runImportOnce).toHaveBeenCalledTimes(2);
+
+    polling.stop();
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(runImportOnce).toHaveBeenCalledTimes(2);
   });
 });

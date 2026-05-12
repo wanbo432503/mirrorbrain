@@ -12,6 +12,10 @@ export interface SourceLedgerImportSchedule {
   scanIntervalMs: number;
 }
 
+export interface SourceLedgerImportPolling {
+  stop(): void;
+}
+
 export interface SourceLedgerImportResult {
   importedCount: number;
   skippedCount: number;
@@ -40,9 +44,53 @@ interface ImportChangedSourceLedgersDependencies {
   writeSourceAuditEvent(event: SourceAuditEvent): Promise<void>;
 }
 
+interface StartSourceLedgerImportPollingInput {
+  schedule?: SourceLedgerImportSchedule;
+}
+
+interface StartSourceLedgerImportPollingDependencies {
+  runImportOnce(): Promise<unknown>;
+}
+
 export function getSourceLedgerImportSchedule(): SourceLedgerImportSchedule {
   return {
     scanIntervalMs: 30 * 60 * 1000,
+  };
+}
+
+export function startSourceLedgerImportPolling(
+  input: StartSourceLedgerImportPollingInput,
+  dependencies: StartSourceLedgerImportPollingDependencies,
+): SourceLedgerImportPolling {
+  const schedule = input.schedule ?? getSourceLedgerImportSchedule();
+  let isRunning = false;
+
+  const tick = async () => {
+    if (isRunning) {
+      return;
+    }
+
+    isRunning = true;
+
+    try {
+      await dependencies.runImportOnce();
+    } catch {
+      // Import failures are surfaced through explicit manual import and audit paths.
+    } finally {
+      isRunning = false;
+    }
+  };
+
+  void tick();
+
+  const intervalId = setInterval(() => {
+    void tick();
+  }, schedule.scanIntervalMs);
+
+  return {
+    stop() {
+      clearInterval(intervalId);
+    },
   };
 }
 

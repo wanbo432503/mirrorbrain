@@ -36,7 +36,8 @@ HTTP server and tests.
 Responsibilities:
 
 - Start the runtime service with ActivityWatch browser polling, optional shell
-  sync, checkpoint storage, and OpenViking writers.
+  sync, source-ledger import polling, checkpoint storage, and OpenViking
+  writers.
 - Expose memory sync, paginated memory listing, memory query, candidate review,
   knowledge generation, knowledge approval, knowledge graph, and skill draft
   operations.
@@ -44,6 +45,8 @@ Responsibilities:
   deletion tombstones for knowledge and skill artifacts.
 - Refresh browser and shell memory narratives after explicit sync.
 - Refresh knowledge relations and schedule linting after knowledge writes.
+- Run Phase 4 source-ledger imports once on startup and every 30 minutes through
+  the source import workflow.
 
 Inputs:
 
@@ -71,6 +74,7 @@ Failure modes and constraints:
 
 - Browser sync fails when no ActivityWatch browser bucket is available.
 - Shell sync fails when no shell history path is configured.
+- Source-ledger polling failures do not stop later import ticks.
 - Artifact deletion validates ids to prevent path traversal.
 - Knowledge approval fails when a draft id and draft snapshot do not match.
 - OpenViking read failures fall back to workspace reads for several local
@@ -949,7 +953,8 @@ Responsibilities:
 - Run ledger text through `src/modules/source-ledger-importer`.
 - Persist imported `MemoryEvent` records through injected dependencies.
 - Persist operational `SourceAuditEvent` records through injected dependencies.
-- Expose the default 30-minute scan cadence for scheduler/runtime wiring.
+- Expose the default 30-minute scan cadence.
+- Run one immediate import and scheduled interval imports for runtime wiring.
 
 Inputs:
 
@@ -965,6 +970,7 @@ Failure modes and constraints:
 - Missing ledger roots import as empty.
 - Malformed ledger lines are represented as audit warnings rather than workflow
   failures.
+- Scheduled import failures do not stop future import ticks.
 - The workflow does not authorize capture or import; the caller must enforce
   source-instance authorization before invoking it.
 

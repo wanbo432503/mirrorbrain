@@ -8,6 +8,10 @@ persists normalized `MemoryEvent` and `SourceAuditEvent` outputs through
 injected writers. It is the orchestration layer between ledger files and
 MirrorBrain storage.
 
+The workflow also provides the default polling loop used by the local runtime.
+That loop runs one import immediately on startup and then repeats at the
+configured scan interval.
+
 The workflow keeps source acquisition behind the ledger boundary. It reads
 ledger files; it does not collect browser, file, shell, screenshot, or agent
 activity.
@@ -25,6 +29,7 @@ This workflow is responsible for:
 - persisting operational `SourceAuditEvent` records through injected
   dependencies
 - exposing the default 30-minute scan cadence as a configuration surface
+- starting and stopping a runtime polling loop for scheduled imports
 
 This workflow is not responsible for:
 
@@ -38,6 +43,7 @@ This workflow is not responsible for:
 
 - `importChangedSourceLedgers(...)`
 - `getSourceLedgerImportSchedule()`
+- `startSourceLedgerImportPolling(...)`
 - `SourceLedgerImportResult`
 
 `importChangedSourceLedgers` accepts workspace path, authorization scope id, and
@@ -46,13 +52,15 @@ injected so the service layer can choose the durable backend.
 
 ## Data Flow
 
-1. Resolve `<workspaceDir>/mirrorbrain/ledgers`.
-2. List date subdirectories and `*.jsonl` ledger files.
-3. Read each ledger's `SourceLedgerImportCheckpoint`.
-4. Import only lines after the checkpoint.
-5. Write imported memory events.
-6. Write audit events for imported and skipped lines.
-7. Persist the next checkpoint for each scanned ledger.
+1. The local runtime starts `startSourceLedgerImportPolling(...)`.
+2. The polling loop runs one import immediately and schedules later ticks.
+3. Each import resolves `<workspaceDir>/mirrorbrain/ledgers`.
+4. The workflow lists date subdirectories and `*.jsonl` ledger files.
+5. The workflow reads each ledger's `SourceLedgerImportCheckpoint`.
+6. The workflow imports only lines after the checkpoint.
+7. The workflow writes imported memory events.
+8. The workflow writes audit events for imported and skipped lines.
+9. The workflow persists the next checkpoint for each scanned ledger.
 
 ## Inputs And Outputs
 
@@ -80,6 +88,7 @@ Outputs:
   are handled by the importer.
 - Filesystem read failures outside a missing ledger root are surfaced to the
   caller.
+- Scheduled import failures do not stop future polling ticks.
 - Checkpoints are currently line-number based. A later scanner can add
   file-size or mtime prefiltering without changing the workflow contract.
 - The workflow does not decide whether a source is authorized; the caller must
@@ -94,5 +103,5 @@ pnpm vitest run src/workflows/source-ledger-import/index.test.ts
 ```
 
 The tests cover daily ledger scanning, imported memory-event writes, audit-event
-writes, bad-line continuation, checkpointed manual import behavior, and the
-30-minute scan schedule.
+writes, bad-line continuation, checkpointed manual import behavior, the
+30-minute scan schedule, and polling start/stop behavior.

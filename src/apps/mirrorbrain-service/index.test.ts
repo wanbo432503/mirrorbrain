@@ -69,8 +69,12 @@ describe('mirrorbrain service', () => {
 
   it('starts browser sync polling and stops it through the service lifecycle', () => {
     const stopPolling = vi.fn();
+    const stopSourceImportPolling = vi.fn();
     const startBrowserSyncPolling = vi.fn(() => ({
       stop: stopPolling,
+    }));
+    const startSourceLedgerImportPolling = vi.fn(() => ({
+      stop: stopSourceImportPolling,
     }));
 
     const service = startMirrorBrainService(
@@ -79,16 +83,80 @@ describe('mirrorbrain service', () => {
       },
       {
         startBrowserSyncPolling,
+        startSourceLedgerImportPolling,
       },
     );
 
     expect(startBrowserSyncPolling).toHaveBeenCalledTimes(1);
+    expect(startSourceLedgerImportPolling).toHaveBeenCalledTimes(1);
     expect(service.status).toBe('running');
 
     service.stop();
 
     expect(stopPolling).toHaveBeenCalledTimes(1);
+    expect(stopSourceImportPolling).toHaveBeenCalledTimes(1);
     expect(service.status).toBe('stopped');
+  });
+
+  it('wires source ledger import execution into the polling lifecycle', async () => {
+    const config = getMirrorBrainConfig();
+    const stateStore = {
+      readCheckpoint: vi.fn(async () => null),
+      writeCheckpoint: vi.fn(async () => undefined),
+      writeSourceAuditEvent: vi.fn(async () => undefined),
+      listSourceAuditEvents: vi.fn(async () => []),
+      listSourceInstanceSummaries: vi.fn(async () => []),
+    };
+    const writeMemoryEvent = vi.fn(async () => undefined);
+    const importSourceLedgers = vi.fn(async () => ({
+      importedCount: 0,
+      skippedCount: 0,
+      scannedLedgerCount: 0,
+      changedLedgerCount: 0,
+      ledgerResults: [],
+    }));
+    const startSourceLedgerImportPolling = vi.fn((_input, dependencies) => {
+      void dependencies.runImportOnce();
+
+      return {
+        stop: vi.fn(),
+      };
+    });
+
+    startMirrorBrainService(
+      {
+        config,
+        workspaceDir: '/tmp/mirrorbrain-source-ledger-runtime',
+      },
+      {
+        startBrowserSyncPolling: vi.fn(() => ({
+          stop: vi.fn(),
+        })),
+        startSourceLedgerImportPolling,
+        createSourceLedgerStateStore: vi.fn(() => stateStore),
+        createMemoryEventWriter: vi.fn(() => ({
+          writeMemoryEvent,
+        })),
+        importSourceLedgers,
+        now: () => '2026-05-12T10:31:00.000Z',
+      },
+    );
+
+    await Promise.resolve();
+
+    expect(importSourceLedgers).toHaveBeenCalledWith(
+      {
+        authorizationScopeId: 'scope-source-ledger',
+        importedAt: '2026-05-12T10:31:00.000Z',
+        workspaceDir: '/tmp/mirrorbrain-source-ledger-runtime',
+      },
+      expect.objectContaining({
+        readCheckpoint: stateStore.readCheckpoint,
+        writeCheckpoint: stateStore.writeCheckpoint,
+        writeSourceAuditEvent: stateStore.writeSourceAuditEvent,
+        writeMemoryEvent: expect.any(Function),
+      }),
+    );
   });
 
   it('wires real browser sync execution into the polling lifecycle', async () => {

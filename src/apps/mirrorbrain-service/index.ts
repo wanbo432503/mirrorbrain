@@ -71,7 +71,9 @@ import {
   mergeDailyReviewIntoTopicKnowledge,
 } from '../../workflows/topic-knowledge-merge/index.js';
 import {
+  getSourceLedgerImportSchedule,
   importChangedSourceLedgers,
+  startSourceLedgerImportPolling,
   type SourceLedgerImportResult,
 } from '../../workflows/source-ledger-import/index.js';
 import {
@@ -120,6 +122,7 @@ interface StartMirrorBrainServiceInput {
 
 interface StartMirrorBrainServiceDependencies {
   startBrowserSyncPolling?: typeof startBrowserMemorySyncPolling;
+  startSourceLedgerImportPolling?: typeof startSourceLedgerImportPolling;
   createCheckpointStore?: (input: {
     workspaceDir: string;
   }) => SyncCheckpointStore;
@@ -127,6 +130,10 @@ interface StartMirrorBrainServiceDependencies {
     config: ReturnType<typeof getMirrorBrainConfig>;
     workspaceDir: string;
   }) => OpenVikingMemoryEventWriter;
+  createSourceLedgerStateStore?: (input: {
+    workspaceDir: string;
+  }) => SourceLedgerStateStore;
+  importSourceLedgers?: typeof importChangedSourceLedgers;
   fetchActivityWatchBuckets?: typeof fetchActivityWatchBuckets;
   runBrowserMemorySyncOnce?: typeof runBrowserMemorySyncOnce;
   runShellMemorySyncOnce?: typeof runShellMemorySyncOnce;
@@ -348,6 +355,8 @@ export function startMirrorBrainService(
   const shellScopeId = input.shellScopeId ?? 'scope-shell';
   const startPolling =
     dependencies.startBrowserSyncPolling ?? startBrowserMemorySyncPolling;
+  const startSourceImportPolling =
+    dependencies.startSourceLedgerImportPolling ?? startSourceLedgerImportPolling;
   const checkpointStore = (
     dependencies.createCheckpointStore ?? createFileSyncCheckpointStore
   )({
@@ -363,6 +372,13 @@ export function startMirrorBrainService(
     dependencies.runBrowserMemorySyncOnce ?? runBrowserMemorySyncOnce;
   const executeShellMemorySyncOnce =
     dependencies.runShellMemorySyncOnce ?? runShellMemorySyncOnce;
+  const sourceLedgerStateStore = (
+    dependencies.createSourceLedgerStateStore ?? createFileSourceLedgerStateStore
+  )({
+    workspaceDir,
+  });
+  const executeSourceLedgerImport =
+    dependencies.importSourceLedgers ?? importChangedSourceLedgers;
   const loadActivityWatchBuckets =
     dependencies.fetchActivityWatchBuckets ?? fetchActivityWatchBuckets;
   const now = dependencies.now ?? (() => new Date().toISOString());
@@ -458,12 +474,38 @@ export function startMirrorBrainService(
       },
     );
   };
+  const importSourceLedgersOnce = (): Promise<SourceLedgerImportResult> =>
+    executeSourceLedgerImport(
+      {
+        authorizationScopeId: 'scope-source-ledger',
+        importedAt: now(),
+        workspaceDir,
+      },
+      {
+        readCheckpoint: sourceLedgerStateStore.readCheckpoint,
+        writeCheckpoint: sourceLedgerStateStore.writeCheckpoint,
+        writeMemoryEvent: async (event) => {
+          await memoryEventWriter.writeMemoryEvent(
+            createOpenVikingMemoryEventRecord(event),
+          );
+        },
+        writeSourceAuditEvent: sourceLedgerStateStore.writeSourceAuditEvent,
+      },
+    );
   const polling = startPolling(
     {
       config,
     },
     {
       runSyncOnce: syncBrowserMemory,
+    },
+  );
+  const sourceImportPolling = startSourceImportPolling(
+    {
+      schedule: getSourceLedgerImportSchedule(),
+    },
+    {
+      runImportOnce: importSourceLedgersOnce,
     },
   );
   let status: 'running' | 'stopped' = 'running';
@@ -477,6 +519,7 @@ export function startMirrorBrainService(
     syncShellMemory,
     stop() {
       polling.stop();
+      sourceImportPolling.stop();
       status = 'stopped';
     },
   };
