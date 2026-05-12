@@ -13,8 +13,9 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
   screenshot, shell, and agent-transcript source instances
 - wires source-ledger import to checkpoint persistence, source audit persistence, source enablement checks, and OpenViking memory ingestion
 - exposes an explicit shell-history sync operation when a shell history path is configured
-- exposes explicit Phase 4 source-ledger import for manual Import Sources operations,
-  refreshing the default ActivityWatch browser ledger before import
+- exposes explicit Phase 4 source-ledger import for manual Import Sources
+  operations, immediately scanning ledgers and best-effort refreshing the
+  default ActivityWatch browser ledger before import
 - exposes source audit events and source instance summaries as operational state
 - exposes manual Phase 4 work-session analysis windows for 6h, 24h, and 7d ranges
 - records explicit work-session review decisions and project assignments
@@ -139,8 +140,9 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
 - if no page-content capture authorization dependency is injected at startup, readable page text backfill is denied by default while browser activity memory capture can still proceed
 - shell sync is currently explicit only; it does not start a shell polling loop or discover shell history paths automatically
 - Phase 4 source-ledger import is available manually through the service
-  contract, refreshes the default ActivityWatch browser ledger on demand, and
-  runs on the local runtime scheduler every minute
+  contract, best-effort refreshes the default ActivityWatch browser ledger on
+  demand, always scans existing ledgers during the manual call, and runs on the
+  local runtime scheduler every minute
 - manual source-ledger import refreshes the memory-event cache after scanning
   ledgers so the Memory tab can surface already imported workspace events even
   when the current scan finds no new lines

@@ -240,6 +240,58 @@ describe('mirrorbrain service', () => {
     await rm(workspaceDir, { recursive: true, force: true });
   });
 
+  it('still scans source ledgers when manual browser refresh fails', async () => {
+    const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-manual-source-import-'));
+    const captureBrowserLedgerRecords = vi.fn(async () => {
+      throw new Error('ActivityWatch is unavailable');
+    });
+    const importSourceLedgers = vi.fn(async () => ({
+      importedCount: 1,
+      skippedCount: 0,
+      scannedLedgerCount: 1,
+      changedLedgerCount: 1,
+      ledgerResults: [
+        {
+          ledgerPath: 'ledgers/2026-05-12/browser.jsonl',
+          importedCount: 1,
+          skippedCount: 0,
+          checkpoint: {
+            ledgerPath: 'ledgers/2026-05-12/browser.jsonl',
+            nextLineNumber: 2,
+            updatedAt: '2026-05-12T08:06:00.000Z',
+          },
+        },
+      ],
+    }));
+    const service = createMirrorBrainService(
+      {
+        workspaceDir,
+        browserBucketId: 'aw-watcher-web-chrome',
+        service: {
+          status: 'running',
+          config: getMirrorBrainConfig(),
+          syncBrowserMemory: vi.fn(),
+          syncShellMemory: vi.fn(),
+          stop: vi.fn(),
+        },
+      },
+      {
+        captureBrowserLedgerRecords,
+        importSourceLedgers,
+        now: () => '2026-05-12T08:06:00.000Z',
+      },
+    );
+
+    await expect(service.importSourceLedgers()).resolves.toMatchObject({
+      importedCount: 1,
+      scannedLedgerCount: 1,
+    });
+    expect(captureBrowserLedgerRecords).toHaveBeenCalledTimes(1);
+    expect(importSourceLedgers).toHaveBeenCalledTimes(1);
+
+    await rm(workspaceDir, { recursive: true, force: true });
+  });
+
   it('starts built-in source ledger recorder supervision for enabled runtime sources', async () => {
     const stopSourceImportPolling = vi.fn();
     const stopRecorderSupervisor = vi.fn(async () => undefined);

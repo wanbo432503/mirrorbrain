@@ -1526,7 +1526,12 @@ export function createMirrorBrainService(
       return summarizeImportedEvents(sync) as ShellMemorySyncResult;
     },
     importSourceLedgers: async (): Promise<SourceLedgerImportResult> => {
-      await captureBrowserSourceLedgerForService();
+      try {
+        await captureBrowserSourceLedgerForService();
+      } catch {
+        // Manual import must still scan already-written ledgers even when the
+        // optional browser refresh cannot reach ActivityWatch.
+      }
 
       const result = await importSourceLedgersForService();
 

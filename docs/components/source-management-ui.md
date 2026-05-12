@@ -67,8 +67,9 @@ declarations.
 6. When the user enables or disables a source, the app calls
    `PATCH /sources/config`, writes audit-backed config through the service, and
    reloads source statuses.
-7. When the user clicks `Import Now`, the app calls `POST /sources/import` and
-   then reloads source statuses.
+7. When the user clicks `Import Now`, the app calls `POST /sources/import`,
+   which immediately scans/imports existing ledgers once, and then reloads
+   source statuses.
 
 ## Failure Modes And Operational Constraints
 

@@ -390,7 +390,10 @@ Failure mode:
 ### `POST /sources/import`
 
 Triggers explicit Phase 4 source-ledger import. This is the manual Import Now
-operation for changed daily JSONL ledgers under the MirrorBrain workspace.
+operation for changed daily JSONL ledgers under the MirrorBrain workspace. The
+service immediately runs one ledger scan/import for this request. Browser
+ActivityWatch refresh is best-effort before the scan; existing ledger files are
+still scanned if that refresh cannot complete.
 
 Response status: `202`
 
@@ -423,6 +426,8 @@ Notes:
 
 - Manual import is checkpointed and should not duplicate previously imported
   ledger lines.
+- Manual import always scans existing ledger files once for the request, rather
+  than waiting for the background polling interval.
 - Malformed ledger lines are represented as source audit warnings and do not
   block later lines.
 - This endpoint imports ledgers; it does not start source recorders.
