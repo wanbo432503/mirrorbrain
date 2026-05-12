@@ -14,6 +14,7 @@ The module owns:
 - Validating that Knowledge Article Draft inputs are reviewed work sessions.
 - Preserving reviewed work-session and memory-event provenance.
 - Representing topic proposals on drafts.
+- Preserving a stable `articleId` lineage separate from version ids.
 - Publishing drafts into durable project/topic article versions.
 - Marking prior current-best article versions as superseded when an update is
   published.
@@ -29,12 +30,19 @@ The module does not own:
 
 ## Key Interfaces
 
-Draft generation input:
+Domain draft generation input:
 
 - `reviewedWorkSessions`: one or more reviewed sessions from a single project.
 - title, summary, and body.
 - `topicProposal`: an existing topic or new topic proposal.
 - `articleOperationProposal`: create, update, or attach-as-evidence proposal.
+
+Service/API draft generation input:
+
+- `reviewedWorkSessionIds`: ids of reviewed sessions already persisted by the
+  work-session review flow.
+- The service loads those reviewed sessions before calling the domain module.
+- Caller-supplied reviewed session objects are not trusted API input.
 
 Draft generation output:
 
@@ -55,6 +63,8 @@ Publish input:
 Publish output:
 
 - `KnowledgeArticle`.
+  - `articleId`: stable logical article lineage id.
+  - `id`: version-specific article id.
 - optional created `Topic`.
 - optional superseded prior article version.
 
@@ -65,15 +75,18 @@ Publish output:
 2. A draft is created with a topic proposal and article operation proposal.
 3. The user can correct topic/article assignment before publishing.
 4. Publish resolves the final topic assignment.
-5. The module creates the next article version and marks it as current-best.
-6. If a prior current-best version exists under the same project/topic, the
-   returned `supersededArticle` marks that prior version as no longer
+5. The module resolves a stable article lineage id.
+6. The module creates the next version for that article lineage and marks it as
    current-best.
+7. If a prior current-best version exists for the same `articleId`, the returned
+   `supersededArticle` marks that prior version as no longer current-best.
 
 ## Failure Modes And Constraints
 
 - Draft generation rejects discarded work sessions.
 - Draft generation requires all sessions to belong to one reviewed project.
+- Service/API draft generation rejects reviewed session ids that have not been
+  persisted by the explicit review flow.
 - Creating a durable topic requires `confirmed-new-topic` at publish time.
 - The module does not persist the new article or superseded article; callers
   must save both atomically when storage is introduced.
@@ -88,5 +101,7 @@ The tests verify:
 - Drafts preserve reviewed work-session and memory-event provenance.
 - Discarded work sessions cannot generate drafts.
 - Publishing a first article creates a current-best version and confirmed topic.
+- Publishing separate articles under the same topic preserves separate
+  `articleId` and version streams.
 - Publishing an update creates a new current-best version and returns the prior
   version as superseded.

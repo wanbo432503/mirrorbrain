@@ -12,8 +12,10 @@ The store owns:
 
 - Writing project, topic, draft, and article JSON files under `mirrorbrain/`.
 - Listing drafts and project-scoped topics.
-- Listing article history for a project/topic pair.
-- Returning the current-best published article for a project/topic pair.
+- Listing article history for a project/topic pair, optionally narrowed to one
+  stable `articleId`.
+- Returning the current-best published article for a project/topic pair,
+  optionally narrowed to one stable `articleId`.
 
 The store does not own:
 
@@ -34,14 +36,15 @@ The store does not own:
   - `saveArticles(articles)`
   - `listDrafts()`
   - `listTopics(projectId?)`
-  - `listArticleHistory({ projectId, topicId })`
-  - `getCurrentBestArticle({ projectId, topicId })`
+  - `listArticleHistory({ projectId, topicId, articleId? })`
+  - `getCurrentBestArticle({ projectId, topicId, articleId? })`
 
 ## Data Flow
 
 1. Domain modules create or update project/topic/draft/article values.
 2. The service or workflow layer saves those values through the store.
-3. Published article versions are read back by project and topic.
+3. Published article versions are read back by project and topic, with
+   article-specific reads using `articleId`.
 4. Current-best retrieval filters history for the version marked
    `isCurrentBest`.
 
@@ -57,5 +60,5 @@ The store does not own:
 
 Unit tests live in `src/integrations/knowledge-article-store/index.test.ts`.
 
-The tests verify draft persistence, topic listing, current-best lookup, and
-newest-first article history.
+The tests verify draft persistence, topic listing, current-best lookup, separate
+article histories within one topic, and newest-first article history.

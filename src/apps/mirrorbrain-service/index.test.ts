@@ -282,10 +282,9 @@ describe('mirrorbrain service', () => {
 
   it('generates and publishes Knowledge Article Drafts from reviewed work sessions', async () => {
     const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-article-service-'));
-    const reviewedWorkSession: ReviewedWorkSession = {
-      id: 'reviewed-work-session:source-ledger',
-      candidateId: 'work-session-candidate:source-ledger',
-      projectId: 'project:mirrorbrain',
+    const candidate: WorkSessionCandidate = {
+      id: 'work-session-candidate:source-ledger',
+      projectHint: 'mirrorbrain',
       title: 'Source ledger integration',
       summary: 'Built source ledger import.',
       memoryEventIds: ['browser-1'],
@@ -295,9 +294,7 @@ describe('mirrorbrain service', () => {
         endAt: '2026-05-12T10:30:00.000Z',
       },
       relationHints: ['Phase 4 design'],
-      reviewState: 'reviewed',
-      reviewedAt: '2026-05-12T12:05:00.000Z',
-      reviewedBy: 'user',
+      reviewState: 'pending',
     };
     const service = createMirrorBrainService(
       {
@@ -313,9 +310,17 @@ describe('mirrorbrain service', () => {
         now: () => '2026-05-12T12:10:00.000Z',
       },
     );
+    const review = await service.reviewWorkSessionCandidate(candidate, {
+      decision: 'keep',
+      reviewedBy: 'user',
+      projectAssignment: {
+        kind: 'confirmed-new-project',
+        name: 'MirrorBrain',
+      },
+    });
 
     const draft = await service.generateKnowledgeArticleDraft({
-      reviewedWorkSessions: [reviewedWorkSession],
+      reviewedWorkSessionIds: [review.reviewedWorkSession.id],
       title: 'Source ledger architecture',
       summary: 'How source ledgers feed memory.',
       body: 'Source ledgers are the acquisition boundary.',
@@ -339,7 +344,7 @@ describe('mirrorbrain service', () => {
     expect(draft).toMatchObject({
       draftState: 'draft',
       projectId: 'project:mirrorbrain',
-      sourceReviewedWorkSessionIds: [reviewedWorkSession.id],
+      sourceReviewedWorkSessionIds: [review.reviewedWorkSession.id],
     });
     expect(published.article).toMatchObject({
       projectId: 'project:mirrorbrain',
@@ -354,6 +359,44 @@ describe('mirrorbrain service', () => {
         topicId: published.article.topicId,
       }),
     ).resolves.toEqual([published.article]);
+
+    await rm(workspaceDir, { recursive: true, force: true });
+  });
+
+  it('rejects Knowledge Article Draft generation from unpersisted reviewed work-session ids', async () => {
+    const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-article-service-'));
+    const service = createMirrorBrainService(
+      {
+        workspaceDir,
+        service: {
+          status: 'running',
+          syncBrowserMemory: vi.fn(),
+          syncShellMemory: vi.fn(),
+          stop: vi.fn(),
+        },
+      },
+      {
+        now: () => '2026-05-12T12:10:00.000Z',
+      },
+    );
+
+    await expect(
+      service.generateKnowledgeArticleDraft({
+        reviewedWorkSessionIds: ['reviewed-work-session:forged'],
+        title: 'Forged article',
+        summary: 'This should not be generated.',
+        body: 'Unpersisted review inputs are not trusted.',
+        topicProposal: {
+          kind: 'new-topic',
+          name: 'Forged',
+        },
+        articleOperationProposal: {
+          kind: 'create-new-article',
+        },
+      }),
+    ).rejects.toThrow(
+      'Reviewed work session was not found: reviewed-work-session:forged',
+    );
 
     await rm(workspaceDir, { recursive: true, force: true });
   });

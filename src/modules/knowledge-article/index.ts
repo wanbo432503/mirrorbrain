@@ -54,6 +54,7 @@ export interface KnowledgeArticleDraft {
 
 export interface KnowledgeArticle {
   id: string;
+  articleId: string;
   projectId: string;
   topicId: string;
   title: string;
@@ -106,10 +107,12 @@ export interface PublishKnowledgeArticleDraftResult {
 }
 
 function slugify(value: string): string {
-  return value
+  const slug = value
     .toLowerCase()
     .replace(/[^a-z0-9]+/gu, '-')
     .replace(/^-|-$/gu, '');
+
+  return slug.length > 0 ? slug : 'untitled';
 }
 
 function uniqueValues(values: string[]): string[] {
@@ -220,6 +223,40 @@ function resolveTopic(input: {
   };
 }
 
+function createArticleId(input: {
+  projectId: string;
+  topicId: string;
+  title: string;
+}): string {
+  return `article:${slugify(input.projectId)}:${slugify(input.topicId)}:${slugify(input.title)}`;
+}
+
+function resolveArticleId(input: {
+  draft: KnowledgeArticleDraft;
+  topicId: string;
+}): string {
+  if (input.draft.articleOperationProposal.kind === 'update-existing-article') {
+    return input.draft.articleOperationProposal.articleId;
+  }
+
+  if (input.draft.articleOperationProposal.kind === 'attach-as-supporting-evidence') {
+    return (
+      input.draft.articleOperationProposal.articleId ??
+      createArticleId({
+        projectId: input.draft.projectId,
+        topicId: input.topicId,
+        title: input.draft.title,
+      })
+    );
+  }
+
+  return createArticleId({
+    projectId: input.draft.projectId,
+    topicId: input.topicId,
+    title: input.draft.title,
+  });
+}
+
 export function publishKnowledgeArticleDraft(
   input: PublishKnowledgeArticleDraftInput,
 ): PublishKnowledgeArticleDraftResult {
@@ -228,21 +265,27 @@ export function publishKnowledgeArticleDraft(
     topicAssignment: input.topicAssignment,
     publishedAt: input.publishedAt,
   });
-  const existingTopicArticles = input.existingArticles.filter(
+  const articleId = resolveArticleId({
+    draft: input.draft,
+    topicId,
+  });
+  const existingArticleVersions = input.existingArticles.filter(
     (article) =>
       article.projectId === input.draft.projectId &&
-      article.topicId === topicId,
+      article.topicId === topicId &&
+      article.articleId === articleId,
   );
-  const currentBest = existingTopicArticles
+  const currentBest = existingArticleVersions
     .filter((article) => article.isCurrentBest)
     .sort((left, right) => right.version - left.version)[0];
   const nextVersion =
-    existingTopicArticles.reduce(
+    existingArticleVersions.reduce(
       (maxVersion, article) => Math.max(maxVersion, article.version),
       0,
     ) + 1;
   const article: KnowledgeArticle = {
-    id: `knowledge-article:${slugify(input.draft.projectId)}:${slugify(topicId)}:v${nextVersion}`,
+    id: `knowledge-article:${slugify(articleId)}:v${nextVersion}`,
+    articleId,
     projectId: input.draft.projectId,
     topicId,
     title: input.draft.title,

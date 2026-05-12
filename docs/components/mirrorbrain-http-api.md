@@ -663,10 +663,28 @@ Notes:
 
 ### `POST /knowledge-articles/drafts`
 
-Generates and persists a Phase 4 Knowledge Article Draft from reviewed work
-sessions. The request body follows the service/domain draft input shape:
-reviewed work sessions, title, summary, body, topic proposal, and article
-operation proposal.
+Generates and persists a Phase 4 Knowledge Article Draft from previously
+persisted reviewed work sessions. The request body must pass reviewed session
+ids, not caller-supplied reviewed session objects; the service loads the
+persisted review records before draft generation.
+
+Request:
+
+```json
+{
+  "reviewedWorkSessionIds": ["reviewed-work-session:source-ledger"],
+  "title": "Source ledger architecture",
+  "summary": "How source ledgers feed memory.",
+  "body": "Source ledgers are the acquisition boundary.",
+  "topicProposal": {
+    "kind": "new-topic",
+    "name": "Source ledger"
+  },
+  "articleOperationProposal": {
+    "kind": "create-new-article"
+  }
+}
+```
 
 Response `201`:
 
@@ -694,7 +712,8 @@ Response `201`:
 ```json
 {
   "article": {
-    "id": "knowledge-article:project-mirrorbrain:topic-source-ledger:v1",
+    "id": "knowledge-article:article-project-mirrorbrain-topic-source-ledger-source-ledger-architecture:v1",
+    "articleId": "article:project-mirrorbrain:topic-source-ledger:source-ledger-architecture",
     "projectId": "project:mirrorbrain",
     "topicId": "topic:project-mirrorbrain:source-ledger",
     "version": 1,
@@ -707,7 +726,8 @@ Response `201`:
 ### `GET /knowledge-articles/history`
 
 Lists published Knowledge Article versions for a project/topic pair in
-newest-first order.
+newest-first order. When `articleId` is supplied, the response is narrowed to
+one stable article lineage.
 
 Query parameters:
 
@@ -715,6 +735,7 @@ Query parameters:
 | --- | --- | --- |
 | `projectId` | yes | Project id such as `project:mirrorbrain`. |
 | `topicId` | yes | Topic id such as `topic:project-mirrorbrain:source-ledger`. |
+| `articleId` | no | Stable article lineage id. |
 
 Response:
 

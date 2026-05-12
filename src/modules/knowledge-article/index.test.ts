@@ -126,7 +126,9 @@ describe('knowledge article model', () => {
       updatedAt: '2026-05-12T12:20:00.000Z',
     });
     expect(result.article).toMatchObject({
-      id: 'knowledge-article:project-mirrorbrain:topic-project-mirrorbrain-source-ledger-architecture:v1',
+      articleId:
+        'article:project-mirrorbrain:topic-project-mirrorbrain-source-ledger-architecture:source-ledger-import-architecture',
+      id: 'knowledge-article:article-project-mirrorbrain-topic-project-mirrorbrain-source-ledger-architecture-source-ledger-import-architecture:v1',
       projectId: 'project:mirrorbrain',
       topicId: 'topic:project-mirrorbrain:source-ledger-architecture',
       version: 1,
@@ -138,9 +140,81 @@ describe('knowledge article model', () => {
     });
   });
 
+  it('keeps separate article identities and version streams within the same topic', () => {
+    const importDraft = createKnowledgeArticleDraft({
+      reviewedWorkSessions: [reviewedWorkSession],
+      generatedAt: '2026-05-12T12:10:00.000Z',
+      title: 'Source ledger import architecture',
+      summary: 'How MirrorBrain imports source ledgers into memory events.',
+      body: 'Import body.',
+      topicProposal: {
+        kind: 'existing-topic',
+        topicId: 'topic:source-ledger',
+      },
+      articleOperationProposal: {
+        kind: 'create-new-article',
+      },
+    });
+    const recorderDraft = createKnowledgeArticleDraft({
+      reviewedWorkSessions: [reviewedWorkSession],
+      generatedAt: '2026-05-12T12:15:00.000Z',
+      title: 'Source recorder supervision',
+      summary: 'How MirrorBrain supervises built-in recorders.',
+      body: 'Recorder body.',
+      topicProposal: {
+        kind: 'existing-topic',
+        topicId: 'topic:source-ledger',
+      },
+      articleOperationProposal: {
+        kind: 'create-new-article',
+      },
+    });
+
+    const importResult = publishKnowledgeArticleDraft({
+      draft: importDraft,
+      publishedAt: '2026-05-12T12:20:00.000Z',
+      publishedBy: 'user',
+      topicAssignment: {
+        kind: 'existing-topic',
+        topicId: 'topic:source-ledger',
+      },
+      existingArticles: [],
+    });
+    const recorderResult = publishKnowledgeArticleDraft({
+      draft: recorderDraft,
+      publishedAt: '2026-05-12T12:30:00.000Z',
+      publishedBy: 'user',
+      topicAssignment: {
+        kind: 'existing-topic',
+        topicId: 'topic:source-ledger',
+      },
+      existingArticles: [importResult.article],
+    });
+
+    expect(importResult.article.articleId).toBe(
+      'article:project-mirrorbrain:topic-source-ledger:source-ledger-import-architecture',
+    );
+    expect(recorderResult.article.articleId).toBe(
+      'article:project-mirrorbrain:topic-source-ledger:source-recorder-supervision',
+    );
+    expect(importResult.article).toMatchObject({
+      version: 1,
+      isCurrentBest: true,
+      supersedesArticleId: null,
+    });
+    expect(recorderResult.article).toMatchObject({
+      version: 1,
+      isCurrentBest: true,
+      supersedesArticleId: null,
+    });
+    expect(recorderResult.supersededArticle).toBeUndefined();
+  });
+
   it('publishes an update as a new current-best version and marks the prior version superseded', () => {
     const priorArticle: KnowledgeArticle = {
-      id: 'knowledge-article:project-mirrorbrain:topic-source-ledger:v1',
+      id: 'knowledge-article:article-project-mirrorbrain-topic-source-ledger-source-ledger-import-architecture:v1',
+      articleId:
+        'article:project-mirrorbrain:topic-source-ledger:source-ledger-import-architecture',
       projectId: 'project:mirrorbrain',
       topicId: 'topic:source-ledger',
       title: 'Source ledger import architecture',
@@ -168,7 +242,7 @@ describe('knowledge article model', () => {
       },
       articleOperationProposal: {
         kind: 'update-existing-article',
-        articleId: priorArticle.id,
+        articleId: priorArticle.articleId,
       },
     });
 
@@ -184,7 +258,8 @@ describe('knowledge article model', () => {
     });
 
     expect(result.article).toMatchObject({
-      id: 'knowledge-article:project-mirrorbrain:topic-source-ledger:v2',
+      id: 'knowledge-article:article-project-mirrorbrain-topic-source-ledger-source-ledger-import-architecture:v2',
+      articleId: priorArticle.articleId,
       version: 2,
       isCurrentBest: true,
       supersedesArticleId: priorArticle.id,

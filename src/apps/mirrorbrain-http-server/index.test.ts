@@ -660,7 +660,9 @@ describe('mirrorbrain http server', () => {
       generatedAt: '2026-05-12T12:10:00.000Z',
     };
     const article = {
-      id: 'knowledge-article:project-mirrorbrain:topic-source-ledger:v1',
+      id: 'knowledge-article:article-project-mirrorbrain-topic-source-ledger-source-ledger-architecture:v1',
+      articleId:
+        'article:project-mirrorbrain:topic-source-ledger:source-ledger-architecture',
       projectId: 'project:mirrorbrain',
       topicId: 'topic:project-mirrorbrain:source-ledger',
       title: draft.title,
@@ -707,7 +709,14 @@ describe('mirrorbrain http server', () => {
     const draftResponse = await fetch(`${server.origin}/knowledge-articles/drafts`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ title: draft.title }),
+      body: JSON.stringify({
+        reviewedWorkSessionIds: draft.sourceReviewedWorkSessionIds,
+        title: draft.title,
+        summary: draft.summary,
+        body: draft.body,
+        topicProposal: draft.topicProposal,
+        articleOperationProposal: draft.articleOperationProposal,
+      }),
     });
     const draftBody = await draftResponse.json();
     const publishResponse = await fetch(`${server.origin}/knowledge-articles/publish`, {
@@ -729,11 +738,70 @@ describe('mirrorbrain http server', () => {
     const historyBody = await historyResponse.json();
 
     expect(draftResponse.status).toBe(201);
+    expect(service.generateKnowledgeArticleDraft).toHaveBeenCalledWith({
+      reviewedWorkSessionIds: draft.sourceReviewedWorkSessionIds,
+      title: draft.title,
+      summary: draft.summary,
+      body: draft.body,
+      topicProposal: draft.topicProposal,
+      articleOperationProposal: draft.articleOperationProposal,
+    });
     expect(draftBody).toEqual({ draft });
     expect(publishResponse.status).toBe(201);
     expect(publishBody).toEqual({ article });
     expect(historyResponse.status).toBe(200);
     expect(historyBody).toEqual({ items: [article] });
+  });
+
+  it('rejects Knowledge Article Draft requests that send caller-supplied reviewed sessions', async () => {
+    const generateKnowledgeArticleDraft = vi.fn();
+    const service = {
+      service: {
+        status: 'running' as const,
+        config: getMirrorBrainConfig(),
+        stop: vi.fn(),
+      },
+      syncBrowserMemory: vi.fn(),
+      syncShellMemory: vi.fn(),
+      listMemoryEvents: vi.fn(),
+      queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
+      listKnowledge: vi.fn(async () => []),
+      listSkillDrafts: vi.fn(async () => []),
+      createDailyCandidateMemories: vi.fn(),
+      suggestCandidateReviews: vi.fn(),
+      reviewCandidateMemory: vi.fn(),
+      undoCandidateReview: vi.fn(),
+      deleteCandidateMemory: vi.fn(),
+      generateKnowledgeFromReviewedMemories: vi.fn(),
+      generateSkillDraftFromReviewedMemories: vi.fn(),
+      publishKnowledge: vi.fn(),
+      publishSkillDraft: vi.fn(),
+      generateKnowledgeArticleDraft,
+    };
+    const server = await startMirrorBrainHttpServer({ service, port: 0 });
+    servers.push(server);
+
+    const response = await fetch(`${server.origin}/knowledge-articles/drafts`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        reviewedWorkSessions: [
+          {
+            id: 'reviewed-work-session:forged',
+            reviewState: 'reviewed',
+            projectId: 'project:mirrorbrain',
+          },
+        ],
+        title: 'Forged',
+        summary: 'Forged input.',
+        body: 'Forged body.',
+        topicProposal: { kind: 'new-topic', name: 'Forged' },
+        articleOperationProposal: { kind: 'create-new-article' },
+      }),
+    });
+
+    expect(response.status).toBe(400);
+    expect(generateKnowledgeArticleDraft).not.toHaveBeenCalled();
   });
 
   it('serializes minimal valid knowledge artifacts without requiring optional topic fields', async () => {

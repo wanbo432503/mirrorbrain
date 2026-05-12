@@ -444,7 +444,8 @@ Responsibilities:
 - Save projects, topics, Knowledge Article Drafts, and published article
   versions as JSON files.
 - List drafts and project-scoped topics.
-- Return current-best articles and newest-first article history.
+- Return current-best articles and newest-first article history, optionally
+  scoped to one stable `articleId`.
 
 Inputs:
 
@@ -851,14 +852,15 @@ Responsibilities:
 - Generate `KnowledgeArticleDraft` values from reviewed work sessions.
 - Preserve reviewed work-session and memory-event provenance.
 - Carry topic and article operation proposals on drafts.
-- Publish drafts into project/topic article versions.
+- Publish drafts into project/topic article versions with stable `articleId`
+  lineages.
 - Return superseded prior current-best versions when publishing updates.
 
 Inputs:
 
 - Reviewed work sessions, draft title/summary/body content, topic proposals,
   article operation proposals, final topic assignment, publisher metadata, and
-  existing article versions for a project/topic.
+  existing article versions for a project/topic/article lineage.
 
 Outputs:
 
@@ -868,6 +870,9 @@ Outputs:
 Failure modes and constraints:
 
 - Draft generation rejects discarded sessions and mixed-project inputs.
+- The service/API layer loads reviewed work sessions by persisted id before
+  calling this module; caller-supplied reviewed session objects are not trusted
+  HTTP input.
 - Durable topic creation requires confirmed publish-time assignment.
 - The module does not own persistence, UI correction, LLM generation, or skill
   generation.

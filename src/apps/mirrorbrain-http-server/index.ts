@@ -70,6 +70,7 @@ interface MirrorBrainHttpService {
   listKnowledgeArticleHistory?(filter: {
     projectId: string;
     topicId: string;
+    articleId?: string;
   }): Promise<unknown[]>;
   listMemoryEvents(input?: {
     page?: number;
@@ -1364,7 +1365,33 @@ export async function startMirrorBrainHttpServer(
         summary: 'Generate a Phase 4 Knowledge Article Draft',
         body: {
           type: 'object',
-          additionalProperties: true,
+          additionalProperties: false,
+          properties: {
+            reviewedWorkSessionIds: {
+              type: 'array',
+              items: { type: 'string' },
+              minItems: 1,
+            },
+            title: { type: 'string' },
+            summary: { type: 'string' },
+            body: { type: 'string' },
+            topicProposal: {
+              type: 'object',
+              additionalProperties: true,
+            },
+            articleOperationProposal: {
+              type: 'object',
+              additionalProperties: true,
+            },
+          },
+          required: [
+            'reviewedWorkSessionIds',
+            'title',
+            'summary',
+            'body',
+            'topicProposal',
+            'articleOperationProposal',
+          ],
         },
         response: {
           201: {
@@ -1443,6 +1470,7 @@ export async function startMirrorBrainHttpServer(
     Querystring: {
       projectId: string;
       topicId: string;
+      articleId?: string;
     };
   }>(
     '/knowledge-articles/history',
@@ -1454,6 +1482,7 @@ export async function startMirrorBrainHttpServer(
           properties: {
             projectId: { type: 'string' },
             topicId: { type: 'string' },
+            articleId: { type: 'string' },
           },
           required: ['projectId', 'topicId'],
         },
@@ -1493,6 +1522,7 @@ export async function startMirrorBrainHttpServer(
         items: await input.service.listKnowledgeArticleHistory({
           projectId: request.query.projectId,
           topicId: request.query.topicId,
+          articleId: request.query.articleId,
         }),
       };
     },

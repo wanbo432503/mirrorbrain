@@ -108,6 +108,7 @@ import {
   reviewWorkSessionCandidate as reviewPhase4WorkSessionCandidate,
   type ProjectAssignment,
   type ReviewWorkSessionCandidateResult,
+  type ReviewedWorkSession,
 } from '../../modules/project-work-session/index.js';
 import {
   createKnowledgeArticleDraft as createPhase4KnowledgeArticleDraft,
@@ -265,8 +266,10 @@ interface ReviewWorkSessionInput {
 
 type GenerateKnowledgeArticleDraftInput = Omit<
   CreateKnowledgeArticleDraftInput,
-  'generatedAt'
->;
+  'generatedAt' | 'reviewedWorkSessions'
+> & {
+  reviewedWorkSessionIds: string[];
+};
 
 interface PublishKnowledgeArticleDraftServiceInput {
   draft: KnowledgeArticleDraft;
@@ -286,6 +289,17 @@ function isReviewedMemoryLike(value: unknown): value is ReviewedMemory {
     'candidateMemoryId' in value &&
     'memoryEventIds' in value &&
     Array.isArray((value as { memoryEventIds?: unknown }).memoryEventIds)
+  );
+}
+
+function isReviewedWorkSessionLike(value: unknown): value is ReviewedWorkSession {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'id' in value &&
+    'candidateId' in value &&
+    'memoryEventIds' in value &&
+    'reviewState' in value
   );
 }
 
@@ -1077,14 +1091,17 @@ export function createMirrorBrainService(
       });
     }
   };
-  const saveReviewedWorkSession = async (
-    reviewedWorkSession: ReviewWorkSessionCandidateResult['reviewedWorkSession'],
-  ): Promise<void> => {
-    const reviewedWorkSessionsDir = join(
+  const getReviewedWorkSessionsDir = () =>
+    join(
       workspaceDir,
       'mirrorbrain',
       'reviewed-work-sessions',
     );
+
+  const saveReviewedWorkSession = async (
+    reviewedWorkSession: ReviewWorkSessionCandidateResult['reviewedWorkSession'],
+  ): Promise<void> => {
+    const reviewedWorkSessionsDir = getReviewedWorkSessionsDir();
 
     await mkdir(reviewedWorkSessionsDir, { recursive: true });
     await writeFile(
@@ -1094,6 +1111,43 @@ export function createMirrorBrainService(
       ),
       `${JSON.stringify(reviewedWorkSession, null, 2)}\n`,
     );
+  };
+  const loadReviewedWorkSession = async (
+    reviewedWorkSessionId: string,
+  ): Promise<ReviewedWorkSession> => {
+    const reviewedWorkSessionPath = join(
+      getReviewedWorkSessionsDir(),
+      `${encodeURIComponent(reviewedWorkSessionId)}.json`,
+    );
+
+    let text: string;
+
+    try {
+      text = await readFile(reviewedWorkSessionPath, 'utf8');
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        throw new Error(`Reviewed work session was not found: ${reviewedWorkSessionId}`);
+      }
+
+      throw error;
+    }
+
+    const parsed = JSON.parse(text) as unknown;
+
+    if (!isReviewedWorkSessionLike(parsed)) {
+      throw new Error(`Reviewed work session is malformed: ${reviewedWorkSessionId}`);
+    }
+
+    return parsed;
+  };
+  const loadReviewedWorkSessions = async (
+    reviewedWorkSessionIds: string[],
+  ): Promise<ReviewedWorkSession[]> => {
+    if (reviewedWorkSessionIds.length === 0) {
+      throw new Error('Knowledge Article Drafts require reviewed work sessions.');
+    }
+
+    return Promise.all(reviewedWorkSessionIds.map(loadReviewedWorkSession));
   };
   const createAnalysisWindow = (preset: AnalysisWindowPreset) => {
     const endAt = now();
@@ -1347,8 +1401,16 @@ export function createMirrorBrainService(
     generateKnowledgeArticleDraft: async (
       input: GenerateKnowledgeArticleDraftInput,
     ): Promise<KnowledgeArticleDraft> => {
+      const reviewedWorkSessions = await loadReviewedWorkSessions(
+        input.reviewedWorkSessionIds,
+      );
       const draft = createPhase4KnowledgeArticleDraft({
-        ...input,
+        title: input.title,
+        summary: input.summary,
+        body: input.body,
+        topicProposal: input.topicProposal,
+        articleOperationProposal: input.articleOperationProposal,
+        reviewedWorkSessions,
         generatedAt: now(),
       });
 
@@ -1391,6 +1453,7 @@ export function createMirrorBrainService(
       filter: {
         projectId: string;
         topicId: string;
+        articleId?: string;
       },
     ): Promise<KnowledgeArticle[]> =>
       knowledgeArticleStore.listArticleHistory(filter),

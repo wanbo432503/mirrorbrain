@@ -18,10 +18,12 @@ export interface KnowledgeArticleStore {
   listArticleHistory(filter: {
     projectId: string;
     topicId: string;
+    articleId?: string;
   }): Promise<Phase4KnowledgeArticle[]>;
   getCurrentBestArticle(filter: {
     projectId: string;
     topicId: string;
+    articleId?: string;
   }): Promise<Phase4KnowledgeArticle | null>;
 }
 
@@ -159,9 +161,14 @@ export function createFileKnowledgeArticleStore(
         .filter(
           (article) =>
             article.projectId === filter.projectId &&
-            article.topicId === filter.topicId,
+            article.topicId === filter.topicId &&
+            (filter.articleId === undefined || article.articleId === filter.articleId),
         )
-        .sort((left, right) => right.version - left.version);
+        .sort((left, right) => {
+          const publishedOrder = right.publishedAt.localeCompare(left.publishedAt);
+
+          return publishedOrder !== 0 ? publishedOrder : right.version - left.version;
+        });
     },
     getCurrentBestArticle: async (filter) => {
       const history = await createFileKnowledgeArticleStore(input).listArticleHistory(

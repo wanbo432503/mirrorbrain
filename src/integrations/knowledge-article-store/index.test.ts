@@ -51,7 +51,9 @@ describe('file knowledge article store', () => {
       generatedAt: '2026-05-12T12:00:00.000Z',
     };
     const versionOne: KnowledgeArticle = {
-      id: 'knowledge-article:project-mirrorbrain:topic-source-ledger:v1',
+      id: 'knowledge-article:article-project-mirrorbrain-topic-source-ledger-source-ledger-architecture:v1',
+      articleId:
+        'article:project-mirrorbrain:topic-source-ledger:source-ledger-architecture',
       projectId: 'project:mirrorbrain',
       topicId: topic.id,
       title: 'Source ledger architecture',
@@ -69,17 +71,29 @@ describe('file knowledge article store', () => {
     };
     const versionTwo: KnowledgeArticle = {
       ...versionOne,
-      id: 'knowledge-article:project-mirrorbrain:topic-source-ledger:v2',
+      id: 'knowledge-article:article-project-mirrorbrain-topic-source-ledger-source-ledger-architecture:v2',
       summary: 'Version two.',
       version: 2,
       isCurrentBest: true,
       supersedesArticleId: versionOne.id,
       publishedAt: '2026-05-12T13:00:00.000Z',
     };
+    const siblingArticle: KnowledgeArticle = {
+      ...versionOne,
+      id: 'knowledge-article:article-project-mirrorbrain-topic-source-ledger-recorder-supervision:v1',
+      articleId:
+        'article:project-mirrorbrain:topic-source-ledger:recorder-supervision',
+      title: 'Recorder supervision',
+      summary: 'Sibling article.',
+      version: 1,
+      isCurrentBest: true,
+      supersedesArticleId: null,
+      publishedAt: '2026-05-12T13:30:00.000Z',
+    };
 
     await store.saveTopic(topic);
     await store.saveDraft(draft);
-    await store.saveArticles([versionOne, versionTwo]);
+    await store.saveArticles([versionOne, versionTwo, siblingArticle]);
 
     await expect(store.listDrafts()).resolves.toEqual([draft]);
     await expect(store.listTopics('project:mirrorbrain')).resolves.toEqual([topic]);
@@ -87,13 +101,21 @@ describe('file knowledge article store', () => {
       store.getCurrentBestArticle({
         projectId: 'project:mirrorbrain',
         topicId: topic.id,
+        articleId: versionTwo.articleId,
       }),
     ).resolves.toEqual(versionTwo);
     await expect(
       store.listArticleHistory({
         projectId: 'project:mirrorbrain',
         topicId: topic.id,
+        articleId: versionTwo.articleId,
       }),
     ).resolves.toEqual([versionTwo, versionOne]);
+    await expect(
+      store.listArticleHistory({
+        projectId: 'project:mirrorbrain',
+        topicId: topic.id,
+      }),
+    ).resolves.toEqual([siblingArticle, versionTwo, versionOne]);
   });
 });
