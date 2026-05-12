@@ -38,7 +38,9 @@ This component adapts browser activity coming from `ActivityWatch`, with `aw-wat
 ## Phase 4 Ledger Bridge
 
 The Phase 4 runtime recorder uses `captureActivityWatchBrowserLedgerRecords(...)`
-for the default browser source. The bridge:
+for the default browser source. The manual Source Import path also calls this
+bridge before running the ledger importer so the Web UI can pull the latest
+ActivityWatch browser events into `browser.jsonl` on demand. The bridge:
 
 1. Uses the same initial-backfill and incremental planning rules as the browser
    memory source.

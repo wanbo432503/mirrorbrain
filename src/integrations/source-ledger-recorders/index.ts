@@ -74,6 +74,28 @@ async function appendLedgerEntry(input: {
   await appendFile(ledgerPath, `${JSON.stringify(entry)}\n`, 'utf8');
 }
 
+export async function appendCapturedSourceRecordsToLedger(input: {
+  workspaceDir: string;
+  now(): string;
+  source: SupervisedSourceInstance;
+  records: CapturedSourceRecordResult;
+}): Promise<void> {
+  if (input.records === null) {
+    return;
+  }
+
+  const records = Array.isArray(input.records) ? input.records : [input.records];
+
+  for (const record of records) {
+    await appendLedgerEntry({
+      workspaceDir: input.workspaceDir,
+      now: input.now,
+      source: input.source,
+      record,
+    });
+  }
+}
+
 export function createBuiltInSourceLedgerRecorderStarter(
   input: BuiltInSourceLedgerRecorderStarterInput,
 ): BuiltInSourceLedgerRecorderStarter {
@@ -85,16 +107,12 @@ export function createBuiltInSourceLedgerRecorderStarter(
         return;
       }
 
-      const records = Array.isArray(result) ? result : [result];
-
-      for (const record of records) {
-        await appendLedgerEntry({
-          workspaceDir: input.workspaceDir,
-          now: input.now,
-          source,
-          record,
-        });
-      }
+      await appendCapturedSourceRecordsToLedger({
+        workspaceDir: input.workspaceDir,
+        now: input.now,
+        source,
+        records: result,
+      });
     };
 
     await captureOnce();

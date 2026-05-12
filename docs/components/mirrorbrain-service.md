@@ -12,7 +12,8 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
   screenshot, shell, and agent-transcript source instances
 - wires source-ledger import to checkpoint persistence, source audit persistence, source enablement checks, and OpenViking memory ingestion
 - exposes an explicit shell-history sync operation when a shell history path is configured
-- exposes explicit Phase 4 source-ledger import for manual Import Sources operations
+- exposes explicit Phase 4 source-ledger import for manual Import Sources operations,
+  refreshing the default ActivityWatch browser ledger before import
 - exposes source audit events and source instance summaries as operational state
 - exposes manual Phase 4 work-session analysis windows for 6h, 24h, and 7d ranges
 - records explicit work-session review decisions and project assignments
@@ -55,7 +56,11 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 8. Create the Phase 4 source-ledger state store for per-ledger checkpoints and operational source audit records.
 9. Expose the `openclaw`-facing service contract around that runtime handle.
 10. After explicit browser or shell sync calls through the service contract, return the sync summary immediately and schedule the corresponding narrative rebuild in the background when new events were imported.
-11. When source-ledger import is requested, run the Phase 4 import workflow, skip disabled source instances before memory writes, persist imported memory events through the memory writer, and persist audit/checkpoint state through the source-ledger state store.
+11. When source-ledger import is requested, first capture the latest enabled
+    ActivityWatch browser records into the default browser ledger, then run the
+    Phase 4 import workflow, skip disabled source instances before memory
+    writes, persist imported memory events through the memory writer, and
+    persist audit/checkpoint state through the source-ledger state store.
 12. List source audit events and source instance summaries from operational source state without mixing them into memory retrieval.
 13. Run manual 6h, 24h, or 7d work-session analysis by reading stored memory events and returning pending work-session candidates without marking them reviewed.
 14. Record explicit work-session review decisions, save confirmed new projects, and persist reviewed work sessions in the workspace.
@@ -100,6 +105,8 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
 - unit tests verify explicit browser sync schedules browser theme narrative rebuilds
 - unit tests verify explicit browser sync returns before the background narrative rebuild finishes
 - unit tests verify Phase 4 source-ledger import is wired through the service facade with memory-event writes, audit writes, and checkpoint updates
+- unit tests verify manual source import refreshes ActivityWatch browser ledger
+  records before running the ledger importer
 - unit tests verify disabled source instances are skipped during source-ledger import before memory-event writes
 - unit tests verify source audit and source instance summary reads remain operational state separate from memory retrieval
 - unit tests verify manual Phase 4 work-session analysis builds pending candidates from explicit 6h, 24h, or 7d analysis windows
@@ -130,7 +137,9 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
 - if no external authorization-scope lookup is injected at startup, the runtime service bootstraps narrow active scopes for the configured browser and shell scope ids; durable scope persistence remains outside this service component
 - if no page-content capture authorization dependency is injected at startup, readable page text backfill is denied by default while browser activity memory capture can still proceed
 - shell sync is currently explicit only; it does not start a shell polling loop or discover shell history paths automatically
-- Phase 4 source-ledger import is available manually through the service contract and runs on the runtime scheduler every 30 minutes by default
+- Phase 4 source-ledger import is available manually through the service
+  contract, refreshes the default ActivityWatch browser ledger on demand, and
+  runs on the runtime scheduler every 30 minutes by default
 - source enable/disable updates are persisted and audited; both recorder startup and source-ledger import enforce disabled source instances
 - source-ledger state derives source summaries from checkpoint and audit history; richer live recorder health reporting is still a later operational improvement
 - the retrieval contract now accepts lightweight query and filter input, but still uses minimal result shaping rather than mature ranking

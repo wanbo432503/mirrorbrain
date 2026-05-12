@@ -83,7 +83,10 @@ import {
   type SourceRecorderSupervisor,
   type SupervisedSourceInstance,
 } from '../../workflows/source-recorder-supervisor/index.js';
-import type { CapturedSourceRecordResult } from '../../integrations/source-ledger-recorders/index.js';
+import {
+  appendCapturedSourceRecordsToLedger,
+  type CapturedSourceRecordResult,
+} from '../../integrations/source-ledger-recorders/index.js';
 import {
   analyzeWorkSessionCandidates,
   type AnalysisWindowPreset,
@@ -203,6 +206,8 @@ const DEFAULT_SUPERVISED_SOURCE_INSTANCES: SupervisedSourceInstance[] = [
 interface CreateMirrorBrainServiceInput {
   service: MirrorBrainRuntimeService;
   workspaceDir?: string;
+  browserBucketId?: string;
+  browserScopeId?: string;
 }
 
 type MemoryEventReadResult =
@@ -271,10 +276,15 @@ interface CreateMirrorBrainServiceDependencies {
     config: ReturnType<typeof getMirrorBrainConfig>;
     workspaceDir: string;
   }) => OpenVikingMemoryEventWriter;
+  createCheckpointStore?: (input: {
+    workspaceDir: string;
+  }) => SyncCheckpointStore;
   createSourceLedgerStateStore?: (input: {
     workspaceDir: string;
   }) => SourceLedgerStateStore;
   importSourceLedgers?: typeof importChangedSourceLedgers;
+  captureBrowserLedgerRecords?: typeof captureActivityWatchBrowserLedgerRecords;
+  fetchActivityWatchBuckets?: typeof fetchActivityWatchBuckets;
   analyzeWorkSessions?: AnalyzeWorkSessionCandidatesDependency;
   now?: () => string;
 }
@@ -701,7 +711,9 @@ export function createMirrorBrainService(
 ) {
   const baseUrl =
     input.service.config?.openViking.baseUrl ?? getMirrorBrainConfig().openViking.baseUrl;
+  const serviceConfig = input.service.config ?? getMirrorBrainConfig();
   const workspaceDir = input.workspaceDir ?? process.cwd();
+  const browserScopeId = input.browserScopeId ?? 'scope-browser';
   const knowledgeArticleStore = createFileKnowledgeArticleStore({
     workspaceDir,
   });
@@ -737,7 +749,12 @@ export function createMirrorBrainService(
   const memoryEventWriter = (
     dependencies.createMemoryEventWriter ?? createOpenVikingMemoryEventWriter
   )({
-    config: input.service.config ?? getMirrorBrainConfig(),
+    config: serviceConfig,
+    workspaceDir,
+  });
+  const checkpointStore = (
+    dependencies.createCheckpointStore ?? createFileSyncCheckpointStore
+  )({
     workspaceDir,
   });
   const sourceLedgerStateStore = (
@@ -747,6 +764,11 @@ export function createMirrorBrainService(
   });
   const importSourceLedgers =
     dependencies.importSourceLedgers ?? importChangedSourceLedgers;
+  const captureBrowserLedgerRecords =
+    dependencies.captureBrowserLedgerRecords ??
+    captureActivityWatchBrowserLedgerRecords;
+  const loadActivityWatchBuckets =
+    dependencies.fetchActivityWatchBuckets ?? fetchActivityWatchBuckets;
   const analyzeWorkSessions =
     dependencies.analyzeWorkSessions ?? analyzeWorkSessionCandidates;
   const undoReviewedMemory =
@@ -1351,6 +1373,71 @@ export function createMirrorBrainService(
         },
       },
     );
+  const resolveManualBrowserBucket = async (): Promise<{
+    id: string;
+    created?: string;
+  }> => {
+    if (input.browserBucketId !== undefined) {
+      return {
+        id: input.browserBucketId,
+      };
+    }
+
+    const buckets = await loadActivityWatchBuckets({
+      baseUrl: serviceConfig.activityWatch.baseUrl,
+    });
+    const bucketId = resolveActivityWatchBrowserBucket(buckets);
+
+    if (bucketId === null) {
+      throw new Error(
+        'No ActivityWatch browser watcher bucket is available for source import.',
+      );
+    }
+
+    const bucket = buckets.find((item) => item.id === bucketId);
+
+    return {
+      id: bucketId,
+      created: bucket?.created,
+    };
+  };
+  const captureBrowserSourceLedgerForService = async (): Promise<void> => {
+    const configs = await sourceLedgerStateStore.listSourceInstanceConfigs();
+    const browserConfig = configs.find(
+      (config) =>
+        config.sourceKind === 'browser' &&
+        config.sourceInstanceId === 'chrome-main',
+    );
+
+    if (browserConfig?.enabled === false) {
+      return;
+    }
+
+    const bucket = await resolveManualBrowserBucket();
+    const records = await captureBrowserLedgerRecords(
+      {
+        bucketId: bucket.id,
+        config: serviceConfig,
+        initialBackfillStartAt: bucket.created,
+        now: now(),
+        scopeId: browserScopeId,
+      },
+      {
+        checkpointStore,
+      },
+    );
+
+    await appendCapturedSourceRecordsToLedger({
+      workspaceDir,
+      now,
+      source: {
+        sourceKind: 'browser',
+        sourceInstanceId: 'chrome-main',
+        enabled: true,
+      },
+      records,
+    });
+  };
   const refreshMemoryNarratives = async (
     buildNarratives: (input: { memoryEvents: MemoryEvent[] }) => MemoryNarrative[],
   ) => {
@@ -1434,7 +1521,11 @@ export function createMirrorBrainService(
 
       return summarizeImportedEvents(sync) as ShellMemorySyncResult;
     },
-    importSourceLedgers: importSourceLedgersForService,
+    importSourceLedgers: async (): Promise<SourceLedgerImportResult> => {
+      await captureBrowserSourceLedgerForService();
+
+      return importSourceLedgersForService();
+    },
     listSourceAuditEvents: (
       filter: SourceAuditEventFilter = {},
     ) => sourceLedgerStateStore.listSourceAuditEvents(filter),

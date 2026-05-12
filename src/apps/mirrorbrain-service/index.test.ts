@@ -163,6 +163,83 @@ describe('mirrorbrain service', () => {
     );
   });
 
+  it('captures latest ActivityWatch browser records before manual source import', async () => {
+    const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-manual-source-import-'));
+    const captureBrowserLedgerRecords = vi.fn(async () => [
+      {
+        occurredAt: '2026-05-12T08:05:00.000Z',
+        capturedAt: '2026-05-12T08:06:00.000Z',
+        payload: {
+          id: 'aw-event-latest',
+          title: 'Latest browser page',
+          url: 'https://example.com/latest',
+          page_content: 'Latest browser page\n\nhttps://example.com/latest',
+        },
+      },
+    ]);
+    const callOrder: string[] = [];
+    const importSourceLedgers = vi.fn(async () => {
+      callOrder.push('import');
+      return {
+        importedCount: 1,
+        skippedCount: 0,
+        scannedLedgerCount: 1,
+        changedLedgerCount: 1,
+        ledgerResults: [],
+      };
+    });
+    captureBrowserLedgerRecords.mockImplementation(async () => {
+      callOrder.push('capture');
+      return [
+        {
+          occurredAt: '2026-05-12T08:05:00.000Z',
+          capturedAt: '2026-05-12T08:06:00.000Z',
+          payload: {
+            id: 'aw-event-latest',
+            title: 'Latest browser page',
+            url: 'https://example.com/latest',
+            page_content: 'Latest browser page\n\nhttps://example.com/latest',
+          },
+        },
+      ];
+    });
+    const service = createMirrorBrainService(
+      {
+        workspaceDir,
+        browserBucketId: 'aw-watcher-web-chrome',
+        service: {
+          status: 'running',
+          config: getMirrorBrainConfig(),
+          syncBrowserMemory: vi.fn(),
+          syncShellMemory: vi.fn(),
+          stop: vi.fn(),
+        },
+      },
+      {
+        captureBrowserLedgerRecords,
+        importSourceLedgers,
+        now: () => '2026-05-12T08:06:00.000Z',
+      },
+    );
+
+    const result = await service.importSourceLedgers();
+
+    expect(result.importedCount).toBe(1);
+    expect(callOrder).toEqual(['capture', 'import']);
+    expect(captureBrowserLedgerRecords).toHaveBeenCalledWith(
+      expect.objectContaining({
+        config: getMirrorBrainConfig(),
+        now: '2026-05-12T08:06:00.000Z',
+        scopeId: 'scope-browser',
+      }),
+      expect.objectContaining({
+        checkpointStore: expect.any(Object),
+      }),
+    );
+
+    await rm(workspaceDir, { recursive: true, force: true });
+  });
+
   it('starts built-in source ledger recorder supervision for enabled runtime sources', async () => {
     const stopSourceImportPolling = vi.fn();
     const stopRecorderSupervisor = vi.fn(async () => undefined);
