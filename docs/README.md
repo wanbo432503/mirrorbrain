@@ -66,6 +66,9 @@ these boundaries as part of the current architecture:
   manual demo path for the current memory retrieval surface.
 - [Phase 2 / Phase 3 Plan](./plans/2026-04-01-mirrorbrain-phase2-phase3-plan.md):
   roadmap source of truth for openclaw integration and topic knowledge.
+- [Phase 4 Design Draft](./plans/2026-05-12-mirrorbrain-phase4-design.md):
+  draft direction for multi-source ledgers, work sessions, projects, and
+  atomic knowledge articles.
 
 ## Component Documentation Policy
 
