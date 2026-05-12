@@ -45,8 +45,8 @@ Responsibilities:
   deletion tombstones for knowledge and skill artifacts.
 - Refresh browser and shell memory narratives after explicit sync.
 - Refresh knowledge relations and schedule linting after knowledge writes.
-- Run Phase 4 source-ledger imports once on startup and every 30 minutes through
-  the source import workflow.
+- Run Phase 4 source-ledger imports once on startup and every minute in the
+  local runtime through the source import workflow.
 
 Inputs:
 

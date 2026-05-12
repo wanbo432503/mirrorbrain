@@ -55,7 +55,10 @@ Output:
 5. If capture returns one record, the starter wraps it in `SourceLedgerEntry`.
 6. If capture returns multiple records, each record is wrapped and appended as
    its own JSONL line.
-7. Later importer workflows turn ledger entries into normalized `MemoryEvent`
+7. When `intervalMs` is provided, the same capture tick repeats until the
+   returned recorder handle is stopped. The MirrorBrain service supplies a
+   one-minute interval for the local runtime.
+8. Later importer workflows turn ledger entries into normalized `MemoryEvent`
    records.
 
 ## Failure Modes And Constraints

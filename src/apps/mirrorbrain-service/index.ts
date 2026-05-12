@@ -73,7 +73,6 @@ import {
   mergeDailyReviewIntoTopicKnowledge,
 } from '../../workflows/topic-knowledge-merge/index.js';
 import {
-  getSourceLedgerImportSchedule,
   importChangedSourceLedgers,
   startSourceLedgerImportPolling,
   type SourceLedgerImportResult,
@@ -202,6 +201,8 @@ const DEFAULT_SUPERVISED_SOURCE_INSTANCES: SupervisedSourceInstance[] = [
     enabled: true,
   },
 ];
+
+const SOURCE_LEDGER_RUNTIME_INTERVAL_MS = 60 * 1000;
 
 interface CreateMirrorBrainServiceInput {
   service: MirrorBrainRuntimeService;
@@ -655,7 +656,9 @@ export function startMirrorBrainService(
   };
   const sourceImportPolling = startSourceImportPolling(
     {
-      schedule: getSourceLedgerImportSchedule(),
+      schedule: {
+        scanIntervalMs: SOURCE_LEDGER_RUNTIME_INTERVAL_MS,
+      },
     },
     {
       runImportOnce: importSourceLedgersOnce,
@@ -667,6 +670,7 @@ export function startMirrorBrainService(
     .then((sources) =>
       startRecorderSupervisor(
         {
+          intervalMs: SOURCE_LEDGER_RUNTIME_INTERVAL_MS,
           workspaceDir,
           sources,
           now,

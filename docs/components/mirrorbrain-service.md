@@ -7,7 +7,8 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 ## Responsibility Boundary
 
 - owns service startup and shutdown lifecycle
-- starts background source-ledger import polling with the configured interval
+- starts background source-ledger import polling with the runtime source-ledger
+  interval
 - starts the built-in source-ledger recorder supervisor for browser, file,
   screenshot, shell, and agent-transcript source instances
 - wires source-ledger import to checkpoint persistence, source audit persistence, source enablement checks, and OpenViking memory ingestion
@@ -49,8 +50,8 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 2. Create a file-backed sync checkpoint store and an OpenViking-backed memory writer.
 3. Build a runtime source authorization policy from `getAuthorizationScope(...)`.
 4. Build a separate page-content capture authorization callback, using the injected dependency when present and denying readable page text capture by default.
-5. Start the built-in source-ledger recorder supervisor with the default Phase 4 source instances, using persisted source-instance configuration to disable configured sources.
-6. Start the source-ledger import polling workflow, using persisted source-instance configuration to skip disabled source instances before memory writes.
+5. Start the built-in source-ledger recorder supervisor with the default Phase 4 source instances, using persisted source-instance configuration to disable configured sources and a one-minute runtime interval so enabled recorders keep appending fresh ledgers.
+6. Start the source-ledger import polling workflow with the same one-minute runtime interval, using persisted source-instance configuration to skip disabled source instances before memory writes.
 7. Keep explicit browser and shell sync methods available through the service contract for review flows that still call them directly, using runtime source and page-content authorization policies.
 7. Return a runtime service handle with `status` and `stop()`.
 8. Create the Phase 4 source-ledger state store for per-ledger checkpoints and operational source audit records.
@@ -139,7 +140,7 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
 - shell sync is currently explicit only; it does not start a shell polling loop or discover shell history paths automatically
 - Phase 4 source-ledger import is available manually through the service
   contract, refreshes the default ActivityWatch browser ledger on demand, and
-  runs on the runtime scheduler every 30 minutes by default
+  runs on the local runtime scheduler every minute
 - manual source-ledger import refreshes the memory-event cache after scanning
   ledgers so the Memory tab can surface already imported workspace events even
   when the current scan finds no new lines

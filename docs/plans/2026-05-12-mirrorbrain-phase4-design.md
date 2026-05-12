@@ -12,9 +12,11 @@ multi-source project memory system.
 
 MirrorBrain should continuously record authorized browser, file, shell, agent,
 and screenshot activity through built-in recorders into daily JSONL ledgers.
-An importer scans changed ledger files on a 30-minute interval, converts new
+An importer scans changed ledger files on a configurable interval, converts new
 entries into unified `MemoryEvent` records, and leaves source acquisition
-details behind the ledger boundary. Users then manually analyze 6-hour,
+details behind the ledger boundary. The workflow-level default is 30 minutes,
+while the local MirrorBrain runtime currently supplies a one-minute interval for
+fresh browser-memory capture and import. Users then manually analyze 6-hour,
 24-hour, or 7-day windows into reviewed work sessions. Reviewed work sessions
 feed project-scoped, topic-organized, atomic Knowledge Article Drafts that can
 be published as current-best Knowledge Articles with version history.
@@ -666,7 +668,8 @@ Phase 4 architecture is on track when:
 
 - all Phase 4 sources write daily JSONL ledgers
 - browser data is no longer a special direct-ingestion path
-- importer scans changed ledgers every 30 minutes and supports manual import
+- importer scans changed ledgers on the configured runtime interval and
+  supports manual import
 - ledger bad lines are skipped with audit warnings rather than blocking import
 - imported records are unified `MemoryEvent` values
 - Source Management UI exposes Overview, Recent Memory, Audit, and Settings

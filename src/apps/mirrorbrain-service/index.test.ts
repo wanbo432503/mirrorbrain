@@ -286,6 +286,7 @@ describe('mirrorbrain service', () => {
 
     expect(startSourceRecorderSupervisor).toHaveBeenCalledWith(
       {
+        intervalMs: 60 * 1000,
         workspaceDir: '/tmp/mirrorbrain-workspace',
         now: expect.any(Function),
         sources: [
@@ -307,6 +308,16 @@ describe('mirrorbrain service', () => {
       {
         captureSourceRecord: expect.any(Function),
         writeSourceAuditEvent: stateStore.writeSourceAuditEvent,
+      },
+    );
+    expect(startSourceLedgerImportPolling).toHaveBeenCalledWith(
+      {
+        schedule: {
+          scanIntervalMs: 60 * 1000,
+        },
+      },
+      {
+        runImportOnce: expect.any(Function),
       },
     );
     const [, supervisorDependencies] =

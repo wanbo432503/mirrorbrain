@@ -10,7 +10,9 @@ MirrorBrain storage.
 
 The workflow also provides the default polling loop used by the local runtime.
 That loop runs one import immediately on startup and then repeats at the
-configured scan interval.
+configured scan interval. The lower-level workflow exposes a 30-minute default
+schedule, while the MirrorBrain service local runtime supplies a one-minute
+interval so newly captured source-ledger records are imported promptly.
 
 The workflow keeps source acquisition behind the ledger boundary. It reads
 ledger files; it does not collect browser, file, shell, screenshot, or agent
@@ -28,7 +30,8 @@ This workflow is responsible for:
 - persisting imported `MemoryEvent` records through injected dependencies
 - persisting operational `SourceAuditEvent` records through injected
   dependencies
-- exposing the default 30-minute scan cadence as a configuration surface
+- exposing the default 30-minute scan cadence as a workflow-level configuration
+  surface
 - starting and stopping a runtime polling loop for scheduled imports
 
 This workflow is not responsible for:
