@@ -897,6 +897,41 @@ Verification:
 
 - `src/workflows/memory-source-sync/index.test.ts`
 
+### `src/workflows/source-ledger-import`
+
+Purpose: orchestrate Phase 4 daily JSONL ledger scanning and import into
+normalized MirrorBrain memory evidence.
+
+Responsibilities:
+
+- Locate ledger files under `<workspaceDir>/mirrorbrain/ledgers`.
+- Read and write per-ledger source import checkpoints.
+- Run ledger text through `src/modules/source-ledger-importer`.
+- Persist imported `MemoryEvent` records through injected dependencies.
+- Persist operational `SourceAuditEvent` records through injected dependencies.
+- Expose the default 30-minute scan cadence for scheduler/runtime wiring.
+
+Inputs:
+
+- Workspace directory, authorization scope id, import timestamp, checkpoint
+  reader/writer, memory writer, and audit writer.
+
+Outputs:
+
+- Aggregate import counts and per-ledger import summaries.
+
+Failure modes and constraints:
+
+- Missing ledger roots import as empty.
+- Malformed ledger lines are represented as audit warnings rather than workflow
+  failures.
+- The workflow does not authorize capture or import; the caller must enforce
+  source-instance authorization before invoking it.
+
+Verification:
+
+- `src/workflows/source-ledger-import/index.test.ts`
+
 ### `src/workflows/browser-memory-sync`
 
 Purpose: sync ActivityWatch browser events and attach browser page content.

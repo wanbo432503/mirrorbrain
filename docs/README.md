@@ -59,6 +59,9 @@ these boundaries as part of the current architecture:
 - [Source Ledger Importer](./components/source-ledger-importer.md): Phase 4
   JSONL ledger-to-`MemoryEvent` import boundary with audit warnings and
   checkpointed manual re-import.
+- [Source Ledger Import Workflow](./components/source-ledger-import.md): scans
+  daily JSONL ledgers, persists imported memory/audit outputs, and exposes the
+  default 30-minute scan cadence.
 - [OpenClaw Plugin API](./components/openclaw-plugin-api.md): host-facing
   memory, knowledge, and skill capability helpers.
 - [Current Project Status](./features/current-project-status.md): concise
