@@ -3,6 +3,7 @@ import SyncActions from './SyncActions'
 import MemoryList from './MemoryList'
 import Pagination from '../common/Pagination'
 import LoadingSpinner from '../common/LoadingSpinner'
+import Button from '../common/Button'
 import { useMirrorBrain } from '../../contexts/MirrorBrainContext'
 import { createMirrorBrainBrowserApi, type MirrorBrainWebAppApi } from '../../api/client'
 import { useSyncOperations } from '../../hooks/useSyncOperations'
@@ -31,9 +32,13 @@ export function getVisibleMemoryEvents(input: {
 
 interface MemoryPanelProps {
   api?: MirrorBrainWebAppApi
+  actionMode?: 'full' | 'import-only'
 }
 
-export default function MemoryPanel({ api: providedApi }: MemoryPanelProps = {}) {
+export default function MemoryPanel({
+  actionMode = 'full',
+  api: providedApi,
+}: MemoryPanelProps = {}) {
   const { state, dispatch } = useMirrorBrain()
   const defaultApi: MirrorBrainWebAppApi = useMemo(
     () => createMirrorBrainBrowserApi(window.location.origin),
@@ -146,31 +151,62 @@ export default function MemoryPanel({ api: providedApi }: MemoryPanelProps = {})
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {/* Feedback Banner */}
-      {visibleFeedback && (
-        <div
-          className={`mb-3 p-3 rounded-lg border ${
-            visibleFeedback.kind === 'success'
-              ? 'bg-green-100 border-green-300 text-green-700'
-              : visibleFeedback.kind === 'error'
-              ? 'bg-red-100 border-red-300 text-red-700'
-              : 'bg-blue-100 border-blue-300 text-blue-700'
-          }`}
-          role="alert"
-        >
-          <p className="font-body font-medium text-sm">{visibleFeedback.message}</p>
+      {actionMode === 'import-only' ? (
+        <div data-testid="memory-import-actions" className="mb-3 flex items-stretch gap-2">
+          {visibleFeedback ? (
+            <div
+              className={`flex min-w-0 flex-1 items-center rounded-lg border px-3 py-2 ${
+                visibleFeedback.kind === 'success'
+                  ? 'border-green-300 bg-green-100 text-green-700'
+                  : visibleFeedback.kind === 'error'
+                  ? 'border-red-300 bg-red-100 text-red-700'
+                  : 'border-blue-300 bg-blue-100 text-blue-700'
+              }`}
+              role="alert"
+            >
+              <p className="truncate font-body text-sm font-medium">
+                {visibleFeedback.message}
+              </p>
+            </div>
+          ) : (
+            <div className="min-w-0 flex-1" aria-hidden="true" />
+          )}
+          <Button
+            variant="primary"
+            className="h-full"
+            onClick={handleImportSources}
+            loading={isImportingSources}
+          >
+            Import Sources
+          </Button>
         </div>
-      )}
+      ) : (
+        <>
+          {visibleFeedback && (
+            <div
+              className={`mb-3 rounded-lg border p-3 ${
+                visibleFeedback.kind === 'success'
+                  ? 'border-green-300 bg-green-100 text-green-700'
+                  : visibleFeedback.kind === 'error'
+                  ? 'border-red-300 bg-red-100 text-red-700'
+                  : 'border-blue-300 bg-blue-100 text-blue-700'
+              }`}
+              role="alert"
+            >
+              <p className="font-body text-sm font-medium">{visibleFeedback.message}</p>
+            </div>
+          )}
 
-      {/* Sync Actions */}
-      <SyncActions
-        onImportSources={handleImportSources}
-        onSyncShell={handleSyncShell}
-        onSyncFilesystems={() => handleSyncUnavailable('Filesystem')}
-        onSyncScreenshot={() => handleSyncUnavailable('Screenshot')}
-        isImportingSources={isImportingSources}
-        isSyncingShell={isSyncingShell}
-      />
+          <SyncActions
+            onImportSources={handleImportSources}
+            onSyncShell={handleSyncShell}
+            onSyncFilesystems={() => handleSyncUnavailable('Filesystem')}
+            onSyncScreenshot={() => handleSyncUnavailable('Screenshot')}
+            isImportingSources={isImportingSources}
+            isSyncingShell={isSyncingShell}
+          />
+        </>
+      )}
 
       {/* Last Sync Summary */}
       {state.lastSyncSummary && (

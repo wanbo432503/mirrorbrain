@@ -17,8 +17,8 @@ artifacts.
 This component is responsible for:
 
 - exposing source status summaries from `GET /sources/status`
-- embedding the original memory-tab controls and global `GET /memory` records
-  under the `All-Main Sources` -> `Memory Events` subtab
+- embedding the original memory-tab list and pagination layout under
+  `All-Main Sources`, with only the `Import Sources` action visible
 - showing recent imported memory records from `GET /memory` with source filters
 - showing source-specific audit records from `GET /sources/audit`
 - enabling or disabling source instances through `PATCH /sources/config`
@@ -61,12 +61,13 @@ declarations.
 
 1. The user opens the top-level `memory sources` tab.
 2. The app calls `GET /sources/status` and selects `All-Main Sources`.
-3. The right panel shows a `Memory Events` subtab that mounts the original
-   memory panel.
+3. The right panel mounts the memory list and pagination layout directly,
+   without an extra subtab.
 4. The memory panel calls `GET /memory` without source filters to populate the
    global memory event list.
 5. When the user clicks `Import Sources`, the memory panel calls
-   `POST /sources/import` and refreshes global memory events.
+   `POST /sources/import`, displays feedback to the left of the button, and
+   refreshes global memory events.
 6. When the user selects an individual source, the app calls
    `GET /sources/audit` with the selected source kind and
    instance id.
@@ -106,5 +107,5 @@ corepack pnpm vitest run \
 ```
 
 The tests cover source API client calls, source status/audit rendering, manual
-import feedback, the `All-Main Sources` -> `Memory Events` global memory view,
-and the top-level `memory sources` tab integration.
+import feedback, the `All-Main Sources` global memory view, and the top-level
+`memory sources` tab integration.

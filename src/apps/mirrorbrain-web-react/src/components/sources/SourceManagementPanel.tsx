@@ -247,25 +247,7 @@ export default function SourceManagementPanel({
 
         {selectedSourceKey === ALL_MAIN_SOURCES_KEY && (
           <div className="flex min-h-0 flex-1 flex-col">
-            <div>
-              <h3 className="font-heading text-lg font-semibold">All-Main Sources</h3>
-              <p className="text-sm text-inkMuted-80">memory events</p>
-            </div>
-
-            <div role="tablist" className="mt-4 flex border-b border-hairline">
-              <button
-                type="button"
-                role="tab"
-                aria-selected="true"
-                className="border-b-2 border-primary px-3 py-2 text-sm text-primary"
-              >
-                Memory Events
-              </button>
-            </div>
-
-            <div role="tabpanel" className="mt-4 flex min-h-0 flex-1 flex-col">
-              <MemoryPanel api={sourceApi} />
-            </div>
+            <MemoryPanel api={sourceApi} actionMode="import-only" />
           </div>
         )}
 

@@ -136,7 +136,7 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and an
 
 - **Features:**
   - Top-level Memory Sources tab that combines global memory events and source inspection
-  - `All-Main Sources` view with a `Memory Events` subtab that preserves the original Memory tab controls and paginated memory events
+  - `All-Main Sources` view that preserves the original Memory tab list and pagination layout with only `Import Sources` visible
   - Source instance list backed by `/sources/status`
   - Recent memory records backed by `/memory` source filters
   - Source-specific audit events backed by `/sources/audit`

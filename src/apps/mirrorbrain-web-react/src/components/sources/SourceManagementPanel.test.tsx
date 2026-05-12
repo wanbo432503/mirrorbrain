@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import type { MirrorBrainWebAppApi } from '../../api/client'
@@ -20,7 +20,7 @@ describe('SourceManagementPanel', () => {
     )
   }
 
-  it('keeps the original memory panel as the all-main sources memory events subtab', async () => {
+  it('shows the all-main sources memory layout with import-only actions', async () => {
     const api = {
       listSourceStatuses: vi.fn(async () => [
         {
@@ -72,11 +72,11 @@ describe('SourceManagementPanel', () => {
     renderSourceManagementPanel(api)
 
     expect(await screen.findByRole('button', { name: /all-main sources/i })).not.toBeNull()
-    expect(await screen.findByRole('tab', { name: 'Memory Events' })).not.toBeNull()
+    expect(screen.queryByRole('tab', { name: 'Memory Events' })).toBeNull()
     expect(await screen.findByRole('button', { name: 'Import Sources' })).not.toBeNull()
-    expect(await screen.findByRole('button', { name: 'Sync Shell' })).not.toBeNull()
-    expect(await screen.findByRole('button', { name: 'Sync Filesystems' })).not.toBeNull()
-    expect(await screen.findByRole('button', { name: 'Sync Screenshot' })).not.toBeNull()
+    expect(screen.queryByRole('button', { name: 'Sync Shell' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Sync Filesystems' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Sync Screenshot' })).toBeNull()
     expect(await screen.findByText('Global browser memory')).not.toBeNull()
     expect(api.listMemory).toHaveBeenCalledWith(1, 10)
     expect(api.listSourceAuditEvents).not.toHaveBeenCalled()
@@ -89,6 +89,10 @@ describe('SourceManagementPanel', () => {
     expect(
       await screen.findByText('Source import completed: 1 events imported from 1 ledgers')
     ).not.toBeNull()
+    const importActions = screen.getByTestId('memory-import-actions')
+    expect(importActions.className).toContain('items-stretch')
+    expect(within(importActions).getByRole('alert').className).toContain('flex-1')
+    expect(within(importActions).getByRole('button', { name: 'Import Sources' })).not.toBeNull()
     expect(api.listMemory).toHaveBeenCalledWith(1, 10)
   })
 
