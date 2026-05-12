@@ -405,9 +405,9 @@ Phase 4 source management belongs in the MirrorBrain UI.
 
 The standalone UI should expose a single top-level `memory sources` tab instead
 of separate `memory` and `sources` tabs. The left rail starts with
-`All-Main Sources`; selecting it shows one `Import Sources` action and the same
-global memory event list that previously lived under the `memory` tab. Selecting
-an individual source keeps the existing source-specific management surface.
+`All-Main Sources`; selecting it shows a `Memory Events` subtab that embeds the
+original memory-tab controls and paginated memory event list. Selecting an
+individual source keeps the existing source-specific management surface.
 
 Each source instance has a detail page with tabs:
 
@@ -680,7 +680,8 @@ Phase 4 architecture is on track when:
 - imported records are unified `MemoryEvent` values
 - the standalone UI exposes memory retrieval and source management through one
   top-level `memory sources` tab
-- `All-Main Sources` exposes manual `Import Sources` and global memory events
+- `All-Main Sources` exposes the original memory-tab experience through a
+  `Memory Events` subtab
 - Source Management UI exposes Overview, Recent Memory, Audit, and Settings
   for individual source instances
 - users can manually run 6h/24h/7d analysis windows

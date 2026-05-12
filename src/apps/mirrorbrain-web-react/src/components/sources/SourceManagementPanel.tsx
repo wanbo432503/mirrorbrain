@@ -13,9 +13,7 @@ import type {
 } from '../../types/index'
 import Button from '../common/Button'
 import LoadingSpinner from '../common/LoadingSpinner'
-import MemoryList from '../memory/MemoryList'
-import Pagination from '../common/Pagination'
-import { MEMORY_PAGE_SIZE } from '../memory/memory-page-config'
+import MemoryPanel from '../memory/MemoryPanel'
 
 type SourceDetailTab = 'Overview' | 'Recent Memory' | 'Audit' | 'Settings'
 
@@ -61,15 +59,6 @@ export default function SourceManagementPanel({
   const [selectedTab, setSelectedTab] = useState<SourceDetailTab>('Overview')
   const [auditEvents, setAuditEvents] = useState<SourceAuditEvent[]>([])
   const [recentMemoryEvents, setRecentMemoryEvents] = useState<MemoryEvent[]>([])
-  const [globalMemoryEvents, setGlobalMemoryEvents] = useState<MemoryEvent[]>([])
-  const [globalMemoryPagination, setGlobalMemoryPagination] = useState<{
-    total: number
-    page: number
-    pageSize: number
-    totalPages: number
-  } | null>(null)
-  const [globalMemoryPage, setGlobalMemoryPage] = useState(1)
-  const [isLoadingGlobalMemory, setIsLoadingGlobalMemory] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isImporting, setIsImporting] = useState(false)
   const [isUpdatingConfig, setIsUpdatingConfig] = useState(false)
@@ -92,19 +81,6 @@ export default function SourceManagementPanel({
         ? current
         : ALL_MAIN_SOURCES_KEY
     })
-  }
-
-  const loadGlobalMemory = async (page: number) => {
-    setIsLoadingGlobalMemory(true)
-
-    try {
-      const result = await sourceApi.listMemory(page, MEMORY_PAGE_SIZE)
-      setGlobalMemoryEvents(result.items)
-      setGlobalMemoryPagination(result.pagination)
-      setGlobalMemoryPage(page)
-    } finally {
-      setIsLoadingGlobalMemory(false)
-    }
   }
 
   useEffect(() => {
@@ -174,14 +150,6 @@ export default function SourceManagementPanel({
     }
   }, [selectedSource, selectedSourceKey, sourceApi])
 
-  useEffect(() => {
-    if (selectedSourceKey !== ALL_MAIN_SOURCES_KEY) {
-      return
-    }
-
-    void loadGlobalMemory(globalMemoryPage)
-  }, [selectedSourceKey, sourceApi])
-
   const handleImportNow = async () => {
     setIsImporting(true)
     setFeedback(null)
@@ -190,9 +158,6 @@ export default function SourceManagementPanel({
       const result = await sourceApi.importSourceLedgers()
       setFeedback(formatImportMessage(result))
       await loadSources()
-      if (selectedSourceKey === ALL_MAIN_SOURCES_KEY) {
-        await loadGlobalMemory(globalMemoryPage)
-      }
     } finally {
       setIsImporting(false)
     }
@@ -282,44 +247,25 @@ export default function SourceManagementPanel({
 
         {selectedSourceKey === ALL_MAIN_SOURCES_KEY && (
           <div className="flex min-h-0 flex-1 flex-col">
-            <div className="mb-3 flex justify-end">
-              <Button variant="primary" loading={isImporting} onClick={handleImportNow}>
-                Import Sources
-              </Button>
+            <div>
+              <h3 className="font-heading text-lg font-semibold">All-Main Sources</h3>
+              <p className="text-sm text-inkMuted-80">memory events</p>
             </div>
 
-            {globalMemoryPagination && (
-              <div className="mb-2 text-xs text-gray-600">
-                Showing {globalMemoryEvents.length} of {globalMemoryPagination.total} unique URLs
-                (page {globalMemoryPage} of {globalMemoryPagination.totalPages})
-              </div>
-            )}
-
-            {isLoadingGlobalMemory ? (
-              <div className="flex min-h-0 flex-1 items-center justify-center py-12">
-                <LoadingSpinner size="large" />
-              </div>
-            ) : (
-              <div
-                data-testid="memory-list-scroll-region"
-                className="min-h-0 flex-1 overflow-y-auto pr-2"
+            <div role="tablist" className="mt-4 flex border-b border-hairline">
+              <button
+                type="button"
+                role="tab"
+                aria-selected="true"
+                className="border-b-2 border-primary px-3 py-2 text-sm text-primary"
               >
-                <MemoryList events={globalMemoryEvents} />
-              </div>
-            )}
+                Memory Events
+              </button>
+            </div>
 
-            {globalMemoryPagination && globalMemoryPagination.totalPages > 1 && (
-              <div
-                data-testid="memory-pagination-footer"
-                className="shrink-0 border-t border-hairline bg-canvas-parchment pt-3"
-              >
-                <Pagination
-                  currentPage={globalMemoryPage}
-                  totalPages={globalMemoryPagination.totalPages}
-                  onPageChange={loadGlobalMemory}
-                />
-              </div>
-            )}
+            <div role="tabpanel" className="mt-4 flex min-h-0 flex-1 flex-col">
+              <MemoryPanel api={sourceApi} />
+            </div>
           </div>
         )}
 

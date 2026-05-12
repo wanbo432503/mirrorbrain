@@ -4,6 +4,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import type { MirrorBrainWebAppApi } from '../../api/client'
+import { MirrorBrainProvider } from '../../contexts/MirrorBrainContext'
 import SourceManagementPanel from './SourceManagementPanel'
 
 afterEach(() => {
@@ -11,7 +12,15 @@ afterEach(() => {
 })
 
 describe('SourceManagementPanel', () => {
-  it('defaults to all main sources with source import and global memory events', async () => {
+  function renderSourceManagementPanel(api: MirrorBrainWebAppApi) {
+    render(
+      <MirrorBrainProvider>
+        <SourceManagementPanel api={api} />
+      </MirrorBrainProvider>
+    )
+  }
+
+  it('keeps the original memory panel as the all-main sources memory events subtab', async () => {
     const api = {
       listSourceStatuses: vi.fn(async () => [
         {
@@ -60,10 +69,14 @@ describe('SourceManagementPanel', () => {
       })),
     } as unknown as MirrorBrainWebAppApi
 
-    render(<SourceManagementPanel api={api} />)
+    renderSourceManagementPanel(api)
 
     expect(await screen.findByRole('button', { name: /all-main sources/i })).not.toBeNull()
+    expect(await screen.findByRole('tab', { name: 'Memory Events' })).not.toBeNull()
     expect(await screen.findByRole('button', { name: 'Import Sources' })).not.toBeNull()
+    expect(await screen.findByRole('button', { name: 'Sync Shell' })).not.toBeNull()
+    expect(await screen.findByRole('button', { name: 'Sync Filesystems' })).not.toBeNull()
+    expect(await screen.findByRole('button', { name: 'Sync Screenshot' })).not.toBeNull()
     expect(await screen.findByText('Global browser memory')).not.toBeNull()
     expect(api.listMemory).toHaveBeenCalledWith(1, 10)
     expect(api.listSourceAuditEvents).not.toHaveBeenCalled()
@@ -74,7 +87,7 @@ describe('SourceManagementPanel', () => {
       expect(api.importSourceLedgers).toHaveBeenCalledTimes(1)
     })
     expect(
-      await screen.findByText('Imported 1 source ledger event across 1 scanned ledger.')
+      await screen.findByText('Source import completed: 1 events imported from 1 ledgers')
     ).not.toBeNull()
     expect(api.listMemory).toHaveBeenCalledWith(1, 10)
   })
@@ -150,7 +163,7 @@ describe('SourceManagementPanel', () => {
       })),
     } as unknown as MirrorBrainWebAppApi
 
-    render(<SourceManagementPanel api={api} />)
+    renderSourceManagementPanel(api)
 
     await userEvent.click(await screen.findByRole('button', { name: /chrome-main browser/i }))
 

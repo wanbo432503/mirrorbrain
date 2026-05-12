@@ -29,12 +29,17 @@ export function getVisibleMemoryEvents(input: {
     .slice(startIndex, startIndex + input.pageSize)
 }
 
-export default function MemoryPanel() {
+interface MemoryPanelProps {
+  api?: MirrorBrainWebAppApi
+}
+
+export default function MemoryPanel({ api: providedApi }: MemoryPanelProps = {}) {
   const { state, dispatch } = useMirrorBrain()
-  const api: MirrorBrainWebAppApi = useMemo(
+  const defaultApi: MirrorBrainWebAppApi = useMemo(
     () => createMirrorBrainBrowserApi(window.location.origin),
     []
   )
+  const api = providedApi ?? defaultApi
 
   const { feedback, isSyncingShell, syncShell } = useSyncOperations(api)
 

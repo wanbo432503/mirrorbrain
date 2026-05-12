@@ -346,7 +346,9 @@ describe('App', () => {
     await user.click(screen.getByRole('tab', { name: /memory sources/i }))
 
     expect(await screen.findByRole('button', { name: /all-main sources/i })).not.toBeNull()
+    expect(await screen.findByRole('tab', { name: 'Memory Events' })).not.toBeNull()
     expect(await screen.findByRole('button', { name: 'Import Sources' })).not.toBeNull()
+    expect(await screen.findByRole('button', { name: 'Sync Shell' })).not.toBeNull()
     expect(await screen.findByText('Recent browser memory')).not.toBeNull()
     expect(document.getElementById('memory-sources-panel')).not.toBeNull()
     expect(
