@@ -434,6 +434,38 @@ Verification:
 
 - `src/integrations/source-ledger-recorders/index.test.ts`
 
+### `src/integrations/knowledge-article-store`
+
+Purpose: persist Phase 4 Project -> Topic -> Knowledge Article artifacts in the
+local workspace.
+
+Responsibilities:
+
+- Save projects, topics, Knowledge Article Drafts, and published article
+  versions as JSON files.
+- List drafts and project-scoped topics.
+- Return current-best articles and newest-first article history.
+
+Inputs:
+
+- Workspace directory and Phase 4 project/topic/draft/article objects.
+
+Outputs:
+
+- Persisted JSON artifacts, draft lists, topic lists, current-best article
+  lookup, and article history.
+
+Failure modes and constraints:
+
+- Missing directories are empty.
+- Corrupt JSON propagates to the caller.
+- Publish policy and atomic multi-artifact writes belong to the service or
+  workflow layer.
+
+Verification:
+
+- `src/integrations/knowledge-article-store/index.test.ts`
+
 ### `src/integrations/openviking-store`
 
 Purpose: bridge MirrorBrain artifacts to OpenViking resources and workspace
