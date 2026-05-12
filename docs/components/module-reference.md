@@ -404,6 +404,36 @@ Verification:
 
 - `src/integrations/source-ledger-state-store/index.test.ts`
 
+### `src/integrations/source-ledger-recorders`
+
+Purpose: start built-in Phase 4 source recorders that write daily JSONL ledgers.
+
+Responsibilities:
+
+- Provide a recorder starter compatible with the source recorder supervisor.
+- Call injected built-in source capture functions.
+- Wrap captured payloads in `SourceLedgerEntry` envelopes.
+- Append entries to `<workspaceDir>/mirrorbrain/ledgers/YYYY-MM-DD/<kind>.jsonl`.
+
+Inputs:
+
+- Workspace directory, clock, source instance, optional interval, and injected
+  capture function.
+
+Outputs:
+
+- Ledger JSONL entries and a recorder stop handle.
+
+Failure modes and constraints:
+
+- The integration never writes `MemoryEvent` records directly.
+- Authorization and redaction must happen before a capture function returns a
+  payload.
+
+Verification:
+
+- `src/integrations/source-ledger-recorders/index.test.ts`
+
 ### `src/integrations/openviking-store`
 
 Purpose: bridge MirrorBrain artifacts to OpenViking resources and workspace

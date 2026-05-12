@@ -2,6 +2,10 @@ import type {
   SourceAuditEvent,
   SourceLedgerKind,
 } from '../../modules/source-ledger-importer/index.js';
+import {
+  createBuiltInSourceLedgerRecorderStarter,
+  type CapturedSourceRecord,
+} from '../../integrations/source-ledger-recorders/index.js';
 
 export interface SupervisedSourceInstance {
   sourceKind: SourceLedgerKind;
@@ -18,8 +22,19 @@ interface StartSourceRecorderSupervisorInput {
   now(): string;
 }
 
+interface StartBuiltInSourceLedgerRecorderSupervisorInput
+  extends StartSourceRecorderSupervisorInput {
+  workspaceDir: string;
+  intervalMs?: number;
+}
+
 interface StartSourceRecorderSupervisorDependencies {
   startRecorder(source: SupervisedSourceInstance): Promise<SourceRecorderHandle>;
+  writeSourceAuditEvent(event: SourceAuditEvent): Promise<void>;
+}
+
+interface StartBuiltInSourceLedgerRecorderSupervisorDependencies {
+  captureSourceRecord(source: SupervisedSourceInstance): Promise<CapturedSourceRecord | null>;
   writeSourceAuditEvent(event: SourceAuditEvent): Promise<void>;
 }
 
@@ -93,4 +108,19 @@ export async function startSourceRecorderSupervisor(
       }
     },
   };
+}
+
+export function startBuiltInSourceLedgerRecorderSupervisor(
+  input: StartBuiltInSourceLedgerRecorderSupervisorInput,
+  dependencies: StartBuiltInSourceLedgerRecorderSupervisorDependencies,
+): Promise<SourceRecorderSupervisor> {
+  return startSourceRecorderSupervisor(input, {
+    startRecorder: createBuiltInSourceLedgerRecorderStarter({
+      workspaceDir: input.workspaceDir,
+      now: input.now,
+      captureSourceRecord: dependencies.captureSourceRecord,
+      intervalMs: input.intervalMs,
+    }),
+    writeSourceAuditEvent: dependencies.writeSourceAuditEvent,
+  });
 }

@@ -8,7 +8,10 @@ disabled source instances, and writes operational `SourceAuditEvent` lifecycle
 records.
 
 This supervisor does not collect activity by itself. Concrete recorder
-implementations remain responsible for writing daily JSONL ledgers.
+implementations remain responsible for writing daily JSONL ledgers. The
+`startBuiltInSourceLedgerRecorderSupervisor(...)` helper wires the supervisor to
+the built-in source-ledger recorder starter while keeping acquisition and import
+behind the ledger boundary.
 
 ## Responsibility Boundary
 
@@ -19,6 +22,8 @@ This component is responsible for:
 - stopping running recorder handles
 - writing `recorder-started`, `recorder-stopped`, and `recorder-disabled` audit
   events
+- wiring built-in source-ledger recorder startup through
+  `startBuiltInSourceLedgerRecorderSupervisor(...)`
 
 This component is not responsible for:
 
@@ -30,6 +35,7 @@ This component is not responsible for:
 ## Key Interfaces
 
 - `startSourceRecorderSupervisor(...)`
+- `startBuiltInSourceLedgerRecorderSupervisor(...)`
 - `SupervisedSourceInstance`
 - `SourceRecorderHandle`
 
@@ -58,4 +64,4 @@ pnpm vitest run src/workflows/source-recorder-supervisor/index.test.ts
 ```
 
 The tests cover enabled recorder startup, disabled-source skipping, lifecycle
-audit events, and stop behavior.
+audit events, built-in source-ledger recorder wiring, and stop behavior.
