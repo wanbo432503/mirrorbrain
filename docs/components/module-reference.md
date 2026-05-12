@@ -984,6 +984,37 @@ Verification:
 
 - `src/workflows/source-ledger-import/index.test.ts`
 
+### `src/workflows/source-recorder-supervisor`
+
+Purpose: manage Phase 4 source recorder lifecycle without embedding source
+acquisition logic in the supervisor.
+
+Responsibilities:
+
+- Start enabled source recorder instances.
+- Skip disabled source instances.
+- Stop running recorder handles.
+- Write recorder lifecycle audit events.
+
+Inputs:
+
+- Source instances with enablement state, a recorder-start dependency, an audit
+  writer, and a clock.
+
+Outputs:
+
+- Running recorder handles and operational `SourceAuditEvent` records.
+
+Failure modes and constraints:
+
+- Disabled sources are skipped rather than started.
+- Audit events remain operational metadata, not memory evidence.
+- Restart/backoff policy belongs to a later supervisor slice.
+
+Verification:
+
+- `src/workflows/source-recorder-supervisor/index.test.ts`
+
 ### `src/workflows/browser-memory-sync`
 
 Purpose: sync ActivityWatch browser events and attach browser page content.

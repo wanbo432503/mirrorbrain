@@ -13,7 +13,10 @@ export type SourceAuditEventType =
   | 'entry-imported'
   | 'schema-validation-failed'
   | 'source-enabled'
-  | 'source-disabled';
+  | 'source-disabled'
+  | 'recorder-started'
+  | 'recorder-stopped'
+  | 'recorder-disabled';
 
 export interface SourceLedgerEntry<TPayload = unknown> {
   schemaVersion: string;
