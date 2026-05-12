@@ -458,6 +458,102 @@ describe('mirrorbrain http server', () => {
     });
   });
 
+  it('POST /work-sessions/analyze runs a manual Phase 4 analysis window', async () => {
+    const analyzeWorkSessions = vi.fn(async () => ({
+      analysisWindow: {
+        preset: 'last-6-hours' as const,
+        startAt: '2026-05-12T06:00:00.000Z',
+        endAt: '2026-05-12T12:00:00.000Z',
+      },
+      generatedAt: '2026-05-12T12:00:00.000Z',
+      candidates: [
+        {
+          id: 'work-session-candidate:mirrorbrain:2026-05-12T12:00:00.000Z',
+          projectHint: 'mirrorbrain',
+          title: 'mirrorbrain work session',
+          summary: 'Imported source ledgers.',
+          memoryEventIds: ['browser-1', 'shell-1'],
+          sourceTypes: ['browser', 'shell'],
+          timeRange: {
+            startAt: '2026-05-12T10:00:00.000Z',
+            endAt: '2026-05-12T10:30:00.000Z',
+          },
+          relationHints: ['Phase 4 design', 'Run tests'],
+          reviewState: 'pending' as const,
+        },
+      ],
+      excludedMemoryEventIds: [],
+    }));
+    const service = {
+      service: {
+        status: 'running' as const,
+        config: getMirrorBrainConfig(),
+        stop: vi.fn(),
+      },
+      syncBrowserMemory: vi.fn(),
+      syncShellMemory: vi.fn(),
+      listMemoryEvents: vi.fn(),
+      queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
+      listKnowledge: vi.fn(async () => []),
+      listSkillDrafts: vi.fn(async () => []),
+      createDailyCandidateMemories: vi.fn(),
+      suggestCandidateReviews: vi.fn(),
+      reviewCandidateMemory: vi.fn(),
+      undoCandidateReview: vi.fn(),
+      deleteCandidateMemory: vi.fn(),
+      generateKnowledgeFromReviewedMemories: vi.fn(),
+      generateSkillDraftFromReviewedMemories: vi.fn(),
+      publishKnowledge: vi.fn(),
+      publishSkillDraft: vi.fn(),
+      analyzeWorkSessions,
+    };
+
+    const server = await startMirrorBrainHttpServer({
+      service,
+      port: 0,
+    });
+    servers.push(server);
+
+    const response = await fetch(`${server.origin}/work-sessions/analyze`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ preset: 'last-6-hours' }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(analyzeWorkSessions).toHaveBeenCalledWith({
+      preset: 'last-6-hours',
+    });
+    expect(body).toEqual({
+      analysis: {
+        analysisWindow: {
+          preset: 'last-6-hours',
+          startAt: '2026-05-12T06:00:00.000Z',
+          endAt: '2026-05-12T12:00:00.000Z',
+        },
+        generatedAt: '2026-05-12T12:00:00.000Z',
+        candidates: [
+          {
+            id: 'work-session-candidate:mirrorbrain:2026-05-12T12:00:00.000Z',
+            projectHint: 'mirrorbrain',
+            title: 'mirrorbrain work session',
+            summary: 'Imported source ledgers.',
+            memoryEventIds: ['browser-1', 'shell-1'],
+            sourceTypes: ['browser', 'shell'],
+            timeRange: {
+              startAt: '2026-05-12T10:00:00.000Z',
+              endAt: '2026-05-12T10:30:00.000Z',
+            },
+            relationHints: ['Phase 4 design', 'Run tests'],
+            reviewState: 'pending',
+          },
+        ],
+        excludedMemoryEventIds: [],
+      },
+    });
+  });
+
   it('serializes minimal valid knowledge artifacts without requiring optional topic fields', async () => {
     const service = {
       service: {

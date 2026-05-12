@@ -360,6 +360,16 @@ describe('start mirrorbrain dev runtime', () => {
       deleteSkillArtifact: vi.fn(),
       publishKnowledge: vi.fn(),
       publishSkillDraft: vi.fn(),
+      analyzeWorkSessions: vi.fn(async () => ({
+        analysisWindow: {
+          preset: 'last-6-hours' as const,
+          startAt: '2026-05-12T06:00:00.000Z',
+          endAt: '2026-05-12T12:00:00.000Z',
+        },
+        generatedAt: '2026-05-12T12:00:00.000Z',
+        candidates: [],
+        excludedMemoryEventIds: [],
+      })),
     }));
     const prepareWebAssets = vi.fn(async () => ({
       outputDir: '/tmp/mirrorbrain-web',
@@ -514,6 +524,16 @@ describe('start mirrorbrain dev runtime', () => {
           generateSkillDraftFromReviewedMemories: vi.fn(),
           publishKnowledge: vi.fn(),
           publishSkillDraft: vi.fn(),
+          analyzeWorkSessions: vi.fn(async () => ({
+            analysisWindow: {
+              preset: 'last-6-hours' as const,
+              startAt: '2026-05-12T06:00:00.000Z',
+              endAt: '2026-05-12T12:00:00.000Z',
+            },
+            generatedAt: '2026-05-12T12:00:00.000Z',
+            candidates: [],
+            excludedMemoryEventIds: [],
+          })),
         })),
         startMirrorBrainHttpServer: vi.fn(async () => ({
           origin: 'http://127.0.0.1:3007',
@@ -646,6 +666,16 @@ describe('start mirrorbrain dev runtime', () => {
           generateSkillDraftFromReviewedMemories: vi.fn(),
           publishKnowledge: vi.fn(),
           publishSkillDraft: vi.fn(),
+          analyzeWorkSessions: vi.fn(async () => ({
+            analysisWindow: {
+              preset: 'last-6-hours' as const,
+              startAt: '2026-05-12T06:00:00.000Z',
+              endAt: '2026-05-12T12:00:00.000Z',
+            },
+            generatedAt: '2026-05-12T12:00:00.000Z',
+            candidates: [],
+            excludedMemoryEventIds: [],
+          })),
         })),
         startMirrorBrainHttpServer: vi.fn(async () => ({
           origin: 'http://127.0.0.1:3007',

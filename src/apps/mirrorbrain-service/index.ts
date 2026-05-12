@@ -78,6 +78,11 @@ import {
   type SourceLedgerImportResult,
 } from '../../workflows/source-ledger-import/index.js';
 import {
+  analyzeWorkSessionCandidates,
+  type AnalysisWindowPreset,
+  type WorkSessionAnalysisResult,
+} from '../../workflows/work-session-analysis/index.js';
+import {
   lintKnowledgeArtifacts,
   type KnowledgeLintInput,
   type KnowledgeLintPlan,
@@ -181,6 +186,10 @@ type LintKnowledgeDependency = (
   input: KnowledgeLintInput,
 ) => KnowledgeLintPlan | Promise<KnowledgeLintPlan>;
 
+type AnalyzeWorkSessionCandidatesDependency = (
+  input: Parameters<typeof analyzeWorkSessionCandidates>[0],
+) => WorkSessionAnalysisResult | Promise<WorkSessionAnalysisResult>;
+
 interface CreateMirrorBrainServiceDependencies {
   queryMemory?: typeof queryMemoryFromPluginApi;
   listMemoryEvents?: ListMemoryEventsDependency;
@@ -222,7 +231,12 @@ interface CreateMirrorBrainServiceDependencies {
     workspaceDir: string;
   }) => SourceLedgerStateStore;
   importSourceLedgers?: typeof importChangedSourceLedgers;
+  analyzeWorkSessions?: AnalyzeWorkSessionCandidatesDependency;
   now?: () => string;
+}
+
+interface AnalyzeWorkSessionsInput {
+  preset: AnalysisWindowPreset;
 }
 
 function normalizeMemoryEventReadResult(result: MemoryEventReadResult): MemoryEvent[] {
@@ -575,6 +589,8 @@ export function createMirrorBrainService(
   });
   const importSourceLedgers =
     dependencies.importSourceLedgers ?? importChangedSourceLedgers;
+  const analyzeWorkSessions =
+    dependencies.analyzeWorkSessions ?? analyzeWorkSessionCandidates;
   const undoReviewedMemory =
     dependencies.undoReviewedMemory ??
     (async (reviewedMemoryId: string, workspaceDir: string) => {
@@ -1032,6 +1048,24 @@ export function createMirrorBrainService(
       });
     }
   };
+  const createAnalysisWindow = (preset: AnalysisWindowPreset) => {
+    const endAt = now();
+    const endDate = new Date(endAt);
+    const durationMsByPreset: Record<AnalysisWindowPreset, number> = {
+      'last-6-hours': 6 * 60 * 60 * 1000,
+      'last-24-hours': 24 * 60 * 60 * 1000,
+      'last-7-days': 7 * 24 * 60 * 60 * 1000,
+    };
+    const startAt = new Date(
+      endDate.getTime() - durationMsByPreset[preset],
+    ).toISOString();
+
+    return {
+      preset,
+      startAt,
+      endAt,
+    };
+  };
   const loadCandidateMemories = async (): Promise<CandidateMemory[]> => {
     try {
       const result = await listCandidateMemories({ baseUrl });
@@ -1220,6 +1254,18 @@ export function createMirrorBrainService(
     },
     listSourceInstanceSummaries: (): Promise<SourceInstanceSummary[]> =>
       sourceLedgerStateStore.listSourceInstanceSummaries(),
+    analyzeWorkSessions: async (
+      input: AnalyzeWorkSessionsInput,
+    ): Promise<WorkSessionAnalysisResult> => {
+      const analysisWindow = createAnalysisWindow(input.preset);
+      const memoryEvents = await loadMemoryEvents();
+
+      return analyzeWorkSessions({
+        analysisWindow,
+        generatedAt: analysisWindow.endAt,
+        memoryEvents,
+      });
+    },
     listMemoryEvents: async (
       input?: { page?: number; pageSize?: number } & MemoryEventSourceFilter,
     ) => {

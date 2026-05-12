@@ -20,6 +20,7 @@ The HTTP API is a local-first capability surface for:
 
 - memory sync, listing, retrieval, candidate creation, and review
 - Phase 4 source-ledger manual import, audit inspection, and source status
+- Phase 4 manual work-session analysis windows
 - knowledge listing, generation, regeneration, approval, topic reading, graph
   reading, saving, and deletion
 - skill draft listing, generation, saving, and deletion
@@ -532,6 +533,65 @@ Notes:
   derived artifacts.
 - The update is auditable through `GET /sources/audit` as `source-enabled` or
   `source-disabled`.
+
+### `POST /work-sessions/analyze`
+
+Runs an explicit Phase 4 work-session analysis window. This endpoint is
+user-triggered and returns pending `WorkSessionCandidate` values; it does not
+review, keep, discard, publish knowledge, or create skills.
+
+Request:
+
+```json
+{
+  "preset": "last-6-hours"
+}
+```
+
+Supported presets:
+
+| Field | Values |
+| --- | --- |
+| `preset` | `last-6-hours`, `last-24-hours`, `last-7-days` |
+
+Response `201`:
+
+```json
+{
+  "analysis": {
+    "analysisWindow": {
+      "preset": "last-6-hours",
+      "startAt": "2026-05-12T06:00:00.000Z",
+      "endAt": "2026-05-12T12:00:00.000Z"
+    },
+    "generatedAt": "2026-05-12T12:00:00.000Z",
+    "candidates": [
+      {
+        "id": "work-session-candidate:mirrorbrain:2026-05-12T12:00:00.000Z",
+        "projectHint": "mirrorbrain",
+        "title": "mirrorbrain work session",
+        "summary": "Imported source ledgers.",
+        "memoryEventIds": ["browser-1", "shell-1"],
+        "sourceTypes": ["browser", "shell"],
+        "timeRange": {
+          "startAt": "2026-05-12T10:00:00.000Z",
+          "endAt": "2026-05-12T10:30:00.000Z"
+        },
+        "relationHints": ["Phase 4 design", "Run tests"],
+        "reviewState": "pending"
+      }
+    ],
+    "excludedMemoryEventIds": []
+  }
+}
+```
+
+Notes:
+
+- Analysis reads already imported `MemoryEvent` records.
+- Analysis candidates are review inputs, not reviewed work sessions.
+- The endpoint returns `501` when the service implementation does not expose
+  work-session analysis.
 
 ## Candidate And Review Endpoints
 

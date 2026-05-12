@@ -2,7 +2,7 @@
 
 ## Summary
 
-This component is the runnable service entrypoint for MirrorBrain. It starts the browser sync polling workflow, wires memory-source sync workflows to the checkpoint store and OpenViking memory ingestion adapter, schedules stored memory narrative rebuilds after explicit browser or shell sync operations, wires Phase 4 source-ledger import to checkpoint and audit storage, and exposes the `openclaw`-facing service contract for memory retrieval, source management, daily candidate generation, candidate review suggestions, explicit review decisions, and reviewed-memory-driven artifact generation.
+This component is the runnable service entrypoint for MirrorBrain. It starts the browser sync polling workflow, wires memory-source sync workflows to the checkpoint store and OpenViking memory ingestion adapter, schedules stored memory narrative rebuilds after explicit browser or shell sync operations, wires Phase 4 source-ledger import to checkpoint and audit storage, and exposes the `openclaw`-facing service contract for memory retrieval, source management, user-triggered work-session analysis, daily candidate generation, candidate review suggestions, explicit review decisions, and reviewed-memory-driven artifact generation.
 
 ## Responsibility Boundary
 
@@ -12,6 +12,7 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 - exposes an explicit shell-history sync operation when a shell history path is configured
 - exposes explicit Phase 4 source-ledger import for manual Import Now operations
 - exposes source audit events and source instance summaries as operational state
+- exposes manual Phase 4 work-session analysis windows for 6h, 24h, and 7d ranges
 - wires runtime memory-source authorization policy into browser and shell sync execution
 - wires separate page-content capture authorization into browser page text backfill
 - exposes the high-level service contract used by `openclaw`
@@ -51,9 +52,10 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 10. After explicit browser or shell sync calls through the service contract, return the sync summary immediately and schedule the corresponding narrative rebuild in the background when new events were imported.
 11. When source-ledger import is requested, run the Phase 4 import workflow, persist imported memory events through the memory writer, and persist audit/checkpoint state through the source-ledger state store.
 12. List source audit events and source instance summaries from operational source state without mixing them into memory retrieval.
-13. List raw imported memory when review-oriented workflows need event-level records, preferring OpenViking-backed reads and falling back to workspace-cached memory-event files when storage reads fail.
-14. Forward `openclaw` memory retrieval calls through the configured OpenViking base URL and return shaped retrieval results.
-15. Before daily candidate generation or refresh, run an explicit browser-memory sync so the workspace raw-event cache reflects the latest ActivityWatch browser history.
+13. Run manual 6h, 24h, or 7d work-session analysis by reading stored memory events and returning pending work-session candidates without marking them reviewed.
+14. List raw imported memory when review-oriented workflows need event-level records, preferring OpenViking-backed reads and falling back to workspace-cached memory-event files when storage reads fail.
+15. Forward `openclaw` memory retrieval calls through the configured OpenViking base URL and return shaped retrieval results.
+16. Before daily candidate generation or refresh, run an explicit browser-memory sync so the workspace raw-event cache reflects the latest ActivityWatch browser history.
 13. If candidates already exist for a review date and the sync imports no new browser events, return the existing candidates without rebuilding them.
 14. If candidates already exist for a review date and the sync imports new browser events, rebuild the daily candidates from current raw workspace memory history so late-day URLs are included.
 15. Before rebuilding daily candidates, exclude memory events and browser URLs that are already linked through reviewed memories to published knowledge so previously synthesized work is not clustered again.
@@ -88,6 +90,7 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
 - unit tests verify explicit browser sync returns before the background narrative rebuild finishes
 - unit tests verify Phase 4 source-ledger import is wired through the service facade with memory-event writes, audit writes, and checkpoint updates
 - unit tests verify source audit and source instance summary reads remain operational state separate from memory retrieval
+- unit tests verify manual Phase 4 work-session analysis builds pending candidates from explicit 6h, 24h, or 7d analysis windows
 - unit tests verify the service forwards retrieval calls to the plugin API with the configured OpenViking base URL and retrieval input
 - unit tests verify review-oriented flows still use raw memory event listing where needed
 - unit tests verify raw memory reads fall back to workspace-cached events when OpenViking reads fail
@@ -125,6 +128,7 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
 - knowledge and skill artifact deletion currently relies on service-owned tombstones rather than a documented OpenViking hard-delete path in this service layer, so upstream OpenViking resources may still exist even though MirrorBrain no longer surfaces them
 - candidate deletion removes both the MirrorBrain workspace candidate file and the corresponding OpenViking resource
 - candidate generation is heuristic and bounded to at most 10 tasks per review window
+- work-session analysis is explicit and user-triggered; the service does not schedule background sessionization
 - AI review suggestions are heuristic placeholders in Phase 1
 - retrieval methods still lack pagination and advanced ranking
 - topic-knowledge merge policy is currently a narrow rule-based baseline for Milestone 2, not the final Phase 3 quality engine

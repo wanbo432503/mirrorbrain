@@ -24,6 +24,10 @@ import type {
   SourceLedgerImportResult,
 } from '../../workflows/source-ledger-import/index.js';
 import type {
+  AnalysisWindowPreset,
+  WorkSessionAnalysisResult,
+} from '../../workflows/work-session-analysis/index.js';
+import type {
   CandidateMemory,
   CandidateReviewSuggestion,
   KnowledgeArtifact,
@@ -54,6 +58,9 @@ interface MirrorBrainHttpService {
     enabled: boolean;
     updatedBy: string;
   }): Promise<SourceInstanceConfig>;
+  analyzeWorkSessions?(input: {
+    preset: AnalysisWindowPreset;
+  }): Promise<WorkSessionAnalysisResult>;
   listMemoryEvents(input?: {
     page?: number;
     pageSize?: number;
@@ -549,6 +556,74 @@ const sourceInstanceConfigSchema = {
     'enabled',
     'updatedAt',
     'updatedBy',
+  ],
+} as const;
+
+const workSessionCandidateSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    projectHint: { type: 'string' },
+    title: { type: 'string' },
+    summary: { type: 'string' },
+    memoryEventIds: {
+      type: 'array',
+      items: { type: 'string' },
+    },
+    sourceTypes: {
+      type: 'array',
+      items: { type: 'string' },
+    },
+    timeRange: memoryTimeRangeSchema,
+    relationHints: {
+      type: 'array',
+      items: { type: 'string' },
+    },
+    reviewState: { type: 'string', enum: ['pending'] },
+  },
+  required: [
+    'id',
+    'projectHint',
+    'title',
+    'summary',
+    'memoryEventIds',
+    'sourceTypes',
+    'timeRange',
+    'relationHints',
+    'reviewState',
+  ],
+} as const;
+
+const workSessionAnalysisSchema = {
+  type: 'object',
+  properties: {
+    analysisWindow: {
+      type: 'object',
+      properties: {
+        preset: {
+          type: 'string',
+          enum: ['last-6-hours', 'last-24-hours', 'last-7-days'],
+        },
+        startAt: { type: 'string' },
+        endAt: { type: 'string' },
+      },
+      required: ['preset', 'startAt', 'endAt'],
+    },
+    generatedAt: { type: 'string' },
+    candidates: {
+      type: 'array',
+      items: workSessionCandidateSchema,
+    },
+    excludedMemoryEventIds: {
+      type: 'array',
+      items: { type: 'string' },
+    },
+  },
+  required: [
+    'analysisWindow',
+    'generatedAt',
+    'candidates',
+    'excludedMemoryEventIds',
   ],
 } as const;
 
@@ -1185,6 +1260,52 @@ export async function startMirrorBrainHttpServer(
 
       return {
         config: await input.service.updateSourceInstanceConfig(request.body),
+      };
+    },
+  );
+
+  app.post<{
+    Body: {
+      preset: AnalysisWindowPreset;
+    };
+  }>(
+    '/work-sessions/analyze',
+    {
+      schema: {
+        summary: 'Run a manual Phase 4 work-session analysis window',
+        body: {
+          type: 'object',
+          properties: {
+            preset: {
+              type: 'string',
+              enum: ['last-6-hours', 'last-24-hours', 'last-7-days'],
+            },
+          },
+          required: ['preset'],
+        },
+        response: {
+          201: createArtifactResponseSchema('analysis', workSessionAnalysisSchema),
+          501: {
+            type: 'object',
+            properties: {
+              message: { type: 'string' },
+            },
+            required: ['message'],
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      if (input.service.analyzeWorkSessions === undefined) {
+        reply.code(501);
+        return {
+          message: 'Work-session analysis is not available.',
+        };
+      }
+
+      reply.code(201);
+      return {
+        analysis: await input.service.analyzeWorkSessions(request.body),
       };
     },
   );

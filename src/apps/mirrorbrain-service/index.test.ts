@@ -161,6 +161,73 @@ describe('mirrorbrain service', () => {
     );
   });
 
+  it('analyzes a user-selected work-session window from stored memory events', async () => {
+    const memoryEvents: MemoryEvent[] = [
+      {
+        id: 'browser-1',
+        sourceType: 'browser',
+        sourceRef: 'browser:default:1',
+        timestamp: '2026-05-12T10:00:00.000Z',
+        authorizationScopeId: 'scope-source-ledger',
+        content: {
+          title: 'Phase 4 design',
+          summary: 'Read source ledger design.',
+          entities: [{ kind: 'project', label: 'mirrorbrain' }],
+        },
+        captureMetadata: {
+          upstreamSource: 'source-ledger:browser',
+          checkpoint: 'ledgers/2026-05-12/browser.jsonl:1',
+        },
+      },
+      {
+        id: 'shell-1',
+        sourceType: 'shell',
+        sourceRef: 'shell:default:1',
+        timestamp: '2026-05-12T10:30:00.000Z',
+        authorizationScopeId: 'scope-source-ledger',
+        content: {
+          title: 'Run tests',
+          summary: 'Ran source ledger tests.',
+          entities: [{ kind: 'project', label: 'mirrorbrain' }],
+        },
+        captureMetadata: {
+          upstreamSource: 'source-ledger:shell',
+          checkpoint: 'ledgers/2026-05-12/shell.jsonl:1',
+        },
+      },
+    ];
+    const service = createMirrorBrainService(
+      {
+        service: {
+          status: 'running',
+          syncBrowserMemory: vi.fn(),
+          syncShellMemory: vi.fn(),
+          stop: vi.fn(),
+        },
+      },
+      {
+        listMemoryEvents: vi.fn(async () => memoryEvents),
+        now: () => '2026-05-12T12:00:00.000Z',
+      },
+    );
+
+    const result = await service.analyzeWorkSessions({
+      preset: 'last-6-hours',
+    });
+
+    expect(result.analysisWindow).toEqual({
+      preset: 'last-6-hours',
+      startAt: '2026-05-12T06:00:00.000Z',
+      endAt: '2026-05-12T12:00:00.000Z',
+    });
+    expect(result.candidates).toHaveLength(1);
+    expect(result.candidates[0]).toMatchObject({
+      projectHint: 'mirrorbrain',
+      memoryEventIds: ['browser-1', 'shell-1'],
+      reviewState: 'pending',
+    });
+  });
+
   it('wires real browser sync execution into the polling lifecycle', async () => {
     const config = getMirrorBrainConfig();
     const checkpointStore = {
