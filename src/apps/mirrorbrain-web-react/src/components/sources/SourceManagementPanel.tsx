@@ -6,6 +6,7 @@ import {
   type MirrorBrainWebAppApi,
 } from '../../api/client'
 import type {
+  MemoryEvent,
   SourceAuditEvent,
   SourceInstanceSummary,
   SourceLedgerKind,
@@ -55,6 +56,7 @@ export default function SourceManagementPanel({
   const [selectedSourceKey, setSelectedSourceKey] = useState<string | null>(null)
   const [selectedTab, setSelectedTab] = useState<SourceDetailTab>('Overview')
   const [auditEvents, setAuditEvents] = useState<SourceAuditEvent[]>([])
+  const [recentMemoryEvents, setRecentMemoryEvents] = useState<MemoryEvent[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isImporting, setIsImporting] = useState(false)
   const [feedback, setFeedback] = useState<string | null>(null)
@@ -102,23 +104,31 @@ export default function SourceManagementPanel({
   useEffect(() => {
     if (selectedSource === null) {
       setAuditEvents([])
+      setRecentMemoryEvents([])
       return
     }
 
     let isMounted = true
 
-    const loadAudit = async () => {
-      const events = await sourceApi.listSourceAuditEvents({
-        sourceKind: selectedSource.sourceKind,
-        sourceInstanceId: selectedSource.sourceInstanceId,
-      })
+    const loadSourceDetails = async () => {
+      const [events, recentMemory] = await Promise.all([
+        sourceApi.listSourceAuditEvents({
+          sourceKind: selectedSource.sourceKind,
+          sourceInstanceId: selectedSource.sourceInstanceId,
+        }),
+        sourceApi.listMemory(1, 5, {
+          sourceKind: selectedSource.sourceKind,
+          sourceInstanceId: selectedSource.sourceInstanceId,
+        }),
+      ])
 
       if (isMounted) {
         setAuditEvents(events)
+        setRecentMemoryEvents(recentMemory.items)
       }
     }
 
-    void loadAudit()
+    void loadSourceDetails()
 
     return () => {
       isMounted = false
@@ -244,8 +254,31 @@ export default function SourceManagementPanel({
         )}
 
         {selectedTab === 'Recent Memory' && (
-          <div className="mt-4 rounded-sm border border-hairline p-4 text-sm text-inkMuted-80">
-            No recent memory records for this source.
+          <div className="mt-4 flex flex-col gap-2">
+            {recentMemoryEvents.length === 0 && (
+              <div className="rounded-sm border border-hairline p-4 text-sm text-inkMuted-80">
+                No recent memory records for this source.
+              </div>
+            )}
+            {recentMemoryEvents.map((event) => (
+              <article
+                key={event.id}
+                className="rounded-sm border border-hairline bg-canvas p-3 text-sm"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <strong>{formatMemoryEventTitle(event)}</strong>
+                  <span className="shrink-0 text-xs text-inkMuted-80">
+                    {event.sourceType}
+                  </span>
+                </div>
+                <p className="mt-1 text-inkMuted-80">
+                  {formatMemoryEventSummary(event)}
+                </p>
+                <p className="mt-1 break-words text-xs text-inkMuted-80">
+                  {event.sourceRef}
+                </p>
+              </article>
+            ))}
           </div>
         )}
 
@@ -282,6 +315,18 @@ export default function SourceManagementPanel({
       </div>
     </section>
   )
+}
+
+function formatMemoryEventTitle(event: MemoryEvent): string {
+  return typeof event.content.title === 'string' && event.content.title.length > 0
+    ? event.content.title
+    : event.id
+}
+
+function formatMemoryEventSummary(event: MemoryEvent): string {
+  return typeof event.content.summary === 'string' && event.content.summary.length > 0
+    ? event.content.summary
+    : event.timestamp
 }
 
 function Metric({ label, value }: { label: string; value: ReactNode }) {

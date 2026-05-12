@@ -40,6 +40,7 @@ import {
   updateCacheWithNewEvents,
   getEventsFromCache,
   type MemoryEventsCache,
+  type MemoryEventSourceFilter,
 } from '../../modules/memory-events-cache/index.js';
 import {
   listKnowledge as listKnowledgeFromPluginApi,
@@ -1144,11 +1145,21 @@ export function createMirrorBrainService(
     ) => sourceLedgerStateStore.listSourceAuditEvents(filter),
     listSourceInstanceSummaries: (): Promise<SourceInstanceSummary[]> =>
       sourceLedgerStateStore.listSourceInstanceSummaries(),
-    listMemoryEvents: async (input?: { page?: number; pageSize?: number }) => {
+    listMemoryEvents: async (
+      input?: { page?: number; pageSize?: number } & MemoryEventSourceFilter,
+    ) => {
       const page = input?.page ?? 1;
       const pageSize = input?.pageSize ?? 10;
       const cache = await loadOrInitializeCache();
-      const { events, total, totalPages } = getEventsFromCache(cache, page, pageSize);
+      const { events, total, totalPages } = getEventsFromCache(
+        cache,
+        page,
+        pageSize,
+        {
+          sourceKind: input?.sourceKind,
+          sourceInstanceId: input?.sourceInstanceId,
+        },
+      );
 
       return {
         items: events,

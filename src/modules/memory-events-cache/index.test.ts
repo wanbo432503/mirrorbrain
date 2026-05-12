@@ -43,6 +43,31 @@ function createTestMemoryEvent(id: string, timestamp: string, url?: string): Mem
   };
 }
 
+function createLedgerMemoryEvent(input: {
+  id: string;
+  sourceKind: string;
+  sourceInstanceId: string;
+  timestamp: string;
+}): MemoryEvent {
+  return {
+    id: input.id,
+    sourceType: input.sourceKind,
+    sourceRef: `${input.sourceKind}:${input.sourceInstanceId}:${input.id}`,
+    timestamp: input.timestamp,
+    authorizationScopeId: 'scope-source-ledger',
+    content: {
+      title: `Ledger Event ${input.id}`,
+      summary: `Summary for ${input.id}`,
+      contentKind: `${input.sourceKind}-event`,
+      sourceSpecific: {},
+    },
+    captureMetadata: {
+      upstreamSource: `source-ledger:${input.sourceKind}`,
+      checkpoint: `ledgers/2026-05-12/${input.sourceKind}.jsonl:1`,
+    },
+  };
+}
+
 describe('memory-events-cache', () => {
   let tempWorkspace: string;
 
@@ -170,6 +195,47 @@ describe('memory-events-cache', () => {
 
       expect(result.events.length).toBe(0);
       expect(result.total).toBe(0);
+      expect(result.totalPages).toBe(1);
+    });
+
+    it('should filter events by Phase 4 source instance before paginating', async () => {
+      const cache: MemoryEventsCache = {
+        version: 1,
+        updatedAt: '2026-05-12T10:00:00Z',
+        total: 3,
+        events: [
+          createLedgerMemoryEvent({
+            id: 'event-browser-new',
+            sourceKind: 'browser',
+            sourceInstanceId: 'chrome-main',
+            timestamp: '2026-05-12T10:00:00.000Z',
+          }),
+          createLedgerMemoryEvent({
+            id: 'event-shell',
+            sourceKind: 'shell',
+            sourceInstanceId: 'iterm-main',
+            timestamp: '2026-05-12T09:00:00.000Z',
+          }),
+          createLedgerMemoryEvent({
+            id: 'event-browser-old',
+            sourceKind: 'browser',
+            sourceInstanceId: 'chrome-main',
+            timestamp: '2026-05-12T08:00:00.000Z',
+          }),
+        ],
+        lastSyncSummary: {},
+      };
+
+      const result = getEventsFromCache(cache, 1, 10, {
+        sourceKind: 'browser',
+        sourceInstanceId: 'chrome-main',
+      });
+
+      expect(result.events.map((event) => event.id)).toEqual([
+        'event-browser-new',
+        'event-browser-old',
+      ]);
+      expect(result.total).toBe(2);
       expect(result.totalPages).toBe(1);
     });
   });

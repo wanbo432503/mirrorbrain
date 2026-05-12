@@ -223,4 +223,57 @@ describe('createMirrorBrainBrowserApi', () => {
       expect.objectContaining({ method: 'POST' }),
     );
   });
+
+  it('requests recent memory for a Phase 4 source instance', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        items: [
+          {
+            id: 'ledger:browser:recent',
+            sourceType: 'browser',
+            sourceRef: 'browser:chrome-main:recent',
+            timestamp: '2026-05-12T10:00:00.000Z',
+            authorizationScopeId: 'scope-source-ledger',
+            content: {
+              title: 'Recent browser memory',
+              summary: 'Imported browser page.',
+            },
+            captureMetadata: {
+              upstreamSource: 'source-ledger:browser',
+              checkpoint: 'ledgers/2026-05-12/browser.jsonl:1',
+            },
+          },
+        ],
+        pagination: {
+          total: 1,
+          page: 1,
+          pageSize: 5,
+          totalPages: 1,
+        },
+      }),
+    })) as unknown as typeof fetch;
+    vi.stubGlobal('fetch', fetchMock);
+
+    const api = createMirrorBrainBrowserApi('http://localhost:3000');
+
+    await expect(
+      api.listMemory(1, 5, {
+        sourceKind: 'browser',
+        sourceInstanceId: 'chrome-main',
+      }),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        items: [
+          expect.objectContaining({
+            id: 'ledger:browser:recent',
+          }),
+        ],
+      }),
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://localhost:3000/memory?page=1&pageSize=5&sourceKind=browser&sourceInstanceId=chrome-main',
+    );
+  });
 });

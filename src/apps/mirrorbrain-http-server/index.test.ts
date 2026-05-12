@@ -176,6 +176,10 @@ describe('mirrorbrain http server', () => {
     const healthBody = await healthResponse.json();
     const memoryResponse = await fetch(`${server.origin}/memory`);
     const memoryBody = await memoryResponse.json();
+    const filteredMemoryResponse = await fetch(
+      `${server.origin}/memory?page=1&pageSize=5&sourceKind=browser&sourceInstanceId=chrome-main`,
+    );
+    const filteredMemoryBody = await filteredMemoryResponse.json();
     const knowledgeResponse = await fetch(`${server.origin}/knowledge`);
     const knowledgeBody = await knowledgeResponse.json();
     const skillsResponse = await fetch(`${server.origin}/skills`);
@@ -219,6 +223,14 @@ describe('mirrorbrain http server', () => {
         pageSize: 10,
         totalPages: 1,
       },
+    });
+    expect(filteredMemoryResponse.status).toBe(200);
+    expect(filteredMemoryBody.items).toHaveLength(1);
+    expect(listMemoryEvents).toHaveBeenNthCalledWith(2, {
+      page: 1,
+      pageSize: 5,
+      sourceKind: 'browser',
+      sourceInstanceId: 'chrome-main',
     });
     expect(knowledgeResponse.status).toBe(200);
     expect(knowledgeBody).toEqual({

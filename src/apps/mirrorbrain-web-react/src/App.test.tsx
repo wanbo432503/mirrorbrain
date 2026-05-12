@@ -53,6 +53,37 @@ describe('App', () => {
         )
       }
 
+      if (url.includes('/memory?page=1&pageSize=5')) {
+        return new Response(
+          JSON.stringify({
+            items: [
+              {
+                id: 'ledger:browser:recent',
+                sourceType: 'browser',
+                sourceRef: 'browser:chrome-main:recent',
+                timestamp: '2026-05-12T10:00:00.000Z',
+                authorizationScopeId: 'scope-source-ledger',
+                content: {
+                  title: 'Recent browser memory',
+                  summary: 'Imported browser page.',
+                },
+                captureMetadata: {
+                  upstreamSource: 'source-ledger:browser',
+                  checkpoint: 'ledgers/2026-05-12/browser.jsonl:1',
+                },
+              },
+            ],
+            pagination: {
+              total: 1,
+              page: 1,
+              pageSize: 5,
+              totalPages: 1,
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      }
+
       if (url.endsWith('/knowledge')) {
         return new Response(
           JSON.stringify({

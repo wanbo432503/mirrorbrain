@@ -50,6 +50,8 @@ interface MirrorBrainHttpService {
   listMemoryEvents(input?: {
     page?: number;
     pageSize?: number;
+    sourceKind?: SourceLedgerKind;
+    sourceInstanceId?: string;
   }): Promise<MemoryEvent[] | PaginatedMemoryEvents>;
   queryMemory?(input: MemoryQueryInput): Promise<MemoryQueryResult>;
   listKnowledge(): Promise<KnowledgeArtifact[]>;
@@ -630,6 +632,8 @@ export async function startMirrorBrainHttpServer(
     Querystring: {
       page?: number;
       pageSize?: number;
+      sourceKind?: SourceLedgerKind;
+      sourceInstanceId?: string;
     };
   }>(
     '/memory',
@@ -641,6 +645,8 @@ export async function startMirrorBrainHttpServer(
           properties: {
             page: { type: 'number' },
             pageSize: { type: 'number' },
+            sourceKind: { type: 'string' },
+            sourceInstanceId: { type: 'string' },
           },
         },
         response: {
@@ -670,7 +676,12 @@ export async function startMirrorBrainHttpServer(
     async (request) => {
       const page = request.query.page ?? 1;
       const pageSize = request.query.pageSize ?? 10;
-      const result = await input.service.listMemoryEvents({ page, pageSize });
+      const result = await input.service.listMemoryEvents({
+        page,
+        pageSize,
+        sourceKind: request.query.sourceKind,
+        sourceInstanceId: request.query.sourceInstanceId,
+      });
       if (Array.isArray(result)) {
         return {
           items: result,

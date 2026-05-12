@@ -248,6 +248,8 @@ Query parameters:
 | --- | --- | --- | --- |
 | `page` | number | `1` | 1-based page number. |
 | `pageSize` | number | `10` | Number of memory events per page. |
+| `sourceKind` | string | none | Optional Phase 4 source kind filter, such as `browser` or `shell`. |
+| `sourceInstanceId` | string | none | Optional Phase 4 source instance filter, such as `chrome-main`. |
 
 Response:
 
@@ -282,6 +284,9 @@ Response:
 Notes:
 
 - This endpoint uses the memory event cache when available.
+- Source filters are applied before pagination. They are intended for Source
+  Management Recent Memory views and match Phase 4 ledger-imported
+  `MemoryEvent.sourceType` plus the source instance encoded in `sourceRef`.
 - The cache is display-oriented; durable records remain in workspace/OpenViking
   storage.
 

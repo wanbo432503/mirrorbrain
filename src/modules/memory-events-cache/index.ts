@@ -41,6 +41,11 @@ export interface MemoryEventsCache {
   };
 }
 
+export interface MemoryEventSourceFilter {
+  sourceKind?: string;
+  sourceInstanceId?: string;
+}
+
 const CACHE_VERSION = 1;
 const CACHE_DIR_NAME = 'cache';
 const CACHE_FILE_NAME = 'memory-events-cache.json';
@@ -304,19 +309,41 @@ export function getEventsFromCache(
   cache: MemoryEventsCache,
   page: number,
   pageSize: number,
+  filter: MemoryEventSourceFilter = {},
 ): {
   events: MemoryEvent[];
   total: number;
   totalPages: number;
 } {
-  const totalPages = Math.max(1, Math.ceil(cache.total / pageSize));
+  const filteredEvents = cache.events.filter((event) =>
+    matchesMemoryEventSourceFilter(event, filter),
+  );
+  const total = filteredEvents.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const clampedPage = Math.max(1, Math.min(page, totalPages));
   const startIndex = (clampedPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
 
   return {
-    events: cache.events.slice(startIndex, endIndex),
-    total: cache.total,
+    events: filteredEvents.slice(startIndex, endIndex),
+    total,
     totalPages,
   };
+}
+
+function matchesMemoryEventSourceFilter(
+  event: MemoryEvent,
+  filter: MemoryEventSourceFilter,
+): boolean {
+  if (filter.sourceKind !== undefined && event.sourceType !== filter.sourceKind) {
+    return false;
+  }
+
+  if (filter.sourceInstanceId === undefined) {
+    return true;
+  }
+
+  const [sourceKind, sourceInstanceId] = event.sourceRef.split(':');
+
+  return sourceKind === event.sourceType && sourceInstanceId === filter.sourceInstanceId;
 }

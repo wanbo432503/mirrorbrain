@@ -652,12 +652,13 @@ Responsibilities:
 - Merge new sync events into the cache.
 - Deduplicate browser URL events for display while preserving access times.
 - Store last sync summaries and event evaluation statistics.
-- Return paginated cache slices.
+- Return paginated cache slices, including Phase 4 source-filtered slices for
+  Source Management Recent Memory views.
 
 Inputs:
 
-- Workspace directory, OpenViking base URL, new imported events, and source
-  category.
+- Workspace directory, OpenViking base URL, new imported events, source
+  category, and optional source filters.
 
 Outputs:
 

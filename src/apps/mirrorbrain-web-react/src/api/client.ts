@@ -25,7 +25,14 @@ export interface PaginatedMemoryEvents {
 
 export interface MirrorBrainWebAppApi {
   getHealth(): Promise<{ status: 'running' | 'stopped' }>;
-  listMemory(page?: number, pageSize?: number): Promise<PaginatedMemoryEvents>;
+  listMemory(
+    page?: number,
+    pageSize?: number,
+    filter?: {
+      sourceKind?: SourceLedgerKind;
+      sourceInstanceId?: string;
+    },
+  ): Promise<PaginatedMemoryEvents>;
   listKnowledge(): Promise<KnowledgeArtifact[]>;
   listKnowledgeTopics(): Promise<
     Array<{
@@ -106,10 +113,21 @@ export function createMirrorBrainBrowserApi(
       return { status: body.status };
     },
 
-    async listMemory(page?: number, pageSize?: number) {
+    async listMemory(
+      page?: number,
+      pageSize?: number,
+      filter: {
+        sourceKind?: SourceLedgerKind;
+        sourceInstanceId?: string;
+      } = {},
+    ) {
       const params = new URLSearchParams();
       if (page !== undefined) params.set('page', String(page));
       if (pageSize !== undefined) params.set('pageSize', String(pageSize));
+      if (filter.sourceKind !== undefined) params.set('sourceKind', filter.sourceKind);
+      if (filter.sourceInstanceId !== undefined) {
+        params.set('sourceInstanceId', filter.sourceInstanceId);
+      }
 
       const url = `${baseUrl}/memory${params.toString() ? `?${params.toString()}` : ''}`;
       const response = await fetch(url);

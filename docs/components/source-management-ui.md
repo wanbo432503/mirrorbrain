@@ -16,6 +16,7 @@ artifacts.
 This component is responsible for:
 
 - exposing source status summaries from `GET /sources/status`
+- showing recent imported memory records from `GET /memory` with source filters
 - showing source-specific audit records from `GET /sources/audit`
 - triggering manual source ledger import through `POST /sources/import`
 - keeping the source management experience separate from memory review,
@@ -35,17 +36,20 @@ Frontend entry points:
 
 - `SourceManagementPanel`
 - `MirrorBrainWebAppApi.importSourceLedgers`
+- `MirrorBrainWebAppApi.listMemory`
 - `MirrorBrainWebAppApi.listSourceAuditEvents`
 - `MirrorBrainWebAppApi.listSourceStatuses`
 
 Backend API surfaces consumed by the component:
 
 - `POST /sources/import`
+- `GET /memory?sourceKind=...&sourceInstanceId=...`
 - `GET /sources/audit`
 - `GET /sources/status`
 
-The API responses use `SourceLedgerImportResult`, `SourceAuditEvent`, and
-`SourceInstanceSummary` from the shared React type declarations.
+The API responses use `SourceLedgerImportResult`, `SourceAuditEvent`,
+`SourceInstanceSummary`, and `MemoryEvent` from the shared React type
+declarations.
 
 ## Data Flow
 
@@ -53,9 +57,11 @@ The API responses use `SourceLedgerImportResult`, `SourceAuditEvent`, and
 2. The app calls `GET /sources/status` and selects the first returned source.
 3. The app calls `GET /sources/audit` with the selected source kind and
    instance id.
-4. The selected source detail panel displays overview, recent memory placeholder,
-   audit, and settings tabs.
-5. When the user clicks `Import Now`, the app calls `POST /sources/import` and
+4. The app calls `GET /memory` with the same selected source kind and instance
+   id to populate Recent Memory.
+5. The selected source detail panel displays overview, recent memory, audit,
+   and settings tabs.
+6. When the user clicks `Import Now`, the app calls `POST /sources/import` and
    then reloads source statuses.
 
 ## Failure Modes And Operational Constraints
@@ -66,8 +72,9 @@ The API responses use `SourceLedgerImportResult`, `SourceAuditEvent`, and
   outputs and must not be used as reviewed memory, knowledge, or skill evidence.
 - Source enablement and recorder status are read-only until recorder supervision
   and source configuration APIs are added.
-- Recent memory is intentionally a placeholder until a source-filtered memory
-  query endpoint exists.
+- Recent memory shows imported `MemoryEvent` records for the selected source.
+  It remains read-only; review and knowledge synthesis still happen through
+  their explicit workflows.
 
 ## Test Strategy
 

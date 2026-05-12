@@ -47,6 +47,32 @@ describe('SourceManagementPanel', () => {
         changedLedgerCount: 1,
         ledgerResults: [],
       })),
+      listMemory: vi.fn(async () => ({
+        items: [
+          {
+            id: 'ledger:browser:recent',
+            sourceType: 'browser',
+            sourceRef: 'browser:chrome-main:recent',
+            timestamp: '2026-05-12T10:00:00.000Z',
+            authorizationScopeId: 'scope-source-ledger',
+            content: {
+              title: 'Recent browser memory',
+              summary: 'Imported browser page.',
+              contentKind: 'browser-page',
+            },
+            captureMetadata: {
+              upstreamSource: 'source-ledger:browser',
+              checkpoint: 'ledgers/2026-05-12/browser.jsonl:1',
+            },
+          },
+        ],
+        pagination: {
+          total: 1,
+          page: 1,
+          pageSize: 5,
+          totalPages: 1,
+        },
+      })),
     } as unknown as MirrorBrainWebAppApi
 
     render(<SourceManagementPanel api={api} />)
@@ -59,6 +85,14 @@ describe('SourceManagementPanel', () => {
     expect(screen.getByText('2')).not.toBeNull()
     expect(screen.getByText('Skipped')).not.toBeNull()
     expect(screen.getAllByText('1').length).toBeGreaterThan(0)
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Recent Memory' }))
+    await screen.findByText('Recent browser memory')
+    expect(screen.getByText('Imported browser page.')).not.toBeNull()
+    expect(api.listMemory).toHaveBeenCalledWith(1, 5, {
+      sourceKind: 'browser',
+      sourceInstanceId: 'chrome-main',
+    })
 
     await userEvent.click(screen.getByRole('tab', { name: 'Audit' }))
     await screen.findByText('schema-validation-failed')

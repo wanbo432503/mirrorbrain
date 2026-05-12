@@ -795,6 +795,112 @@ describe('mirrorbrain service', () => {
     });
   });
 
+  it('lists recent memory events for a Phase 4 source instance', async () => {
+    const workspaceDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-source-memory-'));
+    const service = {
+      status: 'running' as const,
+      config: getMirrorBrainConfig(),
+      syncBrowserMemory: vi.fn(async () => ({
+        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:00:00.000Z',
+        importedEvents: [],
+      })),
+      syncShellMemory: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:00:00.000Z',
+        importedEvents: [],
+      })),
+      stop: vi.fn(),
+    };
+    const memoryEvents: MemoryEvent[] = [
+      {
+        id: 'ledger:browser:recent',
+        sourceType: 'browser',
+        sourceRef: 'browser:chrome-main:recent',
+        timestamp: '2026-05-12T10:00:00.000Z',
+        authorizationScopeId: 'scope-source-ledger',
+        content: {
+          title: 'Recent browser memory',
+          summary: 'Imported browser page.',
+          contentKind: 'browser-page',
+          sourceSpecific: {},
+        },
+        captureMetadata: {
+          upstreamSource: 'source-ledger:browser',
+          checkpoint: 'ledgers/2026-05-12/browser.jsonl:1',
+        },
+      },
+      {
+        id: 'ledger:shell:other',
+        sourceType: 'shell',
+        sourceRef: 'shell:iterm-main:other',
+        timestamp: '2026-05-12T09:00:00.000Z',
+        authorizationScopeId: 'scope-source-ledger',
+        content: {
+          title: 'Other shell memory',
+          summary: 'Imported shell command.',
+          contentKind: 'shell-command',
+          sourceSpecific: {},
+        },
+        captureMetadata: {
+          upstreamSource: 'source-ledger:shell',
+          checkpoint: 'ledgers/2026-05-12/shell.jsonl:1',
+        },
+      },
+    ];
+
+    try {
+      const api = createMirrorBrainService(
+        {
+          service,
+          workspaceDir,
+        },
+        {
+          listMemoryEvents: vi.fn(async () => ({
+            items: memoryEvents,
+            pagination: {
+              total: memoryEvents.length,
+              page: 1,
+              pageSize: 10,
+              totalPages: 1,
+            },
+          })),
+          listWorkspaceMemoryEvents: vi.fn(async () => memoryEvents),
+          listKnowledge: vi.fn(async () => []),
+          listSkillDrafts: vi.fn(async () => []),
+        },
+      );
+
+      await expect(
+        api.listMemoryEvents({
+          page: 1,
+          pageSize: 10,
+          sourceKind: 'browser',
+          sourceInstanceId: 'chrome-main',
+        }),
+      ).resolves.toEqual({
+        items: [
+          expect.objectContaining({
+            id: 'ledger:browser:recent',
+            sourceRef: 'browser:chrome-main:recent',
+          }),
+        ],
+        pagination: {
+          total: 1,
+          page: 1,
+          pageSize: 10,
+          totalPages: 1,
+        },
+      });
+    } finally {
+      await rm(workspaceDir, { recursive: true, force: true });
+    }
+  });
+
   it('builds daily candidates from workspace-cached raw memory history', async () => {
     const service = {
       status: 'running' as const,
