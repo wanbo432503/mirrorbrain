@@ -37,6 +37,8 @@ owning MirrorBrain's internal workflows.
 - Initial Phase 4 source-ledger import workflow that scans daily JSONL ledgers,
   persists imported memory/audit outputs through injected writers, and exposes
   the default 30-minute scan cadence.
+- Local Phase 4 source-ledger state store for per-ledger checkpoints,
+  operational source audit events, and derived source instance summaries.
 - Runtime source authorization checks before source fetch and before
   persistence.
 - Best-effort shell command secret redaction before MirrorBrain storage,

@@ -353,6 +353,39 @@ Verification:
 
 - `src/integrations/file-sync-checkpoint-store/index.test.ts`
 
+### `src/integrations/source-ledger-state-store`
+
+Purpose: persist Phase 4 source ledger import checkpoints and operational audit
+events in local workspace files.
+
+Responsibilities:
+
+- Read and write `SourceLedgerImportCheckpoint` records under
+  `mirrorbrain/state/source-ledger-checkpoints/`.
+- Write `SourceAuditEvent` records under `mirrorbrain/source-audit-events/`.
+- List source audit records with source-kind and source-instance filters.
+- Derive source instance summaries for Source Management surfaces.
+
+Inputs:
+
+- Workspace directory, ledger path, source audit events, and audit filters.
+
+Outputs:
+
+- Source ledger checkpoints, filtered audit records, and source instance
+  summaries.
+
+Failure modes and constraints:
+
+- Missing checkpoint and audit directories are treated as empty state.
+- Corrupt JSON propagates as a read/parse failure.
+- Audit records are operational metadata and must remain separate from
+  `MemoryEvent` persistence and retrieval.
+
+Verification:
+
+- `src/integrations/source-ledger-state-store/index.test.ts`
+
 ### `src/integrations/openviking-store`
 
 Purpose: bridge MirrorBrain artifacts to OpenViking resources and workspace

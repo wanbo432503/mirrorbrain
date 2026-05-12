@@ -62,6 +62,9 @@ these boundaries as part of the current architecture:
 - [Source Ledger Import Workflow](./components/source-ledger-import.md): scans
   daily JSONL ledgers, persists imported memory/audit outputs, and exposes the
   default 30-minute scan cadence.
+- [Source Ledger State Store](./components/source-ledger-state-store.md): local
+  checkpoint and source audit state used by Phase 4 import and Source
+  Management surfaces.
 - [OpenClaw Plugin API](./components/openclaw-plugin-api.md): host-facing
   memory, knowledge, and skill capability helpers.
 - [Current Project Status](./features/current-project-status.md): concise
@@ -124,6 +127,9 @@ subdirectories:
 - `knowledge/`: knowledge drafts, topic candidates, and topic knowledge.
 - `skill-drafts/`: generated skill artifacts.
 - `state/sync-checkpoints/`: source-aware incremental sync checkpoints.
+- `state/source-ledger-checkpoints/`: Phase 4 per-ledger line checkpoints.
+- `source-audit-events/`: operational source audit events, separate from user
+  work evidence.
 - `cache/`: display-oriented memory event cache.
 - `deleted-artifacts/`: deletion tombstones for knowledge and skills.
 
