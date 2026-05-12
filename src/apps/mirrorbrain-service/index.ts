@@ -740,17 +740,12 @@ export function createMirrorBrainService(
         `${reviewedMemoryId}.json`,
       );
 
-      console.log(`[undoCandidateReview] Deleting reviewed memory file: ${reviewedFilePath}`);
-
       try {
         await unlink(reviewedFilePath);
-        console.log(`[undoCandidateReview] Successfully deleted: ${reviewedMemoryId}`);
       } catch (error) {
         if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
-          console.log(`[undoCandidateReview] File already deleted: ${reviewedFilePath}`);
           return;
         }
-        console.error(`[undoCandidateReview] Error deleting file: ${reviewedFilePath}`, error);
         throw error;
       }
     });
@@ -770,18 +765,13 @@ export function createMirrorBrainService(
       `${candidateMemoryId}.json`,
     );
 
-    console.log(`[deleteCandidateMemory] Deleting candidate memory file: ${candidateFilePath}`);
-
     let workspaceDeleteError: unknown = null;
 
     try {
       await unlink(candidateFilePath);
-      console.log(`[deleteCandidateMemory] Successfully deleted: ${candidateMemoryId}`);
     } catch (error) {
       if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
-        console.log(`[deleteCandidateMemory] File already deleted: ${candidateFilePath}`);
       } else {
-        console.error(`[deleteCandidateMemory] Error deleting file: ${candidateFilePath}`, error);
         workspaceDeleteError = error;
       }
     }

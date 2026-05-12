@@ -75,12 +75,6 @@ export async function startMirrorBrainMvpFixture() {
         status: 'running',
         config: getMirrorBrainConfig(),
       },
-      syncBrowserMemory: async () => ({
-        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
-        strategy: 'incremental' as const,
-        importedCount: 1,
-        lastSyncedAt: '2026-03-20T09:00:00.000Z',
-      }),
       syncShellMemory: async () => ({
         sourceKey: 'shell-history:/tmp/.zsh_history',
         strategy: 'incremental' as const,

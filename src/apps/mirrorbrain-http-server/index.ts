@@ -44,7 +44,6 @@ interface MirrorBrainHttpService {
     status: 'running' | 'stopped';
     config?: ReturnType<typeof getMirrorBrainConfig>;
   };
-  syncBrowserMemory(): Promise<unknown>;
   syncShellMemory(): Promise<unknown>;
   importSourceLedgers?(): Promise<SourceLedgerImportResult>;
   listSourceAuditEvents?(filter: {

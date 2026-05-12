@@ -179,12 +179,6 @@ describe('review to artifacts integration', () => {
           status: 'running',
           config: getMirrorBrainConfig(),
         },
-        syncBrowserMemory: async () => ({
-          sourceKey: 'activitywatch-browser:test',
-          strategy: 'incremental' as const,
-          importedCount: 0,
-          lastSyncedAt: `${reviewDate}T00:00:00.000Z`,
-        }),
         syncShellMemory: async () => ({
           sourceKey: 'shell-history:test',
           strategy: 'incremental' as const,

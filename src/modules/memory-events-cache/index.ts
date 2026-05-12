@@ -297,10 +297,6 @@ export async function updateCacheWithNewEvents(
     evaluationStats,
   };
 
-  console.log(
-    `[memory-events-cache] ${sourceType} sync: ${newEvents.length} new → ${evaluationStats.finalKept} kept (filtered ${evaluationStats.basicFiltered}, deduped ${evaluationStats.dedupRemoved})`,
-  );
-
   await saveMemoryEventsCache(workspaceDir, cache);
   return cache;
 }
