@@ -42,6 +42,7 @@ Those concerns remain in the service, workflow, module, and integration layers.
 - `GET /sources/audit`
 - `GET /sources/status`
 - `POST /work-sessions/analyze`
+- `POST /work-sessions/reviews`
 - `GET /memory`
 - `POST /memory/query`
 - `GET /knowledge`
@@ -69,14 +70,15 @@ Those concerns remain in the service, workflow, module, and integration layers.
 6. `POST /sources/import` runs the Phase 4 source-ledger import workflow through the service layer and returns import counts.
 7. `GET /sources/audit` and `GET /sources/status` expose operational source state without adding audit records to memory retrieval.
 8. `POST /work-sessions/analyze` runs an explicit 6h, 24h, or 7d analysis window and returns pending work-session candidates.
-9. `GET /memory` returns raw memory events for the standalone MVP and review-oriented flows.
-10. `POST /memory/query` forwards a query-shaped retrieval request and returns theme-level memory results.
-11. `POST /knowledge` and `POST /skills` let the standalone UI save edited draft artifacts back through the service layer.
-12. The server serializes the domain result as JSON and returns an HTTP status that matches the action.
-13. Daily candidate creation returns task-oriented candidates with source URL refs, bounded result counts, and explicit time ranges.
-14. AI review suggestions stay separate from reviewed-memory writes, and now include a keep-score plus supporting reasons so the UI can explain why a candidate exists and why it may be worth keeping.
-15. Knowledge generation, regeneration, and approval routes delegate to the service layer and return structured errors when a capability is unavailable.
-16. `POST /knowledge/approve` accepts the current draft snapshot along with `draftId` so the service can publish the visible draft even if the storage index has not exposed it yet.
+9. `POST /work-sessions/reviews` records explicit keep/discard decisions and project assignment inputs.
+10. `GET /memory` returns raw memory events for the standalone MVP and review-oriented flows.
+11. `POST /memory/query` forwards a query-shaped retrieval request and returns theme-level memory results.
+12. `POST /knowledge` and `POST /skills` let the standalone UI save edited draft artifacts back through the service layer.
+13. The server serializes the domain result as JSON and returns an HTTP status that matches the action.
+14. Daily candidate creation returns task-oriented candidates with source URL refs, bounded result counts, and explicit time ranges.
+15. AI review suggestions stay separate from reviewed-memory writes, and now include a keep-score plus supporting reasons so the UI can explain why a candidate exists and why it may be worth keeping.
+16. Knowledge generation, regeneration, and approval routes delegate to the service layer and return structured errors when a capability is unavailable.
+17. `POST /knowledge/approve` accepts the current draft snapshot along with `draftId` so the service can publish the visible draft even if the storage index has not exposed it yet.
 
 ## Dependencies
 
@@ -102,6 +104,7 @@ Those concerns remain in the service, workflow, module, and integration layers.
 - `POST /sources/import` depends on a service object that implements Phase 4 source-ledger import; otherwise it returns `501`
 - source audit and source status endpoints are operational metadata surfaces, not memory retrieval endpoints
 - `POST /work-sessions/analyze` depends on a service object that implements Phase 4 work-session analysis; otherwise it returns `501`
+- `POST /work-sessions/reviews` depends on a service object that implements Phase 4 work-session review; otherwise it returns `501`
 - sync responses can include a recent `importedEvents` preview so standalone clients can surface newly imported memory immediately without returning the full imported event batch
 - knowledge approval depends on a persisted draft id; missing ids return a request error rather than a partially shaped success payload
 
@@ -111,6 +114,7 @@ Those concerns remain in the service, workflow, module, and integration layers.
 - unit-style coverage for Swagger UI and OpenAPI schema publication
 - unit-style coverage for Phase 4 source import, audit, and status endpoints
 - unit-style coverage for manual work-session analysis endpoint routing and serialization
+- unit-style coverage for explicit work-session review endpoint routing and serialization
 - broader integration coverage through the wrapped service contract tests
 - API client coverage verifies failed knowledge approval responses are surfaced as errors before UI state reads topic metadata
 - `tsc --noEmit` after TypeScript changes

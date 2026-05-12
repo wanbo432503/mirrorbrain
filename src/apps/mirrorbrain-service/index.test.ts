@@ -14,6 +14,7 @@ import type {
   ReviewedMemory,
 } from '../../shared/types/index.js';
 import type { SourceAuditEvent } from '../../modules/source-ledger-importer/index.js';
+import type { WorkSessionCandidate } from '../../workflows/work-session-analysis/index.js';
 import { createMirrorBrainService, startMirrorBrainService } from './index.js';
 
 function createCandidateMemoryFixture(input: {
@@ -225,6 +226,56 @@ describe('mirrorbrain service', () => {
       projectHint: 'mirrorbrain',
       memoryEventIds: ['browser-1', 'shell-1'],
       reviewState: 'pending',
+    });
+  });
+
+  it('reviews a work-session candidate with explicit project assignment', async () => {
+    const candidate: WorkSessionCandidate = {
+      id: 'work-session-candidate:mirrorbrain:2026-05-12T12:00:00.000Z',
+      projectHint: 'mirrorbrain',
+      title: 'mirrorbrain work session',
+      summary: 'Imported source ledgers.',
+      memoryEventIds: ['browser-1', 'shell-1'],
+      sourceTypes: ['browser', 'shell'],
+      timeRange: {
+        startAt: '2026-05-12T10:00:00.000Z',
+        endAt: '2026-05-12T10:30:00.000Z',
+      },
+      relationHints: ['Phase 4 design', 'Run tests'],
+      reviewState: 'pending',
+    };
+    const service = createMirrorBrainService(
+      {
+        service: {
+          status: 'running',
+          syncBrowserMemory: vi.fn(),
+          syncShellMemory: vi.fn(),
+          stop: vi.fn(),
+        },
+      },
+      {
+        now: () => '2026-05-12T12:05:00.000Z',
+      },
+    );
+
+    const result = await service.reviewWorkSessionCandidate(candidate, {
+      decision: 'keep',
+      reviewedBy: 'user',
+      projectAssignment: {
+        kind: 'confirmed-new-project',
+        name: 'MirrorBrain',
+      },
+    });
+
+    expect(result.project).toMatchObject({
+      id: 'project:mirrorbrain',
+      name: 'MirrorBrain',
+    });
+    expect(result.reviewedWorkSession).toMatchObject({
+      candidateId: candidate.id,
+      projectId: 'project:mirrorbrain',
+      reviewState: 'reviewed',
+      reviewedAt: '2026-05-12T12:05:00.000Z',
     });
   });
 

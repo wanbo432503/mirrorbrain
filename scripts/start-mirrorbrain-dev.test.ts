@@ -370,6 +370,25 @@ describe('start mirrorbrain dev runtime', () => {
         candidates: [],
         excludedMemoryEventIds: [],
       })),
+      reviewWorkSessionCandidate: vi.fn(async () => ({
+        reviewedWorkSession: {
+          id: 'reviewed-work-session:example',
+          candidateId: 'work-session-candidate:example',
+          projectId: null,
+          title: 'Example',
+          summary: '',
+          memoryEventIds: [],
+          sourceTypes: [],
+          timeRange: {
+            startAt: '2026-05-12T12:00:00.000Z',
+            endAt: '2026-05-12T12:00:00.000Z',
+          },
+          relationHints: [],
+          reviewState: 'discarded' as const,
+          reviewedAt: '2026-05-12T12:00:00.000Z',
+          reviewedBy: 'user',
+        },
+      })),
     }));
     const prepareWebAssets = vi.fn(async () => ({
       outputDir: '/tmp/mirrorbrain-web',
@@ -534,6 +553,25 @@ describe('start mirrorbrain dev runtime', () => {
             candidates: [],
             excludedMemoryEventIds: [],
           })),
+          reviewWorkSessionCandidate: vi.fn(async () => ({
+            reviewedWorkSession: {
+              id: 'reviewed-work-session:example',
+              candidateId: 'work-session-candidate:example',
+              projectId: null,
+              title: 'Example',
+              summary: '',
+              memoryEventIds: [],
+              sourceTypes: [],
+              timeRange: {
+                startAt: '2026-05-12T12:00:00.000Z',
+                endAt: '2026-05-12T12:00:00.000Z',
+              },
+              relationHints: [],
+              reviewState: 'discarded' as const,
+              reviewedAt: '2026-05-12T12:00:00.000Z',
+              reviewedBy: 'user',
+            },
+          })),
         })),
         startMirrorBrainHttpServer: vi.fn(async () => ({
           origin: 'http://127.0.0.1:3007',
@@ -675,6 +713,25 @@ describe('start mirrorbrain dev runtime', () => {
             generatedAt: '2026-05-12T12:00:00.000Z',
             candidates: [],
             excludedMemoryEventIds: [],
+          })),
+          reviewWorkSessionCandidate: vi.fn(async () => ({
+            reviewedWorkSession: {
+              id: 'reviewed-work-session:example',
+              candidateId: 'work-session-candidate:example',
+              projectId: null,
+              title: 'Example',
+              summary: '',
+              memoryEventIds: [],
+              sourceTypes: [],
+              timeRange: {
+                startAt: '2026-05-12T12:00:00.000Z',
+                endAt: '2026-05-12T12:00:00.000Z',
+              },
+              relationHints: [],
+              reviewState: 'discarded' as const,
+              reviewedAt: '2026-05-12T12:00:00.000Z',
+              reviewedBy: 'user',
+            },
           })),
         })),
         startMirrorBrainHttpServer: vi.fn(async () => ({

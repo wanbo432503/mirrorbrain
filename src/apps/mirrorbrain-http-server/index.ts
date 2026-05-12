@@ -61,6 +61,10 @@ interface MirrorBrainHttpService {
   analyzeWorkSessions?(input: {
     preset: AnalysisWindowPreset;
   }): Promise<WorkSessionAnalysisResult>;
+  reviewWorkSessionCandidate?(
+    candidate: unknown,
+    review: unknown,
+  ): Promise<unknown>;
   listMemoryEvents(input?: {
     page?: number;
     pageSize?: number;
@@ -1307,6 +1311,61 @@ export async function startMirrorBrainHttpServer(
       return {
         analysis: await input.service.analyzeWorkSessions(request.body),
       };
+    },
+  );
+
+  app.post<{
+    Body: {
+      candidate: unknown;
+      review: unknown;
+    };
+  }>(
+    '/work-sessions/reviews',
+    {
+      schema: {
+        summary: 'Record an explicit Phase 4 work-session review',
+        body: {
+          type: 'object',
+          properties: {
+            candidate: {
+              type: 'object',
+              additionalProperties: true,
+            },
+            review: {
+              type: 'object',
+              additionalProperties: true,
+            },
+          },
+          required: ['candidate', 'review'],
+        },
+        response: {
+          201: {
+            type: 'object',
+            additionalProperties: true,
+          },
+          501: {
+            type: 'object',
+            properties: {
+              message: { type: 'string' },
+            },
+            required: ['message'],
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      if (input.service.reviewWorkSessionCandidate === undefined) {
+        reply.code(501);
+        return {
+          message: 'Work-session review is not available.',
+        };
+      }
+
+      reply.code(201);
+      return input.service.reviewWorkSessionCandidate(
+        request.body.candidate,
+        request.body.review,
+      );
     },
   );
 

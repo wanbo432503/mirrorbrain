@@ -104,6 +104,12 @@ import {
   createAuthorizationScope,
   createMemorySourceAuthorizationPolicy,
 } from '../../modules/authorization-scope-policy/index.js';
+import {
+  reviewWorkSessionCandidate as reviewPhase4WorkSessionCandidate,
+  type ProjectAssignment,
+  type ReviewWorkSessionCandidateResult,
+} from '../../modules/project-work-session/index.js';
+import { createFileKnowledgeArticleStore } from '../../integrations/knowledge-article-store/index.js';
 import type {
   AuthorizationScope,
   CandidateMemory,
@@ -116,6 +122,7 @@ import type {
   SkillArtifact,
 } from '../../shared/types/index.js';
 import type { KnowledgeGraphSnapshot } from '../../modules/knowledge-graph/index.js';
+import type { WorkSessionCandidate } from '../../workflows/work-session-analysis/index.js';
 
 interface StartMirrorBrainServiceInput {
   config?: ReturnType<typeof getMirrorBrainConfig>;
@@ -237,6 +244,14 @@ interface CreateMirrorBrainServiceDependencies {
 
 interface AnalyzeWorkSessionsInput {
   preset: AnalysisWindowPreset;
+}
+
+interface ReviewWorkSessionInput {
+  decision: 'keep' | 'discard';
+  reviewedBy: string;
+  title?: string;
+  summary?: string;
+  projectAssignment?: ProjectAssignment;
 }
 
 function normalizeMemoryEventReadResult(result: MemoryEventReadResult): MemoryEvent[] {
@@ -547,6 +562,9 @@ export function createMirrorBrainService(
   const baseUrl =
     input.service.config?.openViking.baseUrl ?? getMirrorBrainConfig().openViking.baseUrl;
   const workspaceDir = input.workspaceDir ?? process.cwd();
+  const knowledgeArticleStore = createFileKnowledgeArticleStore({
+    workspaceDir,
+  });
   const now = dependencies.now ?? (() => new Date().toISOString());
   const queryMemory = dependencies.queryMemory ?? queryMemoryFromPluginApi;
   const listMemoryEvents =
@@ -1048,6 +1066,24 @@ export function createMirrorBrainService(
       });
     }
   };
+  const saveReviewedWorkSession = async (
+    reviewedWorkSession: ReviewWorkSessionCandidateResult['reviewedWorkSession'],
+  ): Promise<void> => {
+    const reviewedWorkSessionsDir = join(
+      workspaceDir,
+      'mirrorbrain',
+      'reviewed-work-sessions',
+    );
+
+    await mkdir(reviewedWorkSessionsDir, { recursive: true });
+    await writeFile(
+      join(
+        reviewedWorkSessionsDir,
+        `${encodeURIComponent(reviewedWorkSession.id)}.json`,
+      ),
+      `${JSON.stringify(reviewedWorkSession, null, 2)}\n`,
+    );
+  };
   const createAnalysisWindow = (preset: AnalysisWindowPreset) => {
     const endAt = now();
     const endDate = new Date(endAt);
@@ -1265,6 +1301,27 @@ export function createMirrorBrainService(
         generatedAt: analysisWindow.endAt,
         memoryEvents,
       });
+    },
+    reviewWorkSessionCandidate: async (
+      candidate: WorkSessionCandidate,
+      review: ReviewWorkSessionInput,
+    ): Promise<ReviewWorkSessionCandidateResult> => {
+      const result = reviewPhase4WorkSessionCandidate(candidate, {
+        decision: review.decision,
+        reviewedAt: now(),
+        reviewedBy: review.reviewedBy,
+        title: review.title,
+        summary: review.summary,
+        projectAssignment: review.projectAssignment,
+      });
+
+      if (result.project !== undefined) {
+        await knowledgeArticleStore.saveProject(result.project);
+      }
+
+      await saveReviewedWorkSession(result.reviewedWorkSession);
+
+      return result;
     },
     listMemoryEvents: async (
       input?: { page?: number; pageSize?: number } & MemoryEventSourceFilter,

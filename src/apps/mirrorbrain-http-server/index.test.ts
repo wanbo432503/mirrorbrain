@@ -554,6 +554,105 @@ describe('mirrorbrain http server', () => {
     });
   });
 
+  it('POST /work-sessions/reviews records explicit project-assigned review', async () => {
+    const reviewWorkSessionCandidate = vi.fn(async () => ({
+      project: {
+        id: 'project:mirrorbrain',
+        name: 'MirrorBrain',
+        status: 'active' as const,
+        createdAt: '2026-05-12T12:05:00.000Z',
+        updatedAt: '2026-05-12T12:05:00.000Z',
+      },
+      reviewedWorkSession: {
+        id: 'reviewed-work-session:work-session-candidate:mirrorbrain',
+        candidateId: 'work-session-candidate:mirrorbrain',
+        projectId: 'project:mirrorbrain',
+        title: 'mirrorbrain work session',
+        summary: 'Imported source ledgers.',
+        memoryEventIds: ['browser-1', 'shell-1'],
+        sourceTypes: ['browser', 'shell'],
+        timeRange: {
+          startAt: '2026-05-12T10:00:00.000Z',
+          endAt: '2026-05-12T10:30:00.000Z',
+        },
+        relationHints: ['Phase 4 design'],
+        reviewState: 'reviewed' as const,
+        reviewedAt: '2026-05-12T12:05:00.000Z',
+        reviewedBy: 'user',
+      },
+    }));
+    const service = {
+      service: {
+        status: 'running' as const,
+        config: getMirrorBrainConfig(),
+        stop: vi.fn(),
+      },
+      syncBrowserMemory: vi.fn(),
+      syncShellMemory: vi.fn(),
+      listMemoryEvents: vi.fn(),
+      queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
+      listKnowledge: vi.fn(async () => []),
+      listSkillDrafts: vi.fn(async () => []),
+      createDailyCandidateMemories: vi.fn(),
+      suggestCandidateReviews: vi.fn(),
+      reviewCandidateMemory: vi.fn(),
+      undoCandidateReview: vi.fn(),
+      deleteCandidateMemory: vi.fn(),
+      generateKnowledgeFromReviewedMemories: vi.fn(),
+      generateSkillDraftFromReviewedMemories: vi.fn(),
+      publishKnowledge: vi.fn(),
+      publishSkillDraft: vi.fn(),
+      reviewWorkSessionCandidate,
+    };
+
+    const server = await startMirrorBrainHttpServer({
+      service,
+      port: 0,
+    });
+    servers.push(server);
+
+    const candidate = {
+      id: 'work-session-candidate:mirrorbrain',
+      projectHint: 'mirrorbrain',
+      title: 'mirrorbrain work session',
+      summary: 'Imported source ledgers.',
+      memoryEventIds: ['browser-1', 'shell-1'],
+      sourceTypes: ['browser', 'shell'],
+      timeRange: {
+        startAt: '2026-05-12T10:00:00.000Z',
+        endAt: '2026-05-12T10:30:00.000Z',
+      },
+      relationHints: ['Phase 4 design'],
+      reviewState: 'pending',
+    };
+    const review = {
+      decision: 'keep',
+      reviewedBy: 'user',
+      projectAssignment: {
+        kind: 'confirmed-new-project',
+        name: 'MirrorBrain',
+      },
+    };
+    const response = await fetch(`${server.origin}/work-sessions/reviews`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ candidate, review }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(reviewWorkSessionCandidate).toHaveBeenCalledWith(candidate, review);
+    expect(body).toMatchObject({
+      project: {
+        id: 'project:mirrorbrain',
+      },
+      reviewedWorkSession: {
+        projectId: 'project:mirrorbrain',
+        reviewState: 'reviewed',
+      },
+    });
+  });
+
   it('serializes minimal valid knowledge artifacts without requiring optional topic fields', async () => {
     const service = {
       service: {

@@ -593,6 +593,80 @@ Notes:
 - The endpoint returns `501` when the service implementation does not expose
   work-session analysis.
 
+### `POST /work-sessions/reviews`
+
+Records an explicit review decision for a work-session candidate. Keeping a
+candidate requires explicit project assignment; a confirmed new project may be
+created as part of the review result.
+
+Request:
+
+```json
+{
+  "candidate": {
+    "id": "work-session-candidate:mirrorbrain",
+    "projectHint": "mirrorbrain",
+    "title": "mirrorbrain work session",
+    "summary": "Imported source ledgers.",
+    "memoryEventIds": ["browser-1", "shell-1"],
+    "sourceTypes": ["browser", "shell"],
+    "timeRange": {
+      "startAt": "2026-05-12T10:00:00.000Z",
+      "endAt": "2026-05-12T10:30:00.000Z"
+    },
+    "relationHints": ["Phase 4 design"],
+    "reviewState": "pending"
+  },
+  "review": {
+    "decision": "keep",
+    "reviewedBy": "user",
+    "projectAssignment": {
+      "kind": "confirmed-new-project",
+      "name": "MirrorBrain"
+    }
+  }
+}
+```
+
+Response `201`:
+
+```json
+{
+  "project": {
+    "id": "project:mirrorbrain",
+    "name": "MirrorBrain",
+    "status": "active",
+    "createdAt": "2026-05-12T12:05:00.000Z",
+    "updatedAt": "2026-05-12T12:05:00.000Z"
+  },
+  "reviewedWorkSession": {
+    "id": "reviewed-work-session:work-session-candidate:mirrorbrain",
+    "candidateId": "work-session-candidate:mirrorbrain",
+    "projectId": "project:mirrorbrain",
+    "title": "mirrorbrain work session",
+    "summary": "Imported source ledgers.",
+    "memoryEventIds": ["browser-1", "shell-1"],
+    "sourceTypes": ["browser", "shell"],
+    "timeRange": {
+      "startAt": "2026-05-12T10:00:00.000Z",
+      "endAt": "2026-05-12T10:30:00.000Z"
+    },
+    "relationHints": ["Phase 4 design"],
+    "reviewState": "reviewed",
+    "reviewedAt": "2026-05-12T12:05:00.000Z",
+    "reviewedBy": "user"
+  }
+}
+```
+
+Notes:
+
+- Review is an explicit human-attributed operation.
+- Suggested project names do not create durable projects unless the review uses
+  `confirmed-new-project`.
+- The endpoint returns `501` when the service implementation does not expose
+  work-session review.
+
 ## Candidate And Review Endpoints
 
 ### `GET /candidate-memories`
