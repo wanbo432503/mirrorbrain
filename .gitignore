@@ -3,6 +3,8 @@ test-results
 .playwright
 playwright-report
 .env
+.claude
+.superpowers
 .mirrorbrain-web
 mirrorbrain
 .mirrorbrain
