@@ -228,16 +228,128 @@ describe('mirrorbrain service', () => {
         ],
       },
       {
-        captureSourceRecord,
+        captureSourceRecord: expect.any(Function),
         writeSourceAuditEvent: stateStore.writeSourceAuditEvent,
       },
     );
+    const [, supervisorDependencies] =
+      startSourceRecorderSupervisor.mock.calls[0] as unknown as [
+        unknown,
+        {
+          captureSourceRecord(input: {
+            sourceKind: 'browser';
+            sourceInstanceId: string;
+            enabled: boolean;
+          }): Promise<unknown>;
+        },
+      ];
+
+    await expect(
+      supervisorDependencies.captureSourceRecord({
+        sourceKind: 'browser',
+        sourceInstanceId: 'chrome-main',
+        enabled: true,
+      }),
+    ).resolves.toBeNull();
+    expect(captureSourceRecord).toHaveBeenCalledWith({
+      sourceKind: 'browser',
+      sourceInstanceId: 'chrome-main',
+      enabled: true,
+    });
 
     service.stop();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(stopRecorderSupervisor).toHaveBeenCalledTimes(1);
     expect(stopSourceImportPolling).toHaveBeenCalledTimes(1);
+  });
+
+  it('provides an ActivityWatch browser capture bridge for the browser ledger recorder', async () => {
+    const stopSourceImportPolling = vi.fn();
+    const checkpointStore = {
+      readCheckpoint: vi.fn(async () => null),
+      writeCheckpoint: vi.fn(async () => undefined),
+    };
+    const stateStore = {
+      readCheckpoint: vi.fn(async () => null),
+      writeCheckpoint: vi.fn(async () => undefined),
+      writeSourceAuditEvent: vi.fn(async () => undefined),
+      listSourceAuditEvents: vi.fn(async () => []),
+      listSourceInstanceSummaries: vi.fn(async () => []),
+      writeSourceInstanceConfig: vi.fn(async () => undefined),
+      listSourceInstanceConfigs: vi.fn(async () => []),
+    };
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => [
+        {
+          id: 'aw-event-1',
+          timestamp: '2026-05-12T10:15:00.000Z',
+          data: {
+            title: 'Phase 4 browser ledger',
+            url: 'https://example.com/phase4',
+          },
+        },
+      ],
+    }));
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    let capturedRecord: unknown = null;
+    const startSourceRecorderSupervisor = vi.fn(async (_input, dependencies) => {
+      capturedRecord = await dependencies.captureSourceRecord({
+        sourceKind: 'browser',
+        sourceInstanceId: 'chrome-main',
+        enabled: true,
+      });
+
+      return {
+        stop: vi.fn(),
+      };
+    });
+
+    try {
+      startMirrorBrainService(
+        {
+          config: getMirrorBrainConfig(),
+          workspaceDir: '/tmp/mirrorbrain-browser-ledger-runtime',
+          browserBucketId: 'aw-watcher-web-chrome',
+        },
+        {
+          createCheckpointStore: vi.fn(() => checkpointStore),
+          createSourceLedgerStateStore: vi.fn(() => stateStore),
+          startSourceLedgerImportPolling: vi.fn(() => ({
+            stop: stopSourceImportPolling,
+          })),
+          startSourceRecorderSupervisor,
+          now: () => '2026-05-12T10:30:00.000Z',
+        },
+      );
+
+      await Promise.resolve();
+      await Promise.resolve();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(capturedRecord).toEqual([
+        {
+          occurredAt: '2026-05-12T10:15:00.000Z',
+          capturedAt: '2026-05-12T10:30:00.000Z',
+          payload: {
+            id: 'aw-event-1',
+            title: 'Phase 4 browser ledger',
+            url: 'https://example.com/phase4',
+            page_content:
+              'Phase 4 browser ledger\n\nhttps://example.com/phase4',
+          },
+        },
+      ]);
+      expect(checkpointStore.writeCheckpoint).toHaveBeenCalledWith({
+        sourceKey: 'activitywatch-browser-ledger:aw-watcher-web-chrome',
+        lastSyncedAt: '2026-05-12T10:30:00.000Z',
+        updatedAt: '2026-05-12T10:30:00.000Z',
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 
   it('analyzes a user-selected work-session window from stored memory events', async () => {

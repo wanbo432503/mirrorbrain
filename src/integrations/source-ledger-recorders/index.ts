@@ -16,10 +16,15 @@ export interface CapturedSourceRecord {
   payload: unknown;
 }
 
+export type CapturedSourceRecordResult =
+  | CapturedSourceRecord
+  | CapturedSourceRecord[]
+  | null;
+
 export interface BuiltInSourceLedgerRecorderStarterInput {
   workspaceDir: string;
   now(): string;
-  captureSourceRecord(source: SupervisedSourceInstance): Promise<CapturedSourceRecord | null>;
+  captureSourceRecord(source: SupervisedSourceInstance): Promise<CapturedSourceRecordResult>;
   intervalMs?: number;
 }
 
@@ -74,18 +79,22 @@ export function createBuiltInSourceLedgerRecorderStarter(
 ): BuiltInSourceLedgerRecorderStarter {
   return async (source) => {
     const captureOnce = async (): Promise<void> => {
-      const record = await input.captureSourceRecord(source);
+      const result = await input.captureSourceRecord(source);
 
-      if (record === null) {
+      if (result === null) {
         return;
       }
 
-      await appendLedgerEntry({
-        workspaceDir: input.workspaceDir,
-        now: input.now,
-        source,
-        record,
-      });
+      const records = Array.isArray(result) ? result : [result];
+
+      for (const record of records) {
+        await appendLedgerEntry({
+          workspaceDir: input.workspaceDir,
+          now: input.now,
+          source,
+          record,
+        });
+      }
     };
 
     await captureOnce();

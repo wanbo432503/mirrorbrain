@@ -4,7 +4,7 @@ import type {
 } from '../../modules/source-ledger-importer/index.js';
 import {
   createBuiltInSourceLedgerRecorderStarter,
-  type CapturedSourceRecord,
+  type CapturedSourceRecordResult,
 } from '../../integrations/source-ledger-recorders/index.js';
 
 export interface SupervisedSourceInstance {
@@ -34,7 +34,7 @@ interface StartSourceRecorderSupervisorDependencies {
 }
 
 interface StartBuiltInSourceLedgerRecorderSupervisorDependencies {
-  captureSourceRecord(source: SupervisedSourceInstance): Promise<CapturedSourceRecord | null>;
+  captureSourceRecord(source: SupervisedSourceInstance): Promise<CapturedSourceRecordResult>;
   writeSourceAuditEvent(event: SourceAuditEvent): Promise<void>;
 }
 

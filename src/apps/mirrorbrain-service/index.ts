@@ -55,6 +55,7 @@ import {
   type BrowserMemorySyncResult,
 } from '../../workflows/browser-memory-sync/index.js';
 import {
+  captureActivityWatchBrowserLedgerRecords,
   fetchActivityWatchBuckets,
   resolveActivityWatchBrowserBucket,
 } from '../../integrations/activitywatch-browser-source/index.js';
@@ -82,7 +83,7 @@ import {
   type SourceRecorderSupervisor,
   type SupervisedSourceInstance,
 } from '../../workflows/source-recorder-supervisor/index.js';
-import type { CapturedSourceRecord } from '../../integrations/source-ledger-recorders/index.js';
+import type { CapturedSourceRecordResult } from '../../integrations/source-ledger-recorders/index.js';
 import {
   analyzeWorkSessionCandidates,
   type AnalysisWindowPreset,
@@ -166,7 +167,7 @@ interface StartMirrorBrainServiceDependencies {
   startSourceRecorderSupervisor?: typeof startBuiltInSourceLedgerRecorderSupervisor;
   captureSourceRecord?(
     source: SupervisedSourceInstance,
-  ): Promise<CapturedSourceRecord | null>;
+  ): Promise<CapturedSourceRecordResult>;
   fetchActivityWatchBuckets?: typeof fetchActivityWatchBuckets;
   runBrowserMemorySyncOnce?: typeof runBrowserMemorySyncOnce;
   runShellMemorySyncOnce?: typeof runShellMemorySyncOnce;
@@ -450,8 +451,7 @@ export function startMirrorBrainService(
   const startRecorderSupervisor =
     dependencies.startSourceRecorderSupervisor ??
     startBuiltInSourceLedgerRecorderSupervisor;
-  const captureSourceRecord =
-    dependencies.captureSourceRecord ?? (async () => null);
+  const dependencyCaptureSourceRecord = dependencies.captureSourceRecord;
   const checkpointStore = (
     dependencies.createCheckpointStore ?? createFileSyncCheckpointStore
   )({
@@ -526,6 +526,33 @@ export function startMirrorBrainService(
       id: bucketId,
       created: bucket?.created,
     };
+  };
+  const captureSourceRecord = async (
+    source: SupervisedSourceInstance,
+  ): Promise<CapturedSourceRecordResult> => {
+    if (dependencyCaptureSourceRecord !== undefined) {
+      return dependencyCaptureSourceRecord(source);
+    }
+
+    if (source.sourceKind !== 'browser') {
+      return null;
+    }
+
+    const bucket = await resolveBrowserBucket();
+
+    return captureActivityWatchBrowserLedgerRecords(
+      {
+        bucketId: bucket.id,
+        config,
+        initialBackfillStartAt: bucket.created,
+        now: now(),
+        scopeId: browserScopeId,
+      },
+      {
+        authorizeSourceSync,
+        checkpointStore,
+      },
+    );
   };
   const syncBrowserMemory = async () => {
     const bucket = await resolveBrowserBucket();

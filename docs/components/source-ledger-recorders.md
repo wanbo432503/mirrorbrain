@@ -16,7 +16,7 @@ The integration owns:
   `startSourceRecorderSupervisor(...)`.
 - Calling an injected built-in source capture function.
 - Wrapping captured payloads in the shared source-ledger envelope.
-- Appending ledger entries to the correct daily source file.
+- Appending one or more ledger entries to the correct daily source file.
 - Returning a stop handle for optional interval capture.
 
 The integration does not own:
@@ -31,6 +31,7 @@ The integration does not own:
 
 - `createBuiltInSourceLedgerRecorderStarter(...)`
 - `CapturedSourceRecord`
+- `CapturedSourceRecordResult`
 
 Input:
 
@@ -51,8 +52,9 @@ Output:
 2. The supervisor starts an enabled source instance.
 3. The built-in starter calls `captureSourceRecord(source)`.
 4. If capture returns `null`, no ledger entry is written.
-5. If capture returns a record, the starter wraps it in `SourceLedgerEntry`.
-6. The entry is appended to the daily JSONL ledger for the source kind.
+5. If capture returns one record, the starter wraps it in `SourceLedgerEntry`.
+6. If capture returns multiple records, each record is wrapped and appended as
+   its own JSONL line.
 7. Later importer workflows turn ledger entries into normalized `MemoryEvent`
    records.
 
@@ -70,4 +72,5 @@ Output:
 Unit tests live in `src/integrations/source-ledger-recorders/index.test.ts`.
 
 The tests verify that a built-in browser recorder writes the expected daily
-JSONL ledger envelope and can be stopped through the returned handle.
+JSONL ledger envelope, can write multiple captured records from one acquisition
+tick, and can be stopped through the returned handle.

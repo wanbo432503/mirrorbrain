@@ -37,6 +37,10 @@ owning MirrorBrain's internal workflows.
 - Initial Phase 4 source-ledger import workflow that scans daily JSONL ledgers,
   persists imported memory/audit outputs through injected writers, and exposes
   the default 30-minute scan cadence.
+- ActivityWatch browser-to-ledger bridge for the default Phase 4 browser
+  recorder, so new `aw-watcher-web` events are converted into daily
+  `browser.jsonl` entries before MirrorBrain imports them as `MemoryEvent`
+  records.
 - Local Phase 4 source-ledger state store for per-ledger checkpoints,
   operational source audit events, and derived source instance summaries.
 - Service and HTTP API methods for manual Phase 4 source-ledger import,
@@ -91,8 +95,8 @@ owning MirrorBrain's internal workflows.
 ## Not Yet Implemented
 
 - Document ingestion.
-- Phase 4 recorder supervision, scheduled ledger scanning, and source
-  management UI.
+- Full real source recorders for file activity, screenshot, shell session
+  output modes, and agent transcript directories.
 - `openclaw` conversation capture.
 - Durable authorization and revocation UX across source instances.
 - Source-instance and domain/path allowlists beyond the current injected

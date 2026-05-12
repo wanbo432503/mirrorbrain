@@ -43,9 +43,13 @@ It is not responsible for:
    the default app `dist/` directory or a caller-provided isolated output
    directory.
 5. The MirrorBrain service runtime starts, including optional shell-history sync wiring when `MIRRORBRAIN_SHELL_HISTORY_PATH` is set.
-6. The service starts source-ledger import polling. It imports once immediately
+6. The service starts the Phase 4 source recorder supervisor. The default
+   browser source uses ActivityWatch as its acquisition mechanism, converts new
+   ActivityWatch browser events into browser ledger entries, and writes them
+   under `<workspaceDir>/mirrorbrain/ledgers/YYYY-MM-DD/browser.jsonl`.
+7. The service starts source-ledger import polling. It imports once immediately
    and then scans changed ledgers every 30 minutes by default.
-7. The HTTP server starts and serves both JSON APIs and static MVP UI assets.
+8. The HTTP server starts and serves both JSON APIs and static MVP UI assets.
 
 ## Failure Modes And Operational Constraints
 

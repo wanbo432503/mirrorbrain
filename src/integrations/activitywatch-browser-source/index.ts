@@ -3,8 +3,11 @@ import {
   normalizeActivityWatchBrowserEvent,
   type MemorySourcePlugin,
 } from '../../modules/memory-capture/index.js';
+import type { CapturedSourceRecord } from '../source-ledger-recorders/index.js';
+import type { SyncCheckpoint, SyncCheckpointStore } from '../file-sync-checkpoint-store/index.js';
 import type { MemoryEvent } from '../../shared/types/index.js';
 import type { MirrorBrainConfig } from '../../shared/types/index.js';
+import type { MemorySourceSyncAuthorizationDependency } from '../../workflows/memory-source-sync/index.js';
 
 interface InitialBrowserSyncPlanInput {
   now: string;
@@ -56,6 +59,20 @@ type FetchActivityWatchBucketsInput = {
 interface CreateActivityWatchBrowserMemorySourcePluginInput {
   bucketId: string;
   initialBackfillStartAt?: string;
+  fetchBrowserEvents?: typeof fetchActivityWatchBrowserEvents;
+}
+
+interface CaptureActivityWatchBrowserLedgerRecordsInput {
+  bucketId: string;
+  config: MirrorBrainConfig;
+  now: string;
+  scopeId: string;
+  initialBackfillStartAt?: string;
+}
+
+interface CaptureActivityWatchBrowserLedgerRecordsDependencies {
+  checkpointStore: SyncCheckpointStore;
+  authorizeSourceSync?: MemorySourceSyncAuthorizationDependency;
   fetchBrowserEvents?: typeof fetchActivityWatchBrowserEvents;
 }
 
@@ -170,6 +187,10 @@ export function getActivityWatchBrowserSourceKey(bucketId: string): string {
   return `activitywatch-browser:${bucketId}`;
 }
 
+export function getActivityWatchBrowserLedgerSourceKey(bucketId: string): string {
+  return `activitywatch-browser-ledger:${bucketId}`;
+}
+
 function createBrowserEventSignature(event: {
   sourceType: string;
   authorizationScopeId: string;
@@ -277,4 +298,127 @@ export function createActivityWatchBrowserMemorySourcePlugin(
       return sanitizeActivityWatchBrowserEvents(events);
     },
   };
+}
+
+function buildBrowserLedgerPageContent(event: ActivityWatchBrowserEvent): string {
+  const parts = [event.data.title, event.data.url]
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+
+  return parts.join('\n\n');
+}
+
+function getNextCheckpoint(
+  checkpoint: SyncCheckpoint | null,
+  now: string,
+  timestamps: string[],
+): string {
+  return [checkpoint?.lastSyncedAt, now, ...timestamps]
+    .filter((value): value is string => value !== null && value !== undefined)
+    .sort()
+    .at(-1) ?? now;
+}
+
+async function assertBrowserLedgerCaptureAuthorized(input: {
+  sourceKey: string;
+  scopeId: string;
+  authorizeSourceSync?: MemorySourceSyncAuthorizationDependency;
+}): Promise<void> {
+  const isAuthorized =
+    input.authorizeSourceSync === undefined
+      ? true
+      : await input.authorizeSourceSync({
+          sourceKey: input.sourceKey,
+          sourceCategory: 'browser',
+          scopeId: input.scopeId,
+        });
+
+  if (!isAuthorized) {
+    throw new Error(
+      `Memory source ${input.sourceKey} is not authorized for scope ${input.scopeId}.`,
+    );
+  }
+}
+
+function toBrowserLedgerRecord(input: {
+  event: ActivityWatchBrowserEvent;
+  capturedAt: string;
+}): CapturedSourceRecord {
+  return {
+    occurredAt: input.event.timestamp,
+    capturedAt: input.capturedAt,
+    payload: {
+      id: input.event.id,
+      title: input.event.data.title,
+      url: input.event.data.url,
+      page_content: buildBrowserLedgerPageContent(input.event),
+    },
+  };
+}
+
+export async function captureActivityWatchBrowserLedgerRecords(
+  input: CaptureActivityWatchBrowserLedgerRecordsInput,
+  dependencies: CaptureActivityWatchBrowserLedgerRecordsDependencies,
+): Promise<CapturedSourceRecord[]> {
+  const sourceKey = getActivityWatchBrowserLedgerSourceKey(input.bucketId);
+  const fetchBrowserEvents =
+    dependencies.fetchBrowserEvents ?? fetchActivityWatchBrowserEvents;
+
+  await assertBrowserLedgerCaptureAuthorized({
+    sourceKey,
+    scopeId: input.scopeId,
+    authorizeSourceSync: dependencies.authorizeSourceSync,
+  });
+
+  const checkpoint = await dependencies.checkpointStore.readCheckpoint(sourceKey);
+  const plan = checkpoint
+    ? createIncrementalBrowserSyncPlan(input.config, {
+        lastSyncedAt: checkpoint.lastSyncedAt,
+        now: input.now,
+      })
+    : createInitialBrowserSyncPlan(input.config, {
+        now: input.now,
+        startAt: input.initialBackfillStartAt,
+      });
+  const rawEvents = await fetchBrowserEvents({
+    baseUrl: input.config.activityWatch.baseUrl,
+    bucketId: input.bucketId,
+    start: plan.start,
+    end: plan.end,
+  });
+  const seenEventIds = new Set<string>();
+  const records = rawEvents
+    .filter((event) => {
+      if (seenEventIds.has(event.id)) {
+        return false;
+      }
+
+      seenEventIds.add(event.id);
+      return true;
+    })
+    .sort((left, right) => left.timestamp.localeCompare(right.timestamp))
+    .map((event) =>
+      toBrowserLedgerRecord({
+        event,
+        capturedAt: input.now,
+      }),
+    );
+
+  await assertBrowserLedgerCaptureAuthorized({
+    sourceKey,
+    scopeId: input.scopeId,
+    authorizeSourceSync: dependencies.authorizeSourceSync,
+  });
+
+  await dependencies.checkpointStore.writeCheckpoint({
+    sourceKey,
+    lastSyncedAt: getNextCheckpoint(
+      checkpoint,
+      input.now,
+      rawEvents.map((event) => event.timestamp),
+    ),
+    updatedAt: input.now,
+  });
+
+  return records;
 }
