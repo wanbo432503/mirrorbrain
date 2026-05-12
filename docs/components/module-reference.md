@@ -651,6 +651,40 @@ Verification:
 
 - `src/modules/memory-review/normalize-memory-items.test.ts`
 
+### `src/modules/project-work-session`
+
+Purpose: review Phase 4 work-session candidates and assign kept sessions to
+projects.
+
+Responsibilities:
+
+- Convert pending work-session candidates into reviewed or discarded sessions.
+- Preserve memory event provenance, source types, time ranges, and relation
+  hints.
+- Require explicit project assignment for kept sessions.
+- Emit a new active project only when the user confirms a new project.
+
+Inputs:
+
+- `WorkSessionCandidate` plus review decision, reviewer metadata, optional text
+  edits, and optional project assignment.
+
+Outputs:
+
+- `ReviewedWorkSession` and, for confirmed new project assignments only, a
+  `Project`.
+
+Failure modes and constraints:
+
+- Kept sessions without explicit project assignment are rejected.
+- Existing project id validation belongs at the persistence or service
+  boundary.
+- The module does not generate knowledge articles or skills.
+
+Verification:
+
+- `src/modules/project-work-session/index.test.ts`
+
 ### `src/modules/memory-events-cache`
 
 Purpose: maintain a display-oriented cache of memory events for fast UI listing.
