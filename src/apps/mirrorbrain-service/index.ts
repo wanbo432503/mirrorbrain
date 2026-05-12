@@ -1524,7 +1524,18 @@ export function createMirrorBrainService(
     importSourceLedgers: async (): Promise<SourceLedgerImportResult> => {
       await captureBrowserSourceLedgerForService();
 
-      return importSourceLedgersForService();
+      const result = await importSourceLedgersForService();
+
+      await initializeCacheFromOpenViking(
+        workspaceDir,
+        baseUrl,
+        {
+          listWorkspaceMemoryEvents,
+          listOpenVikingMemoryEvents: listOpenVikingMemoryEventArray,
+        },
+      );
+
+      return result;
     },
     listSourceAuditEvents: (
       filter: SourceAuditEventFilter = {},

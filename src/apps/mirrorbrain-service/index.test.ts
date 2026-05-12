@@ -1206,6 +1206,191 @@ describe('mirrorbrain service', () => {
     });
   });
 
+  it('refreshes the memory event cache after importing source ledgers', async () => {
+    const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-service-cache-'));
+    const cacheDir = join(workspaceDir, 'mirrorbrain', 'cache');
+    await mkdir(cacheDir, { recursive: true });
+    await writeFile(
+      join(cacheDir, 'memory-events-cache.json'),
+      JSON.stringify({
+        version: 1,
+        updatedAt: '2026-05-12T10:00:00.000Z',
+        total: 0,
+        events: [],
+        lastSyncSummary: {},
+      }),
+    );
+    const memoryEvent: MemoryEvent = {
+      id: 'ledger:browser:event-1',
+      sourceType: 'browser',
+      sourceRef: 'browser:chrome-main:event-1',
+      timestamp: '2026-05-12T10:00:00.000Z',
+      authorizationScopeId: 'scope-source-ledger',
+      content: {
+        title: 'Imported Browser Page',
+        summary: 'Imported from source ledger.',
+        contentKind: 'browser-page',
+        entities: [],
+        sourceSpecific: {
+          id: 'event-1',
+          url: 'https://example.com/imported',
+          pageContent: 'Imported from source ledger.',
+        },
+      },
+      captureMetadata: {
+        upstreamSource: 'source-ledger:browser',
+        checkpoint: 'ledgers/2026-05-12/browser.jsonl:1',
+      },
+    };
+    const stateStore = {
+      readCheckpoint: vi.fn(async () => null),
+      writeCheckpoint: vi.fn(async () => undefined),
+      writeSourceAuditEvent: vi.fn(async () => undefined),
+      listSourceAuditEvents: vi.fn(async () => []),
+      listSourceInstanceSummaries: vi.fn(async () => []),
+      writeSourceInstanceConfig: vi.fn(async () => undefined),
+      listSourceInstanceConfigs: vi.fn(async () => []),
+    };
+    const importSourceLedgers = vi.fn(async (_input, dependencies) => {
+      await dependencies.writeMemoryEvent(memoryEvent);
+
+      return {
+        importedCount: 1,
+        skippedCount: 0,
+        scannedLedgerCount: 1,
+        changedLedgerCount: 1,
+        ledgerResults: [],
+      };
+    });
+    const api = createMirrorBrainService(
+      {
+        service: {
+          status: 'running' as const,
+          config: getMirrorBrainConfig(),
+          syncBrowserMemory: vi.fn(),
+          syncShellMemory: vi.fn(),
+          stop: vi.fn(),
+        },
+        workspaceDir,
+      },
+      {
+        createSourceLedgerStateStore: vi.fn(() => stateStore),
+        createMemoryEventWriter: vi.fn(() => ({
+          writeMemoryEvent: async (record: {
+            recordId: string;
+            payload: MemoryEvent;
+          }) => {
+            const memoryEventsDir = join(workspaceDir, 'mirrorbrain', 'memory-events');
+            await mkdir(memoryEventsDir, { recursive: true });
+            await writeFile(
+              join(memoryEventsDir, `${record.recordId}.json`),
+              JSON.stringify(record.payload, null, 2),
+            );
+          },
+        })),
+        importSourceLedgers,
+      },
+    );
+
+    await api.importSourceLedgers();
+
+    await expect(api.listMemoryEvents()).resolves.toMatchObject({
+      items: [
+        expect.objectContaining({
+          id: 'ledger:browser:event-1',
+          content: expect.objectContaining({
+            title: 'Imported Browser Page',
+          }),
+        }),
+      ],
+      pagination: expect.objectContaining({ total: 1 }),
+    });
+  });
+
+  it('refreshes a stale empty memory event cache after source import scans existing events', async () => {
+    const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-service-stale-cache-'));
+    const cacheDir = join(workspaceDir, 'mirrorbrain', 'cache');
+    const memoryEventsDir = join(workspaceDir, 'mirrorbrain', 'memory-events');
+    await mkdir(cacheDir, { recursive: true });
+    await mkdir(memoryEventsDir, { recursive: true });
+    await writeFile(
+      join(cacheDir, 'memory-events-cache.json'),
+      JSON.stringify({
+        version: 1,
+        updatedAt: '2026-05-12T10:00:00.000Z',
+        total: 0,
+        events: [],
+        lastSyncSummary: {},
+      }),
+    );
+    await writeFile(
+      join(memoryEventsDir, 'ledger:browser:event-1.json'),
+      JSON.stringify({
+        id: 'ledger:browser:event-1',
+        sourceType: 'browser',
+        sourceRef: 'browser:chrome-main:event-1',
+        timestamp: '2026-05-12T10:00:00.000Z',
+        authorizationScopeId: 'scope-source-ledger',
+        content: {
+          title: 'Existing Browser Page',
+          summary: 'Already imported from source ledger.',
+          contentKind: 'browser-page',
+          entities: [],
+          sourceSpecific: {},
+        },
+        captureMetadata: {
+          upstreamSource: 'source-ledger:browser',
+          checkpoint: 'ledgers/2026-05-12/browser.jsonl:1',
+        },
+      } satisfies MemoryEvent),
+    );
+    const stateStore = {
+      readCheckpoint: vi.fn(async () => null),
+      writeCheckpoint: vi.fn(async () => undefined),
+      writeSourceAuditEvent: vi.fn(async () => undefined),
+      listSourceAuditEvents: vi.fn(async () => []),
+      listSourceInstanceSummaries: vi.fn(async () => []),
+      writeSourceInstanceConfig: vi.fn(async () => undefined),
+      listSourceInstanceConfigs: vi.fn(async () => []),
+    };
+    const api = createMirrorBrainService(
+      {
+        service: {
+          status: 'running' as const,
+          config: getMirrorBrainConfig(),
+          syncBrowserMemory: vi.fn(),
+          syncShellMemory: vi.fn(),
+          stop: vi.fn(),
+        },
+        workspaceDir,
+      },
+      {
+        createSourceLedgerStateStore: vi.fn(() => stateStore),
+        importSourceLedgers: vi.fn(async () => ({
+          importedCount: 0,
+          skippedCount: 0,
+          scannedLedgerCount: 1,
+          changedLedgerCount: 0,
+          ledgerResults: [],
+        })),
+      },
+    );
+
+    await api.importSourceLedgers();
+
+    await expect(api.listMemoryEvents()).resolves.toMatchObject({
+      items: [
+        expect.objectContaining({
+          id: 'ledger:browser:event-1',
+          content: expect.objectContaining({
+            title: 'Existing Browser Page',
+          }),
+        }),
+      ],
+      pagination: expect.objectContaining({ total: 1 }),
+    });
+  });
+
   it('updates Phase 4 source instance config with an audit event', async () => {
     const stateStore = {
       readCheckpoint: vi.fn(async () => null),

@@ -140,6 +140,9 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
 - Phase 4 source-ledger import is available manually through the service
   contract, refreshes the default ActivityWatch browser ledger on demand, and
   runs on the runtime scheduler every 30 minutes by default
+- manual source-ledger import refreshes the memory-event cache after scanning
+  ledgers so the Memory tab can surface already imported workspace events even
+  when the current scan finds no new lines
 - source enable/disable updates are persisted and audited; both recorder startup and source-ledger import enforce disabled source instances
 - source-ledger state derives source summaries from checkpoint and audit history; richer live recorder health reporting is still a later operational improvement
 - the retrieval contract now accepts lightweight query and filter input, but still uses minimal result shaping rather than mature ranking
