@@ -17,7 +17,7 @@ Phase 5 keeps that structure but sharpens the most important internal step:
 generating high-quality `WorkSession Candidate` records from `MemoryEvent`
 inputs.
 
-The Phase 5 pipeline remains intentionally short:
+The Phase 5 product pipeline remains intentionally short:
 
 ```text
 MemoryEvent
@@ -26,6 +26,18 @@ MemoryEvent
 -> human publish
 -> current-best Knowledge
 -> public Memory API
+```
+
+Inside the `MemoryEvent -> WorkSession Candidate` step, Phase 5 should use a
+more explicit clustering pipeline:
+
+```text
+clean / deduplicate / segment evidence
+-> vectorize text evidence
+-> first-pass clustering with HDBSCAN or BERTopic
+-> LLM mainline naming and interpretation
+-> second-pass merge into 3-7 key mainlines
+-> task map output
 ```
 
 MirrorBrain should trust its own high-precision clustering enough that users do
@@ -45,9 +57,10 @@ to place into a prompt. Agents should not need to understand raw sources,
 ledger files, clustering internals, work-session confidence scores, knowledge
 drafts, or publication workflow state.
 
-Internally, MirrorBrain keeps the complexity. It filters noisy data, merges near
-duplicates, clusters related evidence, chooses article operations, and maintains
-the Project -> Topic -> Knowledge Article system.
+Internally, MirrorBrain keeps the complexity. It filters noisy data, segments
+long records, merges near duplicates, vectorizes text evidence, clusters
+related evidence, names and interprets mainlines, chooses article operations,
+and maintains the Project -> Topic -> Knowledge Article system.
 
 ## Relationship To Phase 4
 
@@ -69,26 +82,36 @@ lower-quality clustering
 -> high-precision, topic-coherent, knowledge-worthy WorkSession Candidates
 ```
 
-This means filtering low-quality inputs, reducing duplicate weight, improving
-cross-source relation scoring, validating cluster coherence, and only producing
-candidates that can responsibly feed Knowledge Article Draft generation.
+This means filtering low-quality inputs, reducing duplicate weight, vectorizing
+clean evidence, using density/topic clustering for an initial grouping,
+validating and naming the resulting mainlines, merging overly fine clusters
+into a small task map, and only producing candidates that can responsibly feed
+Knowledge Article Draft generation.
 
 ## Core Goals
 
 1. Improve the quality of Phase 4 `WorkSession Candidate` generation.
 2. Use content quality filtering before clustering.
-3. Merge near-duplicate same-source or near-same-source events before scoring.
-4. Prefer high precision over recall when producing candidates.
-5. Use a 24-hour default analysis window.
-6. Generate at most five high-confidence candidates per 24-hour window.
-7. Make every emitted candidate topic-coherent inside a work-session window.
-8. Require both cluster coherence and knowledge value before draft generation.
-9. Classify candidate-to-article operations before creating drafts.
-10. Keep human confirmation at the knowledge publish gate, not at candidate
+3. Segment long events while preserving time, source, and tag metadata.
+4. Merge near-duplicate same-source or near-same-source events before
+   vectorization and scoring.
+5. Prefer high precision over recall when producing candidates.
+6. Use a 24-hour default analysis window.
+7. Use text embeddings as the main semantic representation for first-pass
+   clustering.
+8. Use HDBSCAN or BERTopic for initial cluster discovery.
+9. Use an LLM to name and interpret each cluster mainline.
+10. Merge overly fine clusters into three to seven key mainlines.
+11. Output a task map with mainline tasks, subtasks, evidence, priority, and
+    dependencies.
+12. Make every emitted candidate topic-coherent inside a work-session window.
+13. Require both cluster coherence and knowledge value before draft generation.
+14. Classify candidate-to-article operations before creating drafts.
+15. Keep human confirmation at the knowledge publish gate, not at candidate
     review.
-11. Expose a small read-only public Memory API backed only by published,
+16. Expose a small read-only public Memory API backed only by published,
     current-best knowledge.
-12. Keep raw memory, drafts, clustering scores, source audit, and history out of
+17. Keep raw memory, drafts, clustering scores, source audit, and history out of
     the public API.
 
 ## Non-Goals
@@ -149,8 +172,8 @@ so it should reinforce strong browser/file evidence rather than dominate it.
 
 Phase 5 keeps the `WorkSession Candidate` term but narrows its meaning.
 
-A Phase 5 `WorkSession Candidate` is a high-confidence cluster of related
-evidence inside an analysis window. It should represent a task-internal topic:
+A Phase 5 `WorkSession Candidate` is a high-confidence mainline derived from a
+task map inside an analysis window. It should represent a task-internal topic:
 close enough to a work session to preserve temporal context, but coherent
 enough to generate or update one focused Knowledge Article Draft.
 
@@ -181,17 +204,24 @@ Optional windows:
 - 7 days: a future consolidation or exploration window, not the default path
   for Phase 5 MVP draft generation.
 
-For a 24-hour window, the system should emit at most five WorkSession
-Candidates. It should not fill the quota with weak clusters. If only one or two
-high-confidence candidates exist, only those candidates should be produced.
+For a 24-hour window, the system should produce a task map with three to seven
+key mainlines when enough high-quality evidence exists. It should not fill the
+map with weak mainlines. If only one or two high-confidence mainlines exist,
+only those mainlines should be produced.
 
-## Content Quality Filtering
+## Information Cleaning
 
-Phase 5 should filter low-quality `MemoryEvent` inputs before deduplication and
-clustering.
+Phase 5 should clean `MemoryEvent` inputs before vectorization and clustering.
 
-Filtering only affects candidate generation. It does not delete durable
+Cleaning only affects candidate generation. It does not delete durable
 `MemoryEvent` records and does not remove provenance.
+
+The cleaning step includes:
+
+- content quality filtering
+- near-duplicate merge
+- long-record segmentation
+- preservation of time, source, tag, and provenance metadata
 
 Examples of low-quality inputs:
 
@@ -209,12 +239,12 @@ Examples of low-quality inputs:
 - events missing stable identity fields needed for deduplication
 
 The first implementation should prioritize deterministic content-quality
-filters. More advanced knowledge-value evaluation can happen at the candidate
-level.
+filters. More advanced knowledge-value evaluation can happen after mainline
+formation.
 
-## Near-Duplicate Merge
+### Near-Duplicate Merge
 
-Phase 5 should merge near duplicates before clustering.
+Phase 5 should merge near duplicates before vectorization.
 
 Near-duplicate merge is not cross-source semantic clustering. It handles
 repeated or near-repeated evidence from the same source or nearly the same
@@ -244,41 +274,165 @@ interface DeduplicatedEvidence {
 Clustering should use the representative evidence. Provenance should retain all
 duplicate refs.
 
-## Clustering Strategy
+### Segmentation
 
-Phase 5 clustering should use hybrid scoring:
+Some `MemoryEvent` records are too broad to cluster accurately as single units.
+Agent transcripts, long browser pages, and large file summaries should be split
+into coherent evidence segments when they contain multiple issues, decisions,
+or subtopics.
 
-```text
-semantic similarity as the primary signal
-+ time as a boundary and decay factor
-+ project/file/transcript hints as anti-mixing constraints
-```
+Segments must preserve:
 
-Semantic similarity should use fields such as:
+- parent `MemoryEvent` ID
+- source kind
+- source instance ID
+- occurred-at time range
+- title or local heading
+- extracted tags or entities
+- body or summary text used for embedding
+- provenance references
+
+Segmentation should reduce mixed clusters without introducing a new public
+artifact lifecycle. Segments are clustering inputs, not public memory outputs.
+
+## Vectorization
+
+Phase 5 should use a text embedding model to represent cleaned evidence
+segments.
+
+The embedding text should combine the fields most useful for semantic grouping:
 
 - title
 - summary
 - browser content summary
 - file content summary
 - URL and document terms
-- extracted entities
+- extracted entities and tags
 - agent transcript intent and result summary
 
-Time should constrain clustering inside the selected analysis window. Nearby
-events can receive a relation boost, but temporal closeness must not override
-semantic mismatch.
+Vectorization should preserve non-vector metadata for later ranking and
+explanation:
 
-Project and file hints should prevent false positives. Shared repository paths,
-document paths, project names, transcript session identity, and repeated
-entities can strengthen a relation. Clear project mismatch should reduce a
-relation even when vocabulary overlaps.
+- source kind and source priority
+- source instance
+- time range
+- project/file hints
+- duplicate count
+- provenance refs
+
+Embeddings are internal retrieval and clustering artifacts. They are not public
+Memory API outputs.
+
+## Initial Clustering
+
+Phase 5 should use HDBSCAN or BERTopic for first-pass clustering over cleaned
+and embedded evidence.
+
+HDBSCAN is useful when the system needs density-based cluster discovery and
+noise rejection without knowing the number of clusters in advance. BERTopic is
+useful when topic representation, keyword extraction, and topic-level summaries
+are helpful for interpretability. The first implementation can choose one, but
+the design should keep the clustering stage abstract enough to evaluate both.
+
+Initial clustering should still respect Phase 5 constraints:
+
+- operate inside the selected analysis window
+- use browser, file activity, and agent transcript as the main sources
+- treat shell and screenshot as weak auxiliary sources
+- preserve source, time, tag, and provenance metadata
+- reject noise points instead of forcing every event into a cluster
+
+## Mainline Naming
+
+After initial clustering, MirrorBrain should select representative texts from
+each cluster and ask an LLM to generate a mainline interpretation.
+
+For each cluster, the LLM should return:
+
+- mainline name
+- core problem or question
+- included information types
+- possible next task
+
+The mainline name should be concise and task-oriented. It should describe what
+the user was trying to understand, decide, or advance, not merely list keywords.
+
+The LLM output is an interpretation layer over clustered evidence. It must keep
+links back to representative evidence and should not invent unsupported facts.
+
+## Second-Pass Merge
+
+Initial clustering may produce clusters that are too fine-grained. Phase 5
+should run a second-pass merge over interpreted clusters to produce three to
+seven key mainlines for the analysis window.
+
+Merge decisions should consider:
+
+- embedding similarity between cluster representatives
+- overlapping mainline names or core questions
+- shared project/file anchors
+- shared browser topics or domains
+- same transcript task or user intent
+- temporal continuity
+- dependency or subtask relationship
+
+The merge step should not over-compress unrelated work. If there are fewer than
+three high-confidence mainlines, the system should return fewer. If there are
+more than seven plausible mainlines, it should keep the strongest seven and
+demote weaker clusters to supporting or ignored evidence.
+
+## Task Map Output
+
+The final clustering output is a task map. A task map is an internal
+knowledge-building artifact that organizes the analysis window into key
+mainlines and their supporting evidence.
+
+```ts
+interface WorkSessionTaskMap {
+  windowStart: string
+  windowEnd: string
+  mainlines: WorkSessionMainline[]
+}
+
+interface WorkSessionMainline {
+  id: string
+  name: string
+  coreProblem: string
+  subtasks: WorkSessionSubtask[]
+  informationTypes: string[]
+  keyEvidence: Array<{
+    eventId: string
+    sourceKind: string
+    title: string
+    reason: string
+  }>
+  priority: 'high' | 'medium' | 'low'
+  dependencies: Array<{
+    mainlineId: string
+    reason: string
+  }>
+  possibleNextTask?: string
+  confidence: number
+}
+
+interface WorkSessionSubtask {
+  id: string
+  title: string
+  evidenceIds: string[]
+  statusHint?: 'done' | 'in-progress' | 'blocked' | 'unknown'
+}
+```
+
+The task map feeds WorkSession Candidate creation. A mainline can become a
+WorkSession Candidate when it passes coherence and knowledge-value gates.
 
 ## Cluster Coherence
 
-Phase 5 should validate clusters using a center-representative model.
+Phase 5 should validate every candidate mainline using a center-representative
+model.
 
-Each candidate cluster should have a clear centroid or representative topic.
-Every member evidence item must meet a minimum relevance threshold to that
+Each candidate mainline should have a clear centroid or representative topic.
+Every member evidence segment must meet a minimum relevance threshold to that
 center. Weak edge items should be removed rather than allowed to reduce the
 quality of the candidate.
 
@@ -290,7 +444,7 @@ Rules:
 - After exclusion, a candidate must still have at least three valid
   representative evidence items.
 - Duplicate refs do not count toward the three-evidence minimum.
-- Cluster confidence should be based on coherent evidence, not repeated noise.
+- Candidate confidence should be based on coherent evidence, not repeated noise.
 
 ## Knowledge Value Gate
 
@@ -319,7 +473,8 @@ or be dropped from draft generation.
 
 ## Article Operation Classifier
 
-Phase 5 should classify the article operation before creating a Knowledge
+Phase 5 should classify the article operation for each draft-eligible
+WorkSession Candidate created from the task map before creating a Knowledge
 Article Draft.
 
 Possible operations:
@@ -376,10 +531,14 @@ The main flow is:
 
 ```text
 MemoryEvent
--> quality filtering
+-> information cleaning
 -> near-duplicate merge
--> high-precision clustering
--> WorkSession Candidate
+-> segmentation
+-> vectorization
+-> HDBSCAN / BERTopic first-pass clustering
+-> LLM mainline naming
+-> second-pass merge into task map
+-> WorkSession Candidate from qualified mainlines
 -> article operation classifier
 -> Knowledge Article Draft
 -> human publish
@@ -400,13 +559,18 @@ is not a required product review flow.
 
 The inspection surface can show:
 
-- generated candidates for a 24-hour window
+- generated task maps for a 24-hour window
+- first-pass clusters before second-pass merge
+- LLM-generated mainline names, core problems, and possible next tasks
+- generated candidates derived from task-map mainlines
 - candidate title, summary, and confidence
 - representative evidence
 - duplicate refs
 - source composition
 - filtered low-quality event counts
+- segmented parent event references
 - excluded weak members
+- task-map priorities and dependencies
 - article operation classification
 - reasons a candidate became `attach-evidence-only` or `no-draft`
 
@@ -563,14 +727,22 @@ Phase 5 is on track when:
   transcript evidence.
 - Source weighting follows
   `browser > file-activity > agent-transcript > shell > screenshot`.
-- Low-quality MemoryEvents are filtered before clustering.
-- Near-duplicate same-source evidence is merged before scoring.
-- Clustering uses semantic similarity as the main signal with time and
-  project/file hints as constraints.
+- Low-quality MemoryEvents are filtered before vectorization.
+- Long records can be segmented while preserving parent event, source, time,
+  tag, and provenance metadata.
+- Near-duplicate same-source evidence is merged before vectorization.
+- Cleaned evidence is embedded with a text embedding model.
+- Initial clustering uses HDBSCAN or BERTopic and can reject noise points.
+- Each initial cluster receives an LLM-generated mainline name, core problem,
+  included information types, and possible next task.
+- Overly fine clusters are merged into a task map with three to seven key
+  mainlines when enough high-quality evidence exists.
+- The task map includes mainline tasks, subtasks, key evidence, priority, and
+  dependencies.
 - Every emitted candidate has at least three representative evidence items.
 - Duplicate refs do not count toward the evidence minimum.
 - Every emitted candidate passes a center-representative coherence check.
-- A 24-hour window emits at most five high-confidence candidates.
+- A 24-hour window does not invent weak mainlines to fill the task map.
 - Candidate draft generation requires both coherence and knowledge value.
 - Article operation classification happens before draft generation.
 - Existing articles are updated through rewritten current-best drafts.
@@ -589,6 +761,17 @@ Phase 5 is on track when:
   filter.
 - The first threshold values for near-duplicate similarity,
   `minRelevanceToCentroid`, and candidate confidence.
+- Which embedding model should be the default for local and API-backed
+  deployments.
+- Whether the first implementation should use HDBSCAN, BERTopic, or an
+  adapter that can compare both against the same fixtures.
+- How long-record segmentation should split agent transcripts and long browser
+  pages without losing local context.
+- The prompt and schema for LLM mainline naming, including unsupported-claim
+  prevention.
+- The merge policy for turning first-pass clusters into three to seven
+  task-map mainlines.
+- How task-map priority and dependency inference should be validated.
 - Whether article operation classification can start rule-based or should use
   an LLM-assisted evaluator.
 - How the debug/inspection surface should be exposed without becoming a
