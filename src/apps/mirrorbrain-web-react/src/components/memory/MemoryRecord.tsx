@@ -8,14 +8,26 @@ interface MemoryRecordProps {
 export default function MemoryRecord({ event }: MemoryRecordProps) {
   // Extract title from content based on sourceType
   const getTitle = () => {
-    if (event.sourceType === 'activitywatch-browser') {
-      const content = event.content as { url?: string; title?: string }
-      return content.title || content.url || 'Browser Event'
-    } else if (event.sourceType === 'openviking-shell') {
-      const content = event.content as { command?: string; cwd?: string }
-      return content.command || content.cwd || 'Shell Event'
+    const content = event.content as {
+      command?: string
+      cwd?: string
+      sourceSpecific?: { url?: string }
+      title?: string
+      url?: string
     }
-    return 'Unknown Event'
+
+    if (
+      event.sourceType === 'activitywatch-browser' ||
+      event.sourceType === 'browser'
+    ) {
+      return content.title || content.url || content.sourceSpecific?.url || 'Browser Event'
+    } else if (
+      event.sourceType === 'openviking-shell' ||
+      event.sourceType === 'shell'
+    ) {
+      return content.title || content.command || content.cwd || 'Shell Event'
+    }
+    return content.title || 'Unknown Event'
   }
 
   return (

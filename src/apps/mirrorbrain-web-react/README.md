@@ -44,6 +44,7 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and an
 - **Features:**
   - Load memory events from API once per app session and reuse global state across tab switches
   - Memory list displays newest events first
+  - Memory records render titles from both legacy browser/shell event shapes and Phase 4 source-ledger event shapes such as `sourceType: "browser"` with `content.title`
   - Memory tab requests 10 URL records per page by default
   - Memory content scrolls inside the active tab area instead of expanding the full page height
   - Browser sync runs against the backend; Shell / Filesystems / Screenshot buttons currently surface explicit not-configured info feedback until those runtimes are wired up
