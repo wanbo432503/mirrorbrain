@@ -669,6 +669,71 @@ Notes:
 
 ## Candidate And Review Endpoints
 
+## Knowledge Article Endpoints
+
+### `POST /knowledge-articles/drafts`
+
+Generates and persists a Phase 4 Knowledge Article Draft from reviewed work
+sessions. The request body follows the service/domain draft input shape:
+reviewed work sessions, title, summary, body, topic proposal, and article
+operation proposal.
+
+Response `201`:
+
+```json
+{
+  "draft": {
+    "id": "knowledge-article-draft:source-ledger",
+    "draftState": "draft",
+    "projectId": "project:mirrorbrain",
+    "title": "Source ledger architecture",
+    "sourceReviewedWorkSessionIds": ["reviewed-work-session:source-ledger"],
+    "sourceMemoryEventIds": ["browser-1"]
+  }
+}
+```
+
+### `POST /knowledge-articles/publish`
+
+Publishes a Phase 4 Knowledge Article Draft under a final topic assignment.
+Publishing creates the next current-best article version and may return a
+superseded prior version.
+
+Response `201`:
+
+```json
+{
+  "article": {
+    "id": "knowledge-article:project-mirrorbrain:topic-source-ledger:v1",
+    "projectId": "project:mirrorbrain",
+    "topicId": "topic:project-mirrorbrain:source-ledger",
+    "version": 1,
+    "isCurrentBest": true,
+    "publishState": "published"
+  }
+}
+```
+
+### `GET /knowledge-articles/history`
+
+Lists published Knowledge Article versions for a project/topic pair in
+newest-first order.
+
+Query parameters:
+
+| Name | Required | Description |
+| --- | --- | --- |
+| `projectId` | yes | Project id such as `project:mirrorbrain`. |
+| `topicId` | yes | Topic id such as `topic:project-mirrorbrain:source-ledger`. |
+
+Response:
+
+```json
+{
+  "items": []
+}
+```
+
 ### `GET /candidate-memories`
 
 Lists candidate memories for a review date.

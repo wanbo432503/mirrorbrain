@@ -65,6 +65,12 @@ interface MirrorBrainHttpService {
     candidate: unknown,
     review: unknown,
   ): Promise<unknown>;
+  generateKnowledgeArticleDraft?(input: unknown): Promise<unknown>;
+  publishKnowledgeArticleDraft?(input: unknown): Promise<unknown>;
+  listKnowledgeArticleHistory?(filter: {
+    projectId: string;
+    topicId: string;
+  }): Promise<unknown[]>;
   listMemoryEvents(input?: {
     page?: number;
     pageSize?: number;
@@ -1366,6 +1372,147 @@ export async function startMirrorBrainHttpServer(
         request.body.candidate,
         request.body.review,
       );
+    },
+  );
+
+  app.post<{ Body: unknown }>(
+    '/knowledge-articles/drafts',
+    {
+      schema: {
+        summary: 'Generate a Phase 4 Knowledge Article Draft',
+        body: {
+          type: 'object',
+          additionalProperties: true,
+        },
+        response: {
+          201: {
+            type: 'object',
+            properties: {
+              draft: {
+                type: 'object',
+                additionalProperties: true,
+              },
+            },
+            required: ['draft'],
+          },
+          501: {
+            type: 'object',
+            properties: {
+              message: { type: 'string' },
+            },
+            required: ['message'],
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      if (input.service.generateKnowledgeArticleDraft === undefined) {
+        reply.code(501);
+        return {
+          message: 'Knowledge Article Draft generation is not available.',
+        };
+      }
+
+      reply.code(201);
+      return {
+        draft: await input.service.generateKnowledgeArticleDraft(request.body),
+      };
+    },
+  );
+
+  app.post<{ Body: unknown }>(
+    '/knowledge-articles/publish',
+    {
+      schema: {
+        summary: 'Publish a Phase 4 Knowledge Article Draft',
+        body: {
+          type: 'object',
+          additionalProperties: true,
+        },
+        response: {
+          201: {
+            type: 'object',
+            additionalProperties: true,
+          },
+          501: {
+            type: 'object',
+            properties: {
+              message: { type: 'string' },
+            },
+            required: ['message'],
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      if (input.service.publishKnowledgeArticleDraft === undefined) {
+        reply.code(501);
+        return {
+          message: 'Knowledge Article publishing is not available.',
+        };
+      }
+
+      reply.code(201);
+      return input.service.publishKnowledgeArticleDraft(request.body);
+    },
+  );
+
+  app.get<{
+    Querystring: {
+      projectId: string;
+      topicId: string;
+    };
+  }>(
+    '/knowledge-articles/history',
+    {
+      schema: {
+        summary: 'List Phase 4 Knowledge Article history',
+        querystring: {
+          type: 'object',
+          properties: {
+            projectId: { type: 'string' },
+            topicId: { type: 'string' },
+          },
+          required: ['projectId', 'topicId'],
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              items: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  additionalProperties: true,
+                },
+              },
+            },
+            required: ['items'],
+          },
+          501: {
+            type: 'object',
+            properties: {
+              message: { type: 'string' },
+            },
+            required: ['message'],
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      if (input.service.listKnowledgeArticleHistory === undefined) {
+        reply.code(501);
+        return {
+          message: 'Knowledge Article history is not available.',
+        };
+      }
+
+      return {
+        items: await input.service.listKnowledgeArticleHistory({
+          projectId: request.query.projectId,
+          topicId: request.query.topicId,
+        }),
+      };
     },
   );
 

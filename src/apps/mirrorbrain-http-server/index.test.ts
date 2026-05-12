@@ -653,6 +653,98 @@ describe('mirrorbrain http server', () => {
     });
   });
 
+  it('exposes Knowledge Article draft, publish, and history endpoints', async () => {
+    const draft = {
+      id: 'knowledge-article-draft:source-ledger',
+      draftState: 'draft' as const,
+      projectId: 'project:mirrorbrain',
+      title: 'Source ledger architecture',
+      summary: 'How source ledgers feed memory.',
+      body: 'Source ledgers are the acquisition boundary.',
+      topicProposal: { kind: 'new-topic' as const, name: 'Source ledger' },
+      articleOperationProposal: { kind: 'create-new-article' as const },
+      sourceReviewedWorkSessionIds: ['reviewed-work-session:source-ledger'],
+      sourceMemoryEventIds: ['browser-1'],
+      provenanceRefs: [{ kind: 'memory-event' as const, id: 'browser-1' }],
+      generatedAt: '2026-05-12T12:10:00.000Z',
+    };
+    const article = {
+      id: 'knowledge-article:project-mirrorbrain:topic-source-ledger:v1',
+      projectId: 'project:mirrorbrain',
+      topicId: 'topic:project-mirrorbrain:source-ledger',
+      title: draft.title,
+      summary: draft.summary,
+      body: draft.body,
+      version: 1,
+      isCurrentBest: true,
+      supersedesArticleId: null,
+      sourceReviewedWorkSessionIds: draft.sourceReviewedWorkSessionIds,
+      sourceMemoryEventIds: draft.sourceMemoryEventIds,
+      provenanceRefs: draft.provenanceRefs,
+      publishState: 'published' as const,
+      publishedAt: '2026-05-12T12:20:00.000Z',
+      publishedBy: 'user',
+    };
+    const service = {
+      service: {
+        status: 'running' as const,
+        config: getMirrorBrainConfig(),
+        stop: vi.fn(),
+      },
+      syncBrowserMemory: vi.fn(),
+      syncShellMemory: vi.fn(),
+      listMemoryEvents: vi.fn(),
+      queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
+      listKnowledge: vi.fn(async () => []),
+      listSkillDrafts: vi.fn(async () => []),
+      createDailyCandidateMemories: vi.fn(),
+      suggestCandidateReviews: vi.fn(),
+      reviewCandidateMemory: vi.fn(),
+      undoCandidateReview: vi.fn(),
+      deleteCandidateMemory: vi.fn(),
+      generateKnowledgeFromReviewedMemories: vi.fn(),
+      generateSkillDraftFromReviewedMemories: vi.fn(),
+      publishKnowledge: vi.fn(),
+      publishSkillDraft: vi.fn(),
+      generateKnowledgeArticleDraft: vi.fn(async () => draft),
+      publishKnowledgeArticleDraft: vi.fn(async () => ({ article })),
+      listKnowledgeArticleHistory: vi.fn(async () => [article]),
+    };
+    const server = await startMirrorBrainHttpServer({ service, port: 0 });
+    servers.push(server);
+
+    const draftResponse = await fetch(`${server.origin}/knowledge-articles/drafts`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ title: draft.title }),
+    });
+    const draftBody = await draftResponse.json();
+    const publishResponse = await fetch(`${server.origin}/knowledge-articles/publish`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        draft,
+        publishedBy: 'user',
+        topicAssignment: {
+          kind: 'confirmed-new-topic',
+          name: 'Source ledger',
+        },
+      }),
+    });
+    const publishBody = await publishResponse.json();
+    const historyResponse = await fetch(
+      `${server.origin}/knowledge-articles/history?projectId=project%3Amirrorbrain&topicId=topic%3Aproject-mirrorbrain%3Asource-ledger`,
+    );
+    const historyBody = await historyResponse.json();
+
+    expect(draftResponse.status).toBe(201);
+    expect(draftBody).toEqual({ draft });
+    expect(publishResponse.status).toBe(201);
+    expect(publishBody).toEqual({ article });
+    expect(historyResponse.status).toBe(200);
+    expect(historyBody).toEqual({ items: [article] });
+  });
+
   it('serializes minimal valid knowledge artifacts without requiring optional topic fields', async () => {
     const service = {
       service: {

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
-import { access, mkdir, rm, writeFile } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -14,6 +14,7 @@ import type {
   ReviewedMemory,
 } from '../../shared/types/index.js';
 import type { SourceAuditEvent } from '../../modules/source-ledger-importer/index.js';
+import type { ReviewedWorkSession } from '../../modules/project-work-session/index.js';
 import type { WorkSessionCandidate } from '../../workflows/work-session-analysis/index.js';
 import { createMirrorBrainService, startMirrorBrainService } from './index.js';
 
@@ -277,6 +278,84 @@ describe('mirrorbrain service', () => {
       reviewState: 'reviewed',
       reviewedAt: '2026-05-12T12:05:00.000Z',
     });
+  });
+
+  it('generates and publishes Knowledge Article Drafts from reviewed work sessions', async () => {
+    const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-article-service-'));
+    const reviewedWorkSession: ReviewedWorkSession = {
+      id: 'reviewed-work-session:source-ledger',
+      candidateId: 'work-session-candidate:source-ledger',
+      projectId: 'project:mirrorbrain',
+      title: 'Source ledger integration',
+      summary: 'Built source ledger import.',
+      memoryEventIds: ['browser-1'],
+      sourceTypes: ['browser'],
+      timeRange: {
+        startAt: '2026-05-12T10:00:00.000Z',
+        endAt: '2026-05-12T10:30:00.000Z',
+      },
+      relationHints: ['Phase 4 design'],
+      reviewState: 'reviewed',
+      reviewedAt: '2026-05-12T12:05:00.000Z',
+      reviewedBy: 'user',
+    };
+    const service = createMirrorBrainService(
+      {
+        workspaceDir,
+        service: {
+          status: 'running',
+          syncBrowserMemory: vi.fn(),
+          syncShellMemory: vi.fn(),
+          stop: vi.fn(),
+        },
+      },
+      {
+        now: () => '2026-05-12T12:10:00.000Z',
+      },
+    );
+
+    const draft = await service.generateKnowledgeArticleDraft({
+      reviewedWorkSessions: [reviewedWorkSession],
+      title: 'Source ledger architecture',
+      summary: 'How source ledgers feed memory.',
+      body: 'Source ledgers are the acquisition boundary.',
+      topicProposal: {
+        kind: 'new-topic',
+        name: 'Source ledger',
+      },
+      articleOperationProposal: {
+        kind: 'create-new-article',
+      },
+    });
+    const published = await service.publishKnowledgeArticleDraft({
+      draft,
+      publishedBy: 'user',
+      topicAssignment: {
+        kind: 'confirmed-new-topic',
+        name: 'Source ledger',
+      },
+    });
+
+    expect(draft).toMatchObject({
+      draftState: 'draft',
+      projectId: 'project:mirrorbrain',
+      sourceReviewedWorkSessionIds: [reviewedWorkSession.id],
+    });
+    expect(published.article).toMatchObject({
+      projectId: 'project:mirrorbrain',
+      version: 1,
+      isCurrentBest: true,
+      publishState: 'published',
+      publishedBy: 'user',
+    });
+    await expect(
+      service.listKnowledgeArticleHistory({
+        projectId: 'project:mirrorbrain',
+        topicId: published.article.topicId,
+      }),
+    ).resolves.toEqual([published.article]);
+
+    await rm(workspaceDir, { recursive: true, force: true });
   });
 
   it('wires real browser sync execution into the polling lifecycle', async () => {

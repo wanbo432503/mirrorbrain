@@ -109,6 +109,15 @@ import {
   type ProjectAssignment,
   type ReviewWorkSessionCandidateResult,
 } from '../../modules/project-work-session/index.js';
+import {
+  createKnowledgeArticleDraft as createPhase4KnowledgeArticleDraft,
+  publishKnowledgeArticleDraft as publishPhase4KnowledgeArticleDraft,
+  type CreateKnowledgeArticleDraftInput,
+  type KnowledgeArticle,
+  type KnowledgeArticleDraft,
+  type PublishKnowledgeArticleDraftResult,
+  type TopicAssignment,
+} from '../../modules/knowledge-article/index.js';
 import { createFileKnowledgeArticleStore } from '../../integrations/knowledge-article-store/index.js';
 import type {
   AuthorizationScope,
@@ -252,6 +261,17 @@ interface ReviewWorkSessionInput {
   title?: string;
   summary?: string;
   projectAssignment?: ProjectAssignment;
+}
+
+type GenerateKnowledgeArticleDraftInput = Omit<
+  CreateKnowledgeArticleDraftInput,
+  'generatedAt'
+>;
+
+interface PublishKnowledgeArticleDraftServiceInput {
+  draft: KnowledgeArticleDraft;
+  publishedBy: string;
+  topicAssignment: TopicAssignment;
 }
 
 function normalizeMemoryEventReadResult(result: MemoryEventReadResult): MemoryEvent[] {
@@ -1323,6 +1343,56 @@ export function createMirrorBrainService(
 
       return result;
     },
+    generateKnowledgeArticleDraft: async (
+      input: GenerateKnowledgeArticleDraftInput,
+    ): Promise<KnowledgeArticleDraft> => {
+      const draft = createPhase4KnowledgeArticleDraft({
+        ...input,
+        generatedAt: now(),
+      });
+
+      await knowledgeArticleStore.saveDraft(draft);
+
+      return draft;
+    },
+    publishKnowledgeArticleDraft: async (
+      input: PublishKnowledgeArticleDraftServiceInput,
+    ): Promise<PublishKnowledgeArticleDraftResult> => {
+      const topicId =
+        input.topicAssignment.kind === 'existing-topic'
+          ? input.topicAssignment.topicId
+          : `topic:${input.draft.projectId.replace(/[^a-z0-9]+/giu, '-').toLowerCase().replace(/^-|-$/gu, '')}:${input.topicAssignment.name.toLowerCase().replace(/[^a-z0-9]+/gu, '-').replace(/^-|-$/gu, '')}`;
+      const existingArticles = await knowledgeArticleStore.listArticleHistory({
+        projectId: input.draft.projectId,
+        topicId,
+      });
+      const result = publishPhase4KnowledgeArticleDraft({
+        draft: input.draft,
+        publishedAt: now(),
+        publishedBy: input.publishedBy,
+        topicAssignment: input.topicAssignment,
+        existingArticles,
+      });
+
+      if (result.topic !== undefined) {
+        await knowledgeArticleStore.saveTopic(result.topic);
+      }
+
+      await knowledgeArticleStore.saveArticles(
+        result.supersededArticle
+          ? [result.supersededArticle, result.article]
+          : [result.article],
+      );
+
+      return result;
+    },
+    listKnowledgeArticleHistory: (
+      filter: {
+        projectId: string;
+        topicId: string;
+      },
+    ): Promise<KnowledgeArticle[]> =>
+      knowledgeArticleStore.listArticleHistory(filter),
     listMemoryEvents: async (
       input?: { page?: number; pageSize?: number } & MemoryEventSourceFilter,
     ) => {
