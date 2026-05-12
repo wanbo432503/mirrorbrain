@@ -5,21 +5,6 @@ import { MEMORY_PAGE_SIZE } from '../components/memory/memory-page-config'
 export function useMemoryEvents(api: MirrorBrainWebAppApi) {
   const { state, dispatch } = useMirrorBrain()
 
-  const syncBrowser = async (): Promise<{ kind: 'success' | 'error'; message: string }> => {
-    try {
-      const summary = await api.syncBrowser()
-      dispatch({ type: 'SYNC_BROWSER', payload: summary })
-
-      return {
-        kind: 'success',
-        message: `Browser sync completed: ${summary.importedCount} events imported`,
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Browser sync failed'
-      return { kind: 'error', message }
-    }
-  }
-
   const syncShell = async (): Promise<{ kind: 'success' | 'error'; message: string }> => {
     try {
       const summary = await api.syncShell()
@@ -51,7 +36,6 @@ export function useMemoryEvents(api: MirrorBrainWebAppApi) {
   return {
     memoryEvents: state.memoryEvents,
     lastSyncSummary: state.lastSyncSummary,
-    syncBrowser,
     syncShell,
     getMemoryPageCount,
     getMemoryPage,

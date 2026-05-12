@@ -52,7 +52,6 @@ export interface MirrorBrainWebAppApi {
   >;
   listSkills(): Promise<SkillArtifact[]>;
   listCandidateMemoriesByDate?(reviewDate: string): Promise<CandidateMemory[]>;
-  syncBrowser(): Promise<BrowserSyncSummary>;
   syncShell(): Promise<BrowserSyncSummary>;
   importSourceLedgers(): Promise<SourceLedgerImportResult>;
   listSourceAuditEvents(filter?: {
@@ -183,14 +182,6 @@ export function createMirrorBrainBrowserApi(
       const response = await fetch(`${baseUrl}/candidate-memories?reviewDate=${reviewDate}`);
       const body = await readJson<{ candidates: CandidateMemory[] }>(response);
       return body.candidates;
-    },
-
-    async syncBrowser() {
-      const response = await fetch(`${baseUrl}/sync/browser`, {
-        method: 'POST',
-      });
-      const body = await readJson<{ sync: BrowserSyncSummary }>(response);
-      return body.sync;
     },
 
     async syncShell() {

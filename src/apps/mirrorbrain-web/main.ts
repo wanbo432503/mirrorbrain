@@ -15,6 +15,14 @@ interface BrowserSyncSummary {
   importedEvents?: MemoryEvent[];
 }
 
+interface SourceLedgerImportResult {
+  importedCount: number;
+  skippedCount: number;
+  scannedLedgerCount: number;
+  changedLedgerCount: number;
+  ledgerResults: unknown[];
+}
+
 type MirrorBrainWebTab = 'memory' | 'review' | 'artifacts';
 type MirrorBrainArtifactsSubtab =
   | 'history-topics'
@@ -73,7 +81,7 @@ interface MirrorBrainWebAppApi {
     }>
   >;
   listSkills(): Promise<SkillArtifact[]>;
-  syncBrowser(): Promise<BrowserSyncSummary>;
+  importSourceLedgers(): Promise<SourceLedgerImportResult>;
   syncShell(): Promise<BrowserSyncSummary>;
   createDailyCandidates(
     reviewDate: string,
@@ -231,7 +239,7 @@ function renderMemoryPanel(state: MirrorBrainWebAppState): string {
     '<section class="mirrorbrain-panel">',
     '<h2>Memory Events</h2>',
     '<p style="font-size: 0.9rem;">Imported browser and shell events. Use pagination to browse.</p>',
-    '<div class="mirrorbrain-actions"><button type="button" data-action="sync-browser">Sync Browser</button><button type="button" data-action="sync-shell">Sync Shell</button></div>',
+    '<div class="mirrorbrain-actions"><button type="button" data-action="import-sources">Import Sources</button><button type="button" data-action="sync-shell">Sync Shell</button></div>',
     `<div class="mirrorbrain-pagination" style="font-size: 0.85rem;"><button type="button" data-action="memory-prev-page"${
       currentPage === 1 ? ' disabled' : ''
     }>←</button><span style="color: var(--muted);">Page ${currentPage} of ${pageCount}</span><button type="button" data-action="memory-next-page"${
@@ -877,24 +885,14 @@ export function createMirrorBrainWebApp(input: CreateMirrorBrainWebAppInput) {
         message: `Loaded ${state.memoryEvents.length} memory events.`,
       });
     },
-    async syncBrowserMemory() {
-      state.lastSyncSummary = await input.api.syncBrowser();
-      try {
-        state.memoryEvents = await input.api.listMemory();
-      } catch {
-        state.memoryEvents =
-          state.lastSyncSummary.importedEvents === undefined
-            ? state.memoryEvents
-            : mergeMemoryEvents(
-                state.memoryEvents,
-                state.lastSyncSummary.importedEvents,
-              );
-      }
+    async importSourceLedgers() {
+      const importResult = await input.api.importSourceLedgers();
+      state.memoryEvents = await input.api.listMemory();
       state.memoryPage = 1;
       state.activeTab = 'memory';
       setFeedback({
         kind: 'success',
-        message: `Browser sync completed: ${state.lastSyncSummary.importedCount} events imported.`,
+        message: `Source import completed: ${importResult.importedCount} events imported from ${importResult.scannedLedgerCount} ledgers.`,
       });
     },
     async syncShellMemory() {
@@ -1166,15 +1164,15 @@ export function createMirrorBrainBrowserApi(
 
       return body.items;
     },
-    async syncBrowser() {
-      const response = await fetch(`${baseUrl}/sync/browser`, {
+    async importSourceLedgers() {
+      const response = await fetch(`${baseUrl}/sources/import`, {
         method: 'POST',
       });
       const body = await readJson<{
-        sync: BrowserSyncSummary;
+        import: SourceLedgerImportResult;
       }>(response);
 
-      return body.sync;
+      return body.import;
     },
     async syncShell() {
       const response = await fetch(`${baseUrl}/sync/shell`, {
@@ -1353,9 +1351,9 @@ export async function mountMirrorBrainWebApp(
 
   const bindActions = () => {
     root
-      .querySelector('[data-action="sync-browser"]')
+      .querySelector('[data-action="import-sources"]')
       ?.addEventListener('click', async () => {
-        await app.syncBrowserMemory();
+        await app.importSourceLedgers();
         render();
       });
     root

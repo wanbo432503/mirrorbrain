@@ -502,7 +502,7 @@ describe('mirrorbrain web app', () => {
       activeTab: 'artifacts',
     });
 
-    expect(memoryHtml).toContain('data-action="sync-browser"');
+    expect(memoryHtml).toContain('data-action="import-sources"');
     expect(memoryHtml).toContain('data-action="sync-shell"');
     expect(reviewHtml).toContain('data-action="create-candidate"');
     expect(reviewHtml).toContain('data-action="keep-candidate"');
@@ -565,11 +565,12 @@ describe('mirrorbrain web app', () => {
       listKnowledge: vi.fn(async () => [] as KnowledgeArtifact[]),
         listKnowledgeTopics: vi.fn(async () => []),
       listSkills: vi.fn(async () => [] as SkillArtifact[]),
-      syncBrowser: vi.fn(async () => ({
-        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
-        strategy: 'incremental' as const,
+      importSourceLedgers: vi.fn(async () => ({
         importedCount: 2,
-        lastSyncedAt: '2026-03-20T09:00:00.000Z',
+        skippedCount: 0,
+        scannedLedgerCount: 1,
+        changedLedgerCount: 1,
+        ledgerResults: [],
       })),
       syncShell: vi.fn(async () => ({
         sourceKey: 'shell-history:/tmp/.zsh_history',
@@ -599,7 +600,7 @@ describe('mirrorbrain web app', () => {
     });
 
     await app.load();
-    await app.syncBrowserMemory();
+    await app.importSourceLedgers();
     await app.createDailyCandidates();
     app.selectCandidate(candidates[1].id);
     await app.reviewSelectedCandidate('keep');
@@ -661,11 +662,12 @@ describe('mirrorbrain web app', () => {
       listKnowledge: vi.fn(async () => [] as KnowledgeArtifact[]),
         listKnowledgeTopics: vi.fn(async () => []),
       listSkills: vi.fn(async () => [] as SkillArtifact[]),
-      syncBrowser: vi.fn(async () => ({
-        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
-        strategy: 'incremental' as const,
+      importSourceLedgers: vi.fn(async () => ({
         importedCount: 0,
-        lastSyncedAt: '2026-03-20T09:00:00.000Z',
+        skippedCount: 0,
+        scannedLedgerCount: 0,
+        changedLedgerCount: 0,
+        ledgerResults: [],
       })),
       syncShell: vi.fn(async () => ({
         sourceKey: 'shell-history:/tmp/.zsh_history',
@@ -697,7 +699,7 @@ describe('mirrorbrain web app', () => {
     });
   });
 
-  it('reloads memory events after browser sync so url-compressed browser state stays authoritative', async () => {
+  it('reloads memory events after source import so url-compressed browser state stays authoritative', async () => {
     const existingEvent = createMemoryEvent(
       'browser:existing',
       'Existing Event',
@@ -719,12 +721,12 @@ describe('mirrorbrain web app', () => {
       listKnowledge: vi.fn(async () => []),
       listKnowledgeTopics: vi.fn(async () => []),
       listSkills: vi.fn(async () => []),
-      syncBrowser: vi.fn(async () => ({
-        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
-        strategy: 'incremental' as const,
+      importSourceLedgers: vi.fn(async () => ({
         importedCount: 1,
-        lastSyncedAt: '2026-03-20T09:00:00.000Z',
-        importedEvents: [importedEvent],
+        skippedCount: 0,
+        scannedLedgerCount: 1,
+        changedLedgerCount: 1,
+        ledgerResults: [],
       })),
       syncShell: vi.fn(async () => ({
         sourceKey: 'shell-history:/tmp/.zsh_history',
@@ -746,13 +748,13 @@ describe('mirrorbrain web app', () => {
     });
 
     await app.load();
-    await app.syncBrowserMemory();
+    await app.importSourceLedgers();
 
     expect(app.state.memoryEvents).toEqual([importedEvent, existingEvent]);
     expect(api.listMemory).toHaveBeenCalledTimes(2);
   });
 
-  it('reloads the full memory list after browser sync when the sync response is only a preview', async () => {
+  it('reloads the full memory list after source import', async () => {
     const importedPreviewEvents: MemoryEvent[] = Array.from({ length: 50 }, (_, index) =>
       createMemoryEvent(
         `browser:preview-${index + 1}`,
@@ -780,12 +782,12 @@ describe('mirrorbrain web app', () => {
       listKnowledge: vi.fn(async () => []),
       listKnowledgeTopics: vi.fn(async () => []),
       listSkills: vi.fn(async () => []),
-      syncBrowser: vi.fn(async () => ({
-        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
-        strategy: 'initial-backfill' as const,
+      importSourceLedgers: vi.fn(async () => ({
         importedCount: 75,
-        lastSyncedAt: '2026-03-20T09:49:00.000Z',
-        importedEvents: importedPreviewEvents,
+        skippedCount: 0,
+        scannedLedgerCount: 2,
+        changedLedgerCount: 2,
+        ledgerResults: [],
       })),
       syncShell: vi.fn(async () => ({
         sourceKey: 'shell-history:/tmp/.zsh_history',
@@ -807,7 +809,7 @@ describe('mirrorbrain web app', () => {
     });
 
     await app.load();
-    await app.syncBrowserMemory();
+    await app.importSourceLedgers();
 
     expect(app.state.memoryEvents).toEqual(fullMemoryEvents);
     expect(listMemory).toHaveBeenCalledTimes(2);
@@ -849,7 +851,7 @@ describe('mirrorbrain web app', () => {
       listKnowledge: vi.fn(async () => [knowledgeArtifact]),
       listKnowledgeTopics: vi.fn(async () => []),
       listSkills: vi.fn(async () => [skillArtifact]),
-      syncBrowser: vi.fn(),
+      importSourceLedgers: vi.fn(),
       syncShell: vi.fn(),
       createDailyCandidates: vi.fn(async () => []),
       suggestCandidateReviews: vi.fn(async () => []),
@@ -905,24 +907,25 @@ describe('mirrorbrain web app', () => {
       getHealth: vi.fn(async () => ({
         status: 'running' as const,
       })),
-      listMemory: vi.fn(async () => {
-        throw new Error('fetch failed');
-      }),
-      listKnowledge: vi.fn(async () => []),
-      listKnowledgeTopics: vi.fn(async () => []),
-      listSkills: vi.fn(async () => []),
-      syncBrowser: vi.fn(async () => ({
-        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
-        strategy: 'incremental' as const,
-        importedCount: 1,
-        lastSyncedAt: '2026-03-20T09:00:00.000Z',
-        importedEvents: [
+      listMemory: vi
+        .fn<() => Promise<MemoryEvent[]>>()
+        .mockRejectedValueOnce(new Error('fetch failed'))
+        .mockResolvedValueOnce([
           createMemoryEvent(
             'browser:imported',
             'Imported Event',
             '2026-03-20T09:00:00.000Z',
           ),
-        ],
+        ]),
+      listKnowledge: vi.fn(async () => []),
+      listKnowledgeTopics: vi.fn(async () => []),
+      listSkills: vi.fn(async () => []),
+      importSourceLedgers: vi.fn(async () => ({
+        importedCount: 1,
+        skippedCount: 0,
+        scannedLedgerCount: 1,
+        changedLedgerCount: 1,
+        ledgerResults: [],
       })),
       syncShell: vi.fn(async () => ({
         sourceKey: 'shell-history:/tmp/.zsh_history',
@@ -951,7 +954,7 @@ describe('mirrorbrain web app', () => {
       message: 'fetch failed',
     });
 
-    await app.syncBrowserMemory();
+    await app.importSourceLedgers();
     app.setActiveTab('review');
     app.setActiveTab('memory');
 
@@ -991,12 +994,12 @@ describe('mirrorbrain web app', () => {
       listKnowledge: vi.fn(async () => []),
       listKnowledgeTopics: vi.fn(async () => []),
       listSkills: vi.fn(async () => []),
-      syncBrowser: vi.fn(async () => ({
-        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
-        strategy: 'incremental' as const,
+      importSourceLedgers: vi.fn(async () => ({
         importedCount: 0,
-        lastSyncedAt: '2026-04-13T09:00:00.000Z',
-        importedEvents: [],
+        skippedCount: 0,
+        scannedLedgerCount: 0,
+        changedLedgerCount: 0,
+        ledgerResults: [],
       })),
       syncShell: vi.fn(async () => ({
         sourceKey: 'shell-history:/tmp/.zsh_history',
@@ -1046,7 +1049,7 @@ describe('mirrorbrain web app', () => {
         listKnowledge: vi.fn(async () => [] as KnowledgeArtifact[]),
         listKnowledgeTopics: vi.fn(async () => []),
         listSkills: vi.fn(async () => [] as SkillArtifact[]),
-        syncBrowser: vi.fn(),
+        importSourceLedgers: vi.fn(),
         syncShell: vi.fn(),
         createDailyCandidates: vi.fn(async () => {
           throw new Error('No memory events found for review date 2026-03-19.');
@@ -1082,7 +1085,7 @@ describe('mirrorbrain web app', () => {
         listKnowledge: vi.fn(async () => [] as KnowledgeArtifact[]),
         listKnowledgeTopics: vi.fn(async () => []),
         listSkills: vi.fn(async () => [] as SkillArtifact[]),
-        syncBrowser: vi.fn(),
+        importSourceLedgers: vi.fn(),
         syncShell: vi.fn(),
         createDailyCandidates: vi.fn(async () => {
           throw new Error('No memory events found for review date 2026-03-19.');
@@ -1152,7 +1155,7 @@ describe('mirrorbrain web app', () => {
         listKnowledge: vi.fn(async () => [] as KnowledgeArtifact[]),
         listKnowledgeTopics: vi.fn(async () => []),
         listSkills: vi.fn(async () => [] as SkillArtifact[]),
-        syncBrowser: vi.fn(),
+        importSourceLedgers: vi.fn(),
         syncShell: vi.fn(),
         createDailyCandidates,
         suggestCandidateReviews: vi.fn(async () => []),

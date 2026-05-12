@@ -16,9 +16,9 @@ test('runs the phase 1 MVP review flow through the standalone UI', async ({
     await expect(page.getByText('Personal Memory & Knowledge')).toBeVisible();
     await expect(page.getByText('Showing 1 of 1 unique URLs')).toBeVisible();
 
-    await page.getByRole('button', { name: 'Sync Browser' }).click();
+    await page.getByRole('button', { name: 'Import Sources' }).click();
     await expect(
-      page.getByText('Browser sync completed: 1 events imported'),
+      page.getByText('Source import completed: 1 events imported from 1 ledgers.'),
     ).toBeVisible();
 
     await createAndKeepFixtureCandidate(page);

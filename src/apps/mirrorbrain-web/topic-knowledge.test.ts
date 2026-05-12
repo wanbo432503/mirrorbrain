@@ -50,7 +50,7 @@ describe('mirrorbrain web topic knowledge UI', () => {
         listKnowledge: vi.fn(),
         listKnowledgeTopics: vi.fn(),
         listSkills: vi.fn(),
-        syncBrowser: vi.fn(),
+        importSourceLedgers: vi.fn(),
         syncShell: vi.fn(),
         createDailyCandidates: vi.fn(),
         suggestCandidateReviews: vi.fn(),
