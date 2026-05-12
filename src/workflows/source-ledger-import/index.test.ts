@@ -122,6 +122,34 @@ describe('source ledger import workflow', () => {
     ]);
   });
 
+  it('counts a ledger with only valid imported entries as changed', async () => {
+    const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-ledgers-'));
+    const ledgerDir = join(workspaceDir, 'mirrorbrain', 'ledgers', '2026-05-12');
+    await mkdir(ledgerDir, { recursive: true });
+    await writeFile(
+      join(ledgerDir, 'browser.jsonl'),
+      '{"schemaVersion":"1","sourceKind":"browser","sourceInstanceId":"chrome-main","occurredAt":"2026-05-12T10:00:00.000Z","payload":{"id":"page-1","title":"Valid Entry","url":"https://example.com/valid","page_content":"Valid page."}}',
+    );
+
+    const result = await importChangedSourceLedgers(
+      {
+        authorizationScopeId: 'scope-browser',
+        importedAt: '2026-05-12T10:31:00.000Z',
+        workspaceDir,
+      },
+      {
+        readCheckpoint: async () => null,
+        writeCheckpoint: async () => undefined,
+        writeMemoryEvent: async () => undefined,
+        writeSourceAuditEvent: async () => undefined,
+      },
+    );
+
+    expect(result.importedCount).toBe(1);
+    expect(result.skippedCount).toBe(0);
+    expect(result.changedLedgerCount).toBe(1);
+  });
+
   it('skips disabled source instances before writing imported MemoryEvents', async () => {
     const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-ledgers-'));
     const ledgerDir = join(workspaceDir, 'mirrorbrain', 'ledgers', '2026-05-12');

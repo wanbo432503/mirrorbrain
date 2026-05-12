@@ -214,10 +214,6 @@ export async function importChangedSourceLedgers(
       (event) => event.eventType === 'schema-validation-failed',
     ).length;
 
-    if (ledgerImportedCount > 0 || ledgerSkippedCount > 0) {
-      changedLedgerCount += 1;
-    }
-
     for (const event of importResult.importedEvents) {
       const source = getEventSource(event);
       const isAllowed =
@@ -239,6 +235,10 @@ export async function importChangedSourceLedgers(
 
       await dependencies.writeMemoryEvent(event);
       ledgerImportedCount += 1;
+    }
+
+    if (ledgerImportedCount > 0 || ledgerSkippedCount > 0) {
+      changedLedgerCount += 1;
     }
 
     for (const auditEvent of filteredAuditEvents) {
