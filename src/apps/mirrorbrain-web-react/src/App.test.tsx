@@ -227,6 +227,13 @@ describe('App', () => {
         )
       }
 
+      if (url.endsWith('/knowledge-articles/tree')) {
+        return new Response(JSON.stringify({ projects: [] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+
       if (url.includes('/candidate-memories/daily')) {
         return new Response(JSON.stringify({ candidates: [] }), {
           status: 200,
@@ -277,7 +284,7 @@ describe('App', () => {
     const reviewPanel = await waitFor(() => {
       const panel = document.getElementById('review-panel')
       expect(panel).not.toBeNull()
-      expect(panel?.textContent).toContain('Candidates')
+      expect(panel?.textContent).toContain('Last 6h')
       return panel as HTMLElement
     })
 
@@ -285,7 +292,7 @@ describe('App', () => {
 
     expect(document.getElementById('review-panel')).toBe(reviewPanel)
     expect(reviewPanel.hidden).toBe(true)
-    expect(reviewPanel.textContent).toContain('Candidates')
+    expect(reviewPanel.textContent).toContain('Preview')
   }, 15_000)
 
   it('loads persisted knowledge data on refresh', async () => {
@@ -358,7 +365,7 @@ describe('App', () => {
     ).toContain(`${window.location.origin}/sources/status`)
   })
 
-  it('shows Phase 4 work sessions as a top-level manual analysis tab', async () => {
+  it('uses Review as the Phase 4 work-session review surface', async () => {
     const user = userEvent.setup()
     const fetchMock = stubInitialAppFetch()
 
@@ -370,9 +377,11 @@ describe('App', () => {
       ).toContain(`${window.location.origin}/memory?page=1&pageSize=10`)
     })
 
-    await user.click(screen.getByRole('tab', { name: /work sessions/i }))
+    expect(screen.queryByRole('tab', { name: /work sessions/i })).toBeNull()
 
-    expect(document.getElementById('work-sessions-panel')).not.toBeNull()
+    await user.click(screen.getByRole('tab', { name: /^review$/i }))
+
+    expect(document.getElementById('review-panel')).not.toBeNull()
     await user.click(screen.getByRole('button', { name: 'Last 6h' }))
 
     await waitFor(() => {

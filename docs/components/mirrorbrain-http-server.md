@@ -59,6 +59,7 @@ Those concerns remain in the service, workflow, module, and integration layers.
 - `POST /knowledge-articles/drafts`
 - `POST /knowledge-articles/publish`
 - `GET /knowledge-articles/history`
+- `GET /knowledge-articles/tree`
 - `POST /skills/generate`
 
 ## Data Flow
@@ -80,7 +81,7 @@ Those concerns remain in the service, workflow, module, and integration layers.
 15. AI review suggestions stay separate from reviewed-memory writes, and now include a keep-score plus supporting reasons so the UI can explain why a candidate exists and why it may be worth keeping.
 16. Knowledge generation, regeneration, and approval routes delegate to the service layer and return structured errors when a capability is unavailable.
 17. `POST /knowledge/approve` accepts the current draft snapshot along with `draftId` so the service can publish the visible draft even if the storage index has not exposed it yet.
-18. Knowledge Article routes expose the Phase 4 Project -> Topic -> Knowledge Article draft, publish, and history flow.
+18. Knowledge Article routes expose the Phase 4 Project -> Topic -> Knowledge Article draft, publish, history, and Published tree flow.
 
 ## Dependencies
 
@@ -107,7 +108,7 @@ Those concerns remain in the service, workflow, module, and integration layers.
 - source audit and source status endpoints are operational metadata surfaces, not memory retrieval endpoints
 - `POST /work-sessions/analyze` depends on a service object that implements Phase 4 work-session analysis; otherwise it returns `501`
 - `POST /work-sessions/reviews` depends on a service object that implements Phase 4 work-session review; otherwise it returns `501`
-- Knowledge Article draft, publish, and history endpoints depend on a service object that implements Phase 4 article methods; otherwise they return `501`
+- Knowledge Article draft, publish, history, and tree endpoints depend on a service object that implements Phase 4 article methods; otherwise they return `501`
 - sync responses can include a recent `importedEvents` preview so standalone clients can surface newly imported memory immediately without returning the full imported event batch
 - knowledge approval depends on a persisted draft id; missing ids return a request error rather than a partially shaped success payload
 
@@ -118,7 +119,7 @@ Those concerns remain in the service, workflow, module, and integration layers.
 - unit-style coverage for Phase 4 source import, audit, and status endpoints
 - unit-style coverage for manual work-session analysis endpoint routing and serialization
 - unit-style coverage for explicit work-session review endpoint routing and serialization
-- unit-style coverage for Knowledge Article draft, publish, and history endpoint routing
+- unit-style coverage for Knowledge Article draft, publish, history, and tree endpoint routing
 - broader integration coverage through the wrapped service contract tests
 - API client coverage verifies failed knowledge approval responses are surfaced as errors before UI state reads topic metadata
 - `tsc --noEmit` after TypeScript changes

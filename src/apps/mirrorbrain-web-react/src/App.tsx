@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import AppShell from './components/layout/AppShell'
 import TabNavigation from './components/layout/TabNavigation'
 import FeedbackBanner from './components/layout/FeedbackBanner'
-import ReviewPanel from './components/review/ReviewPanel'
 import KnowledgeTabPanel from './components/artifacts/KnowledgeTabPanel'
 import SkillTabPanel from './components/artifacts/SkillTabPanel'
 import SourceManagementPanel from './components/sources/SourceManagementPanel'
@@ -11,12 +10,12 @@ import { createMirrorBrainBrowserApi } from './api/client'
 import { MirrorBrainProvider } from './contexts/MirrorBrainContext'
 import { useMirrorBrainState } from './hooks/useMirrorBrainState'
 
-type TabType = 'memory-sources' | 'review' | 'knowledge' | 'skill' | 'work-sessions'
+type TabType = 'memory-sources' | 'review' | 'knowledge' | 'skill'
 type FeedbackKind = 'success' | 'error' | 'info'
 type VisitedTabs = Record<TabType, boolean>
 type ThemeMode = 'light' | 'dark'
 
-const TABS: TabType[] = ['memory-sources', 'review', 'knowledge', 'skill', 'work-sessions']
+const TABS: TabType[] = ['memory-sources', 'review', 'knowledge', 'skill']
 
 interface Feedback {
   kind: FeedbackKind
@@ -75,7 +74,6 @@ function AppContent({
     review: false,
     knowledge: false,
     skill: false,
-    'work-sessions': false,
   })
 
   useMirrorBrainState(api)
@@ -112,13 +110,10 @@ function AppContent({
             className={`${isActive ? 'flex' : 'hidden'} min-h-0 flex-1 flex-col overflow-y-auto pt-md lg:overflow-hidden`}
             hidden={!isActive}
           >
-            {shouldRenderPanel && tab === 'review' && <ReviewPanel />}
+            {shouldRenderPanel && tab === 'review' && <WorkSessionAnalysisPanel api={api} />}
             {shouldRenderPanel && tab === 'knowledge' && <KnowledgeTabPanel />}
             {shouldRenderPanel && tab === 'skill' && <SkillTabPanel />}
             {shouldRenderPanel && tab === 'memory-sources' && <SourceManagementPanel api={api} />}
-            {shouldRenderPanel && tab === 'work-sessions' && (
-              <WorkSessionAnalysisPanel api={api} />
-            )}
           </div>
         )
       })}

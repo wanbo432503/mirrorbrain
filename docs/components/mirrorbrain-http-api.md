@@ -747,6 +747,46 @@ Response:
 }
 ```
 
+### `GET /knowledge-articles/tree`
+
+Lists the durable Published Project -> Topic -> Knowledge Article tree. The
+tree groups all published article lineages under their saved project and topic,
+and each article node includes its current-best version plus version history.
+
+Response:
+
+```json
+{
+  "projects": [
+    {
+      "project": {
+        "id": "project:mirrorbrain",
+        "name": "MirrorBrain",
+        "status": "active"
+      },
+      "topics": [
+        {
+          "topic": {
+            "id": "topic:project-mirrorbrain:source-ledger",
+            "projectId": "project:mirrorbrain",
+            "name": "Source ledger",
+            "status": "active"
+          },
+          "articles": [
+            {
+              "articleId": "article:project-mirrorbrain:topic-source-ledger:source-ledger-architecture",
+              "title": "Source ledger architecture",
+              "currentBestArticle": {},
+              "history": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
 ### `GET /candidate-memories`
 
 Lists candidate memories for a review date.

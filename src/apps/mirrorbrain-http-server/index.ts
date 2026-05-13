@@ -71,6 +71,7 @@ interface MirrorBrainHttpService {
     topicId: string;
     articleId?: string;
   }): Promise<unknown[]>;
+  listKnowledgeArticleTree?(): Promise<unknown>;
   listMemoryEvents(input?: {
     page?: number;
     pageSize?: number;
@@ -1462,6 +1463,38 @@ export async function startMirrorBrainHttpServer(
 
       reply.code(201);
       return input.service.publishKnowledgeArticleDraft(request.body);
+    },
+  );
+
+  app.get(
+    '/knowledge-articles/tree',
+    {
+      schema: {
+        summary: 'List the Phase 4 published Knowledge Article tree',
+        response: {
+          200: {
+            type: 'object',
+            additionalProperties: true,
+          },
+          501: {
+            type: 'object',
+            properties: {
+              message: { type: 'string' },
+            },
+            required: ['message'],
+          },
+        },
+      },
+    },
+    async (_request, reply) => {
+      if (input.service.listKnowledgeArticleTree === undefined) {
+        reply.code(501);
+        return {
+          message: 'Knowledge Article tree is not available.',
+        };
+      }
+
+      return input.service.listKnowledgeArticleTree();
     },
   );
 

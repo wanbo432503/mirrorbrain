@@ -56,6 +56,10 @@ owning MirrorBrain's internal workflows.
 - Daily candidate memory generation.
 - Candidate review suggestions.
 - Explicit reviewed-memory creation and undo support.
+- Work-session candidate analysis for 6-hour, 24-hour, and 7-day windows is
+  becoming the primary Phase 4 candidate-generation and review entrypoint.
+  Daily candidate memory review remains available as a compatibility backend
+  path while the Web UI moves to the work-session tree flow.
 - Browser theme narratives for work-recall queries.
 - Shell problem narratives for command-line problem-solving recall.
 - `openclaw`-facing `queryMemory` helper and minimum tool example.
@@ -84,11 +88,15 @@ owning MirrorBrain's internal workflows.
 
 ### UI
 
-- Memory tab for sync and paginated event review.
-- Review tab for daily candidate creation, suggestions, keep/discard decisions,
-  and undo.
+- Memory Sources tab for source import, source detail inspection, and paginated
+  memory-event review.
+- Review tab for the merged work-session review flow: 6h/24h/7d candidate
+  analysis, Preview tree inspection, and publication into the Published tree.
 - Knowledge tab for draft generation/regeneration, approval, topic browsing,
   history, markdown rendering, and graph view.
+- Work-session review is the Phase 4 UI direction for generating candidates,
+  arranging them into a preview Project -> Topic -> Knowledge tree, and
+  publishing reviewed knowledge into the durable tree.
 - Skill tab for draft generation and editing.
 - Local component, hook, context, and API-client tests.
 

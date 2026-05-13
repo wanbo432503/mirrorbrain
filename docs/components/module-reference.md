@@ -431,6 +431,8 @@ Responsibilities:
 - List drafts and project-scoped topics.
 - Return current-best articles and newest-first article history, optionally
   scoped to one stable `articleId`.
+- Return the Published Project -> Topic -> Knowledge Article tree with
+  current-best article versions and full article history.
 
 Inputs:
 
@@ -439,7 +441,7 @@ Inputs:
 Outputs:
 
 - Persisted JSON artifacts, draft lists, topic lists, current-best article
-  lookup, and article history.
+  lookup, article history, and the Published knowledge tree.
 
 Failure modes and constraints:
 

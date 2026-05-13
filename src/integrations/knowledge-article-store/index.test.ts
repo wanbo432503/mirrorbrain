@@ -9,6 +9,7 @@ import type {
   KnowledgeArticleDraft,
   Topic,
 } from '../../modules/knowledge-article/index.js';
+import type { Project } from '../../modules/project-work-session/index.js';
 import { createFileKnowledgeArticleStore } from './index.js';
 
 const tempDirs: string[] = [];
@@ -23,6 +24,13 @@ describe('file knowledge article store', () => {
     const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-article-store-'));
     tempDirs.push(workspaceDir);
     const store = createFileKnowledgeArticleStore({ workspaceDir });
+    const project: Project = {
+      id: 'project:mirrorbrain',
+      name: 'MirrorBrain',
+      status: 'active',
+      createdAt: '2026-05-12T12:00:00.000Z',
+      updatedAt: '2026-05-12T12:00:00.000Z',
+    };
     const topic: Topic = {
       id: 'topic:project-mirrorbrain:source-ledger',
       projectId: 'project:mirrorbrain',
@@ -91,6 +99,7 @@ describe('file knowledge article store', () => {
       publishedAt: '2026-05-12T13:30:00.000Z',
     };
 
+    await store.saveProject(project);
     await store.saveTopic(topic);
     await store.saveDraft(draft);
     await store.saveArticles([versionOne, versionTwo, siblingArticle]);
@@ -117,5 +126,31 @@ describe('file knowledge article store', () => {
         topicId: topic.id,
       }),
     ).resolves.toEqual([siblingArticle, versionTwo, versionOne]);
+    await expect(store.listKnowledgeArticleTree()).resolves.toEqual({
+      projects: [
+        {
+          project,
+          topics: [
+            {
+              topic,
+              articles: [
+                {
+                  articleId: siblingArticle.articleId,
+                  title: siblingArticle.title,
+                  currentBestArticle: siblingArticle,
+                  history: [siblingArticle],
+                },
+                {
+                  articleId: versionTwo.articleId,
+                  title: versionTwo.title,
+                  currentBestArticle: versionTwo,
+                  history: [versionTwo, versionOne],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
   });
 });

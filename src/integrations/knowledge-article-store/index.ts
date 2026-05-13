@@ -15,6 +15,7 @@ export interface KnowledgeArticleStore {
   saveArticles(articles: Phase4KnowledgeArticle[]): Promise<void>;
   listDrafts(): Promise<Phase4KnowledgeArticleDraft[]>;
   listTopics(projectId?: string): Promise<Topic[]>;
+  listKnowledgeArticleTree(): Promise<KnowledgeArticleTree>;
   listArticleHistory(filter: {
     projectId: string;
     topicId: string;
@@ -25,6 +26,27 @@ export interface KnowledgeArticleStore {
     topicId: string;
     articleId?: string;
   }): Promise<Phase4KnowledgeArticle | null>;
+}
+
+export interface KnowledgeArticleTree {
+  projects: KnowledgeArticleProjectNode[];
+}
+
+export interface KnowledgeArticleProjectNode {
+  project: Project;
+  topics: KnowledgeArticleTopicNode[];
+}
+
+export interface KnowledgeArticleTopicNode {
+  topic: Topic;
+  articles: KnowledgeArticleNode[];
+}
+
+export interface KnowledgeArticleNode {
+  articleId: string;
+  title: string;
+  currentBestArticle: Phase4KnowledgeArticle | null;
+  history: Phase4KnowledgeArticle[];
 }
 
 interface CreateFileKnowledgeArticleStoreInput {
@@ -103,6 +125,29 @@ async function listArtifacts<TArtifact>(input: {
   return artifacts;
 }
 
+function compareByNameOrTitle(left: string, right: string): number {
+  return left.localeCompare(right);
+}
+
+function sortArticleHistory(
+  articles: Phase4KnowledgeArticle[],
+): Phase4KnowledgeArticle[] {
+  return [...articles].sort((left, right) => {
+    const publishedOrder = right.publishedAt.localeCompare(left.publishedAt);
+
+    return publishedOrder !== 0 ? publishedOrder : right.version - left.version;
+  });
+}
+
+function compareArticlesByHistoryOrder(
+  left: Phase4KnowledgeArticle,
+  right: Phase4KnowledgeArticle,
+): number {
+  const publishedOrder = right.publishedAt.localeCompare(left.publishedAt);
+
+  return publishedOrder !== 0 ? publishedOrder : right.version - left.version;
+}
+
 export function createFileKnowledgeArticleStore(
   input: CreateFileKnowledgeArticleStoreInput,
 ): KnowledgeArticleStore {
@@ -151,6 +196,74 @@ export function createFileKnowledgeArticleStore(
         .filter((topic) => projectId === undefined || topic.projectId === projectId)
         .sort((left, right) => left.name.localeCompare(right.name));
     },
+    listKnowledgeArticleTree: async () => {
+      const [projects, topics, articles] = await Promise.all([
+        listArtifacts<Project>({
+          workspaceDir: input.workspaceDir,
+          directory: 'projects',
+        }),
+        listArtifacts<Topic>({
+          workspaceDir: input.workspaceDir,
+          directory: 'topics',
+        }),
+        listArtifacts<Phase4KnowledgeArticle>({
+          workspaceDir: input.workspaceDir,
+          directory: 'knowledge-articles',
+        }),
+      ]);
+
+      const topicsByProjectId = new Map<string, Topic[]>();
+      for (const topic of topics) {
+        const projectTopics = topicsByProjectId.get(topic.projectId) ?? [];
+        projectTopics.push(topic);
+        topicsByProjectId.set(topic.projectId, projectTopics);
+      }
+
+      const articlesByTopicId = new Map<string, Map<string, Phase4KnowledgeArticle[]>>();
+      for (const article of articles) {
+        const topicArticles =
+          articlesByTopicId.get(article.topicId) ??
+          new Map<string, Phase4KnowledgeArticle[]>();
+        const lineage = topicArticles.get(article.articleId) ?? [];
+        lineage.push(article);
+        topicArticles.set(article.articleId, lineage);
+        articlesByTopicId.set(article.topicId, topicArticles);
+      }
+
+      return {
+        projects: projects
+          .sort((left, right) => compareByNameOrTitle(left.name, right.name))
+          .map((project) => ({
+            project,
+            topics: (topicsByProjectId.get(project.id) ?? [])
+              .sort((left, right) => compareByNameOrTitle(left.name, right.name))
+              .map((topic) => {
+                const articleLineages = articlesByTopicId.get(topic.id) ?? new Map();
+                const articleNodes = Array.from(articleLineages.entries()).map(
+                  ([articleId, articleHistory]) => {
+                    const history = sortArticleHistory(articleHistory);
+                    const currentBestArticle =
+                      history.find((article) => article.isCurrentBest) ?? null;
+
+                    return {
+                      articleId,
+                      title: currentBestArticle?.title ?? history[0]?.title ?? articleId,
+                      currentBestArticle,
+                      history,
+                    };
+                  },
+                );
+
+                return {
+                  topic,
+                  articles: articleNodes.sort((left, right) =>
+                    compareByNameOrTitle(left.title, right.title),
+                  ),
+                };
+              }),
+          })),
+      };
+    },
     listArticleHistory: async (filter) => {
       const articles = await listArtifacts<Phase4KnowledgeArticle>({
         workspaceDir: input.workspaceDir,
@@ -164,11 +277,7 @@ export function createFileKnowledgeArticleStore(
             article.topicId === filter.topicId &&
             (filter.articleId === undefined || article.articleId === filter.articleId),
         )
-        .sort((left, right) => {
-          const publishedOrder = right.publishedAt.localeCompare(left.publishedAt);
-
-          return publishedOrder !== 0 ? publishedOrder : right.version - left.version;
-        });
+        .sort(compareArticlesByHistoryOrder);
     },
     getCurrentBestArticle: async (filter) => {
       const history = await createFileKnowledgeArticleStore(input).listArticleHistory(

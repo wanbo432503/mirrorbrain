@@ -187,6 +187,124 @@ export interface WorkSessionReviewResult {
   project?: Project;
 }
 
+export interface Topic {
+  id: string;
+  projectId: string;
+  name: string;
+  description?: string;
+  status: 'active' | 'archived';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ArticleOperationProposal =
+  | {
+      kind: 'create-new-article';
+    }
+  | {
+      kind: 'update-existing-article';
+      articleId: string;
+    }
+  | {
+      kind: 'attach-as-supporting-evidence';
+      articleId?: string;
+    };
+
+export type TopicProposal =
+  | {
+      kind: 'existing-topic';
+      topicId: string;
+    }
+  | {
+      kind: 'new-topic';
+      name: string;
+      description?: string;
+    };
+
+export type TopicAssignment =
+  | {
+      kind: 'existing-topic';
+      topicId: string;
+    }
+  | {
+      kind: 'confirmed-new-topic';
+      name: string;
+      description?: string;
+    };
+
+export interface KnowledgeArticleDraft {
+  id: string;
+  draftState: 'draft';
+  projectId: string;
+  title: string;
+  summary: string;
+  body: string;
+  topicProposal: TopicProposal;
+  articleOperationProposal: ArticleOperationProposal;
+  sourceReviewedWorkSessionIds: string[];
+  sourceMemoryEventIds: string[];
+  provenanceRefs: Array<{
+    kind: 'reviewed-work-session' | 'memory-event';
+    id: string;
+  }>;
+  generatedAt: string;
+}
+
+export interface KnowledgeArticle {
+  id: string;
+  articleId: string;
+  projectId: string;
+  topicId: string;
+  title: string;
+  summary: string;
+  body: string;
+  version: number;
+  isCurrentBest: boolean;
+  supersedesArticleId: string | null;
+  sourceReviewedWorkSessionIds: string[];
+  sourceMemoryEventIds: string[];
+  provenanceRefs: KnowledgeArticleDraft['provenanceRefs'];
+  publishState: 'published';
+  publishedAt: string;
+  publishedBy: string;
+}
+
+export interface KnowledgeArticleTree {
+  projects: Array<{
+    project: Project;
+    topics: Array<{
+      topic: Topic;
+      articles: Array<{
+        articleId: string;
+        title: string;
+        currentBestArticle: KnowledgeArticle | null;
+        history: KnowledgeArticle[];
+      }>;
+    }>;
+  }>;
+}
+
+export interface GenerateKnowledgeArticleDraftRequest {
+  reviewedWorkSessionIds: string[];
+  title: string;
+  summary: string;
+  body: string;
+  topicProposal: TopicProposal;
+  articleOperationProposal: ArticleOperationProposal;
+}
+
+export interface PublishKnowledgeArticleDraftRequest {
+  draft: KnowledgeArticleDraft;
+  publishedBy: string;
+  topicAssignment: TopicAssignment;
+}
+
+export interface PublishKnowledgeArticleDraftResult {
+  article: KnowledgeArticle;
+  topic?: Topic;
+  supersededArticle?: KnowledgeArticle;
+}
+
 export interface WorkSessionAnalysisResult {
   analysisWindow: WorkSessionAnalysisWindow;
   generatedAt: string;

@@ -729,6 +729,26 @@ describe('mirrorbrain service', () => {
         topicId: published.article.topicId,
       }),
     ).resolves.toEqual([published.article]);
+    await expect(service.listKnowledgeArticleTree()).resolves.toEqual({
+      projects: [
+        {
+          project: review.project,
+          topics: [
+            {
+              topic: published.topic,
+              articles: [
+                {
+                  articleId: published.article.articleId,
+                  title: published.article.title,
+                  currentBestArticle: published.article,
+                  history: [published.article],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
 
     await rm(workspaceDir, { recursive: true, force: true });
   });

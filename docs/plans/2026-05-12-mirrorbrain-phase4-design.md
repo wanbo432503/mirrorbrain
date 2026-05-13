@@ -525,7 +525,8 @@ selected analysis window
 -> source filtering
 -> hybrid relation scoring
 -> WorkSession candidates
--> user review/edit
+-> preview Project / Topic / Knowledge tree
+-> user review/edit/publish
 ```
 
 The 6-hour, 24-hour, and 7-day windows are candidate data ranges, not final
@@ -536,6 +537,22 @@ Hybrid scoring should only operate inside the selected window. This avoids
 global over-clustering. Strong signals include workspace path, file path, shell
 cwd, agent session, screenshot app/window context, browser URL/domain, repeated
 entities, and summary similarity.
+
+In the Web UI, Work Sessions is the primary candidate-generation and review
+entrypoint. The older daily `CandidateMemory -> ReviewedMemory` flow remains a
+compatibility backend path, but it should not be the main Phase 4 review
+surface. The combined review surface has two knowledge-tree modes:
+
+- `Preview`: an ephemeral Project -> Topic -> Knowledge tree derived from the
+  latest 6-hour, 24-hour, or 7-day work-session analysis window.
+- `Published`: the durable Project -> Topic -> Knowledge tree built from all
+  published Knowledge Articles and their history.
+
+Publishing a preview knowledge item reviews the supporting WorkSession
+candidate, generates a Knowledge Article Draft, and publishes it into the
+durable tree. The publication intent must remain explicit because the merge may
+create a new article, update an existing article with a new version, or fully
+rewrite an existing article lineage.
 
 ## Reviewed Work Sessions
 

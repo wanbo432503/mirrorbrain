@@ -57,8 +57,9 @@ Project / Topic 的 Knowledge Article。
 - 记录 source status、source audit events 和 per-ledger checkpoints，方便
   查看导入与 recorder 状态。
 - 捕获浏览器页面正文，以提升 review 和 synthesis 质量。
-- 生成 daily candidate memories，供人工 review。
-- 按用户选择的时间窗口分析 work-session candidates，供人工审核。
+- 保留 daily candidate memories 作为兼容性的 review 路径。
+- 按用户选择的时间窗口分析 work-session candidates，作为 Phase 4 的主
+  candidate generation 和 review 入口。
 - 保存带来源引用和审核决策的 reviewed memories。
 - 通过本地 HTTP API 和可选宿主适配器查询记忆。
 - 生成 browser theme narrative 和 shell problem narrative，支持“我之前
@@ -66,7 +67,7 @@ Project / Topic 的 Knowledge Article。
 
 ### Knowledge
 
-- 从 reviewed memories 生成 knowledge draft。
+- 在兼容流程中从 reviewed memories 生成 knowledge draft。
 - 产出面向主题的 current-best knowledge artifact。
 - 从 reviewed work sessions 生成 Phase 4 Knowledge Article Draft。
 - 按 Project -> Topic -> Knowledge Article 组织持久知识。
@@ -84,8 +85,9 @@ Project / Topic 的 Knowledge Article。
 ### 操作界面
 
 - Fastify HTTP service，提供 OpenAPI JSON 和 Swagger UI。
-- React Web UI，用于本地控制、Memory Sources、review、work-session
-  analysis、知识浏览和 skill draft 检查。
+- React Web UI，用于本地控制、Memory Sources、work-session review、
+  preview/published Project -> Topic -> Knowledge 树、知识浏览和 skill
+  draft 检查。
 - 本地 workspace artifacts，用于可检查记录和回退读取。
 - 基于 QMD 的本地索引与检索能力，索引数据保存在同一个
   `mirrorbrain-workspace` 下。
@@ -173,23 +175,26 @@ http://127.0.0.1:3007/docs
 
 在 Web UI 中：
 
-1. 打开 `Memory Sources`，选择 `All-Main Sources`，点击 `Import Sources`。
+1. 打开 `Memory Sources`，选择 `All Sources`，点击 `Import Sources`。
 2. 确认导入的 memory events 出现在分页 memory list 中。
 3. 进入单个 source detail 页面，查看 source status、recent memory 或 audit
    events。
 4. 需要整理近期工作时，运行 work-session analysis window。
-5. keep reviewed work 或 memory candidates，生成持久 review inputs。
-6. 打开 `Knowledge`，生成或 approve knowledge draft / article。
+5. 在 Preview Project -> Topic -> Knowledge 树中审核并 publish 有价值的
+   knowledge，使其进入持久的 Published 树。
+6. 需要旧版知识浏览或 approval surface 时，打开 `Knowledge`。
 7. 打开 `Skill`，从 reviewed evidence 生成 skill draft。
 
 预期结果：
 
 - memory events 带来源归因展示。
-- daily candidates 展示 summary、source refs 和 review guidance。
+- daily candidates 仍可用于兼容 review 流程。
 - source audit/status 视图能展示导入和 recorder 状态。
-- work-session candidates 保留支持它们的 memory evidence。
-- keep 后的 candidate 变成 reviewed memory。
-- knowledge draft 保留 reviewed-memory provenance。
+- work-session candidates 保留支持它们的 memory evidence，并先作为
+  preview knowledge tree items 呈现。
+- publish 后的 preview knowledge 进入持久 Project -> Topic -> Knowledge
+  Article 树，并保留 provenance。
+- knowledge draft 保留 reviewed-work provenance。
 - 使用 Phase 4 流程时，knowledge articles 按 project 和 topic 组织。
 - approved topic knowledge 出现在 topic 和 graph 视图中。
 - skill draft 保留 workflow evidence refs 和 confirmation metadata。

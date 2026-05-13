@@ -678,6 +678,39 @@ describe('mirrorbrain http server', () => {
       publishedAt: '2026-05-12T12:20:00.000Z',
       publishedBy: 'user',
     };
+    const knowledgeArticleTree = {
+      projects: [
+        {
+          project: {
+            id: 'project:mirrorbrain',
+            name: 'MirrorBrain',
+            status: 'active',
+            createdAt: '2026-05-12T12:00:00.000Z',
+            updatedAt: '2026-05-12T12:00:00.000Z',
+          },
+          topics: [
+            {
+              topic: {
+                id: article.topicId,
+                projectId: article.projectId,
+                name: 'Source ledger',
+                status: 'active',
+                createdAt: '2026-05-12T12:20:00.000Z',
+                updatedAt: '2026-05-12T12:20:00.000Z',
+              },
+              articles: [
+                {
+                  articleId: article.articleId,
+                  title: article.title,
+                  currentBestArticle: article,
+                  history: [article],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
     const service = {
       service: {
         status: 'running' as const,
@@ -702,6 +735,7 @@ describe('mirrorbrain http server', () => {
       generateKnowledgeArticleDraft: vi.fn(async () => draft),
       publishKnowledgeArticleDraft: vi.fn(async () => ({ article })),
       listKnowledgeArticleHistory: vi.fn(async () => [article]),
+      listKnowledgeArticleTree: vi.fn(async () => knowledgeArticleTree),
     };
     const server = await startMirrorBrainHttpServer({ service, port: 0 });
     servers.push(server);
@@ -736,6 +770,8 @@ describe('mirrorbrain http server', () => {
       `${server.origin}/knowledge-articles/history?projectId=project%3Amirrorbrain&topicId=topic%3Aproject-mirrorbrain%3Asource-ledger`,
     );
     const historyBody = await historyResponse.json();
+    const treeResponse = await fetch(`${server.origin}/knowledge-articles/tree`);
+    const treeBody = await treeResponse.json();
 
     expect(draftResponse.status).toBe(201);
     expect(service.generateKnowledgeArticleDraft).toHaveBeenCalledWith({
@@ -751,6 +787,8 @@ describe('mirrorbrain http server', () => {
     expect(publishBody).toEqual({ article });
     expect(historyResponse.status).toBe(200);
     expect(historyBody).toEqual({ items: [article] });
+    expect(treeResponse.status).toBe(200);
+    expect(treeBody).toEqual(knowledgeArticleTree);
   });
 
   it('rejects Knowledge Article Draft requests that send caller-supplied reviewed sessions', async () => {

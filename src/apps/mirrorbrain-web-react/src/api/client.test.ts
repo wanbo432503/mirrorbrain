@@ -435,4 +435,159 @@ describe('createMirrorBrainBrowserApi', () => {
       }),
     );
   });
+
+  it('loads the Phase 4 published knowledge article tree', async () => {
+    const tree = {
+      projects: [
+        {
+          project: {
+            id: 'project:mirrorbrain',
+            name: 'MirrorBrain',
+            status: 'active',
+            createdAt: '2026-05-12T12:00:00.000Z',
+            updatedAt: '2026-05-12T12:00:00.000Z',
+          },
+          topics: [
+            {
+              topic: {
+                id: 'topic:project-mirrorbrain:source-ledger',
+                projectId: 'project:mirrorbrain',
+                name: 'Source ledger',
+                status: 'active',
+                createdAt: '2026-05-12T12:00:00.000Z',
+                updatedAt: '2026-05-12T12:00:00.000Z',
+              },
+              articles: [
+                {
+                  articleId:
+                    'article:project-mirrorbrain:topic-source-ledger:source-ledger-architecture',
+                  title: 'Source ledger architecture',
+                  currentBestArticle: {
+                    id: 'knowledge-article:source-ledger:v1',
+                    articleId:
+                      'article:project-mirrorbrain:topic-source-ledger:source-ledger-architecture',
+                    projectId: 'project:mirrorbrain',
+                    topicId: 'topic:project-mirrorbrain:source-ledger',
+                    title: 'Source ledger architecture',
+                    summary: 'How source ledgers feed memory.',
+                    body: 'Source ledgers are the acquisition boundary.',
+                    version: 1,
+                    isCurrentBest: true,
+                    supersedesArticleId: null,
+                    sourceReviewedWorkSessionIds: ['reviewed-work-session:source-ledger'],
+                    sourceMemoryEventIds: ['browser-1'],
+                    provenanceRefs: [{ kind: 'memory-event', id: 'browser-1' }],
+                    publishState: 'published',
+                    publishedAt: '2026-05-12T12:20:00.000Z',
+                    publishedBy: 'user',
+                  },
+                  history: [],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => tree,
+    })) as unknown as typeof fetch;
+    vi.stubGlobal('fetch', fetchMock);
+
+    const api = createMirrorBrainBrowserApi('http://localhost:3000');
+
+    await expect(api.listKnowledgeArticleTree()).resolves.toEqual(tree);
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://localhost:3000/knowledge-articles/tree',
+    );
+  });
+
+  it('generates and publishes Phase 4 knowledge article drafts', async () => {
+    const draft = {
+      id: 'knowledge-article-draft:source-ledger',
+      draftState: 'draft' as const,
+      projectId: 'project:mirrorbrain',
+      title: 'Source ledger architecture',
+      summary: 'How source ledgers feed memory.',
+      body: 'Source ledgers are the acquisition boundary.',
+      topicProposal: { kind: 'new-topic' as const, name: 'Source ledger' },
+      articleOperationProposal: { kind: 'create-new-article' as const },
+      sourceReviewedWorkSessionIds: ['reviewed-work-session:source-ledger'],
+      sourceMemoryEventIds: ['browser-1'],
+      provenanceRefs: [{ kind: 'memory-event' as const, id: 'browser-1' }],
+      generatedAt: '2026-05-12T12:10:00.000Z',
+    };
+    const article = {
+      id: 'knowledge-article:source-ledger:v1',
+      articleId: 'article:source-ledger',
+      projectId: draft.projectId,
+      topicId: 'topic:project-mirrorbrain:source-ledger',
+      title: draft.title,
+      summary: draft.summary,
+      body: draft.body,
+      version: 1,
+      isCurrentBest: true,
+      supersedesArticleId: null,
+      sourceReviewedWorkSessionIds: draft.sourceReviewedWorkSessionIds,
+      sourceMemoryEventIds: draft.sourceMemoryEventIds,
+      provenanceRefs: draft.provenanceRefs,
+      publishState: 'published' as const,
+      publishedAt: '2026-05-12T12:20:00.000Z',
+      publishedBy: 'user',
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 201,
+        json: async () => ({ draft }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 201,
+        json: async () => ({ article }),
+      }) as unknown as typeof fetch;
+    vi.stubGlobal('fetch', fetchMock);
+
+    const api = createMirrorBrainBrowserApi('http://localhost:3000');
+    const draftRequest = {
+      reviewedWorkSessionIds: draft.sourceReviewedWorkSessionIds,
+      title: draft.title,
+      summary: draft.summary,
+      body: draft.body,
+      topicProposal: draft.topicProposal,
+      articleOperationProposal: draft.articleOperationProposal,
+    };
+
+    await expect(api.generateKnowledgeArticleDraft(draftRequest)).resolves.toEqual(draft);
+    await expect(
+      api.publishKnowledgeArticleDraft({
+        draft,
+        publishedBy: 'mirrorbrain-web',
+        topicAssignment: { kind: 'confirmed-new-topic', name: 'Source ledger' },
+      }),
+    ).resolves.toEqual({ article });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      'http://localhost:3000/knowledge-articles/drafts',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify(draftRequest),
+      }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      'http://localhost:3000/knowledge-articles/publish',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          draft,
+          publishedBy: 'mirrorbrain-web',
+          topicAssignment: { kind: 'confirmed-new-topic', name: 'Source ledger' },
+        }),
+      }),
+    );
+  });
 });

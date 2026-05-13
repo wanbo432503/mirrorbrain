@@ -69,9 +69,9 @@ snapshot, see [Current Project Status](./docs/features/current-project-status.md
 - Keep browser activity capture and readable page text capture as separate
   authorization decisions. The runtime service denies page text backfill by
   default unless a page-content authorization dependency is explicitly wired.
-- Generate daily candidate memories for human review.
-- Analyze user-selected time windows into work-session candidates for manual
-  review.
+- Keep daily candidate memory generation as a compatibility review path.
+- Analyze user-selected time windows into work-session candidates as the
+  primary Phase 4 candidate-generation and review flow.
 - Store reviewed memories with source references and review decisions.
 - Query memory through the local HTTP API and optional host adapters.
 - Generate browser theme and shell problem narratives for recall-oriented
@@ -79,7 +79,7 @@ snapshot, see [Current Project Status](./docs/features/current-project-status.md
 
 ### Knowledge
 
-- Generate knowledge drafts from reviewed memories.
+- Generate knowledge drafts from reviewed memories in the compatibility flow.
 - Produce topic-oriented knowledge artifacts with current-best versions.
 - Generate Phase 4 Knowledge Article Drafts from reviewed work sessions.
 - Organize durable knowledge under Project -> Topic -> Knowledge Article.
@@ -97,8 +97,9 @@ snapshot, see [Current Project Status](./docs/features/current-project-status.md
 ### Operator Surfaces
 
 - Fastify HTTP service with OpenAPI JSON and Swagger UI.
-- React Web UI for local control, Memory Sources, review, work-session
-  analysis, knowledge browsing, and skill draft inspection.
+- React Web UI for local control, Memory Sources, work-session review,
+  preview/published Project -> Topic -> Knowledge trees, knowledge browsing,
+  and skill draft inspection.
 - Local workspace artifacts for inspectable records and fallback reads.
 - QMD-backed indexing and retrieval inside the same MirrorBrain workspace.
 - Shared API contract schemas for public knowledge and skill artifact DTOs.
@@ -208,24 +209,28 @@ http://127.0.0.1:3007/docs
 
 In the Web UI:
 
-1. Open `Memory Sources`, select `All-Main Sources`, and run `Import Sources`.
+1. Open `Memory Sources`, select `All Sources`, and run `Import Sources`.
 2. Confirm imported memory events appear in the paginated memory list.
 3. Open a source detail page to inspect source status, recent memory, or audit
    events.
 4. Run a work-session analysis window when you want to group recent activity
    into reviewable sessions.
-5. Keep reviewed work or memory candidates to create durable review inputs.
-6. Open `Knowledge` and generate or approve a knowledge draft or article.
+5. Review the Preview Project -> Topic -> Knowledge tree and publish useful
+   knowledge into the durable Published tree.
+6. Open `Knowledge` when you need the older knowledge browsing or approval
+   surfaces.
 7. Open `Skill` and generate a skill draft from reviewed evidence.
 
 Expected results:
 
 - Memory events show source attribution.
-- Daily candidates include summaries, source refs, and review guidance.
+- Daily candidates remain available for compatibility review flows.
 - Source audit/status views show import and recorder state.
-- Work-session candidates preserve their supporting memory evidence.
-- Kept candidates become reviewed memories.
-- Knowledge drafts retain reviewed-memory provenance.
+- Work-session candidates preserve their supporting memory evidence and appear
+  as preview knowledge tree items before publication.
+- Published preview knowledge becomes durable Project -> Topic -> Knowledge
+  Article content with provenance.
+- Knowledge drafts retain reviewed-work provenance.
 - Knowledge articles are organized by project and topic where Phase 4 flows are
   used.
 - Approved topic knowledge appears in topic and graph views.

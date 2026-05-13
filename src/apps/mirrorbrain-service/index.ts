@@ -1707,6 +1707,7 @@ export function createMirrorBrainService(
       },
     ): Promise<KnowledgeArticle[]> =>
       knowledgeArticleStore.listArticleHistory(filter),
+    listKnowledgeArticleTree: () => knowledgeArticleStore.listKnowledgeArticleTree(),
     listMemoryEvents: async (
       input?: { page?: number; pageSize?: number } & MemoryEventSourceFilter,
     ) => {

@@ -17,6 +17,11 @@ import type {
   WorkSessionAnalysisResult,
   WorkSessionCandidate,
   WorkSessionReviewResult,
+  KnowledgeArticleTree,
+  GenerateKnowledgeArticleDraftRequest,
+  KnowledgeArticleDraft,
+  PublishKnowledgeArticleDraftRequest,
+  PublishKnowledgeArticleDraftResult,
 } from '../types/index';
 
 export interface PaginatedMemoryEvents {
@@ -70,6 +75,13 @@ export interface MirrorBrainWebAppApi {
     candidate: WorkSessionCandidate,
     review: ReviewWorkSessionInput
   ): Promise<WorkSessionReviewResult>;
+  listKnowledgeArticleTree(): Promise<KnowledgeArticleTree>;
+  generateKnowledgeArticleDraft(
+    request: GenerateKnowledgeArticleDraftRequest
+  ): Promise<KnowledgeArticleDraft>;
+  publishKnowledgeArticleDraft(
+    request: PublishKnowledgeArticleDraftRequest
+  ): Promise<PublishKnowledgeArticleDraftResult>;
   createDailyCandidates(
     reviewDate: string,
     reviewTimeZone?: string
@@ -251,6 +263,30 @@ export function createMirrorBrainBrowserApi(
       });
       const body = await readJson<WorkSessionReviewResult>(response);
       return body;
+    },
+
+    async listKnowledgeArticleTree() {
+      const response = await fetch(`${baseUrl}/knowledge-articles/tree`);
+      return readJson<KnowledgeArticleTree>(response);
+    },
+
+    async generateKnowledgeArticleDraft(request) {
+      const response = await fetch(`${baseUrl}/knowledge-articles/drafts`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(request),
+      });
+      const body = await readJson<{ draft: KnowledgeArticleDraft }>(response);
+      return body.draft;
+    },
+
+    async publishKnowledgeArticleDraft(request) {
+      const response = await fetch(`${baseUrl}/knowledge-articles/publish`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(request),
+      });
+      return readJson<PublishKnowledgeArticleDraftResult>(response);
     },
 
     async createDailyCandidates(reviewDate: string, reviewTimeZone?: string) {
