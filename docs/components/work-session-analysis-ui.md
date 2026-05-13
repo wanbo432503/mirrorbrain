@@ -7,7 +7,9 @@ is the Phase 4 operator UI for the merged review and work-session flow. It
 exposes the three planned analysis windows, renders pending
 `WorkSessionCandidate` results as a Preview Project -> Topic -> Knowledge tree,
 and lets the user publish useful preview knowledge into the durable Published
-tree.
+tree. Preview and Published intentionally share the same three-level mental
+model, but they have different lifecycles: Preview is regenerated from the
+selected analysis window, while Published is durable historical knowledge.
 
 ## Responsibility Boundary
 
@@ -20,9 +22,14 @@ The component owns:
 - Calling Knowledge Article draft and publish APIs when the user publishes a
   preview knowledge item.
 - Loading the Published Project -> Topic -> Knowledge tree from the API.
-- Rendering the returned analysis window, excluded event count, candidate
-  project hints, source types, time ranges, and provenance event counts.
+- Rendering the returned analysis window, excluded event count, generated
+  knowledge content, source types, and provenance event counts.
 - Rendering `Preview` and `Published` tree modes in the left-side navigation.
+- Rendering Preview as Project -> Topic -> one generated Knowledge item per
+  topic, where the project is task-level and must not simply mirror source
+  hosts such as `arxiv.org`.
+- Rendering Published as Project -> Topic -> many historical Knowledge Articles
+  per topic.
 - Letting the user confirm a project name before keeping a candidate.
 - Letting the user discard a candidate.
 - Displaying request errors without mutating candidate state.
@@ -53,7 +60,8 @@ Input:
 
 Output:
 
-- A rendered list of pending work-session candidates.
+- A rendered list of generated preview knowledge items derived from pending
+  work-session candidates.
 - A preview Project -> Topic -> Knowledge tree for the latest analysis window.
 - A published Project -> Topic -> Knowledge tree for durable articles.
 - Explicit keep/discard review requests sent to the service.
@@ -66,9 +74,11 @@ Output:
 2. The user chooses an analysis window.
 3. The browser API client posts the selected preset to
    `/work-sessions/analyze`.
-4. The panel displays returned candidates in the Preview tree.
-5. The user can edit the proposed project name and inspect the candidate
-   evidence.
+4. The panel derives a Preview Project -> Topic -> Knowledge tree. Source-like
+   hints such as browser hostnames are treated as source evidence, not as final
+   project names.
+5. The user can edit the proposed project name and inspect the generated
+   preview knowledge plus provenance evidence.
 6. The user publishes a preview knowledge item.
 7. The panel records the reviewed work session, generates a Knowledge Article
    Draft, publishes it, refreshes the Published tree, and removes or marks the
@@ -95,7 +105,8 @@ The tests verify:
 - The panel calls the API with the selected preset and renders candidates.
 - The panel sends explicit keep review payloads with confirmed project
   assignment.
-- The panel renders Preview and Published tree modes.
+- The panel renders Preview and Published tree modes with Project -> Topic ->
+  Knowledge hierarchy.
 - The panel publishes preview knowledge through review, draft generation, and
   article publication API calls.
 - The app routes the Review surface to the work-session review panel and no

@@ -1,9 +1,16 @@
 import type { WorkSessionCandidate } from '../../types'
 
+export type WorkSessionPreviewKnowledgeType =
+  | 'systematic-knowledge'
+  | 'workflow'
+  | 'news'
+
 export interface WorkSessionPreviewKnowledgeNode {
   candidateId: string
   title: string
   summary: string
+  body: string
+  knowledgeType: WorkSessionPreviewKnowledgeType
   sourceTypes: string[]
   memoryEventCount: number
   candidate: WorkSessionCandidate
@@ -12,7 +19,9 @@ export interface WorkSessionPreviewKnowledgeNode {
 export interface WorkSessionPreviewTopicNode {
   topicKey: string
   topicName: string
-  knowledge: WorkSessionPreviewKnowledgeNode[]
+  sourceTypes: string[]
+  memoryEventCount: number
+  knowledge: WorkSessionPreviewKnowledgeNode
 }
 
 export interface WorkSessionPreviewProjectNode {
@@ -38,16 +47,127 @@ function getTopicName(candidate: WorkSessionCandidate): string {
   return candidate.relationHints[0]?.trim() || candidate.title
 }
 
+function isSourceLikeProjectHint(value: string): boolean {
+  const normalized = value.trim().toLowerCase()
+
+  if (normalized.length === 0 || normalized === 'unassigned') {
+    return true
+  }
+
+  return (
+    normalized.includes('.') ||
+    normalized === 'browser' ||
+    normalized === 'shell' ||
+    normalized === 'files' ||
+    normalized === 'screenshot' ||
+    normalized === 'audio'
+  )
+}
+
+function getProjectGroupKey(candidate: WorkSessionCandidate): string {
+  const projectHint = candidate.projectHint.trim() || 'unassigned'
+
+  return isSourceLikeProjectHint(projectHint) ? projectHint.toLowerCase() : projectHint
+}
+
+function getCandidateText(candidate: WorkSessionCandidate): string {
+  return [
+    candidate.title,
+    candidate.summary,
+    candidate.projectHint,
+    ...candidate.relationHints,
+  ].join(' ')
+}
+
+function deriveProjectName(candidates: WorkSessionCandidate[]): string {
+  const explicitProjectHint = candidates
+    .map((candidate) => candidate.projectHint.trim())
+    .find((projectHint) => projectHint.length > 0 && !isSourceLikeProjectHint(projectHint))
+
+  if (explicitProjectHint !== undefined) {
+    return explicitProjectHint
+  }
+
+  const text = candidates.map(getCandidateText).join(' ').toLowerCase()
+
+  if (/\b(ai|artificial intelligence)\b/u.test(text) && /\bagents?\b/u.test(text)) {
+    return 'AI agents research'
+  }
+
+  if (text.includes('聚类')) {
+    return '聚类算法研究'
+  }
+
+  const fallbackTopic = getTopicName(candidates[0]).trim()
+  return fallbackTopic.length > 0 ? fallbackTopic : 'unassigned'
+}
+
+function deriveKnowledgeType(candidate: WorkSessionCandidate): WorkSessionPreviewKnowledgeType {
+  const text = getCandidateText(candidate).toLowerCase()
+
+  if (
+    /(\bworkflow\b|\bprocess\b|\bsteps?\b|\bhow to\b|\bdebug\b|\bfix\b|流程|步骤|排查|修复)/u.test(
+      text,
+    )
+  ) {
+    return 'workflow'
+  }
+
+  if (/(\bnews\b|\brelease\b|\bannounced\b|\bupdate\b|新闻|资讯|发布|更新)/u.test(text)) {
+    return 'news'
+  }
+
+  return 'systematic-knowledge'
+}
+
+function buildKnowledgeBody(
+  candidate: WorkSessionCandidate,
+  knowledgeType: WorkSessionPreviewKnowledgeType,
+): string {
+  const headingByType: Record<WorkSessionPreviewKnowledgeType, string> = {
+    'systematic-knowledge': 'Systematic knowledge',
+    workflow: 'Workflow',
+    news: 'News brief',
+  }
+
+  return `## ${headingByType[knowledgeType]}\n\n${candidate.summary}`
+}
+
+function buildKnowledgeNode(candidate: WorkSessionCandidate): WorkSessionPreviewKnowledgeNode {
+  const knowledgeType = deriveKnowledgeType(candidate)
+
+  return {
+    candidateId: candidate.id,
+    title: candidate.title,
+    summary: candidate.summary,
+    body: buildKnowledgeBody(candidate, knowledgeType),
+    knowledgeType,
+    sourceTypes: candidate.sourceTypes,
+    memoryEventCount: candidate.memoryEventIds.length,
+    candidate,
+  }
+}
+
 export function buildWorkSessionPreviewTree(
   candidates: WorkSessionCandidate[],
 ): WorkSessionPreviewTree {
   const projects = new Map<string, WorkSessionPreviewProjectNode>()
+  const projectGroups = new Map<string, WorkSessionCandidate[]>()
 
   for (const candidate of candidates) {
-    const projectName = candidate.projectHint.trim() || 'unassigned'
+    const groupKey = getProjectGroupKey(candidate)
+    const projectCandidates = projectGroups.get(groupKey)
+
+    if (projectCandidates === undefined) {
+      projectGroups.set(groupKey, [candidate])
+    } else {
+      projectCandidates.push(candidate)
+    }
+  }
+
+  for (const projectCandidates of projectGroups.values()) {
+    const projectName = deriveProjectName(projectCandidates)
     const projectKey = slugify(projectName)
-    const topicName = getTopicName(candidate)
-    const topicKey = slugify(topicName)
     let project = projects.get(projectKey)
 
     if (project === undefined) {
@@ -59,24 +179,18 @@ export function buildWorkSessionPreviewTree(
       projects.set(projectKey, project)
     }
 
-    let topic = project.topics.find((item) => item.topicKey === topicKey)
-    if (topic === undefined) {
-      topic = {
+    for (const candidate of projectCandidates) {
+      const topicName = getTopicName(candidate)
+      const topicKey = slugify(topicName)
+      const topic = {
         topicKey,
         topicName,
-        knowledge: [],
+        sourceTypes: candidate.sourceTypes,
+        memoryEventCount: candidate.memoryEventIds.length,
+        knowledge: buildKnowledgeNode(candidate),
       }
       project.topics.push(topic)
     }
-
-    topic.knowledge.push({
-      candidateId: candidate.id,
-      title: candidate.title,
-      summary: candidate.summary,
-      sourceTypes: candidate.sourceTypes,
-      memoryEventCount: candidate.memoryEventIds.length,
-      candidate,
-    })
   }
 
   return {
@@ -86,12 +200,7 @@ export function buildWorkSessionPreviewTree(
         ...project,
         topics: project.topics
           .sort((left, right) => left.topicName.localeCompare(right.topicName))
-          .map((topic) => ({
-            ...topic,
-            knowledge: topic.knowledge.sort((left, right) =>
-              left.title.localeCompare(right.title),
-            ),
-          })),
+          .map((topic) => ({ ...topic })),
       })),
   }
 }

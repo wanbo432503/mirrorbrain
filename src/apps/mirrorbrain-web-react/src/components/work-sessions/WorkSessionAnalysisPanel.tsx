@@ -8,7 +8,12 @@ import type {
   WorkSessionAnalysisResult,
   WorkSessionReviewResult,
 } from '../../types'
-import { buildWorkSessionPreviewTree } from './work-session-preview-tree'
+import {
+  buildWorkSessionPreviewTree,
+  type WorkSessionPreviewKnowledgeNode,
+  type WorkSessionPreviewProjectNode,
+  type WorkSessionPreviewTopicNode,
+} from './work-session-preview-tree'
 
 interface WorkSessionAnalysisPanelProps {
   api: MirrorBrainWebAppApi
@@ -49,6 +54,17 @@ export default function WorkSessionAnalysisPanel({
     () => buildWorkSessionPreviewTree(analysis?.candidates ?? []),
     [analysis],
   )
+  const previewKnowledgeItems = useMemo(
+    () =>
+      previewTree.projects.flatMap((project) =>
+        project.topics.map((topic) => ({
+          project,
+          topic,
+          knowledge: topic.knowledge,
+        })),
+      ),
+    [previewTree],
+  )
 
   useEffect(() => {
     let isMounted = true
@@ -82,14 +98,7 @@ export default function WorkSessionAnalysisPanel({
     try {
       const result = await api.analyzeWorkSessions(preset)
       setAnalysis(result)
-      setProjectNames(
-        Object.fromEntries(
-          result.candidates.map((candidate) => [
-            candidate.id,
-            candidate.projectHint,
-          ])
-        )
-      )
+      setProjectNames({})
       setReviewResults({})
     } catch (caughtError) {
       setError(
@@ -104,13 +113,17 @@ export default function WorkSessionAnalysisPanel({
 
   const reviewCandidate = async (
     candidate: WorkSessionCandidate,
-    decision: 'keep' | 'discard'
+    decision: 'keep' | 'discard',
+    fallbackProjectName?: string,
   ) => {
     setReviewingCandidateId(candidate.id)
     setError(null)
 
     try {
-      const projectName = projectNames[candidate.id]?.trim() || candidate.projectHint
+      const projectName =
+        projectNames[candidate.id]?.trim() ||
+        fallbackProjectName ||
+        candidate.projectHint
       const result = await api.reviewWorkSessionCandidate(candidate, {
         decision,
         reviewedBy: 'mirrorbrain-web',
@@ -141,18 +154,23 @@ export default function WorkSessionAnalysisPanel({
     }
   }
 
-  const publishPreviewKnowledge = async (candidate: WorkSessionCandidate) => {
+  const publishPreviewKnowledge = async (
+    project: WorkSessionPreviewProjectNode,
+    topic: WorkSessionPreviewTopicNode,
+    knowledge: WorkSessionPreviewKnowledgeNode,
+  ) => {
+    const candidate = knowledge.candidate
     setPublishingCandidateId(candidate.id)
     setError(null)
 
     try {
-      const projectName = projectNames[candidate.id]?.trim() || candidate.projectHint
-      const topicName = candidate.relationHints[0]?.trim() || candidate.title
+      const projectName = projectNames[candidate.id]?.trim() || project.projectName
+      const topicName = topic.topicName
       const reviewResult = await api.reviewWorkSessionCandidate(candidate, {
         decision: 'keep',
         reviewedBy: 'mirrorbrain-web',
-        title: candidate.title,
-        summary: candidate.summary,
+        title: knowledge.title,
+        summary: knowledge.summary,
         projectAssignment: {
           kind: 'confirmed-new-project',
           name: projectName,
@@ -160,9 +178,9 @@ export default function WorkSessionAnalysisPanel({
       })
       const draft = await api.generateKnowledgeArticleDraft({
         reviewedWorkSessionIds: [reviewResult.reviewedWorkSession.id],
-        title: candidate.title,
-        summary: candidate.summary,
-        body: candidate.summary,
+        title: knowledge.title,
+        summary: knowledge.summary,
+        body: knowledge.body,
         topicProposal: {
           kind: 'new-topic',
           name: topicName,
@@ -214,18 +232,15 @@ export default function WorkSessionAnalysisPanel({
             {project.topics.map((topic) => (
               <div key={topic.topicKey} className="ml-3 grid gap-xs border-l border-slate-200 pl-3">
                 <div className="text-sm font-medium text-ink">{topic.topicName}</div>
-                {topic.knowledge.map((knowledge) => (
-                  <button
-                    key={knowledge.candidateId}
-                    type="button"
-                    className="rounded border border-slate-200 bg-canvas px-3 py-2 text-left text-sm text-ink transition-colors hover:border-primary"
-                  >
-                    <span className="block font-medium">{knowledge.title}</span>
-                    <span className="mt-1 block text-xs text-inkMuted">
-                      {knowledge.memoryEventCount} events · {knowledge.sourceTypes.join(', ')}
-                    </span>
-                  </button>
-                ))}
+                <button
+                  type="button"
+                  className="min-w-0 rounded border border-slate-200 bg-canvas px-3 py-2 text-left text-sm text-ink transition-colors hover:border-primary"
+                >
+                  <span className="block break-words font-medium">{topic.knowledge.title}</span>
+                  <span className="mt-1 block text-xs text-inkMuted">
+                    1 preview knowledge · {topic.knowledge.knowledgeType}
+                  </span>
+                </button>
               </div>
             ))}
           </div>
@@ -367,51 +382,52 @@ export default function WorkSessionAnalysisPanel({
             </div>
           )}
 
-          {analysis && analysis.candidates.length > 0 && (
+          {analysis && previewKnowledgeItems.length > 0 && (
             <div className="grid gap-sm">
-              {analysis.candidates.map((candidate) => (
+              {previewKnowledgeItems.map(({ project, topic, knowledge }) => (
                 <article
-                  key={candidate.id}
-                  className="rounded border border-slate-200 bg-canvas px-4 py-3"
+                  key={knowledge.candidateId}
+                  className="min-w-0 rounded border border-slate-200 bg-canvas px-4 py-3"
                 >
                 <div className="flex flex-wrap items-start justify-between gap-sm">
-                  <div>
-                    <h3 className="font-heading text-base font-semibold text-ink">
-                      {candidate.title}
+                  <div className="min-w-0 flex-1">
+                    <h3 className="break-words font-heading text-base font-semibold text-ink">
+                      {knowledge.title}
                     </h3>
-                    <p className="mt-1 text-sm text-inkMuted">
-                      {candidate.summary}
+                    <p className="mt-1 break-words text-sm text-inkMuted">
+                      {knowledge.summary}
                     </p>
+                    <div className="mt-3 whitespace-pre-wrap break-words rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm leading-6 text-ink">
+                      {knowledge.body}
+                    </div>
                   </div>
                   <span className="rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700">
-                    {candidate.reviewState}
+                    {knowledge.candidate.reviewState}
                   </span>
                 </div>
 
                 <dl className="mt-3 grid gap-2 text-sm text-inkMuted sm:grid-cols-2 lg:grid-cols-4">
                   <div>
                     <dt className="text-xs uppercase text-inkMuted-80">Project</dt>
-                    <dd className="font-medium text-ink">{candidate.projectHint}</dd>
+                    <dd className="font-medium text-ink">{project.projectName}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs uppercase text-inkMuted-80">Topic</dt>
+                    <dd className="font-medium text-ink">{topic.topicName}</dd>
                   </div>
                   <div>
                     <dt className="text-xs uppercase text-inkMuted-80">Sources</dt>
                     <dd className="font-medium text-ink">
-                      {candidate.sourceTypes.join(', ')}
+                      {knowledge.sourceTypes.join(', ')}
                     </dd>
                   </div>
                   <div>
                     <dt className="text-xs uppercase text-inkMuted-80">Provenance</dt>
                     <dd className="font-medium text-ink">
-                      {candidate.memoryEventIds.length}{' '}
-                      {candidate.memoryEventIds.length === 1
+                      {knowledge.memoryEventCount}{' '}
+                      {knowledge.memoryEventCount === 1
                         ? 'memory event'
                         : 'memory events'}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs uppercase text-inkMuted-80">Range</dt>
-                    <dd className="font-medium text-ink">
-                      {candidate.timeRange.startAt} to {candidate.timeRange.endAt}
                     </dd>
                   </div>
                 </dl>
@@ -420,13 +436,13 @@ export default function WorkSessionAnalysisPanel({
                   <label className="grid gap-1 text-sm text-inkMuted">
                     <span>Project name</span>
                     <input
-                      aria-label={`Project name for ${candidate.title}`}
+                      aria-label={`Project name for ${knowledge.title}`}
                       className="h-9 w-56 rounded border border-slate-300 px-3 text-sm text-ink focus:border-primary focus:outline-none"
-                      value={projectNames[candidate.id] ?? candidate.projectHint}
+                      value={projectNames[knowledge.candidateId] ?? project.projectName}
                       onChange={(event) =>
                         setProjectNames((current) => ({
                           ...current,
-                          [candidate.id]: event.target.value,
+                          [knowledge.candidateId]: event.target.value,
                         }))
                       }
                     />
@@ -436,31 +452,33 @@ export default function WorkSessionAnalysisPanel({
                     type="button"
                     className="h-9 rounded border border-primary bg-primary px-3 text-sm font-medium text-white disabled:cursor-wait disabled:opacity-60"
                     disabled={reviewingCandidateId !== null || publishingCandidateId !== null}
-                    onClick={() => void reviewCandidate(candidate, 'keep')}
+                    onClick={() =>
+                      void reviewCandidate(knowledge.candidate, 'keep', project.projectName)
+                    }
                   >
-                    {reviewingCandidateId === candidate.id ? 'Saving' : 'Keep as project'}
+                    {reviewingCandidateId === knowledge.candidateId ? 'Saving' : 'Keep as project'}
                   </button>
                   <button
                     type="button"
                     className="h-9 rounded border border-primary bg-primary px-3 text-sm font-medium text-white disabled:cursor-wait disabled:opacity-60"
                     disabled={reviewingCandidateId !== null || publishingCandidateId !== null}
-                    onClick={() => void publishPreviewKnowledge(candidate)}
+                    onClick={() => void publishPreviewKnowledge(project, topic, knowledge)}
                   >
-                    {publishingCandidateId === candidate.id ? 'Publishing' : 'Publish'}
+                    {publishingCandidateId === knowledge.candidateId ? 'Publishing' : 'Publish'}
                   </button>
                   <button
                     type="button"
                     className="h-9 rounded border border-slate-300 px-3 text-sm font-medium text-ink transition-colors hover:border-red-400 hover:text-red-700 disabled:cursor-wait disabled:opacity-60"
                     disabled={reviewingCandidateId !== null || publishingCandidateId !== null}
-                    onClick={() => void reviewCandidate(candidate, 'discard')}
+                    onClick={() => void reviewCandidate(knowledge.candidate, 'discard')}
                   >
                     Discard
                   </button>
 
-                  {reviewResults[candidate.id] && (
+                  {reviewResults[knowledge.candidateId] && (
                     <span className="text-sm font-medium text-green-700">
-                      {reviewResults[candidate.id].reviewedWorkSession.projectId
-                        ? `Reviewed into project: ${reviewResults[candidate.id].reviewedWorkSession.projectId}`
+                      {reviewResults[knowledge.candidateId].reviewedWorkSession.projectId
+                        ? `Reviewed into project: ${reviewResults[knowledge.candidateId].reviewedWorkSession.projectId}`
                         : 'Discarded work session'}
                     </span>
                   )}
