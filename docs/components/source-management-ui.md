@@ -5,8 +5,8 @@
 The Source Management UI is the React control surface for MirrorBrain Phase 4
 source ledger operations. It gives the standalone MirrorBrain app a unified
 top-level `memory sources` tab for reading global memory events, importing
-source ledgers, inspecting source instances, reading importer audit events, and
-manually triggering source-specific ledger import.
+source ledgers, inspecting source instances, and browsing source-specific
+memory history.
 
 This UI is an operational surface. It does not collect activity directly and it
 does not convert operational audit state into memory, knowledge, or skill
@@ -22,10 +22,9 @@ This component is responsible for:
 - preserving a flex-based right panel layout for `All-Main Sources`, where the
   memory list owns the vertical scrollbar and pagination remains reachable at
   the bottom of the panel
-- showing recent imported memory records from `GET /memory` with source filters
-- showing source-specific audit records from `GET /sources/audit`
+- showing source-specific imported memory records from `GET /memory` with
+  source filters and pagination
 - enabling or disabling source instances through `PATCH /sources/config`
-- triggering manual source ledger import through `POST /sources/import`
 - keeping memory source management separate from memory review, knowledge
   review, and skill execution tabs
 
@@ -44,7 +43,6 @@ Frontend entry points:
 - `SourceManagementPanel`
 - `MirrorBrainWebAppApi.importSourceLedgers`
 - `MirrorBrainWebAppApi.listMemory`
-- `MirrorBrainWebAppApi.listSourceAuditEvents`
 - `MirrorBrainWebAppApi.listSourceStatuses`
 - `MirrorBrainWebAppApi.updateSourceConfig`
 
@@ -52,13 +50,11 @@ Backend API surfaces consumed by the component:
 
 - `POST /sources/import`
 - `GET /memory?sourceKind=...&sourceInstanceId=...`
-- `GET /sources/audit`
 - `GET /sources/status`
 - `PATCH /sources/config`
 
-The API responses use `SourceLedgerImportResult`, `SourceAuditEvent`,
-`SourceInstanceSummary`, and `MemoryEvent` from the shared React type
-declarations.
+The API responses use `SourceLedgerImportResult`, `SourceInstanceSummary`, and
+`MemoryEvent` from the shared React type declarations.
 
 ## Data Flow
 
@@ -71,29 +67,24 @@ declarations.
 5. When the user clicks `Import Sources`, the memory panel calls
    `POST /sources/import`, displays feedback to the left of the button, and
    refreshes global memory events.
-6. When the user selects an individual source, the app calls
-   `GET /sources/audit` with the selected source kind and
-   instance id.
-7. The app calls `GET /memory` with the same selected source kind and instance
-   id to populate Recent Memory.
-8. The selected source detail panel displays overview, recent memory, audit,
-   and settings tabs.
+6. When the user selects an individual source, the app calls `GET /memory`
+   with the selected source kind and instance id to populate the `Sources`
+   history tab.
+7. The selected source detail panel displays overview, source history, and
+   settings tabs.
+8. Source history uses paginated memory queries so the user can browse all
+   imported records for that source instead of only a fixed recent subset.
 9. When the user enables or disables a source, the app calls
    `PATCH /sources/config`, writes audit-backed config through the service, and
    reloads source statuses.
-10. When the user clicks source-specific `Import Now`, the app calls `POST /sources/import`,
-   which immediately scans/imports existing ledgers once, and then reloads
-   source statuses.
 
 ## Failure Modes And Operational Constraints
 
 - Empty source state renders an empty operational view instead of inventing
   source records.
-- Audit events are displayed as operational evidence only; they are not memory
-  outputs and must not be used as reviewed memory, knowledge, or skill evidence.
 - Source enablement is persisted and audited. Recorder status remains read-only
   until recorder supervision reports real runtime state.
-- Recent memory shows imported `MemoryEvent` records for the selected source.
+- Source history shows imported `MemoryEvent` records for the selected source.
   It remains read-only; review and knowledge synthesis still happen through
   their explicit workflows.
 - The `All-Main Sources` right panel must remain a `min-height: 0` flex column.
@@ -113,7 +104,8 @@ corepack pnpm vitest run \
   src/App.test.tsx
 ```
 
-The tests cover source API client calls, source status/audit rendering, manual
-import feedback, the `All-Main Sources` global memory view, the flex right-panel
-scroll boundary with pagination controls, and the top-level `memory sources`
-tab integration.
+The tests cover source API client calls, source status rendering, source
+history pagination, removal of the single-source audit/import controls, manual
+global import feedback, the `All-Main Sources` global memory view, the flex
+right-panel scroll boundary with pagination controls, and the top-level
+`memory sources` tab integration.

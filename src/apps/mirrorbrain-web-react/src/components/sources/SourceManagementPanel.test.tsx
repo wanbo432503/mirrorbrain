@@ -155,7 +155,59 @@ describe('SourceManagementPanel', () => {
     expect(screen.getByRole('button', { name: 'Last page' })).not.toBeNull()
   })
 
-  it('shows source overview, audit, settings tabs, and manual import now', async () => {
+  it('shows source overview, paginated source history, and settings without audit or manual import', async () => {
+    const pageOneMemory = {
+      items: [
+        {
+          id: 'ledger:browser:source-page-1',
+          sourceType: 'browser',
+          sourceRef: 'browser:chrome-main:source-page-1',
+          timestamp: '2026-05-12T10:00:00.000Z',
+          authorizationScopeId: 'scope-source-ledger',
+          content: {
+            title: 'Browser source history page 1',
+            summary: 'Imported browser page from this source.',
+            contentKind: 'browser-page',
+          },
+          captureMetadata: {
+            upstreamSource: 'source-ledger:browser',
+            checkpoint: 'ledgers/2026-05-12/browser.jsonl:1',
+          },
+        },
+      ],
+      pagination: {
+        total: 11,
+        page: 1,
+        pageSize: 10,
+        totalPages: 2,
+      },
+    }
+    const pageTwoMemory = {
+      items: [
+        {
+          id: 'ledger:browser:source-page-2',
+          sourceType: 'browser',
+          sourceRef: 'browser:chrome-main:source-page-2',
+          timestamp: '2026-05-12T09:00:00.000Z',
+          authorizationScopeId: 'scope-source-ledger',
+          content: {
+            title: 'Browser source history page 2',
+            summary: 'Older browser page from this source.',
+            contentKind: 'browser-page',
+          },
+          captureMetadata: {
+            upstreamSource: 'source-ledger:browser',
+            checkpoint: 'ledgers/2026-05-12/browser.jsonl:11',
+          },
+        },
+      ],
+      pagination: {
+        total: 11,
+        page: 2,
+        pageSize: 10,
+        totalPages: 2,
+      },
+    }
     const api = {
       listSourceStatuses: vi.fn(async () => [
         {
@@ -171,19 +223,7 @@ describe('SourceManagementPanel', () => {
           checkpointSummary: 'ledgers/2026-05-12/browser.jsonl next line 4',
         },
       ]),
-      listSourceAuditEvents: vi.fn(async () => [
-        {
-          id: 'source-audit:warning-1',
-          eventType: 'schema-validation-failed',
-          sourceKind: 'browser' as const,
-          sourceInstanceId: 'chrome-main',
-          ledgerPath: 'ledgers/2026-05-12/browser.jsonl',
-          lineNumber: 2,
-          occurredAt: '2026-05-12T10:31:00.000Z',
-          severity: 'warning' as const,
-          message: 'Skipped invalid source ledger line.',
-        },
-      ]),
+      listSourceAuditEvents: vi.fn(async () => []),
       importSourceLedgers: vi.fn(async () => ({
         importedCount: 1,
         skippedCount: 0,
@@ -198,32 +238,9 @@ describe('SourceManagementPanel', () => {
         updatedAt: '2026-05-12T11:00:00.000Z',
         updatedBy: 'mirrorbrain-web',
       })),
-      listMemory: vi.fn(async () => ({
-        items: [
-          {
-            id: 'ledger:browser:recent',
-            sourceType: 'browser',
-            sourceRef: 'browser:chrome-main:recent',
-            timestamp: '2026-05-12T10:00:00.000Z',
-            authorizationScopeId: 'scope-source-ledger',
-            content: {
-              title: 'Recent browser memory',
-              summary: 'Imported browser page.',
-              contentKind: 'browser-page',
-            },
-            captureMetadata: {
-              upstreamSource: 'source-ledger:browser',
-              checkpoint: 'ledgers/2026-05-12/browser.jsonl:1',
-            },
-          },
-        ],
-        pagination: {
-          total: 1,
-          page: 1,
-          pageSize: 5,
-          totalPages: 1,
-        },
-      })),
+      listMemory: vi.fn(async (page?: number) =>
+        page === 2 ? pageTwoMemory : pageOneMemory,
+      ),
     } as unknown as MirrorBrainWebAppApi
 
     renderSourceManagementPanel(api)
@@ -237,19 +254,28 @@ describe('SourceManagementPanel', () => {
     expect(screen.getByText('Skipped')).not.toBeNull()
     expect(screen.getAllByText('1').length).toBeGreaterThan(0)
 
-    await userEvent.click(screen.getByRole('tab', { name: 'Recent Memory' }))
-    await screen.findByText('Recent browser memory')
-    expect(screen.getByText('Imported browser page.')).not.toBeNull()
-    expect(api.listMemory).toHaveBeenCalledWith(1, 5, {
+    expect(screen.queryByRole('tab', { name: 'Recent Memory' })).toBeNull()
+    expect(screen.queryByRole('tab', { name: 'Audit' })).toBeNull()
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Sources' }))
+    await screen.findByText('Browser source history page 1')
+    expect(screen.getByText('Imported browser page from this source.')).not.toBeNull()
+    expect(screen.getByText('Showing 1 of 11 source records (page 1 of 2)')).not.toBeNull()
+    expect(api.listMemory).toHaveBeenCalledWith(1, 10, {
       sourceKind: 'browser',
       sourceInstanceId: 'chrome-main',
     })
 
-    await userEvent.click(screen.getByRole('tab', { name: 'Audit' }))
-    await screen.findByText('schema-validation-failed')
-    expect(screen.getByText('Skipped invalid source ledger line.')).not.toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Next page' }))
+    await screen.findByText('Browser source history page 2')
+    expect(screen.getByText('Older browser page from this source.')).not.toBeNull()
+    expect(api.listMemory).toHaveBeenCalledWith(2, 10, {
+      sourceKind: 'browser',
+      sourceInstanceId: 'chrome-main',
+    })
 
     await userEvent.click(screen.getByRole('tab', { name: 'Settings' }))
+    expect(screen.queryByRole('button', { name: 'Import Now' })).toBeNull()
     await userEvent.click(screen.getByRole('button', { name: 'Disable Source' }))
 
     await waitFor(() => {
@@ -262,18 +288,8 @@ describe('SourceManagementPanel', () => {
     })
     expect(await screen.findByText('Source disabled.')).not.toBeNull()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Import Now' }))
-
-    await waitFor(() => {
-      expect(api.importSourceLedgers).toHaveBeenCalledTimes(1)
-    })
-    expect(
-      await screen.findByText('Imported 1 source ledger event across 1 scanned ledger.')
-    ).not.toBeNull()
-    expect(api.listSourceStatuses).toHaveBeenCalledTimes(3)
-    expect(api.listSourceAuditEvents).toHaveBeenCalledWith({
-      sourceKind: 'browser',
-      sourceInstanceId: 'chrome-main',
-    })
+    expect(api.importSourceLedgers).not.toHaveBeenCalled()
+    expect(api.listSourceStatuses).toHaveBeenCalledTimes(2)
+    expect(api.listSourceAuditEvents).not.toHaveBeenCalled()
   })
 })

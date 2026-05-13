@@ -3,47 +3,34 @@ import type { ReactNode } from 'react'
 
 import {
   createMirrorBrainBrowserApi,
+  type PaginatedMemoryEvents,
   type MirrorBrainWebAppApi,
 } from '../../api/client'
 import type {
   MemoryEvent,
-  SourceAuditEvent,
   SourceInstanceSummary,
   SourceLedgerKind,
 } from '../../types/index'
 import Button from '../common/Button'
 import LoadingSpinner from '../common/LoadingSpinner'
+import Pagination from '../common/Pagination'
 import MemoryPanel from '../memory/MemoryPanel'
 
-type SourceDetailTab = 'Overview' | 'Recent Memory' | 'Audit' | 'Settings'
+type SourceDetailTab = 'Overview' | 'Sources' | 'Settings'
 
 interface SourceManagementPanelProps {
   api?: MirrorBrainWebAppApi
 }
 
 const ALL_MAIN_SOURCES_KEY = 'all-main-sources'
-const DETAIL_TABS: SourceDetailTab[] = [
-  'Overview',
-  'Recent Memory',
-  'Audit',
-  'Settings',
-]
+const DETAIL_TABS: SourceDetailTab[] = ['Overview', 'Sources', 'Settings']
+const SOURCE_HISTORY_PAGE_SIZE = 10
 
 function getSourceKey(source: {
   sourceKind: SourceLedgerKind
   sourceInstanceId: string
 }): string {
   return `${source.sourceKind}:${source.sourceInstanceId}`
-}
-
-function formatImportMessage(input: {
-  importedCount: number
-  scannedLedgerCount: number
-}): string {
-  const eventLabel = input.importedCount === 1 ? 'event' : 'events'
-  const ledgerLabel = input.scannedLedgerCount === 1 ? 'ledger' : 'ledgers'
-
-  return `Imported ${input.importedCount} source ledger ${eventLabel} across ${input.scannedLedgerCount} scanned ${ledgerLabel}.`
 }
 
 export default function SourceManagementPanel({
@@ -57,10 +44,12 @@ export default function SourceManagementPanel({
   const [sources, setSources] = useState<SourceInstanceSummary[]>([])
   const [selectedSourceKey, setSelectedSourceKey] = useState<string>(ALL_MAIN_SOURCES_KEY)
   const [selectedTab, setSelectedTab] = useState<SourceDetailTab>('Overview')
-  const [auditEvents, setAuditEvents] = useState<SourceAuditEvent[]>([])
-  const [recentMemoryEvents, setRecentMemoryEvents] = useState<MemoryEvent[]>([])
+  const [sourceMemoryEvents, setSourceMemoryEvents] = useState<MemoryEvent[]>([])
+  const [sourceMemoryPagination, setSourceMemoryPagination] =
+    useState<PaginatedMemoryEvents['pagination'] | null>(null)
+  const [sourceHistoryPage, setSourceHistoryPage] = useState(1)
+  const [isLoadingSourceMemory, setIsLoadingSourceMemory] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
-  const [isImporting, setIsImporting] = useState(false)
   const [isUpdatingConfig, setIsUpdatingConfig] = useState(false)
   const [feedback, setFeedback] = useState<string | null>(null)
 
@@ -112,34 +101,36 @@ export default function SourceManagementPanel({
 
   useEffect(() => {
     if (selectedSourceKey === ALL_MAIN_SOURCES_KEY) {
-      setAuditEvents([])
-      setRecentMemoryEvents([])
+      setSourceMemoryEvents([])
+      setSourceMemoryPagination(null)
+      setIsLoadingSourceMemory(false)
       return
     }
 
     if (selectedSource === null) {
-      setAuditEvents([])
-      setRecentMemoryEvents([])
+      setSourceMemoryEvents([])
+      setSourceMemoryPagination(null)
+      setIsLoadingSourceMemory(false)
       return
     }
 
     let isMounted = true
 
     const loadSourceDetails = async () => {
-      const [events, recentMemory] = await Promise.all([
-        sourceApi.listSourceAuditEvents({
+      setIsLoadingSourceMemory(true)
+      const sourceMemory = await sourceApi.listMemory(
+        sourceHistoryPage,
+        SOURCE_HISTORY_PAGE_SIZE,
+        {
           sourceKind: selectedSource.sourceKind,
           sourceInstanceId: selectedSource.sourceInstanceId,
-        }),
-        sourceApi.listMemory(1, 5, {
-          sourceKind: selectedSource.sourceKind,
-          sourceInstanceId: selectedSource.sourceInstanceId,
-        }),
-      ])
+        },
+      )
 
       if (isMounted) {
-        setAuditEvents(events)
-        setRecentMemoryEvents(recentMemory.items)
+        setSourceMemoryEvents(sourceMemory.items)
+        setSourceMemoryPagination(sourceMemory.pagination)
+        setIsLoadingSourceMemory(false)
       }
     }
 
@@ -148,20 +139,7 @@ export default function SourceManagementPanel({
     return () => {
       isMounted = false
     }
-  }, [selectedSource, selectedSourceKey, sourceApi])
-
-  const handleImportNow = async () => {
-    setIsImporting(true)
-    setFeedback(null)
-
-    try {
-      const result = await sourceApi.importSourceLedgers()
-      setFeedback(formatImportMessage(result))
-      await loadSources()
-    } finally {
-      setIsImporting(false)
-    }
-  }
+  }, [selectedSource, selectedSourceKey, sourceApi, sourceHistoryPage])
 
   const handleToggleSourceEnabled = async () => {
     if (selectedSource === null) {
@@ -206,7 +184,11 @@ export default function SourceManagementPanel({
                 ? 'border-primary bg-canvas-parchment text-primary'
                 : 'border-hairline bg-canvas text-ink'
             }`}
-            onClick={() => setSelectedSourceKey(ALL_MAIN_SOURCES_KEY)}
+            onClick={() => {
+              setSelectedSourceKey(ALL_MAIN_SOURCES_KEY)
+              setSelectedTab('Overview')
+              setSourceHistoryPage(1)
+            }}
           >
             <span className="block font-semibold">All-Main Sources</span>
             <span className="block text-xs text-inkMuted-80">memory events</span>
@@ -225,7 +207,11 @@ export default function SourceManagementPanel({
                     ? 'border-primary bg-canvas-parchment text-primary'
                     : 'border-hairline bg-canvas text-ink'
                 }`}
-                onClick={() => setSelectedSourceKey(sourceKey)}
+                onClick={() => {
+                  setSelectedSourceKey(sourceKey)
+                  setSelectedTab('Overview')
+                  setSourceHistoryPage(1)
+                }}
               >
                 <span className="block font-semibold">{source.sourceInstanceId}</span>
                 <span className="block text-xs text-inkMuted-80">{source.sourceKind}</span>
@@ -313,14 +299,26 @@ export default function SourceManagementPanel({
               </div>
             )}
 
-            {selectedTab === 'Recent Memory' && (
-              <div className="mt-4 flex flex-col gap-2">
-                {recentMemoryEvents.length === 0 && (
-                  <div className="rounded-sm border border-hairline p-4 text-sm text-inkMuted-80">
-                    No recent memory records for this source.
+            {selectedTab === 'Sources' && (
+              <div className="mt-4 flex min-h-0 flex-col gap-3">
+                {isLoadingSourceMemory && (
+                  <div className="flex justify-center py-8">
+                    <LoadingSpinner />
                   </div>
                 )}
-                {recentMemoryEvents.map((event) => (
+                {!isLoadingSourceMemory && sourceMemoryPagination && (
+                  <div className="text-xs text-inkMuted-80">
+                    Showing {sourceMemoryEvents.length} of {sourceMemoryPagination.total}{' '}
+                    source records (page {sourceMemoryPagination.page} of{' '}
+                    {sourceMemoryPagination.totalPages})
+                  </div>
+                )}
+                {!isLoadingSourceMemory && sourceMemoryEvents.length === 0 && (
+                  <div className="rounded-sm border border-hairline p-4 text-sm text-inkMuted-80">
+                    No source records imported for this source.
+                  </div>
+                )}
+                {!isLoadingSourceMemory && sourceMemoryEvents.map((event) => (
                   <article
                     key={event.id}
                     className="rounded-sm border border-hairline bg-canvas p-3 text-sm"
@@ -339,28 +337,17 @@ export default function SourceManagementPanel({
                     </p>
                   </article>
                 ))}
-              </div>
-            )}
-
-            {selectedTab === 'Audit' && (
-              <div className="mt-4 flex flex-col gap-2">
-                {auditEvents.map((event) => (
-                  <article
-                    key={event.id}
-                    className="rounded-sm border border-hairline p-3 text-sm"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <strong>{event.eventType}</strong>
-                      <span>{event.severity}</span>
+                {!isLoadingSourceMemory &&
+                  sourceMemoryPagination &&
+                  sourceMemoryPagination.totalPages > 1 && (
+                    <div className="shrink-0 border-t border-hairline bg-canvas-parchment pt-3">
+                      <Pagination
+                        currentPage={sourceMemoryPagination.page}
+                        totalPages={sourceMemoryPagination.totalPages}
+                        onPageChange={setSourceHistoryPage}
+                      />
                     </div>
-                    <p className="mt-1 text-inkMuted-80">{event.message}</p>
-                    {event.ledgerPath.length > 0 && (
-                      <p className="mt-1 break-words text-xs text-inkMuted-80">
-                        {event.ledgerPath}:{event.lineNumber}
-                      </p>
-                    )}
-                  </article>
-                ))}
+                  )}
               </div>
             )}
 
@@ -376,12 +363,6 @@ export default function SourceManagementPanel({
                     {selectedSource.lifecycleStatus === 'disabled'
                       ? 'Enable Source'
                       : 'Disable Source'}
-                  </Button>
-                </div>
-                <div>
-                  <p>Ledger import</p>
-                  <Button variant="primary" loading={isImporting} onClick={handleImportNow}>
-                    Import Now
                   </Button>
                 </div>
               </div>
