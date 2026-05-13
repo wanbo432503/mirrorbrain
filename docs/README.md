@@ -136,9 +136,11 @@ subdirectories:
 - `cache/`: display-oriented memory event cache.
 - `deleted-artifacts/`: deletion tombstones for knowledge and skills.
 
-OpenViking is the retrieval/indexing backend, but the workspace files are also
-used as a local durability and fallback surface. Source-specific upstream
-systems, such as ActivityWatch, are not treated as MirrorBrain's durable store.
+OpenViking is the current implemented retrieval/indexing backend, but the
+accepted next direction is QMD indexing markdown from this same workspace with
+derived index data under `<workspaceDir>/mirrorbrain/qmd/`. Source-specific
+upstream systems, such as ActivityWatch, are not treated as MirrorBrain's
+durable store.
 
 ## Verification
 

@@ -1,5 +1,14 @@
 # OpenViking Store
 
+## Migration Status
+
+This component documents the current OpenViking-backed implementation. The
+accepted next storage direction is to replace this adapter with a QMD-backed
+workspace store that indexes markdown from `mirrorbrain-workspace` in place and
+stores QMD index/vector data under `<workspaceDir>/mirrorbrain/qmd/`.
+
+See `docs/adr/2026-05-13-qmd-workspace-storage.md`.
+
 ## Summary
 
 This component is the storage adapter that maps MirrorBrain artifacts into OpenViking-compatible HTTP imports, including the Phase 2 offline browser and shell memory narratives used by retrieval.

@@ -472,7 +472,7 @@ interface MemoryEventContentV2 {
     | 'agent-transcript'
     | 'screenshot'
   bodyRef?: {
-    kind: 'workspace-file' | 'openviking-resource' | 'external-ref'
+    kind: 'workspace-file' | 'qmd-document' | 'external-ref'
     uri: string
     mediaType?: string
     sizeBytes?: number

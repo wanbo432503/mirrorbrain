@@ -4,6 +4,14 @@
 
 Accepted
 
+## Later Storage Update
+
+This ADR records the historical Phase 1 MVP scope. Its OpenViking storage
+decision is superseded for future storage work by
+`docs/adr/2026-05-13-qmd-workspace-storage.md`, which keeps
+`mirrorbrain-workspace` as the only durable workspace and uses QMD as a
+workspace-local retrieval index.
+
 ## Context
 
 MirrorBrain already has a meaningful Phase 1 backend slice:

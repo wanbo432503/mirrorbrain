@@ -106,7 +106,9 @@ For the first browser slice:
 
 - `ActivityWatch` with `aw-watcher-web` should be the browser activity source
 - `ActivityWatch` should be treated as a source system, not the long-term storage or processing center
-- MirrorBrain should import normalized browser memory into `OpenViking`, which acts as the main local storage and retrieval layer for MirrorBrain artifacts
+- MirrorBrain should import normalized browser memory into MirrorBrain-owned
+  workspace artifacts; the target retrieval backend is QMD indexing markdown
+  from that same workspace rather than a separate OpenViking workspace
 
 Current repository status:
 
@@ -172,8 +174,13 @@ Phase 1 excludes:
 
 ### Storage And Synchronization
 
-- `OpenViking` is the primary local storage and retrieval layer for MirrorBrain in Phase 1
-- raw normalized `MemoryEvent` records should be written into `OpenViking`, not kept only in upstream source systems
+- The original Phase 1 MVP used `OpenViking` as the primary local storage and
+  retrieval layer; the next target is a QMD-backed retrieval layer rooted in
+  `mirrorbrain-workspace`
+- raw normalized `MemoryEvent` records should be written into MirrorBrain-owned
+  workspace artifacts, not kept only in upstream source systems
+- retrieval-relevant markdown should be indexed in place by QMD, with QMD index
+  and vector database files stored under the same `mirrorbrain-workspace`
 - upstream systems such as `ActivityWatch` are treated as source inputs, not as the system of record for MirrorBrain artifacts
 - source imports must support an initial controlled backfill window rather than unbounded history import
 - incremental synchronization must run on a configurable polling interval; an hourly interval is a reasonable default example, but the period should remain configurable
@@ -204,10 +211,11 @@ Phase 1 is successful only if a new user can complete the first MVP flow by foll
 
 The first end-to-end slice should prove the narrowest useful path through the system and be runnable locally by a user:
 
-1. A user follows the repository documentation to start `ActivityWatch`, `OpenViking`, and MirrorBrain locally.
+1. A user follows the repository documentation to start `ActivityWatch` and
+   MirrorBrain locally.
 2. MirrorBrain exposes a local service surface that reports health and supports the first MVP workflow.
 3. MirrorBrain performs an initial backfill from a controlled time window for the browser source.
-4. MirrorBrain normalizes the imported events into `MemoryEvent` records and stores them in `OpenViking`.
+4. MirrorBrain normalizes the imported events into `MemoryEvent` records and stores them in `mirrorbrain-workspace`.
 5. MirrorBrain groups the stored events into candidate memories.
 6. The user reviews at least one candidate memory through a user-facing review flow and marks it as kept.
 7. A daily review flow generates a knowledge draft from reviewed memory.

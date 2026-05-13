@@ -7,7 +7,7 @@ This plan records the current post-Phase-1 direction for MirrorBrain.
 Phase 1 already proved a narrow independent MVP:
 
 - browser memory ingestion through `ActivityWatch`
-- local storage and retrieval through `OpenViking`
+- local storage and retrieval through `OpenViking` for the original MVP
 - a runnable HTTP service and standalone UI
 - a basic end-to-end flow across memory review, knowledge draft generation, and skill draft generation
 
@@ -156,6 +156,26 @@ Remaining non-goal / follow-up territory after Phase 3:
 - direct `openclaw` topic list/detail/history adapter helpers remain future work
 - stronger storage/retrieval consistency guarantees around `isCurrentBest` remain future work
 
+## Storage Backend Direction Update
+
+The next storage direction replaces OpenViking with QMD as an in-process
+workspace retrieval/indexing layer. The authoritative durable workspace remains
+`mirrorbrain-workspace`; QMD must read markdown from that workspace and store
+its sqlite/vector index under the same workspace, not in a separate
+`openviking-workspace` or QMD content workspace.
+
+Design reference: `docs/adr/2026-05-13-qmd-workspace-storage.md`.
+
+Migration priorities:
+
+1. keep MirrorBrain workspace files as the durable source of truth
+2. add QMD indexing as rebuildable derived state under
+   `<workspaceDir>/mirrorbrain/qmd/`
+3. remove mandatory OpenViking startup checks before changing user-facing setup
+   docs
+4. replace OpenViking-backed plugin retrieval with QMD-backed retrieval while
+   preserving the existing `openclaw` memory contract
+
 ## Phase 2A: Plugin Integration And Minimum Demo
 
 ### Goal
@@ -238,14 +258,15 @@ When dependencies are missing, it should:
 - explain which dependency is missing or unhealthy
 - explain how to start or validate that dependency
 
-#### OpenViking Setup Support
+#### Retrieval Backend Setup Support
 
-The first implementation should:
+The first implementation used OpenViking reachability checks. The QMD migration
+should replace those checks with:
 
-- check service reachability
-- inspect whether key configuration is present
-- help generate a minimum config template when configuration is missing
-- prioritize guidance for embedding or model configuration before lower-value template details
+- workspace path validation
+- QMD index path validation under `<workspaceDir>/mirrorbrain/qmd/`
+- guidance for rebuilding the QMD index when workspace markdown changes
+- clear reporting when QMD package/model/index initialization fails
 - reuse values from existing `.env` or adjacent local configuration when that is safe and obvious
 
 #### ActivityWatch Setup Support
@@ -297,7 +318,7 @@ The first acceptance path is manual:
 
 1. add a dedicated startup script or CLI for local developer bring-up
 2. make that entrypoint start MirrorBrain and check dependency readiness
-3. add strong `OpenViking` diagnostics and minimum-config template generation
+3. replace OpenViking diagnostics with QMD workspace/index diagnostics
 4. add `ActivityWatch` browser-data checks for the last hour
 5. consolidate MirrorBrain `.env` missing-variable reporting with example formats
 6. write the minimum `openclaw` plugin integration example for memory retrieval only
@@ -316,7 +337,7 @@ The first startup CLI should be:
 Component grouping should include at least:
 
 - MirrorBrain config
-- `OpenViking`
+- local retrieval backend
 - `ActivityWatch`
 - MirrorBrain startup
 

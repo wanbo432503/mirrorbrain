@@ -33,7 +33,8 @@ The Phase 1 slice is not complete as a backend-only code path. It must include:
 
 - a runnable local HTTP surface for MirrorBrain
 - a minimal standalone review UI or equivalent operator-facing interface
-- documented startup steps for `ActivityWatch`, `OpenViking`, and MirrorBrain
+- documented startup steps for `ActivityWatch`, the active local retrieval
+  backend, and MirrorBrain
 - an end-to-end automated test that follows the documented user flow
 
 ## Recommended Phase 1 Module Map
@@ -183,11 +184,12 @@ Guidance:
 
 The first implementation slice should prove this sequence:
 
-1. start the documented local runtime for `ActivityWatch`, `OpenViking`, and MirrorBrain
+1. start the documented local runtime for `ActivityWatch`, the active local
+   retrieval backend, and MirrorBrain
 2. expose a local HTTP API for health, sync, review, and artifact retrieval
 3. controlled initial backfill from the browser source
 4. normalization and ingestion into `MemoryEvent`
-5. persistence of `MemoryEvent` into `OpenViking`
+5. persistence of `MemoryEvent` into MirrorBrain-owned workspace artifacts
 6. candidate generation into `CandidateMemory`
 7. explicit review transition into `ReviewedMemory`
 8. daily review generation into `KnowledgeArtifact` draft state
@@ -198,7 +200,21 @@ The preferred order of implementation is to make this slice pass end to end with
 
 ## Data And Storage Guidance
 
-Phase 1 should use `OpenViking` as the primary local storage and retrieval layer for MirrorBrain artifacts.
+The original Phase 1 MVP used `OpenViking` as the primary local storage and
+retrieval layer. The next storage architecture replaces that dependency with a
+workspace-owned QMD-backed retrieval layer; see
+`docs/adr/2026-05-13-qmd-workspace-storage.md`.
+
+Target storage rules:
+
+- `mirrorbrain-workspace` is the only MirrorBrain workspace
+- durable MirrorBrain artifacts live under `<workspaceDir>/mirrorbrain/`
+- QMD markdown inputs are those workspace artifacts, not copies in another
+  workspace
+- QMD index/vector database files live under
+  `<workspaceDir>/mirrorbrain/qmd/`
+- QMD derived index state is rebuildable and must not become the lifecycle
+  authority for memory, knowledge, or skill artifacts
 
 Implementations should preserve:
 
@@ -211,7 +227,10 @@ Guidance:
 
 - import upstream source data into MirrorBrain-owned normalized records before downstream processing
 - apply source-specific sanitization such as duplicate suppression before persisting normalized `MemoryEvent` records
-- store normalized raw `MemoryEvent` records in `OpenViking` rather than depending on upstream systems for later queries
+- store normalized raw `MemoryEvent` records in MirrorBrain workspace artifacts
+  rather than depending on upstream systems for later queries
+- generate one canonical markdown projection for retrieval-relevant artifacts
+  and let QMD index that projection in place
 - treat upstream source identifiers and sync checkpoints as part of ingestion metadata
 - when uncertain, prefer append-friendly event capture plus explicit derived artifact records over mutating away provenance
 

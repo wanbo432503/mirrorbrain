@@ -281,6 +281,7 @@ Start with:
 - [Browser page content](./docs/components/browser-page-content.md)
 - [OpenClaw plugin API](./docs/components/openclaw-plugin-api.md)
 - [OpenViking store](./docs/components/openviking-store.md)
+- [QMD workspace store](./docs/components/qmd-workspace-store.md)
 - [ActivityWatch browser source](./docs/components/activitywatch-browser-source.md)
 - [Shell history source](./docs/components/shell-history-source.md)
 - [Memory review](./docs/components/memory-review.md)
