@@ -22,6 +22,9 @@ This component is responsible for:
 - preserving a flex-based right panel layout for `All-Main Sources`, where the
   memory list owns the vertical scrollbar and pagination remains reachable at
   the bottom of the panel
+- preserving the same flex-based containment for individual source detail
+  panels, where the source header and tabs stay inside the right panel and only
+  source-history records scroll within the tab body
 - showing source-specific imported memory records from `GET /memory` with
   source filters and pagination
 - enabling or disabling source instances through `PATCH /sources/config`
@@ -91,6 +94,11 @@ The API responses use `SourceLedgerImportResult`, `SourceInstanceSummary`, and
   The memory event list is the only vertically scrolling region; the import
   action row and pagination footer stay outside that scroll area so resizing
   the app does not hide pagination controls below the panel boundary.
+- Individual source detail panels must also remain `min-height: 0` flex
+  columns. The selected source header, tab row, active tab body, source-history
+  list, and pagination footer are separate flex regions so records for
+  `openclaw-main`, `chrome-main`, `filesystem-main`, `desktop-main`, and
+  `shell-main` stay inside the application viewport.
 
 ## Test Strategy
 
@@ -106,6 +114,6 @@ corepack pnpm vitest run \
 
 The tests cover source API client calls, source status rendering, source
 history pagination, removal of the single-source audit/import controls, manual
-global import feedback, the `All-Main Sources` global memory view, the flex
-right-panel scroll boundary with pagination controls, and the top-level
-`memory sources` tab integration.
+global import feedback, the `All-Main Sources` global memory view, flex
+right-panel scroll boundaries for both global and individual source detail
+views, and the top-level `memory sources` tab integration.

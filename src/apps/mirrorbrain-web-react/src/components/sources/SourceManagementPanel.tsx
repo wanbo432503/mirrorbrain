@@ -250,8 +250,14 @@ export default function SourceManagementPanel({
         )}
 
         {selectedSource && (
-          <div className="min-h-0 flex-1 overflow-y-auto pr-2">
-            <div className="flex items-start justify-between gap-4">
+          <div
+            data-testid="source-detail-layout"
+            className="flex min-h-0 flex-1 flex-col overflow-hidden pr-2"
+          >
+            <div
+              data-testid="source-detail-header"
+              className="flex shrink-0 items-start justify-between gap-4"
+            >
               <div>
                 <h3 className="font-heading text-lg font-semibold">
                   {selectedSource.sourceInstanceId}
@@ -263,7 +269,11 @@ export default function SourceManagementPanel({
               </span>
             </div>
 
-            <div role="tablist" className="mt-4 flex border-b border-hairline">
+            <div
+              role="tablist"
+              data-testid="source-detail-tabs"
+              className="mt-4 flex shrink-0 border-b border-hairline"
+            >
               {DETAIL_TABS.map((tab) => (
                 <button
                   key={tab}
@@ -282,91 +292,112 @@ export default function SourceManagementPanel({
               ))}
             </div>
 
-            {selectedTab === 'Overview' && (
-              <div className="mt-4 grid grid-cols-2 gap-3 text-sm lg:grid-cols-4">
-                <Metric label="Imported" value={selectedSource.importedCount} />
-                <Metric label="Skipped" value={selectedSource.skippedCount} />
-                <Metric label="Recorder" value={selectedSource.recorderStatus} />
-                <Metric
-                  label="Checkpoint"
-                  value={selectedSource.checkpointSummary ?? 'none'}
-                />
-                {selectedSource.latestWarning && (
-                  <div className="col-span-full rounded-sm border border-amber-300 bg-amber-50 p-3 text-amber-800">
-                    {selectedSource.latestWarning}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {selectedTab === 'Sources' && (
-              <div className="mt-4 flex min-h-0 flex-col gap-3">
-                {isLoadingSourceMemory && (
-                  <div className="flex justify-center py-8">
-                    <LoadingSpinner />
-                  </div>
-                )}
-                {!isLoadingSourceMemory && sourceMemoryPagination && (
-                  <div className="text-xs text-inkMuted-80">
-                    Showing {sourceMemoryEvents.length} of {sourceMemoryPagination.total}{' '}
-                    source records (page {sourceMemoryPagination.page} of{' '}
-                    {sourceMemoryPagination.totalPages})
-                  </div>
-                )}
-                {!isLoadingSourceMemory && sourceMemoryEvents.length === 0 && (
-                  <div className="rounded-sm border border-hairline p-4 text-sm text-inkMuted-80">
-                    No source records imported for this source.
-                  </div>
-                )}
-                {!isLoadingSourceMemory && sourceMemoryEvents.map((event) => (
-                  <article
-                    key={event.id}
-                    className="rounded-sm border border-hairline bg-canvas p-3 text-sm"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <strong>{formatMemoryEventTitle(event)}</strong>
-                      <span className="shrink-0 text-xs text-inkMuted-80">
-                        {event.sourceType}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-inkMuted-80">
-                      {formatMemoryEventSummary(event)}
-                    </p>
-                    <p className="mt-1 break-words text-xs text-inkMuted-80">
-                      {event.sourceRef}
-                    </p>
-                  </article>
-                ))}
-                {!isLoadingSourceMemory &&
-                  sourceMemoryPagination &&
-                  sourceMemoryPagination.totalPages > 1 && (
-                    <div className="shrink-0 border-t border-hairline bg-canvas-parchment pt-3">
-                      <Pagination
-                        currentPage={sourceMemoryPagination.page}
-                        totalPages={sourceMemoryPagination.totalPages}
-                        onPageChange={setSourceHistoryPage}
-                      />
+            <div
+              data-testid="source-detail-body"
+              className="mt-4 flex min-h-0 flex-1 flex-col overflow-hidden"
+            >
+              {selectedTab === 'Overview' && (
+                <div className="grid min-h-0 auto-rows-max grid-cols-2 gap-3 overflow-y-auto text-sm lg:grid-cols-4">
+                  <Metric label="Imported" value={selectedSource.importedCount} />
+                  <Metric label="Skipped" value={selectedSource.skippedCount} />
+                  <Metric label="Recorder" value={selectedSource.recorderStatus} />
+                  <Metric
+                    label="Checkpoint"
+                    value={selectedSource.checkpointSummary ?? 'none'}
+                  />
+                  {selectedSource.latestWarning && (
+                    <div className="col-span-full rounded-sm border border-amber-300 bg-amber-50 p-3 text-amber-800">
+                      {selectedSource.latestWarning}
                     </div>
                   )}
-              </div>
-            )}
-
-            {selectedTab === 'Settings' && (
-              <div className="mt-4 flex flex-col gap-4 text-sm">
-                <div>
-                  <p>Source state</p>
-                  <Button
-                    variant="default"
-                    loading={isUpdatingConfig}
-                    onClick={handleToggleSourceEnabled}
-                  >
-                    {selectedSource.lifecycleStatus === 'disabled'
-                      ? 'Enable Source'
-                      : 'Disable Source'}
-                  </Button>
                 </div>
-              </div>
-            )}
+              )}
+
+              {selectedTab === 'Sources' && (
+                <div
+                  data-testid="source-history-panel"
+                  className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden"
+                >
+                  {isLoadingSourceMemory && (
+                    <div className="flex min-h-0 flex-1 items-center justify-center">
+                      <LoadingSpinner />
+                    </div>
+                  )}
+                  {!isLoadingSourceMemory && sourceMemoryPagination && (
+                    <div className="shrink-0 text-xs text-inkMuted-80">
+                      Showing {sourceMemoryEvents.length} of {sourceMemoryPagination.total}{' '}
+                      source records (page {sourceMemoryPagination.page} of{' '}
+                      {sourceMemoryPagination.totalPages})
+                    </div>
+                  )}
+                  {!isLoadingSourceMemory && (
+                    <div
+                      data-testid="source-history-scroll-region"
+                      className="min-h-0 flex-1 overflow-y-auto pr-2"
+                    >
+                      {sourceMemoryEvents.length === 0 ? (
+                        <div className="rounded-sm border border-hairline p-4 text-sm text-inkMuted-80">
+                          No source records imported for this source.
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-2">
+                          {sourceMemoryEvents.map((event) => (
+                            <article
+                              key={event.id}
+                              className="rounded-sm border border-hairline bg-canvas p-3 text-sm"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <strong>{formatMemoryEventTitle(event)}</strong>
+                                <span className="shrink-0 text-xs text-inkMuted-80">
+                                  {event.sourceType}
+                                </span>
+                              </div>
+                              <p className="mt-1 text-inkMuted-80">
+                                {formatMemoryEventSummary(event)}
+                              </p>
+                              <p className="mt-1 break-words text-xs text-inkMuted-80">
+                                {event.sourceRef}
+                              </p>
+                            </article>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {!isLoadingSourceMemory &&
+                    sourceMemoryPagination &&
+                    sourceMemoryPagination.totalPages > 1 && (
+                      <div
+                        data-testid="source-history-pagination-footer"
+                        className="shrink-0 border-t border-hairline bg-canvas-parchment pt-3"
+                      >
+                        <Pagination
+                          currentPage={sourceMemoryPagination.page}
+                          totalPages={sourceMemoryPagination.totalPages}
+                          onPageChange={setSourceHistoryPage}
+                        />
+                      </div>
+                    )}
+                </div>
+              )}
+
+              {selectedTab === 'Settings' && (
+                <div className="min-h-0 overflow-y-auto text-sm">
+                  <div>
+                    <p>Source state</p>
+                    <Button
+                      variant="default"
+                      loading={isUpdatingConfig}
+                      onClick={handleToggleSourceEnabled}
+                    >
+                      {selectedSource.lifecycleStatus === 'disabled'
+                        ? 'Enable Source'
+                        : 'Disable Source'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

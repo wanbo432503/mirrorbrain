@@ -155,6 +155,113 @@ describe('SourceManagementPanel', () => {
     expect(screen.getByRole('button', { name: 'Last page' })).not.toBeNull()
   })
 
+  it('keeps each selected source detail panel inside the flex viewport', async () => {
+    const sourceSummaries = [
+      {
+        sourceKind: 'agent-transcript' as const,
+        sourceInstanceId: 'openclaw-main',
+      },
+      {
+        sourceKind: 'browser' as const,
+        sourceInstanceId: 'chrome-main',
+      },
+      {
+        sourceKind: 'file-activity' as const,
+        sourceInstanceId: 'filesystem-main',
+      },
+      {
+        sourceKind: 'screenshot' as const,
+        sourceInstanceId: 'desktop-main',
+      },
+      {
+        sourceKind: 'shell' as const,
+        sourceInstanceId: 'shell-main',
+      },
+    ].map((source) => ({
+      ...source,
+      lifecycleStatus: 'enabled' as const,
+      recorderStatus: 'unknown' as const,
+      importedCount: 18,
+      skippedCount: 0,
+      checkpointSummary: `${source.sourceInstanceId}.jsonl next line 19`,
+    }))
+    const api = {
+      listSourceStatuses: vi.fn(async () => sourceSummaries),
+      listSourceAuditEvents: vi.fn(async () => []),
+      importSourceLedgers: vi.fn(),
+      updateSourceConfig: vi.fn(),
+      listMemory: vi.fn(async (_page?: number, _pageSize?: number, filter?: {
+        sourceInstanceId?: string
+      }) => ({
+        items: Array.from({ length: 10 }, (_, index) => ({
+          id: `ledger:${filter?.sourceInstanceId ?? 'unknown'}:${index + 1}`,
+          sourceType: 'browser',
+          sourceRef: `${filter?.sourceInstanceId ?? 'unknown'}:record-${index + 1}`,
+          timestamp: `2026-05-12T10:${String(index).padStart(2, '0')}:00.000Z`,
+          authorizationScopeId: 'scope-source-ledger',
+          content: {
+            title: `History for ${filter?.sourceInstanceId ?? 'unknown'} ${index + 1}`,
+            summary: 'A source-specific record kept inside the detail viewport.',
+            contentKind: 'source-record',
+          },
+          captureMetadata: {
+            upstreamSource: 'source-ledger:test',
+            checkpoint: `${filter?.sourceInstanceId ?? 'unknown'}.jsonl:${index + 1}`,
+          },
+        })),
+        pagination: {
+          total: 18,
+          page: 1,
+          pageSize: 10,
+          totalPages: 2,
+        },
+      })),
+    } as unknown as MirrorBrainWebAppApi
+
+    renderSourceManagementPanel(api)
+
+    for (const source of sourceSummaries) {
+      await userEvent.click(
+        await screen.findByRole('button', {
+          name: new RegExp(`${source.sourceInstanceId} ${source.sourceKind}`, 'i'),
+        }),
+      )
+
+      const sourceDetailLayout = screen.getByTestId('source-detail-layout')
+      const sourceDetailHeader = screen.getByTestId('source-detail-header')
+      const sourceDetailTabs = screen.getByTestId('source-detail-tabs')
+      const sourceDetailBody = screen.getByTestId('source-detail-body')
+
+      expect(sourceDetailLayout.className.split(/\s+/)).toEqual(
+        expect.arrayContaining(['flex', 'min-h-0', 'flex-1', 'flex-col', 'overflow-hidden']),
+      )
+      expect(sourceDetailHeader.className.split(/\s+/)).toContain('shrink-0')
+      expect(sourceDetailTabs.className.split(/\s+/)).toContain('shrink-0')
+      expect(sourceDetailBody.className.split(/\s+/)).toEqual(
+        expect.arrayContaining(['flex', 'min-h-0', 'flex-1', 'flex-col', 'overflow-hidden']),
+      )
+
+      await userEvent.click(screen.getByRole('tab', { name: 'Sources' }))
+      expect(await screen.findByText(`History for ${source.sourceInstanceId} 1`)).not.toBeNull()
+
+      const sourceHistoryPanel = screen.getByTestId('source-history-panel')
+      const sourceHistoryScrollRegion = screen.getByTestId('source-history-scroll-region')
+      const sourceHistoryPaginationFooter = screen.getByTestId(
+        'source-history-pagination-footer',
+      )
+
+      expect(sourceHistoryPanel.className.split(/\s+/)).toEqual(
+        expect.arrayContaining(['flex', 'min-h-0', 'flex-1', 'flex-col', 'overflow-hidden']),
+      )
+      expect(sourceHistoryScrollRegion.className.split(/\s+/)).toEqual(
+        expect.arrayContaining(['min-h-0', 'flex-1', 'overflow-y-auto']),
+      )
+      expect(sourceHistoryPaginationFooter.className.split(/\s+/)).toEqual(
+        expect.arrayContaining(['shrink-0', 'border-t']),
+      )
+    }
+  })
+
   it('shows source overview, paginated source history, and settings without audit or manual import', async () => {
     const pageOneMemory = {
       items: [
