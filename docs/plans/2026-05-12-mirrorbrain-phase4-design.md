@@ -429,6 +429,7 @@ source instance ids.
 Each source instance has a detail page with tabs:
 
 - Sources
+- Ledger Format
 - Settings
 
 The `Sources` tab shows the source summary metrics first:
@@ -445,6 +446,10 @@ The `Sources` tab shows the source summary metrics first:
 
 Below those metrics, the `Sources` tab shows paginated imported `MemoryEvent`
 records for that source.
+
+The `Ledger Format` tab shows a read-only JSONL reference for every supported
+source-ledger type so third-party applications can construct compatible ledger
+files without relying on source-specific UI code.
 
 Settings supports:
 

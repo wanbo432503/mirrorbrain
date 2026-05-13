@@ -140,6 +140,7 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and an
   - User-facing source labels for Agent, Browser, Files, Screenshot, Audio, and Shell while keeping internal source ids for API filters
   - Source instance list backed by `/sources/status`
   - Source-history records backed by `/memory` source filters
+  - Read-only JSONL ledger format reference for third-party source integrations
   - Enable / disable source action backed by `/sources/config`
   - Operational source UI remains separate from memory, knowledge, and skill outputs
 

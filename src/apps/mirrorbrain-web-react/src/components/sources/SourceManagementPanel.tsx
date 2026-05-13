@@ -16,15 +16,154 @@ import LoadingSpinner from '../common/LoadingSpinner'
 import Pagination from '../common/Pagination'
 import MemoryPanel from '../memory/MemoryPanel'
 
-type SourceDetailTab = 'Sources' | 'Settings'
+type SourceDetailTab = 'Sources' | 'Ledger Format' | 'Settings'
 
 interface SourceManagementPanelProps {
   api?: MirrorBrainWebAppApi
 }
 
 const ALL_MAIN_SOURCES_KEY = 'all-main-sources'
-const DETAIL_TABS: SourceDetailTab[] = ['Sources', 'Settings']
+const DETAIL_TABS: SourceDetailTab[] = ['Sources', 'Ledger Format', 'Settings']
 const SOURCE_HISTORY_PAGE_SIZE = 10
+
+const SOURCE_LEDGER_FORMATS = [
+  {
+    sourceKind: 'browser',
+    title: 'Browser',
+    description: 'browser history',
+    fileName: 'browser.jsonl',
+    example: JSON.stringify({
+      schemaVersion: '1',
+      sourceKind: 'browser',
+      sourceInstanceId: 'chrome-main',
+      occurredAt: '2026-05-12T10:00:00.000Z',
+      payload: {
+        id: 'page-161',
+        title: 'MirrorBrain source ledger design',
+        url: 'https://example.com/mirrorbrain/source-ledgers',
+        page_content: 'Readable page text captured from an authorized browser source.',
+      },
+    }),
+  },
+  {
+    sourceKind: 'file-activity',
+    title: 'Files',
+    description: 'file activity',
+    fileName: 'file-activity.jsonl',
+    example: JSON.stringify({
+      schemaVersion: '1',
+      sourceKind: 'file-activity',
+      sourceInstanceId: 'filesystem-main',
+      occurredAt: '2026-05-12T10:10:00.000Z',
+      payload: {
+        filePath: '/Users/example/Notes/phase4.md',
+        fileName: 'phase4.md',
+        fileType: 'markdown',
+        mimeType: 'text/markdown',
+        openedByApp: 'Cursor',
+        sizeBytes: 1200,
+        modifiedAt: '2026-05-12T10:09:00.000Z',
+        contentSummary: 'Phase 4 ledger architecture notes.',
+        fullContentRef: 'workspace-file:///Users/example/Notes/phase4.md',
+      },
+    }),
+  },
+  {
+    sourceKind: 'screenshot',
+    title: 'Screenshot',
+    description: 'screen capture',
+    fileName: 'screenshot.jsonl',
+    example: JSON.stringify({
+      schemaVersion: '1',
+      sourceKind: 'screenshot',
+      sourceInstanceId: 'desktop-main',
+      occurredAt: '2026-05-12T10:11:00.000Z',
+      payload: {
+        title: 'Architecture diagram',
+        appName: 'Preview',
+        windowTitle: 'phase4.png',
+        imagePath: '/tmp/phase4.png',
+        imageRetained: true,
+        imageSize: {
+          width: 1440,
+          height: 900,
+        },
+        ocrSummary: 'Phase 4 ledgers and importer',
+        visionSummary: 'A diagram showing recorders writing ledgers into MirrorBrain.',
+      },
+    }),
+  },
+  {
+    sourceKind: 'audio-recording',
+    title: 'Audio',
+    description: 'audio recording',
+    fileName: 'audio-recording.jsonl',
+    example: JSON.stringify({
+      schemaVersion: '1',
+      sourceKind: 'audio-recording',
+      sourceInstanceId: 'recording-main',
+      occurredAt: '2026-05-12T10:11:30.000Z',
+      payload: {
+        title: 'Design discussion recording',
+        appName: 'Voice Memos',
+        audioPath: '/tmp/phase4.m4a',
+        audioRetained: true,
+        durationMs: 420000,
+        transcriptSummary: 'A recorded discussion about adding source names.',
+        transcriptText: 'Optional transcript text.',
+        redactionStatus: 'none',
+      },
+    }),
+  },
+  {
+    sourceKind: 'shell',
+    title: 'Shell',
+    description: 'terminal history',
+    fileName: 'shell.jsonl',
+    example: JSON.stringify({
+      schemaVersion: '1',
+      sourceKind: 'shell',
+      sourceInstanceId: 'shell-main',
+      occurredAt: '2026-05-12T10:12:00.000Z',
+      payload: {
+        sessionId: 'shell-session-1',
+        commandIndex: 7,
+        command: 'pnpm test',
+        cwd: '/Users/example/Workspace/mirrorbrain',
+        exitCode: 0,
+        shellType: 'zsh',
+        terminalApp: 'Terminal',
+        redactionStatus: 'none',
+      },
+    }),
+  },
+  {
+    sourceKind: 'agent',
+    title: 'Agent',
+    description: 'Sessions',
+    fileName: 'agent.jsonl',
+    example: JSON.stringify({
+      schemaVersion: '1',
+      sourceKind: 'agent',
+      sourceInstanceId: 'agent-main',
+      occurredAt: '2026-05-12T10:13:00.000Z',
+      payload: {
+        transcriptPath: '/Users/example/.codex/sessions/session.jsonl',
+        sessionId: 'codex-1',
+        agentIdentity: 'Codex',
+        userTask: 'Implement Phase 4 importer',
+        messageRange: {
+          start: 3,
+          end: 42,
+        },
+        toolCallSummary: 'Read files, edited importer, ran tests.',
+        finalResultSummary: 'Importer implemented and verified.',
+        redactionStatus: 'none',
+        updatedAt: '2026-05-12T10:13:30.000Z',
+      },
+    }),
+  },
+] as const
 
 const SOURCE_DISPLAY_BY_KEY: Record<string, { name: string; description: string }> = {
   'agent:agent-main': {
@@ -447,9 +586,11 @@ export default function SourceManagementPanel({
                           onPageChange={setSourceHistoryPage}
                         />
                       </div>
-                    )}
+                  )}
                 </div>
               )}
+
+              {selectedTab === 'Ledger Format' && <LedgerFormatPanel />}
 
               {selectedTab === 'Settings' && (
                 <div className="min-h-0 overflow-y-auto text-sm">
@@ -485,6 +626,139 @@ function formatMemoryEventSummary(event: MemoryEvent): string {
   return typeof event.content.summary === 'string' && event.content.summary.length > 0
     ? event.content.summary
     : event.timestamp
+}
+
+function tokenizeJsonlLine(line: string): Array<{
+  text: string
+  kind: 'key' | 'string' | 'number' | 'literal' | 'punctuation' | 'plain'
+}> {
+  const tokenPattern =
+    /("(?:\\.|[^"\\])*"(?=\s*:)|"(?:\\.|[^"\\])*"|true|false|null|-?\d+(?:\.\d+)?|[{}[\]:,])/gu
+  const tokens: Array<{
+    text: string
+    kind: 'key' | 'string' | 'number' | 'literal' | 'punctuation' | 'plain'
+  }> = []
+  let cursor = 0
+
+  for (const match of line.matchAll(tokenPattern)) {
+    const index = match.index ?? 0
+
+    if (index > cursor) {
+      tokens.push({ text: line.slice(cursor, index), kind: 'plain' })
+    }
+
+    const text = match[0]
+    let kind: 'key' | 'string' | 'number' | 'literal' | 'punctuation' | 'plain' = 'plain'
+
+    if (/^"(?:\\.|[^"\\])*"$/u.test(text)) {
+      kind = line.slice(index + text.length).startsWith(':') ? 'key' : 'string'
+    } else if (/^(true|false|null)$/u.test(text)) {
+      kind = 'literal'
+    } else if (/^-?\d/u.test(text)) {
+      kind = 'number'
+    } else {
+      kind = 'punctuation'
+    }
+
+    tokens.push({ text, kind })
+    cursor = index + text.length
+  }
+
+  if (cursor < line.length) {
+    tokens.push({ text: line.slice(cursor), kind: 'plain' })
+  }
+
+  return tokens
+}
+
+function getJsonlTokenClass(kind: ReturnType<typeof tokenizeJsonlLine>[number]['kind']) {
+  switch (kind) {
+    case 'key':
+      return 'text-sky-700'
+    case 'string':
+      return 'text-emerald-700'
+    case 'number':
+      return 'text-amber-700'
+    case 'literal':
+      return 'text-fuchsia-700'
+    case 'punctuation':
+      return 'text-inkMuted-80'
+    case 'plain':
+      return ''
+  }
+}
+
+function JsonlCodeBlock({
+  code,
+  label,
+}: {
+  code: string
+  label: string
+}) {
+  return (
+    <pre
+      aria-label={label}
+      data-language="jsonl"
+      className="language-jsonl overflow-x-auto rounded-sm border border-hairline bg-canvas-parchment p-3 font-mono text-xs leading-relaxed"
+    >
+      <code>
+        {code.split('\n').map((line, lineIndex) => (
+          <span key={`${label}-${lineIndex}`} className="block min-w-max">
+            {tokenizeJsonlLine(line).map((token, tokenIndex) => (
+              <span
+                key={`${label}-${lineIndex}-${tokenIndex}`}
+                className={getJsonlTokenClass(token.kind)}
+              >
+                {token.text}
+              </span>
+            ))}
+          </span>
+        ))}
+      </code>
+    </pre>
+  )
+}
+
+function LedgerFormatPanel() {
+  return (
+    <div
+      data-testid="ledger-format-panel"
+      className="min-h-0 flex-1 overflow-y-auto pr-2 text-sm"
+    >
+      <div className="mb-4">
+        <h4 className="font-heading text-base font-semibold">Source Ledger JSONL</h4>
+        <p className="mt-1 max-w-3xl text-sm text-inkMuted-80">
+          MirrorBrain imports one JSON object per line. Each line uses the shared
+          envelope fields below, with a source-specific payload.
+        </p>
+      </div>
+      <div className="grid gap-3 xl:grid-cols-2">
+        {SOURCE_LEDGER_FORMATS.map((format) => (
+          <article
+            key={format.sourceKind}
+            className="rounded-sm border border-hairline bg-canvas p-3"
+          >
+            <div className="mb-2 flex items-start justify-between gap-3">
+              <div>
+                <h5 className="font-semibold">{format.title}</h5>
+                <p className="text-xs text-inkMuted-80">{format.description}</p>
+              </div>
+              <span className="shrink-0 rounded-sm border border-hairline px-2 py-1 font-mono text-xs">
+                {format.sourceKind}
+              </span>
+            </div>
+            <p className="mb-2 font-mono text-xs text-inkMuted-80">
+              ledgers/YYYY-MM-DD/{format.fileName}
+            </p>
+            <JsonlCodeBlock
+              code={format.example}
+              label={`${format.sourceKind} ledger JSONL example`}
+            />
+          </article>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 function Metric({ label, value }: { label: string; value: ReactNode }) {
