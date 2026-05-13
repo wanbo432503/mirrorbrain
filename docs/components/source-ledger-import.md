@@ -15,8 +15,8 @@ schedule, while the MirrorBrain service local runtime supplies a one-minute
 interval so newly captured source-ledger records are imported promptly.
 
 The workflow keeps source acquisition behind the ledger boundary. It reads
-ledger files; it does not collect browser, file, shell, screenshot, or agent
-activity.
+ledger files; it does not collect browser, file, shell, screenshot, audio, or
+agent activity.
 
 ## Responsibility Boundary
 

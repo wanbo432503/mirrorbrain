@@ -80,6 +80,7 @@ Initial built-in source plugins:
 - `browser`
 - `file-activity`
 - `screenshot`
+- `audio-recording`
 - `shell`
 - `agent-transcript`
 
@@ -119,6 +120,8 @@ Recorders own source acquisition:
 - shell command/session metadata
 - agent transcript metadata and summaries
 - screenshot OCR/vision summaries
+- authorized audio recording transcript summaries and optional retained-audio
+  references
 
 Importers own:
 
@@ -144,12 +147,14 @@ ledgers/
     browser.jsonl
     file-activity.jsonl
     screenshot.jsonl
+    audio-recording.jsonl
     shell.jsonl
     agent-transcript.jsonl
   2026-05-13/
     browser.jsonl
     file-activity.jsonl
     screenshot.jsonl
+    audio-recording.jsonl
     shell.jsonl
     agent-transcript.jsonl
 ```
@@ -165,7 +170,13 @@ All ledger entries use a common envelope with source-specific payloads:
 ```ts
 interface SourceLedgerEntry<TPayload> {
   schemaVersion: string
-  sourceKind: 'browser' | 'file-activity' | 'screenshot' | 'shell' | 'agent-transcript'
+  sourceKind:
+    | 'browser'
+    | 'file-activity'
+    | 'screenshot'
+    | 'audio-recording'
+    | 'shell'
+    | 'agent-transcript'
   sourceInstanceId: string
   occurredAt: string
   capturedAt?: string
@@ -185,6 +196,8 @@ The deterministic ID inputs are source-specific. Examples:
 - browser: URL, source page ID, occurredAt, page content hash
 - file activity: file path, occurredAt, content summary hash, file metadata hash
 - screenshot: occurredAt, vision summary hash, image path/hash when retained
+- audio recording: occurredAt, transcript summary hash, audio path/hash when
+  retained, duration when available
 - shell: session ID, command timestamp/index, cwd, redacted command hash
 - agent transcript: transcript path, session ID, message range, updatedAt
 
@@ -405,23 +418,21 @@ Phase 4 source management belongs in the MirrorBrain UI.
 
 The standalone UI should expose a single top-level `memory sources` tab instead
 of separate `memory` and `sources` tabs. The left rail starts with
-`All-Main Sources`; selecting it shows the original memory-tab list and
+`All Sources`; selecting it shows the original memory-tab list and
 pagination layout without an extra subtab. The action row keeps only
 `Import Sources`, with import feedback displayed to the left of that button.
-Selecting an individual source keeps the existing source-specific management
-surface.
+Selecting an individual source keeps the source-specific management surface,
+but the navigation labels should use product-facing names such as OpenClaw,
+Chrome, Files, Screenshot, Recording, and Shell instead of internal `*-main`
+source instance ids.
 
 Each source instance has a detail page with tabs:
 
-- Overview
-- Recent Memory
-- Audit
+- Sources
 - Settings
 
-Overview shows:
+The `Sources` tab shows the source summary metrics first:
 
-- source kind
-- source instance ID
 - enabled / disabled / running / degraded / error
 - recorder status
 - last ledger write time
@@ -432,9 +443,8 @@ Overview shows:
 - latest warning/error
 - checkpoint summary
 
-Recent Memory shows imported `MemoryEvent` records for that source.
-
-Audit shows `SourceAuditEvent` records and recent failure samples.
+Below those metrics, the `Sources` tab shows paginated imported `MemoryEvent`
+records for that source.
 
 Settings supports:
 
@@ -445,7 +455,8 @@ Settings supports:
 - screenshot image retention toggle
 - shell capture options
 - agent transcript directory
-- manual Import Now
+- audio recording source configuration when an authorized recording recorder is
+  added later
 - future delete/exclude governance entry points
 
 Disable means stop future acquisition. It does not delete existing
@@ -468,6 +479,7 @@ interface MemoryEventContentV2 {
   contentKind:
     | 'browser-page'
     | 'file-activity'
+    | 'audio-recording'
     | 'shell-command'
     | 'agent-transcript'
     | 'screenshot'
@@ -682,10 +694,10 @@ Phase 4 architecture is on track when:
 - imported records are unified `MemoryEvent` values
 - the standalone UI exposes memory retrieval and source management through one
   top-level `memory sources` tab
-- `All-Main Sources` exposes the original memory-tab list and pagination layout
+- `All Sources` exposes the original memory-tab list and pagination layout
   with only the `Import Sources` action
-- Source Management UI exposes Overview, Recent Memory, Audit, and Settings
-  for individual source instances
+- Source Management UI exposes Sources and Settings for individual source
+  instances, with summary metrics above source-specific memory history
 - users can manually run 6h/24h/7d analysis windows
 - analysis produces multiple WorkSession candidates where appropriate
 - reviewed work sessions can be assigned to projects

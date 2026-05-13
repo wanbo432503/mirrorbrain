@@ -6,6 +6,7 @@ export type SourceLedgerKind =
   | 'browser'
   | 'file-activity'
   | 'screenshot'
+  | 'audio-recording'
   | 'shell'
   | 'agent-transcript';
 
@@ -81,6 +82,17 @@ interface ScreenshotLedgerPayload {
   visionSummary: string;
   ocrModel?: string;
   visionModel?: string;
+}
+
+interface AudioRecordingLedgerPayload {
+  title?: string;
+  appName?: string;
+  audioPath?: string;
+  audioRetained: boolean;
+  durationMs?: number;
+  transcriptSummary: string;
+  transcriptText?: string;
+  redactionStatus?: string;
 }
 
 interface ShellLedgerPayload {
@@ -191,6 +203,7 @@ function isSourceKind(value: unknown): value is SourceLedgerKind {
     value === 'browser' ||
     value === 'file-activity' ||
     value === 'screenshot' ||
+    value === 'audio-recording' ||
     value === 'shell' ||
     value === 'agent-transcript'
   );
@@ -402,6 +415,33 @@ function parseScreenshotLedgerPayload(
     ),
     ocrModel: optionalStringField(payload, 'ocrModel'),
     visionModel: optionalStringField(payload, 'visionModel'),
+  };
+}
+
+function parseAudioRecordingLedgerPayload(
+  payload: unknown,
+): AudioRecordingLedgerPayload {
+  if (!isRecord(payload)) {
+    throw new Error('payload must be an object.');
+  }
+
+  return {
+    title: optionalStringField(payload, 'title'),
+    appName: optionalStringField(payload, 'appName'),
+    audioPath: optionalStringField(payload, 'audioPath'),
+    audioRetained: requireBooleanField(
+      payload,
+      'audioRetained',
+      'payload.audioRetained',
+    ),
+    durationMs: optionalNumberField(payload, 'durationMs'),
+    transcriptSummary: requireStringField(
+      payload,
+      'transcriptSummary',
+      'payload.transcriptSummary',
+    ),
+    transcriptText: optionalStringField(payload, 'transcriptText'),
+    redactionStatus: optionalStringField(payload, 'redactionStatus'),
   };
 }
 
@@ -670,6 +710,62 @@ function normalizeScreenshotLedgerEntry(input: {
   };
 }
 
+function normalizeAudioRecordingLedgerEntry(input: {
+  authorizationScopeId: string;
+  entry: SourceLedgerEntry;
+  ledgerPath: string;
+  lineNumber: number;
+}): MemoryEvent {
+  const payload = parseAudioRecordingLedgerPayload(input.entry.payload);
+  const title = payload.title ?? payload.appName ?? 'Recording';
+  const identifiers = createMemoryEventId({
+    sourceKind: 'audio-recording',
+    sourceInstanceId: input.entry.sourceInstanceId,
+    identity: {
+      occurredAt: input.entry.occurredAt,
+      transcriptSummaryHash: hashValue(payload.transcriptSummary),
+      audioPath: payload.audioPath,
+      durationMs: payload.durationMs,
+    },
+  });
+
+  return {
+    id: identifiers.id,
+    sourceType: 'audio-recording',
+    sourceRef: identifiers.sourceRef,
+    timestamp: input.entry.occurredAt,
+    authorizationScopeId: input.authorizationScopeId,
+    content: {
+      title,
+      summary: summarizeText(payload.transcriptSummary),
+      contentKind: 'audio-recording',
+      bodyRef:
+        payload.audioRetained && payload.audioPath
+          ? {
+              kind: 'workspace-file',
+              uri: payload.audioPath,
+            }
+          : undefined,
+      entities: [
+        ...(payload.appName
+          ? [
+              {
+                kind: 'app',
+                label: payload.appName,
+                ref: payload.appName,
+              },
+            ]
+          : []),
+      ],
+      sourceSpecific: payload,
+    },
+    captureMetadata: {
+      upstreamSource: 'source-ledger:audio-recording',
+      checkpoint: `${input.ledgerPath}:${input.lineNumber}`,
+    },
+  };
+}
+
 function normalizeShellLedgerEntry(input: {
   authorizationScopeId: string;
   entry: SourceLedgerEntry;
@@ -790,6 +886,8 @@ function normalizeLedgerEntry(input: {
       return normalizeFileActivityLedgerEntry(input);
     case 'screenshot':
       return normalizeScreenshotLedgerEntry(input);
+    case 'audio-recording':
+      return normalizeAudioRecordingLedgerEntry(input);
     case 'shell':
       return normalizeShellLedgerEntry(input);
     case 'agent-transcript':

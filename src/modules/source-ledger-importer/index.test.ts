@@ -183,6 +183,7 @@ describe('source ledger importer', () => {
       ledgerText: [
         '{"schemaVersion":"1","sourceKind":"file-activity","sourceInstanceId":"finder-main","occurredAt":"2026-05-12T10:10:00.000Z","payload":{"filePath":"/Users/wanbo/Notes/phase4.md","fileName":"phase4.md","fileType":"markdown","mimeType":"text/markdown","openedByApp":"Cursor","sizeBytes":1200,"modifiedAt":"2026-05-12T10:09:00.000Z","contentSummary":"Phase 4 ledger architecture notes.","fullContentRef":"workspace-file:///Users/wanbo/Notes/phase4.md"}}',
         '{"schemaVersion":"1","sourceKind":"screenshot","sourceInstanceId":"desktop","occurredAt":"2026-05-12T10:11:00.000Z","payload":{"title":"Architecture Diagram","appName":"Preview","windowTitle":"phase4.png","imagePath":"/tmp/phase4.png","imageRetained":true,"imageSize":{"width":1440,"height":900},"ocrSummary":"Phase 4 ledgers and importer","visionSummary":"A diagram showing recorders writing ledgers into MirrorBrain."}}',
+        '{"schemaVersion":"1","sourceKind":"audio-recording","sourceInstanceId":"recording-main","occurredAt":"2026-05-12T10:11:30.000Z","payload":{"title":"Design discussion recording","appName":"Voice Memos","audioPath":"/tmp/phase4.m4a","audioRetained":true,"durationMs":420000,"transcriptSummary":"A recorded discussion about adding source names and recording memory.","redactionStatus":"none"}}',
         '{"schemaVersion":"1","sourceKind":"shell","sourceInstanceId":"iterm-main","occurredAt":"2026-05-12T10:12:00.000Z","payload":{"sessionId":"shell-session-1","commandIndex":7,"command":"pnpm test","cwd":"/Users/wanbo/Workspace/mirrorbrain","exitCode":0,"shellType":"zsh","terminalApp":"iTerm2","redactionStatus":"none"}}',
         '{"schemaVersion":"1","sourceKind":"agent-transcript","sourceInstanceId":"codex-local","occurredAt":"2026-05-12T10:13:00.000Z","payload":{"transcriptPath":"/Users/wanbo/.codex/sessions/session.jsonl","sessionId":"codex-1","agentIdentity":"Codex","userTask":"Implement Phase 4 importer","messageRange":{"start":3,"end":42},"toolCallSummary":"Read files, edited importer, ran tests.","finalResultSummary":"Importer implemented and verified.","redactionStatus":"none","updatedAt":"2026-05-12T10:13:30.000Z"}}',
       ].join('\n'),
@@ -230,6 +231,25 @@ describe('source ledger importer', () => {
         }),
       }),
       expect.objectContaining({
+        sourceType: 'audio-recording',
+        content: expect.objectContaining({
+          title: 'Design discussion recording',
+          summary: 'A recorded discussion about adding source names and recording memory.',
+          contentKind: 'audio-recording',
+          bodyRef: {
+            kind: 'workspace-file',
+            uri: '/tmp/phase4.m4a',
+          },
+          entities: expect.arrayContaining([
+            {
+              kind: 'app',
+              label: 'Voice Memos',
+              ref: 'Voice Memos',
+            },
+          ]),
+        }),
+      }),
+      expect.objectContaining({
         sourceType: 'shell',
         content: expect.objectContaining({
           title: 'pnpm test',
@@ -269,6 +289,6 @@ describe('source ledger importer', () => {
         }),
       }),
     ]);
-    expect(result.auditEvents).toHaveLength(4);
+    expect(result.auditEvents).toHaveLength(5);
   });
 });

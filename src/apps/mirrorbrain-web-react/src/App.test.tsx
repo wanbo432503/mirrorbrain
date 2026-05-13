@@ -345,7 +345,7 @@ describe('App', () => {
 
     await user.click(screen.getByRole('tab', { name: /memory sources/i }))
 
-    expect(await screen.findByRole('button', { name: /all-main sources/i })).not.toBeNull()
+    expect(await screen.findByRole('button', { name: /all sources/i })).not.toBeNull()
     expect(screen.queryByRole('tab', { name: 'Memory Events' })).toBeNull()
     expect(await screen.findByRole('button', { name: 'Import Sources' })).not.toBeNull()
     expect(screen.queryByRole('button', { name: 'Sync Shell' })).toBeNull()

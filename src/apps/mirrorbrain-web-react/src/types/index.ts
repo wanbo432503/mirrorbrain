@@ -10,6 +10,7 @@ export type SourceLedgerKind =
   | 'browser'
   | 'file-activity'
   | 'screenshot'
+  | 'audio-recording'
   | 'shell'
   | 'agent-transcript';
 

@@ -6,11 +6,12 @@ The source ledger importer is the first Phase 4 acquisition boundary. It reads
 MirrorBrain-owned daily JSONL ledger text, validates ledger entry envelopes, and
 normalizes valid entries into source-attributed `MemoryEvent` records. The
 implementation supports the initial Phase 4 built-in source kinds: `browser`,
-`file-activity`, `screenshot`, `shell`, and `agent-transcript`.
+`file-activity`, `screenshot`, `audio-recording`, `shell`, and
+`agent-transcript`.
 
 This component is intentionally downstream of recorders. It does not collect
-browser, file, shell, screenshot, or agent activity. Recorders write ledgers;
-the importer converts those ledgers into MirrorBrain memory evidence.
+browser, file, shell, screenshot, audio, or agent activity. Recorders write
+ledgers; the importer converts those ledgers into MirrorBrain memory evidence.
 
 ## Responsibility Boundary
 
@@ -23,7 +24,7 @@ This component is responsible for:
   source fields
 - normalizing source ledger entries into `MemoryEvent.content.contentKind`
   values such as `browser-page`, `file-activity`, `screenshot`,
-  `shell-command`, and `agent-transcript`
+  `audio-recording`, `shell-command`, and `agent-transcript`
 - emitting `SourceAuditEvent` records for imported entries and skipped bad
   lines
 - advancing a line-number checkpoint so manual re-import can process only new
@@ -87,6 +88,8 @@ Other supported payloads map into the same V2 content shape:
   `contentKind = "file-activity"`
 - screenshot: app entity, optional retained-image `bodyRef`, and
   `contentKind = "screenshot"`
+- audio recording: app entity, optional retained-audio `bodyRef`, and
+  `contentKind = "audio-recording"`
 - shell: command/cwd entities and `contentKind = "shell-command"`
 - agent transcript: agent entity, transcript `bodyRef`, and
   `contentKind = "agent-transcript"`
@@ -110,6 +113,8 @@ belong in later workflow or integration layers.
   ledger instead of skipping the whole file.
 - Unsupported future source kinds are treated as schema failures until their
   built-in normalizers are implemented.
+- Audio-recording support only imports existing authorized audio ledgers. It
+  does not perform microphone capture or transcribe recordings.
 - Checkpoints are line-number based for the current text importer. A later file
   scanner may add file size, mtime, or byte-offset checks without changing this
   module's memory-event boundary.

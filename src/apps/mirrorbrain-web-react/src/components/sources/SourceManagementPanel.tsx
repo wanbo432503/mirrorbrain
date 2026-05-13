@@ -26,11 +26,76 @@ const ALL_MAIN_SOURCES_KEY = 'all-main-sources'
 const DETAIL_TABS: SourceDetailTab[] = ['Sources', 'Settings']
 const SOURCE_HISTORY_PAGE_SIZE = 10
 
+const SOURCE_DISPLAY_BY_KEY: Record<string, { name: string; description: string }> = {
+  'agent-transcript:openclaw-main': {
+    name: 'OpenClaw',
+    description: 'agent transcript',
+  },
+  'browser:chrome-main': {
+    name: 'Chrome',
+    description: 'browser',
+  },
+  'file-activity:filesystem-main': {
+    name: 'Files',
+    description: 'file activity',
+  },
+  'screenshot:desktop-main': {
+    name: 'Screenshot',
+    description: 'screen capture',
+  },
+  'audio-recording:recording-main': {
+    name: 'Recording',
+    description: 'audio recording',
+  },
+  'shell:shell-main': {
+    name: 'Shell',
+    description: 'terminal',
+  },
+}
+
 function getSourceKey(source: {
   sourceKind: SourceLedgerKind
   sourceInstanceId: string
 }): string {
   return `${source.sourceKind}:${source.sourceInstanceId}`
+}
+
+function formatSourceKindLabel(sourceKind: SourceLedgerKind): string {
+  switch (sourceKind) {
+    case 'browser':
+      return 'browser'
+    case 'file-activity':
+      return 'file activity'
+    case 'screenshot':
+      return 'screen capture'
+    case 'audio-recording':
+      return 'audio recording'
+    case 'shell':
+      return 'terminal'
+    case 'agent-transcript':
+      return 'agent transcript'
+  }
+}
+
+function formatFallbackSourceName(sourceInstanceId: string): string {
+  return sourceInstanceId
+    .replace(/-main$/u, '')
+    .split(/[-_]/u)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
+
+function getSourceDisplay(source: {
+  sourceKind: SourceLedgerKind
+  sourceInstanceId: string
+}): { name: string; description: string } {
+  return (
+    SOURCE_DISPLAY_BY_KEY[getSourceKey(source)] ?? {
+      name: formatFallbackSourceName(source.sourceInstanceId),
+      description: formatSourceKindLabel(source.sourceKind),
+    }
+  )
 }
 
 export default function SourceManagementPanel({
@@ -190,18 +255,19 @@ export default function SourceManagementPanel({
               setSourceHistoryPage(1)
             }}
           >
-            <span className="block font-semibold">All-Main Sources</span>
+            <span className="block font-semibold">All Sources</span>
             <span className="block text-xs text-inkMuted-80">memory events</span>
           </button>
           {sources.map((source) => {
             const sourceKey = getSourceKey(source)
             const isSelected = sourceKey === selectedSourceKey
+            const sourceDisplay = getSourceDisplay(source)
 
             return (
               <button
                 key={sourceKey}
                 type="button"
-                aria-label={`${source.sourceInstanceId} ${source.sourceKind}`}
+                aria-label={`${sourceDisplay.name} ${sourceDisplay.description}`}
                 className={`rounded-sm border px-3 py-2 text-left text-sm ${
                   isSelected
                     ? 'border-primary bg-canvas-parchment text-primary'
@@ -213,8 +279,10 @@ export default function SourceManagementPanel({
                   setSourceHistoryPage(1)
                 }}
               >
-                <span className="block font-semibold">{source.sourceInstanceId}</span>
-                <span className="block text-xs text-inkMuted-80">{source.sourceKind}</span>
+                <span className="block font-semibold">{sourceDisplay.name}</span>
+                <span className="block text-xs text-inkMuted-80">
+                  {sourceDisplay.description}
+                </span>
               </button>
             )
           })}
@@ -260,9 +328,11 @@ export default function SourceManagementPanel({
             >
               <div>
                 <h3 className="font-heading text-lg font-semibold">
-                  {selectedSource.sourceInstanceId}
+                  {getSourceDisplay(selectedSource).name}
                 </h3>
-                <p className="text-sm text-inkMuted-80">{selectedSource.sourceKind}</p>
+                <p className="text-sm text-inkMuted-80">
+                  {getSourceDisplay(selectedSource).description}
+                </p>
               </div>
               <span className="rounded-sm border border-hairline px-2 py-1 text-xs uppercase">
                 {selectedSource.lifecycleStatus}

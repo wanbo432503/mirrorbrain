@@ -709,7 +709,7 @@ Responsibilities:
 - Deduplicate browser URL events for display while preserving access times.
 - Store last sync summaries and event evaluation statistics.
 - Return paginated cache slices, including Phase 4 source-filtered slices for
-  Source Management Recent Memory views.
+  Source Management `Sources` subtab history views.
 
 Inputs:
 

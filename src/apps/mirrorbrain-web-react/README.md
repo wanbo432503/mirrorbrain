@@ -132,16 +132,15 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and an
 
 ### Current Phase 4: Source Management Surface
 - **Source Components:**
-  - `SourceManagementPanel.tsx` - Source status, audit, recent memory placeholder, and settings surface for Phase 4 ledger imports
+  - `SourceManagementPanel.tsx` - Source status, source-history, and settings surface for Phase 4 ledger imports
 
 - **Features:**
   - Top-level Memory Sources tab that combines global memory events and source inspection
-  - `All-Main Sources` view that preserves the original Memory tab list and pagination layout with only `Import Sources` visible
+  - `All Sources` view that preserves the original Memory tab list and pagination layout with only `Import Sources` visible
+  - User-facing source labels for OpenClaw, Chrome, Files, Screenshot, Recording, and Shell while keeping internal source ids for API filters
   - Source instance list backed by `/sources/status`
-  - Recent memory records backed by `/memory` source filters
-  - Source-specific audit events backed by `/sources/audit`
+  - Source-history records backed by `/memory` source filters
   - Enable / disable source action backed by `/sources/config`
-  - Manual `Import Now` action backed by `/sources/import`
   - Operational source UI remains separate from memory, knowledge, and skill outputs
 
 ## Design System

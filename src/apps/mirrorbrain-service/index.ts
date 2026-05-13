@@ -191,6 +191,11 @@ const DEFAULT_SUPERVISED_SOURCE_INSTANCES: SupervisedSourceInstance[] = [
     enabled: true,
   },
   { sourceKind: 'screenshot', sourceInstanceId: 'desktop-main', enabled: true },
+  {
+    sourceKind: 'audio-recording',
+    sourceInstanceId: 'recording-main',
+    enabled: true,
+  },
   { sourceKind: 'shell', sourceInstanceId: 'shell-main', enabled: true },
   {
     sourceKind: 'agent-transcript',

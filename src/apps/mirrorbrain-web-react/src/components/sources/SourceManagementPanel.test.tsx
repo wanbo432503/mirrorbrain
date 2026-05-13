@@ -20,7 +20,7 @@ describe('SourceManagementPanel', () => {
     )
   }
 
-  it('shows the all-main sources memory layout with import-only actions', async () => {
+  it('shows the all sources memory layout with import-only actions', async () => {
     const api = {
       listSourceStatuses: vi.fn(async () => [
         {
@@ -71,7 +71,7 @@ describe('SourceManagementPanel', () => {
 
     renderSourceManagementPanel(api)
 
-    expect(await screen.findByRole('button', { name: /all-main sources/i })).not.toBeNull()
+    expect(await screen.findByRole('button', { name: /all sources/i })).not.toBeNull()
     expect(screen.queryByRole('tab', { name: 'Memory Events' })).toBeNull()
     expect(await screen.findByRole('button', { name: 'Import Sources' })).not.toBeNull()
     expect(screen.queryByRole('button', { name: 'Sync Shell' })).toBeNull()
@@ -96,7 +96,7 @@ describe('SourceManagementPanel', () => {
     expect(api.listMemory).toHaveBeenCalledWith(1, 10)
   })
 
-  it('keeps all-main memory events in a flex right panel with scrollable list and reachable pagination', async () => {
+  it('keeps all sources memory events in a flex right panel with scrollable list and reachable pagination', async () => {
     const memoryItems = Array.from({ length: 10 }, (_, index) => ({
       id: `ledger:browser:global-${index + 1}`,
       sourceType: 'browser' as const,
@@ -160,22 +160,38 @@ describe('SourceManagementPanel', () => {
       {
         sourceKind: 'agent-transcript' as const,
         sourceInstanceId: 'openclaw-main',
+        displayName: 'OpenClaw',
+        displayDescription: 'agent transcript',
       },
       {
         sourceKind: 'browser' as const,
         sourceInstanceId: 'chrome-main',
+        displayName: 'Chrome',
+        displayDescription: 'browser',
       },
       {
         sourceKind: 'file-activity' as const,
         sourceInstanceId: 'filesystem-main',
+        displayName: 'Files',
+        displayDescription: 'file activity',
       },
       {
         sourceKind: 'screenshot' as const,
         sourceInstanceId: 'desktop-main',
+        displayName: 'Screenshot',
+        displayDescription: 'screen capture',
       },
       {
         sourceKind: 'shell' as const,
         sourceInstanceId: 'shell-main',
+        displayName: 'Shell',
+        displayDescription: 'terminal',
+      },
+      {
+        sourceKind: 'audio-recording' as const,
+        sourceInstanceId: 'recording-main',
+        displayName: 'Recording',
+        displayDescription: 'audio recording',
       },
     ].map((source) => ({
       ...source,
@@ -191,12 +207,13 @@ describe('SourceManagementPanel', () => {
       importSourceLedgers: vi.fn(),
       updateSourceConfig: vi.fn(),
       listMemory: vi.fn(async (_page?: number, _pageSize?: number, filter?: {
+        sourceKind?: string
         sourceInstanceId?: string
       }) => ({
         items: Array.from({ length: 10 }, (_, index) => ({
           id: `ledger:${filter?.sourceInstanceId ?? 'unknown'}:${index + 1}`,
-          sourceType: 'browser',
-          sourceRef: `${filter?.sourceInstanceId ?? 'unknown'}:record-${index + 1}`,
+          sourceType: filter?.sourceKind ?? 'browser',
+          sourceRef: `${filter?.sourceKind ?? 'unknown'}:${filter?.sourceInstanceId ?? 'unknown'}:record-${index + 1}`,
           timestamp: `2026-05-12T10:${String(index).padStart(2, '0')}:00.000Z`,
           authorizationScopeId: 'scope-source-ledger',
           content: {
@@ -223,7 +240,7 @@ describe('SourceManagementPanel', () => {
     for (const source of sourceSummaries) {
       await userEvent.click(
         await screen.findByRole('button', {
-          name: new RegExp(`${source.sourceInstanceId} ${source.sourceKind}`, 'i'),
+          name: new RegExp(`${source.displayName} ${source.displayDescription}`, 'i'),
         }),
       )
 
@@ -245,6 +262,7 @@ describe('SourceManagementPanel', () => {
         'true',
       )
       expect(screen.getByRole('tab', { name: 'Settings' })).not.toBeNull()
+      expect(screen.getByRole('heading', { name: source.displayName })).not.toBeNull()
 
       expect(await screen.findByText(`History for ${source.sourceInstanceId} 1`)).not.toBeNull()
 
@@ -367,9 +385,9 @@ describe('SourceManagementPanel', () => {
 
     renderSourceManagementPanel(api)
 
-    await userEvent.click(await screen.findByRole('button', { name: /chrome-main browser/i }))
+    await userEvent.click(await screen.findByRole('button', { name: /chrome browser/i }))
 
-    expect(screen.getAllByText('chrome-main')).toHaveLength(2)
+    expect(screen.getAllByText('Chrome')).toHaveLength(2)
     expect(screen.getByText('degraded')).not.toBeNull()
 
     expect(screen.queryByRole('tab', { name: 'Overview' })).toBeNull()

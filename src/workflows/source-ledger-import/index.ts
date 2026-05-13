@@ -120,6 +120,7 @@ function getEventSource(input: MemoryEvent): {
       sourceKind === 'browser' ||
       sourceKind === 'file-activity' ||
       sourceKind === 'screenshot' ||
+      sourceKind === 'audio-recording' ||
       sourceKind === 'shell' ||
       sourceKind === 'agent-transcript'
     )

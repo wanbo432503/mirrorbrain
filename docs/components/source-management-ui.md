@@ -18,8 +18,8 @@ This component is responsible for:
 
 - exposing source status summaries from `GET /sources/status`
 - embedding the original memory-tab list and pagination layout under
-  `All-Main Sources`, with only the `Import Sources` action visible
-- preserving a flex-based right panel layout for `All-Main Sources`, where the
+  `All Sources`, with only the `Import Sources` action visible
+- preserving a flex-based right panel layout for `All Sources`, where the
   memory list owns the vertical scrollbar and pagination remains reachable at
   the bottom of the panel
 - preserving the same flex-based containment for individual source detail
@@ -30,6 +30,9 @@ This component is responsible for:
   list
 - showing source-specific imported memory records from `GET /memory` with
   source filters and pagination
+- presenting user-facing source labels such as `OpenClaw`, `Chrome`, `Files`,
+  `Screenshot`, `Shell`, and `Recording` instead of exposing internal
+  `*-main` source instance ids as navigation names
 - enabling or disabling source instances through `PATCH /sources/config`
 - keeping memory source management separate from memory review, knowledge
   review, and skill execution tabs
@@ -65,7 +68,7 @@ The API responses use `SourceLedgerImportResult`, `SourceInstanceSummary`, and
 ## Data Flow
 
 1. The user opens the top-level `memory sources` tab.
-2. The app calls `GET /sources/status` and selects `All-Main Sources`.
+2. The app calls `GET /sources/status` and selects `All Sources`.
 3. The right panel mounts the memory list and pagination layout directly,
    without an extra subtab.
 4. The memory panel calls `GET /memory` without source filters to populate the
@@ -91,18 +94,21 @@ The API responses use `SourceLedgerImportResult`, `SourceInstanceSummary`, and
   source records.
 - Source enablement is persisted and audited. Recorder status remains read-only
   until recorder supervision reports real runtime state.
+- The `Recording` source represents authorized audio-recording ledger imports.
+  This UI only displays, imports, and configures the source; it does not start
+  microphone capture.
 - Source history shows imported `MemoryEvent` records for the selected source.
   It remains read-only; review and knowledge synthesis still happen through
   their explicit workflows.
-- The `All-Main Sources` right panel must remain a `min-height: 0` flex column.
+- The `All Sources` right panel must remain a `min-height: 0` flex column.
   The memory event list is the only vertically scrolling region; the import
   action row and pagination footer stay outside that scroll area so resizing
   the app does not hide pagination controls below the panel boundary.
 - Individual source detail panels must also remain `min-height: 0` flex
   columns. The selected source header, tab row, active tab body, source-history
   summary, source-history list, and pagination footer are separate flex regions
-  so records for `openclaw-main`, `chrome-main`, `filesystem-main`,
-  `desktop-main`, and `shell-main` stay inside the application viewport.
+  so records for OpenClaw, Chrome, Files, Screenshot, Recording, and Shell stay
+  inside the application viewport.
 
 ## Test Strategy
 
@@ -118,7 +124,7 @@ corepack pnpm vitest run \
 
 The tests cover source API client calls, source status rendering inside the
 `Sources` subtab, source history pagination, removal of the single-source
-overview/audit/import controls, manual global import feedback, the `All-Main
-Sources` global memory view, flex right-panel scroll boundaries for both global
-and individual source detail views, and the top-level `memory sources` tab
-integration.
+overview/audit/import controls, manual global import feedback, the `All
+Sources` global memory view, user-facing source labels including Screenshot and
+Recording, flex right-panel scroll boundaries for both global and individual
+source detail views, and the top-level `memory sources` tab integration.

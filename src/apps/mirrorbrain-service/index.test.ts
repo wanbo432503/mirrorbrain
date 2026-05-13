@@ -385,6 +385,11 @@ describe('mirrorbrain service', () => {
             enabled: true,
           },
           { sourceKind: 'screenshot', sourceInstanceId: 'desktop-main', enabled: true },
+          {
+            sourceKind: 'audio-recording',
+            sourceInstanceId: 'recording-main',
+            enabled: true,
+          },
           { sourceKind: 'shell', sourceInstanceId: 'shell-main', enabled: false },
           {
             sourceKind: 'agent-transcript',

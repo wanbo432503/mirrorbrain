@@ -283,7 +283,7 @@ Notes:
 
 - This endpoint uses the memory event cache when available.
 - Source filters are applied before pagination. They are intended for Source
-  Management Recent Memory views and match Phase 4 ledger-imported
+  Management `Sources` subtab history views and match Phase 4 ledger-imported
   `MemoryEvent.sourceType` plus the source instance encoded in `sourceRef`.
 - The cache is display-oriented; durable records remain in QMD workspace
   storage.
@@ -386,7 +386,7 @@ Failure mode:
 
 ### `POST /sources/import`
 
-Triggers explicit Phase 4 source-ledger import. This is the manual Import Now
+Triggers explicit Phase 4 source-ledger import. This is the `Import Sources`
 operation for changed daily JSONL ledgers under the MirrorBrain workspace. The
 service immediately runs one ledger scan/import for this request. Browser
 ActivityWatch refresh is best-effort before the scan; existing ledger files are
