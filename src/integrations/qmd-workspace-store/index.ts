@@ -9,13 +9,6 @@ import type {
   ReviewedMemory,
   SkillArtifact,
 } from '../../shared/types/index.js';
-import {
-  listMirrorBrainCandidateMemoriesFromWorkspace,
-  listMirrorBrainKnowledgeArtifactsFromWorkspace,
-  listMirrorBrainMemoryEventsFromWorkspace,
-  listMirrorBrainSkillArtifactsFromWorkspace,
-  listRawMirrorBrainMemoryEventsFromWorkspace,
-} from '../openviking-store/index.js';
 
 export interface QmdWorkspaceMemoryEventRecord {
   recordType: 'memory-event';
@@ -86,7 +79,10 @@ export interface QmdWorkspacePaths {
   qmdDir: string;
   dbPath: string;
   memoryEventsDir: string;
+  browserPageContentDir: string;
   memoryNarrativesDir: string;
+  candidateMemoriesDir: string;
+  reviewedMemoriesDir: string;
   knowledgeDir: string;
   skillDraftsDir: string;
 }
@@ -128,7 +124,10 @@ export function getQmdWorkspacePaths(workspaceDir: string): QmdWorkspacePaths {
     qmdDir: join(rootDir, 'qmd'),
     dbPath: join(rootDir, 'qmd', 'index.sqlite'),
     memoryEventsDir: join(rootDir, 'memory-events'),
+    browserPageContentDir: join(rootDir, 'browser-page-content'),
     memoryNarrativesDir: join(rootDir, 'memory-narratives'),
+    candidateMemoriesDir: join(rootDir, 'candidate-memories'),
+    reviewedMemoriesDir: join(rootDir, 'reviewed-memories'),
     knowledgeDir: join(rootDir, 'knowledge'),
     skillDraftsDir: join(rootDir, 'skill-drafts'),
   };
@@ -235,6 +234,29 @@ function toMemoryNarrativeMarkdown(artifact: MemoryNarrative): string {
   ].join('\n');
 }
 
+function toBrowserPageContentMarkdown(artifact: {
+  id: string;
+  url: string;
+  title: string;
+  text: string;
+  accessTimes: string[];
+  latestAccessedAt: string;
+}): string {
+  return [
+    `# ${artifact.title}`,
+    '',
+    `- id: ${artifact.id}`,
+    `- url: ${artifact.url}`,
+    `- latestAccessedAt: ${artifact.latestAccessedAt}`,
+    '',
+    '## Access Times',
+    ...artifact.accessTimes.map((accessedAt) => `- ${accessedAt}`),
+    '',
+    '## Text',
+    artifact.text,
+  ].join('\n');
+}
+
 function toKnowledgeMarkdown(artifact: KnowledgeArtifact): string {
   return [
     `# ${artifact.id}`,
@@ -280,6 +302,7 @@ function toSkillMarkdown(artifact: SkillArtifact): string {
 }
 
 async function writeJsonAndMarkdown(input: {
+  workspaceDir: string;
   directory: string;
   id: string;
   payload: unknown;
@@ -295,11 +318,14 @@ async function writeJsonAndMarkdown(input: {
 
   return {
     sourcePath: markdownPath,
-    rootUri: qmdWorkspaceUri(`${input.directory.split('/mirrorbrain/').at(-1) ?? ''}/${safeId}.md`),
+    rootUri: qmdWorkspaceUri(
+      `${resolve(input.directory).slice(resolve(getQmdWorkspacePaths(input.workspaceDir).rootDir).length + 1)}/${safeId}.md`,
+    ),
   };
 }
 
 async function writeMarkdown(input: {
+  workspaceDir: string;
   directory: string;
   id: string;
   markdown: string;
@@ -312,7 +338,9 @@ async function writeMarkdown(input: {
 
   return {
     sourcePath: markdownPath,
-    rootUri: qmdWorkspaceUri(`${input.directory.split('/mirrorbrain/').at(-1) ?? ''}/${safeId}.md`),
+    rootUri: qmdWorkspaceUri(
+      `${resolve(input.directory).slice(resolve(getQmdWorkspacePaths(input.workspaceDir).rootDir).length + 1)}/${safeId}.md`,
+    ),
   };
 }
 
@@ -343,6 +371,7 @@ export function ingestMemoryEventToQmdWorkspace(
   input: QmdWorkspaceStoreInput & { event: MemoryEvent },
 ): Promise<QmdWorkspaceResourceWriteResult> {
   return writeJsonAndMarkdown({
+    workspaceDir: input.workspaceDir,
     directory: getQmdWorkspacePaths(input.workspaceDir).memoryEventsDir,
     id: input.event.id,
     payload: input.event,
@@ -354,7 +383,8 @@ export function ingestCandidateMemoryToQmdWorkspace(
   input: QmdWorkspaceStoreInput & { artifact: CandidateMemory },
 ): Promise<QmdWorkspaceResourceWriteResult> {
   return writeJsonAndMarkdown({
-    directory: join(input.workspaceDir, 'mirrorbrain', 'candidate-memories'),
+    workspaceDir: input.workspaceDir,
+    directory: getQmdWorkspacePaths(input.workspaceDir).candidateMemoriesDir,
     id: input.artifact.id,
     payload: input.artifact,
     markdown: [
@@ -373,7 +403,8 @@ export function ingestReviewedMemoryToQmdWorkspace(
   input: QmdWorkspaceStoreInput & { artifact: ReviewedMemory },
 ): Promise<QmdWorkspaceResourceWriteResult> {
   return writeJsonAndMarkdown({
-    directory: join(input.workspaceDir, 'mirrorbrain', 'reviewed-memories'),
+    workspaceDir: input.workspaceDir,
+    directory: getQmdWorkspacePaths(input.workspaceDir).reviewedMemoriesDir,
     id: input.artifact.id,
     payload: input.artifact,
     markdown: [
@@ -392,6 +423,7 @@ export function ingestMemoryNarrativeToQmdWorkspace(
   input: QmdWorkspaceStoreInput & { artifact: MemoryNarrative },
 ): Promise<QmdWorkspaceResourceWriteResult> {
   return writeJsonAndMarkdown({
+    workspaceDir: input.workspaceDir,
     directory: getQmdWorkspacePaths(input.workspaceDir).memoryNarrativesDir,
     id: input.artifact.id,
     payload: input.artifact,
@@ -399,10 +431,31 @@ export function ingestMemoryNarrativeToQmdWorkspace(
   });
 }
 
+export function ingestBrowserPageContentToQmdWorkspace(
+  input: QmdWorkspaceStoreInput & {
+    artifact: {
+      id: string;
+      url: string;
+      title: string;
+      text: string;
+      accessTimes: string[];
+      latestAccessedAt: string;
+    };
+  },
+): Promise<QmdWorkspaceResourceWriteResult> {
+  return writeMarkdown({
+    workspaceDir: input.workspaceDir,
+    directory: getQmdWorkspacePaths(input.workspaceDir).browserPageContentDir,
+    id: input.artifact.id,
+    markdown: toBrowserPageContentMarkdown(input.artifact),
+  });
+}
+
 export function ingestKnowledgeArtifactToQmdWorkspace(
   input: QmdWorkspaceStoreInput & { artifact: KnowledgeArtifact },
 ): Promise<QmdWorkspaceResourceWriteResult> {
   return writeMarkdown({
+    workspaceDir: input.workspaceDir,
     directory: getQmdWorkspacePaths(input.workspaceDir).knowledgeDir,
     id: input.artifact.id,
     markdown: toKnowledgeMarkdown(input.artifact),
@@ -413,6 +466,7 @@ export function ingestSkillArtifactToQmdWorkspace(
   input: QmdWorkspaceStoreInput & { artifact: SkillArtifact },
 ): Promise<{ sourcePath: string; uri: string }> {
   return writeMarkdown({
+    workspaceDir: input.workspaceDir,
     directory: getQmdWorkspacePaths(input.workspaceDir).skillDraftsDir,
     id: input.artifact.id,
     markdown: toSkillMarkdown(input.artifact),
@@ -477,14 +531,130 @@ function isMemoryEvent(value: unknown): value is MemoryEvent {
   );
 }
 
+function deduplicateById<T extends { id: string }>(items: T[]): T[] {
+  return Array.from(new Map(items.map((item) => [item.id, item])).values());
+}
+
+function isBrowserUrlMemoryEvent(event: MemoryEvent): boolean {
+  return (
+    event.sourceType === 'activitywatch-browser' &&
+    typeof event.content.url === 'string' &&
+    event.content.url.length > 0
+  );
+}
+
+function createMemoryEventDisplaySignature(event: MemoryEvent): string {
+  if (isBrowserUrlMemoryEvent(event)) {
+    return [
+      event.sourceType,
+      event.authorizationScopeId,
+      String(event.content.url),
+    ].join('|');
+  }
+
+  return event.id;
+}
+
+function getMemoryEventAccessTimes(event: MemoryEvent): string[] {
+  const contentAccessTimes = Array.isArray(event.content.accessTimes)
+    ? event.content.accessTimes.filter(
+        (value): value is string => typeof value === 'string' && value.length > 0,
+      )
+    : [];
+
+  return Array.from(new Set([event.timestamp, ...contentAccessTimes])).sort(
+    (left, right) => right.localeCompare(left),
+  );
+}
+
+function mergeMemoryEventsForDisplay(
+  previousEvent: MemoryEvent,
+  nextEvent: MemoryEvent,
+): MemoryEvent {
+  const latestEvent =
+    nextEvent.timestamp.localeCompare(previousEvent.timestamp) >= 0
+      ? nextEvent
+      : previousEvent;
+  const mergedAccessTimes = Array.from(
+    new Set([
+      ...getMemoryEventAccessTimes(previousEvent),
+      ...getMemoryEventAccessTimes(nextEvent),
+    ]),
+  ).sort((left, right) => right.localeCompare(left));
+
+  if (!isBrowserUrlMemoryEvent(latestEvent)) {
+    return latestEvent;
+  }
+
+  return {
+    ...latestEvent,
+    content: {
+      ...latestEvent.content,
+      accessTimes: mergedAccessTimes,
+      latestAccessedAt: mergedAccessTimes[0] ?? latestEvent.timestamp,
+    },
+  };
+}
+
+function deduplicateMemoryEventsForDisplay(events: MemoryEvent[]): MemoryEvent[] {
+  const deduplicatedById = deduplicateById(events);
+  const latestBySignature = new Map<string, MemoryEvent>();
+
+  for (const event of deduplicatedById) {
+    const signature = createMemoryEventDisplaySignature(event);
+    const previousEvent = latestBySignature.get(signature);
+
+    if (previousEvent === undefined) {
+      latestBySignature.set(signature, mergeMemoryEventsForDisplay(event, event));
+      continue;
+    }
+
+    latestBySignature.set(
+      signature,
+      mergeMemoryEventsForDisplay(previousEvent, event),
+    );
+  }
+
+  return [...latestBySignature.values()].sort((left, right) =>
+    left.timestamp.localeCompare(right.timestamp),
+  );
+}
+
+async function readJsonArtifacts<T>(
+  directory: string,
+  predicate: (value: unknown) => value is T,
+): Promise<T[]> {
+  let files: string[];
+
+  try {
+    files = await readdir(directory);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return [];
+    }
+
+    throw error;
+  }
+
+  const items: Array<T | null> = await Promise.all(
+    files
+      .filter((file) => file.endsWith('.json'))
+      .map(async (file) => {
+        const parsed = JSON.parse(await readFile(join(directory, file), 'utf8')) as unknown;
+
+        return predicate(parsed) ? parsed : null;
+      }),
+  );
+
+  return items.filter((item): item is T => item !== null);
+}
+
 export async function listMirrorBrainMemoryEventsFromQmdWorkspace(
   input: QmdWorkspaceMemoryQueryInput,
   dependencies: QmdWorkspaceStoreDependencies = {},
 ): Promise<MemoryEvent[]> {
   if (input.query === undefined || input.query.trim().length === 0) {
-    return listMirrorBrainMemoryEventsFromWorkspace({
-      workspaceDir: input.workspaceDir,
-    });
+    return listMirrorBrainMemoryEventsFromQmdFiles(input);
   }
 
   const store = await openQmdWorkspaceStore(input, dependencies);
@@ -553,7 +723,29 @@ export async function listMirrorBrainMemoryEventsFromQmdWorkspace(
 export function listRawMirrorBrainMemoryEventsFromQmdWorkspace(
   input: QmdWorkspaceStoreInput,
 ): Promise<MemoryEvent[]> {
-  return listRawMirrorBrainMemoryEventsFromWorkspace(input);
+  return listRawMirrorBrainMemoryEventsFromQmdFiles(input);
+}
+
+export async function listMirrorBrainMemoryEventsFromQmdFiles(
+  input: QmdWorkspaceStoreInput,
+): Promise<MemoryEvent[]> {
+  const items = await readJsonArtifacts(
+    getQmdWorkspacePaths(input.workspaceDir).memoryEventsDir,
+    isMemoryEvent,
+  );
+
+  return deduplicateMemoryEventsForDisplay(items);
+}
+
+export async function listRawMirrorBrainMemoryEventsFromQmdFiles(
+  input: QmdWorkspaceStoreInput,
+): Promise<MemoryEvent[]> {
+  const items = await readJsonArtifacts(
+    getQmdWorkspacePaths(input.workspaceDir).memoryEventsDir,
+    isMemoryEvent,
+  );
+
+  return items.sort((left, right) => left.timestamp.localeCompare(right.timestamp));
 }
 
 export async function listMirrorBrainMemoryNarrativesFromQmdWorkspace(
@@ -599,36 +791,19 @@ function isMemoryNarrative(value: unknown): value is MemoryNarrative {
 export function listMirrorBrainCandidateMemoriesFromQmdWorkspace(
   input: QmdWorkspaceStoreInput,
 ): Promise<CandidateMemory[]> {
-  return listMirrorBrainCandidateMemoriesFromWorkspace(input);
+  return readJsonArtifacts(
+    getQmdWorkspacePaths(input.workspaceDir).candidateMemoriesDir,
+    isCandidateMemory,
+  ).then(deduplicateById);
 }
 
 export async function listMirrorBrainReviewedMemoriesFromQmdWorkspace(
   input: QmdWorkspaceStoreInput,
 ): Promise<ReviewedMemory[]> {
-  const reviewedDir = join(input.workspaceDir, 'mirrorbrain', 'reviewed-memories');
-  let files: string[];
-
-  try {
-    files = await readdir(reviewedDir);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return [];
-    }
-
-    throw error;
-  }
-
-  const items = await Promise.all(
-    files
-      .filter((file) => file.endsWith('.json'))
-      .map(async (file) => {
-        const parsed = JSON.parse(await readFile(join(reviewedDir, file), 'utf8')) as unknown;
-
-        return isReviewedMemory(parsed) ? parsed : null;
-      }),
-  );
-
-  return items.filter((item): item is ReviewedMemory => item !== null);
+  return readJsonArtifacts(
+    getQmdWorkspacePaths(input.workspaceDir).reviewedMemoriesDir,
+    isReviewedMemory,
+  ).then(deduplicateById);
 }
 
 function isReviewedMemory(value: unknown): value is ReviewedMemory {
@@ -641,14 +816,224 @@ function isReviewedMemory(value: unknown): value is ReviewedMemory {
   );
 }
 
-export function listMirrorBrainKnowledgeArtifactsFromQmdWorkspace(
-  input: QmdWorkspaceStoreInput,
-): Promise<KnowledgeArtifact[]> {
-  return listMirrorBrainKnowledgeArtifactsFromWorkspace(input);
+function isCandidateMemory(value: unknown): value is CandidateMemory {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'id' in value &&
+    'memoryEventIds' in value &&
+    'reviewState' in value
+  );
 }
 
-export function listMirrorBrainSkillArtifactsFromQmdWorkspace(
+function parseKnowledgeArtifact(markdown: string): KnowledgeArtifact {
+  const lines = markdown.split('\n');
+  const getSectionLines = (
+    sectionTitle: string,
+    endMarkers: string[] = [],
+  ): string[] => {
+    const sectionIndex = lines.findIndex((line) => line.trim() === sectionTitle);
+
+    if (sectionIndex === -1) {
+      return [];
+    }
+
+    const nextSectionIndex =
+      endMarkers.length > 0
+        ? lines.findIndex(
+            (line, index) => index > sectionIndex && endMarkers.includes(line.trim()),
+          )
+        : lines.findIndex((line, index) => index > sectionIndex && line.startsWith('## '));
+
+    return lines.slice(
+      sectionIndex + 1,
+      nextSectionIndex === -1 ? undefined : nextSectionIndex,
+    );
+  };
+  const id = lines[0]?.replace(/^#\s+/, '').trim() ?? '';
+  const artifactType = (lines
+    .find((line) => line.startsWith('- artifactType: '))
+    ?.replace('- artifactType: ', '')
+    .trim() ?? 'daily-review-draft') as KnowledgeArtifact['artifactType'];
+  const draftState = (lines
+    .find((line) => line.startsWith('- draftState: '))
+    ?.replace('- draftState: ', '')
+    .trim() ?? 'draft') as KnowledgeArtifact['draftState'];
+  const topicKey =
+    lines
+      .find((line) => line.startsWith('- topicKey: '))
+      ?.replace('- topicKey: ', '')
+      .trim() ?? '';
+  const title =
+    lines
+      .find((line) => line.startsWith('- title: '))
+      ?.replace('- title: ', '')
+      .trim() ?? id;
+  const summary =
+    lines
+      .find((line) => line.startsWith('- summary: '))
+      ?.replace('- summary: ', '')
+      .trim() ?? '';
+  const version = Number(
+    lines
+      .find((line) => line.startsWith('- version: '))
+      ?.replace('- version: ', '')
+      .trim() ?? '1',
+  );
+  const isCurrentBest =
+    (lines
+      .find((line) => line.startsWith('- isCurrentBest: '))
+      ?.replace('- isCurrentBest: ', '')
+      .trim() ?? 'false') === 'true';
+  const supersedesKnowledgeId =
+    lines
+      .find((line) => line.startsWith('- supersedesKnowledgeId: '))
+      ?.replace('- supersedesKnowledgeId: ', '')
+      .trim() ?? '';
+  const updatedAt =
+    lines
+      .find((line) => line.startsWith('- updatedAt: '))
+      ?.replace('- updatedAt: ', '')
+      .trim() ?? '';
+  const reviewedAt =
+    lines
+      .find((line) => line.startsWith('- reviewedAt: '))
+      ?.replace('- reviewedAt: ', '')
+      .trim() ?? '';
+  const recencyLabel =
+    lines
+      .find((line) => line.startsWith('- recencyLabel: '))
+      ?.replace('- recencyLabel: ', '')
+      .trim() ?? '';
+  const sourceReviewedMemoryIds = getSectionLines('## Source Reviewed Memories')
+    .filter((line) => line.startsWith('- '))
+    .map((line) => line.replace(/^- /, '').trim());
+  const derivedFromKnowledgeIds = getSectionLines('## Derived Knowledge Artifacts')
+    .filter((line) => line.startsWith('- '))
+    .map((line) => line.replace(/^- /, '').trim())
+    .filter((line) => line.length > 0);
+  const body = getSectionLines('## Body', [
+    '## Source Reviewed Memories',
+    '## Derived Knowledge Artifacts',
+    '## Provenance Refs',
+  ]).join('\n').trim();
+  const provenanceRefs = getSectionLines('## Provenance Refs')
+    .filter((line) => line.startsWith('- '))
+    .map((line) => line.replace(/^- /, '').trim())
+    .filter((line) => line.length > 0)
+    .map((line) => {
+      const [kind, ...idParts] = line.split(':');
+
+      return {
+        kind: (kind?.trim() ?? 'reviewed-memory') as 'reviewed-memory' | 'knowledge-artifact',
+        id: idParts.join(':').trim(),
+      };
+    });
+
+  return {
+    artifactType,
+    id,
+    draftState,
+    topicKey: topicKey.length > 0 ? topicKey : null,
+    title,
+    summary,
+    body,
+    sourceReviewedMemoryIds,
+    derivedFromKnowledgeIds,
+    version: Number.isFinite(version) ? version : 1,
+    isCurrentBest,
+    supersedesKnowledgeId:
+      supersedesKnowledgeId.length > 0 ? supersedesKnowledgeId : null,
+    updatedAt: updatedAt.length > 0 ? updatedAt : undefined,
+    reviewedAt: reviewedAt.length > 0 ? reviewedAt : null,
+    recencyLabel,
+    provenanceRefs,
+  };
+}
+
+function parseSkillArtifact(markdown: string): SkillArtifact {
+  const lines = markdown.split('\n');
+  const id = lines[0]?.replace(/^#\s+/, '').trim() ?? '';
+  const approvalState = (lines
+    .find((line) => line.startsWith('- approvalState: '))
+    ?.replace('- approvalState: ', '')
+    .trim() ?? 'draft') as SkillArtifact['approvalState'];
+  const requiresConfirmation =
+    (lines
+      .find((line) => line.startsWith('- requiresConfirmation: '))
+      ?.replace('- requiresConfirmation: ', '')
+      .trim() ?? 'true') === 'true';
+  const sectionIndex = lines.findIndex(
+    (line) => line.trim() === '## Workflow Evidence',
+  );
+  const workflowEvidenceRefs =
+    sectionIndex === -1
+      ? []
+      : lines
+          .slice(sectionIndex + 1)
+          .filter((line) => line.startsWith('- '))
+          .map((line) => line.replace(/^- /, '').trim());
+
+  return {
+    id,
+    approvalState,
+    workflowEvidenceRefs,
+    executionSafetyMetadata: {
+      requiresConfirmation,
+    },
+  };
+}
+
+export async function listMirrorBrainKnowledgeArtifactsFromQmdWorkspace(
+  input: QmdWorkspaceStoreInput,
+): Promise<KnowledgeArtifact[]> {
+  const directory = getQmdWorkspacePaths(input.workspaceDir).knowledgeDir;
+  let files: string[];
+
+  try {
+    files = await readdir(directory);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return [];
+    }
+
+    throw error;
+  }
+
+  const items = await Promise.all(
+    files
+      .filter((file) => file.endsWith('.md'))
+      .map(async (file) => parseKnowledgeArtifact(
+        await readFile(join(directory, file), 'utf8'),
+      )),
+  );
+
+  return deduplicateById(items);
+}
+
+export async function listMirrorBrainSkillArtifactsFromQmdWorkspace(
   input: QmdWorkspaceStoreInput,
 ): Promise<SkillArtifact[]> {
-  return listMirrorBrainSkillArtifactsFromWorkspace(input);
+  const directory = getQmdWorkspacePaths(input.workspaceDir).skillDraftsDir;
+  let files: string[];
+
+  try {
+    files = await readdir(directory);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return [];
+    }
+
+    throw error;
+  }
+
+  const items = await Promise.all(
+    files
+      .filter((file) => file.endsWith('.md'))
+      .map(async (file) => parseSkillArtifact(
+        await readFile(join(directory, file), 'utf8'),
+      )),
+  );
+
+  return deduplicateById(items);
 }

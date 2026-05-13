@@ -21,7 +21,7 @@ MirrorBrain preserves three product surfaces:
 | Layer | Path | Boundary |
 | --- | --- | --- |
 | Apps | `src/apps/` | Process entrypoints, service facade, HTTP transport, and UI surfaces. |
-| Integrations | `src/integrations/` | Adapters for ActivityWatch, shell history, OpenViking, browser content, checkpoints, and openclaw. |
+| Integrations | `src/integrations/` | Adapters for ActivityWatch, shell history, QMD storage, browser content, checkpoints, and openclaw. |
 | Modules | `src/modules/` | Domain rules, artifact construction, lifecycle policy, scoring, relation logic, and shared domain transformations. |
 | Workflows | `src/workflows/` | Multi-step orchestration that composes modules and integrations. |
 | Shared | `src/shared/` | Cross-cutting types, API contracts, config defaults, and low-level HTTP LLM helpers. |
@@ -36,13 +36,13 @@ HTTP server and tests.
 Responsibilities:
 
 - Start the runtime service with ActivityWatch browser polling, optional shell
-  sync, source-ledger import polling, checkpoint storage, and OpenViking
+  sync, source-ledger import polling, checkpoint storage, and QMD workspace
   writers.
 - Expose memory sync, paginated memory listing, memory query, candidate review,
   knowledge generation, knowledge approval, knowledge graph, and skill draft
   operations.
-- Keep OpenViking and workspace reads merged where useful, while respecting
-  deletion tombstones for knowledge and skill artifacts.
+- Keep QMD workspace reads consistent with deletion tombstones for knowledge
+  and skill artifacts.
 - Refresh browser and shell memory narratives after explicit sync.
 - Refresh knowledge relations and schedule linting after knowledge writes.
 - Run Phase 4 source-ledger imports once on startup and every minute in the
@@ -63,7 +63,7 @@ Outputs:
 
 Dependencies:
 
-- `openviking-store`, `openclaw-plugin-api`, `file-sync-checkpoint-store`,
+- `qmd-workspace-store`, `openclaw-plugin-api`, `file-sync-checkpoint-store`,
   `activitywatch-browser-source`, `browser-page-content`.
 - `memory-events-cache`, `memory-review`, `knowledge-generation-llm`,
   `knowledge-relation-network`, `knowledge-graph`.
@@ -77,8 +77,7 @@ Failure modes and constraints:
 - Source-ledger polling failures do not stop later import ticks.
 - Artifact deletion validates ids to prevent path traversal.
 - Knowledge approval fails when a draft id and draft snapshot do not match.
-- OpenViking read failures fall back to workspace reads for several local
-  surfaces.
+- QMD index failures can fall back to workspace files for local surfaces.
 
 Verification:
 
@@ -204,21 +203,6 @@ Verification:
 - Source management UI tests in
   `src/apps/mirrorbrain-web-react/src/components/sources/SourceManagementPanel.test.tsx`.
 
-### `src/apps/mirrorbrain-web`
-
-Purpose: legacy TypeScript web surface kept for compatibility and regression
-coverage.
-
-Responsibilities:
-
-- Exercise earlier standalone UI behavior and topic knowledge display tests.
-- Remain secondary to the React UI for current product development.
-
-Verification:
-
-- `src/apps/mirrorbrain-web/main.test.ts`
-- `src/apps/mirrorbrain-web/topic-knowledge.test.ts`
-
 ## Integrations
 
 ### `src/integrations/activitywatch-browser-source`
@@ -324,7 +308,7 @@ Outputs:
 
 Dependencies:
 
-- Node crypto/path/fs and OpenViking browser page content ingestion.
+- Node crypto/path/fs and QMD browser page content storage.
 
 Failure modes and constraints:
 
@@ -468,44 +452,6 @@ Verification:
 
 - `src/integrations/knowledge-article-store/index.test.ts`
 
-### `src/integrations/openviking-store`
-
-Purpose: bridge MirrorBrain artifacts to OpenViking resources and workspace
-fallback files.
-
-Responsibilities:
-
-- Build stable `viking://resources/mirrorbrain-*` targets.
-- Ingest memory events, page content, candidates, reviewed memories,
-  narratives, knowledge artifacts, and skill artifacts.
-- Delete candidate resources.
-- List artifacts from OpenViking and from local workspace files.
-- Preserve MirrorBrain-owned JSON/Markdown payloads for local inspection and
-  fallback reads.
-
-Inputs:
-
-- OpenViking base URL, workspace directory, and MirrorBrain artifact payloads.
-
-Outputs:
-
-- Resource ingestion metadata, artifact lists, and raw memory event records.
-
-Dependencies:
-
-- OpenViking HTTP filesystem/resource APIs and local filesystem reads.
-
-Failure modes and constraints:
-
-- OpenViking point-lock failures are retried.
-- Some service-level reads fall back to workspace files when OpenViking is
-  unavailable.
-- This module handles storage transport, not product lifecycle policy.
-
-Verification:
-
-- `src/integrations/openviking-store/*.test.ts`
-
 ### `src/integrations/openclaw-plugin-api`
 
 Purpose: expose MirrorBrain capability helpers shaped for openclaw plugin use.
@@ -523,8 +469,8 @@ Responsibilities:
 
 Inputs:
 
-- OpenViking base URL, natural-language query, optional time range, and optional
-  source type filters.
+- Workspace directory, natural-language query, optional time range, and
+  optional source type filters.
 
 Outputs:
 
@@ -532,7 +478,7 @@ Outputs:
 
 Dependencies:
 
-- OpenViking list functions and shared artifact types.
+- QMD workspace list functions and shared artifact types.
 
 Failure modes and constraints:
 
@@ -597,7 +543,7 @@ Responsibilities:
 - Normalize ActivityWatch browser events into source-attributed `MemoryEvent`
   records.
 - Deduplicate memory events by configurable fingerprint.
-- Persist memory events through an OpenViking-compatible writer.
+- Persist memory events through a QMD workspace writer.
 
 Inputs:
 
@@ -605,12 +551,12 @@ Inputs:
 
 Outputs:
 
-- Normalized `MemoryEvent` records and persisted OpenViking memory event
+- Normalized `MemoryEvent` records and persisted QMD memory event
   records.
 
 Dependencies:
 
-- OpenViking memory event record writer and shared types.
+- QMD memory event record writer and shared types.
 
 Failure modes and constraints:
 
@@ -758,7 +704,7 @@ Purpose: maintain a display-oriented cache of memory events for fast UI listing.
 Responsibilities:
 
 - Load and save `mirrorbrain/cache/memory-events-cache.json`.
-- Initialize cache from workspace files first, then OpenViking fallback.
+- Initialize cache from QMD workspace files.
 - Merge new sync events into the cache.
 - Deduplicate browser URL events for display while preserving access times.
 - Store last sync summaries and event evaluation statistics.
@@ -767,8 +713,8 @@ Responsibilities:
 
 Inputs:
 
-- Workspace directory, OpenViking base URL, new imported events, source
-  category, and optional source filters.
+- Workspace directory, new imported events, source category, and optional
+  source filters.
 
 Outputs:
 
@@ -776,7 +722,7 @@ Outputs:
 
 Dependencies:
 
-- OpenViking list functions and `memory-event-evaluator`.
+- QMD workspace list functions and `memory-event-evaluator`.
 
 Failure modes and constraints:
 
@@ -1481,7 +1427,7 @@ Purpose: provide default local runtime configuration.
 Responsibilities:
 
 - Return default sync interval, initial backfill window, ActivityWatch base URL,
-  OpenViking base URL, and MirrorBrain service host/port.
+  and MirrorBrain service host/port.
 
 Constraints:
 
@@ -1519,8 +1465,8 @@ Purpose: developer entrypoint behind `pnpm dev`.
 Responsibilities:
 
 - Parse `.env` and default config into runtime config.
-- Check required environment values, ActivityWatch readiness, OpenViking
-  readiness, and recent browser events.
+- Check required environment values, ActivityWatch readiness, QMD workspace
+  writability, and recent browser events.
 - Spawn a detached MirrorBrain child process from the CLI mode.
 - Start the React `vite build --watch` process and wait for build output.
 - Start the runtime service and HTTP server with optional shell history sync.

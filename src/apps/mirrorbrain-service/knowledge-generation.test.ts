@@ -58,7 +58,7 @@ describe('mirrorbrain service knowledge generation', () => {
   it('generates knowledge with captured page text instead of only candidate summaries', async () => {
     const publishKnowledge = vi.fn(async () => ({
       sourcePath: '/tmp/mirrorbrain/knowledge.md',
-      rootUri: 'viking://resources/mirrorbrain/knowledge.md',
+      rootUri: 'qmd://mirrorbrain/knowledge.md',
     }));
     const analyzeKnowledge = vi.fn(async (prompt: string) => {
       if (prompt.includes('Classify this reviewed work note')) {
@@ -125,7 +125,7 @@ describe('mirrorbrain service knowledge generation', () => {
     };
     const publishKnowledge = vi.fn(async () => ({
       sourcePath: '/tmp/mirrorbrain/knowledge.md',
-      rootUri: 'viking://resources/mirrorbrain/knowledge.md',
+      rootUri: 'qmd://mirrorbrain/knowledge.md',
     }));
     const api = createMirrorBrainService(
       {
@@ -189,7 +189,7 @@ describe('mirrorbrain service knowledge generation', () => {
     };
     const publishKnowledge = vi.fn(async () => ({
       sourcePath: '/tmp/mirrorbrain/knowledge.md',
-      rootUri: 'viking://resources/mirrorbrain/knowledge.md',
+      rootUri: 'qmd://mirrorbrain/knowledge.md',
     }));
     const api = createMirrorBrainService(
       {
@@ -252,7 +252,7 @@ describe('mirrorbrain service knowledge generation', () => {
 
       return {
         sourcePath: '/tmp/mirrorbrain/knowledge.md',
-        rootUri: 'viking://resources/mirrorbrain/knowledge.md',
+        rootUri: 'qmd://mirrorbrain/knowledge.md',
       };
     });
     const api = createMirrorBrainService(
@@ -300,7 +300,7 @@ describe('mirrorbrain service knowledge generation', () => {
 
       return {
         sourcePath: '/tmp/mirrorbrain/knowledge.md',
-        rootUri: 'viking://resources/mirrorbrain/knowledge.md',
+        rootUri: 'qmd://mirrorbrain/knowledge.md',
       };
     });
     const api = createMirrorBrainService(
@@ -388,7 +388,7 @@ describe('mirrorbrain service knowledge generation', () => {
     };
     const publishKnowledge = vi.fn(async () => ({
       sourcePath: '/tmp/mirrorbrain/knowledge.md',
-      rootUri: 'viking://resources/mirrorbrain/knowledge.md',
+      rootUri: 'qmd://mirrorbrain/knowledge.md',
     }));
     const api = createMirrorBrainService(
       {
@@ -446,7 +446,7 @@ describe('mirrorbrain service knowledge generation', () => {
     };
     const publishKnowledge = vi.fn(async () => ({
       sourcePath: '/tmp/mirrorbrain/knowledge.md',
-      rootUri: 'viking://resources/mirrorbrain/knowledge.md',
+      rootUri: 'qmd://mirrorbrain/knowledge.md',
     }));
     const api = createMirrorBrainService(
       {
@@ -508,12 +508,12 @@ describe('mirrorbrain service knowledge generation', () => {
     };
     const publishKnowledge = vi.fn(async (input: { artifact: KnowledgeArtifact }) => {
       if (input.artifact.id === existingArtifact.id) {
-        throw new Error('OpenViking existing relation publish failed');
+        throw new Error('QMD existing relation publish failed');
       }
 
       return {
         sourcePath: '/tmp/mirrorbrain/knowledge.md',
-        rootUri: 'viking://resources/mirrorbrain/knowledge.md',
+        rootUri: 'qmd://mirrorbrain/knowledge.md',
       };
     });
     const api = createMirrorBrainService(
@@ -571,7 +571,7 @@ describe('mirrorbrain service knowledge generation', () => {
         generateKnowledge: vi.fn(async () => generatedArtifact),
         publishKnowledge: vi.fn(async () => ({
           sourcePath: '/tmp/mirrorbrain/knowledge.md',
-          rootUri: 'viking://resources/mirrorbrain/knowledge.md',
+          rootUri: 'qmd://mirrorbrain/knowledge.md',
         })),
         lintKnowledge,
       },
@@ -619,7 +619,7 @@ describe('mirrorbrain service knowledge generation', () => {
     };
     const publishKnowledge = vi.fn(async () => ({
       sourcePath: '/tmp/mirrorbrain/knowledge.md',
-      rootUri: 'viking://resources/mirrorbrain/knowledge.md',
+      rootUri: 'qmd://mirrorbrain/knowledge.md',
     }));
     const api = createMirrorBrainService(
       {

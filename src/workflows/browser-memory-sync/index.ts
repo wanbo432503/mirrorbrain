@@ -13,14 +13,12 @@ import {
   isSkippableBrowserPageUrl,
   loadBrowserPageContentArtifactFromWorkspace,
 } from '../../integrations/browser-page-content/index.js';
-import type {
-  OpenVikingMemoryEventWriter,
-} from '../../integrations/openviking-store/index.js';
 import {
-  createMirrorBrainResourceTarget,
-  createOpenVikingMemoryEventRecord,
-  ingestBrowserPageContentToOpenViking,
-} from '../../integrations/openviking-store/index.js';
+  createQmdWorkspaceMemoryEventRecord,
+  getQmdWorkspacePaths,
+  ingestBrowserPageContentToQmdWorkspace,
+  type QmdWorkspaceMemoryEventWriter,
+} from '../../integrations/qmd-workspace-store/index.js';
 import { createMemorySourceRegistry } from '../../modules/memory-capture/index.js';
 import type { MemoryEvent, MirrorBrainConfig } from '../../shared/types/index.js';
 import type { SyncCheckpointStore } from '../../integrations/file-sync-checkpoint-store/index.js';
@@ -55,8 +53,8 @@ interface RunBrowserMemorySyncOnceDependencies {
   authorizePageContentCapture?: BrowserPageContentCaptureAuthorizationDependency;
   fetchBrowserEvents?: typeof fetchActivityWatchBrowserEvents;
   fetchPageContent?: typeof fetchBrowserPageContent;
-  ingestPageContent?: typeof ingestBrowserPageContentToOpenViking;
-  writeMemoryEvent: OpenVikingMemoryEventWriter['writeMemoryEvent'];
+  ingestPageContent?: typeof ingestBrowserPageContentToQmdWorkspace;
+  writeMemoryEvent: QmdWorkspaceMemoryEventWriter['writeMemoryEvent'];
 }
 
 export type BrowserMemorySyncResult = MemorySourceSyncResult;
@@ -80,17 +78,12 @@ function createBrowserPageContentStorageRef(
   sourcePath: string;
   rootUri: string;
 } {
+  const safeId = artifact.id.replace(/[^a-zA-Z0-9._-]/gu, '-');
+  const paths = getQmdWorkspacePaths(workspaceDir);
+
   return {
-    sourcePath: join(
-      workspaceDir,
-      'mirrorbrain',
-      'browser-page-content',
-      `${artifact.id}.md`,
-    ),
-    rootUri: createMirrorBrainResourceTarget(
-      'browser-page-content',
-      `${artifact.id}.md`,
-    ),
+    sourcePath: join(paths.browserPageContentDir, `${safeId}.md`),
+    rootUri: `qmd://mirrorbrain/browser-page-content/${safeId}.md`,
   };
 }
 
@@ -108,7 +101,7 @@ export async function runBrowserMemorySyncOnce(
 
   const fetchPage = dependencies.fetchPageContent ?? fetchBrowserPageContent;
   const ingestPage =
-    dependencies.ingestPageContent ?? ingestBrowserPageContentToOpenViking;
+    dependencies.ingestPageContent ?? ingestBrowserPageContentToQmdWorkspace;
   const sourceKey = getActivityWatchBrowserSourceKey(input.bucketId);
   const pageContentAuthorization = new Map<string, boolean>();
   const groupedArtifacts = new Map<string, BrowserPageContentArtifact>();
@@ -253,7 +246,7 @@ export async function runBrowserMemorySyncOnce(
       },
       writeMemoryEvent: async (record) => {
         await dependencies.writeMemoryEvent(
-          createOpenVikingMemoryEventRecord(record.payload),
+          createQmdWorkspaceMemoryEventRecord(record.payload),
         );
       },
     },
@@ -287,7 +280,6 @@ export async function runBrowserMemorySyncOnce(
 
         try {
           await ingestPage({
-            baseUrl: input.config.openViking.baseUrl,
             workspaceDir,
             artifact: artifactToStore,
           });

@@ -15,7 +15,7 @@ This workflow is responsible for:
 
 This workflow is not responsible for:
 
-- storing artifacts in OpenViking
+- storing artifacts in the QMD workspace
 - rendering topic knowledge in the UI
 - ranking topic knowledge for retrieval beyond its own merge decisions
 

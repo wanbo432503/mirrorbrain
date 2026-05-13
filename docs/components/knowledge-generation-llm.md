@@ -21,7 +21,7 @@ The knowledge generation module turns reviewed memories into structured `daily-r
 - `classifyNoteType(content, deps)` returns the knowledge note type.
 - `extractThemeFromUrls(urls, deps)` returns a stable topic theme.
 - `buildKnowledgeSynthesisPrompt(...)` returns the markdown-generation prompt used for LLM synthesis.
-- `analyzeKnowledgeWithConfiguredLLM(prompt)` calls the configured OpenAI-compatible model from `MIRRORBRAIN_LLM_API_BASE`, `MIRRORBRAIN_LLM_API_KEY`, and `MIRRORBRAIN_LLM_MODEL`, falling back to `~/.openviking/ov.conf` for compatibility.
+- `analyzeKnowledgeWithConfiguredLLM(prompt)` calls the configured OpenAI-compatible model from `MIRRORBRAIN_LLM_API_BASE`, `MIRRORBRAIN_LLM_API_KEY`, and `MIRRORBRAIN_LLM_MODEL`.
 - `generateKnowledgeFromReviewedMemories(reviewedMemories, options)` returns a draft `KnowledgeArtifact` whose `title` is a readable Chinese knowledge title.
 
 Dependencies are injectable so tests can supply memory events, artifact loaders, LLM analysis, clocks, and fetchers without hidden global state.

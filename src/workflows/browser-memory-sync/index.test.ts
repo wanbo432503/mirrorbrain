@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { getMirrorBrainConfig } from '../../shared/config/index.js';
-import { createOpenVikingMemoryEventRecord } from '../../integrations/openviking-store/index.js';
+import { createQmdWorkspaceMemoryEventRecord } from '../../integrations/qmd-workspace-store/index.js';
 import {
   runBrowserMemorySyncOnce,
   startBrowserMemorySyncPolling,
@@ -115,7 +115,7 @@ describe('browser memory sync workflow', () => {
         }),
         ingestPageContent: async ({ artifact }) => ({
           sourcePath: `/tmp/mirrorbrain/mirrorbrain/browser-page-content/${artifact.id}.md`,
-          rootUri: `viking://resources/mirrorbrain-browser-page-content-${artifact.id}.md`,
+          rootUri: `qmd://mirrorbrain/browser-page-content/.md`,
         }),
         writeMemoryEvent: async (record) => {
           persistedRecordIds.push(record.recordId);
@@ -125,7 +125,7 @@ describe('browser memory sync workflow', () => {
     );
 
     expect(persistedRecordIds).toEqual([
-      createOpenVikingMemoryEventRecord({
+      createQmdWorkspaceMemoryEventRecord({
         id: 'browser:aw-event-1',
         sourceType: 'activitywatch-browser',
         sourceRef: 'aw-event-1',
@@ -140,7 +140,7 @@ describe('browser memory sync workflow', () => {
           checkpoint: '2026-03-20T07:45:00.000Z',
         },
       }).recordId,
-      createOpenVikingMemoryEventRecord({
+      createQmdWorkspaceMemoryEventRecord({
         id: 'browser:aw-event-2',
         sourceType: 'activitywatch-browser',
         sourceRef: 'aw-event-2',
@@ -224,7 +224,7 @@ describe('browser memory sync workflow', () => {
     }));
     const ingestPageContent = vi.fn(async ({ artifact }) => ({
       sourcePath: `/tmp/mirrorbrain/mirrorbrain/browser-page-content/${artifact.id}.md`,
-      rootUri: `viking://resources/mirrorbrain-browser-page-content-${artifact.id}.md`,
+      rootUri: `qmd://mirrorbrain/browser-page-content/.md`,
     }));
 
     const result = await runBrowserMemorySyncOnce(
@@ -293,7 +293,7 @@ describe('browser memory sync workflow', () => {
     }));
     const ingestPageContent = vi.fn(async ({ artifact }) => ({
       sourcePath: `/tmp/mirrorbrain/mirrorbrain/browser-page-content/${artifact.id}.md`,
-      rootUri: `viking://resources/mirrorbrain-browser-page-content-${artifact.id}.md`,
+      rootUri: `qmd://mirrorbrain/browser-page-content/.md`,
     }));
     const persistedRecordContents: Array<Record<string, unknown>> = [];
 
@@ -540,7 +540,7 @@ describe('browser memory sync workflow', () => {
         }),
         ingestPageContent: async ({ artifact }) => ({
           sourcePath: `/tmp/mirrorbrain/mirrorbrain/browser-page-content/${artifact.id}.md`,
-          rootUri: `viking://resources/mirrorbrain-browser-page-content-${artifact.id}.md`,
+          rootUri: `qmd://mirrorbrain/browser-page-content/.md`,
         }),
         writeMemoryEvent: async (record) => {
           persistedRecordIds.push(record.recordId);
@@ -594,7 +594,7 @@ describe('browser memory sync workflow', () => {
     );
     const ingestPageContent = vi.fn(async ({ artifact }) => ({
       sourcePath: `/tmp/mirrorbrain/mirrorbrain/browser-page-content/${artifact.id}.md`,
-      rootUri: `viking://resources/mirrorbrain-browser-page-content-${artifact.id}.md`,
+      rootUri: `qmd://mirrorbrain/browser-page-content/.md`,
     }));
 
     const result = await runBrowserMemorySyncOnce(

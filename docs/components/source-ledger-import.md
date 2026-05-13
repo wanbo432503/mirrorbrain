@@ -38,7 +38,7 @@ This workflow is not responsible for:
 
 - source recorder execution
 - source-instance configuration storage
-- OpenViking or filesystem persistence details
+- QMD workspace persistence details
 - UI presentation
 - work-session analysis, knowledge generation, or skill drafting
 

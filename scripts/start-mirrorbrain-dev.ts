@@ -205,9 +205,6 @@ export function getMirrorBrainDevConfig(
           env.MIRRORBRAIN_ACTIVITYWATCH_BASE_URL ??
           defaultConfig.activityWatch.baseUrl,
       },
-      openViking: {
-        baseUrl: defaultConfig.openViking.baseUrl,
-      },
       sync: {
         pollingIntervalMs: parseInteger(
           env.MIRRORBRAIN_SYNC_INTERVAL_MS,

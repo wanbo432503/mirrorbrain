@@ -20,7 +20,6 @@ export interface MirrorBrainServiceConfig {
 export interface MirrorBrainConfig {
   sync: MirrorBrainSyncConfig;
   activityWatch: MirrorBrainEndpointConfig;
-  openViking: MirrorBrainEndpointConfig;
   service: MirrorBrainServiceConfig;
 }
 

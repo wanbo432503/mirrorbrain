@@ -47,7 +47,7 @@ This slice is not responsible for:
 
 - service coverage in `src/apps/mirrorbrain-service/topic-knowledge-read.test.ts`
 - HTTP coverage in `src/apps/mirrorbrain-http-server/topic-knowledge.test.ts`
-- browser client / UI coverage in `src/apps/mirrorbrain-web/topic-knowledge.test.ts`
+- browser client / UI coverage in `src/apps/mirrorbrain-web-react/src/App.test.tsx`
 
 ## Known Risks And Limitations
 

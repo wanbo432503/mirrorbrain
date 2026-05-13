@@ -45,7 +45,7 @@ describe('browser memory sync integration', () => {
         }),
         ingestPageContent: async ({ artifact }) => ({
           sourcePath: `${workspaceDir}/mirrorbrain/browser-page-content/${artifact.id}.md`,
-          rootUri: `viking://resources/mirrorbrain-browser-page-content-${artifact.id}.md`,
+          rootUri: `qmd://mirrorbrain/browser-page-content/.md`,
         }),
         writeMemoryEvent: async (record) => {
           importedRecordIds.push(record.recordId);
@@ -77,7 +77,7 @@ describe('browser memory sync integration', () => {
         }),
         ingestPageContent: async ({ artifact }) => ({
           sourcePath: `${workspaceDir}/mirrorbrain/browser-page-content/${artifact.id}.md`,
-          rootUri: `viking://resources/mirrorbrain-browser-page-content-${artifact.id}.md`,
+          rootUri: `qmd://mirrorbrain/browser-page-content/.md`,
         }),
         writeMemoryEvent: async (record) => {
           importedRecordIds.push(record.recordId);

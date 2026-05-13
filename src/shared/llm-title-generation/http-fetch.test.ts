@@ -19,4 +19,16 @@ describe('llm http config', () => {
       model: 'gpt-test-knowledge',
     });
   });
+
+  it('requires explicit MirrorBrain LLM environment variables', async () => {
+    vi.stubEnv('MIRRORBRAIN_LLM_API_BASE', '');
+    vi.stubEnv('MIRRORBRAIN_LLM_API_KEY', '');
+    vi.stubEnv('MIRRORBRAIN_LLM_MODEL', '');
+
+    const { loadLLMConfig } = await import('./http-fetch.js');
+
+    await expect(loadLLMConfig()).rejects.toThrow(
+      'MIRRORBRAIN_LLM_API_BASE, MIRRORBRAIN_LLM_API_KEY, and MIRRORBRAIN_LLM_MODEL are required.',
+    );
+  });
 });

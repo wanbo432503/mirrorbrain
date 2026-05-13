@@ -67,7 +67,7 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and an
 
 - **Features:**
   - Create daily candidates for the current user-local calendar day
-  - Review auto-generation waits until the first memory load finishes, avoiding concurrent heavy startup requests against OpenViking
+  - Review auto-generation waits until the first memory load finishes, avoiding concurrent heavy startup requests against the service
   - Select candidate + view task title, duration, formation reasons, and concrete visited URLs split into primary/supporting sources
   - AI review suggestions (confidence/priority/rationale/keep score/supporting reasons)
   - Keep/Discard decisions
@@ -118,7 +118,7 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and an
   - The artifact detail display includes a local conversation area for recording requested edits against the selected artifact
   - Generate knowledge from reviewed memories
   - Generate skill from reviewed memories
-  - Generated knowledge and skill drafts remain in shared app state across top-level tab switches and are written back through the artifact API so refresh restores them; the service reads back from merged OpenViking and workspace copies so newly generated artifacts are not lost if OpenViking is briefly behind
+  - Generated knowledge and skill drafts remain in shared app state across top-level tab switches and are written back through the artifact API so refresh restores them from QMD workspace copies
   - Review-generated knowledge displays the final note body directly in a single scrolling field, with a separate full-width one-line revision request input and send action below it
   - Artifact edit message uses the same single-line full-width input + send row pattern in the knowledge and skill detail panels
   - Artifact history and detail panels stretch to the available tab height and scroll internally instead of using fixed pixel heights

@@ -8,12 +8,6 @@ import type {
   SkillArtifact,
 } from '../../shared/types/index.js';
 import {
-  listMirrorBrainKnowledgeArtifactsFromOpenViking,
-  listMirrorBrainMemoryEventsFromOpenViking,
-  listMirrorBrainMemoryNarrativesFromOpenViking,
-  listMirrorBrainSkillArtifactsFromOpenViking,
-} from '../openviking-store/index.js';
-import {
   listMirrorBrainKnowledgeArtifactsFromQmdWorkspace,
   listMirrorBrainMemoryEventsFromQmdWorkspace,
   listMirrorBrainMemoryNarrativesFromQmdWorkspace,
@@ -602,14 +596,8 @@ export async function queryMemory(
         });
       }
 
-      if (request.baseUrl !== undefined) {
-        return listMirrorBrainMemoryEventsFromOpenViking({
-          baseUrl: request.baseUrl,
+          return [];
         });
-      }
-
-      return [];
-    });
   const listMemoryNarratives =
     dependencies.listMemoryNarratives ??
     (dependencies.listMemoryEvents !== undefined
@@ -618,12 +606,6 @@ export async function queryMemory(
           if (request.workspaceDir !== undefined) {
             return listMirrorBrainMemoryNarrativesFromQmdWorkspace({
               workspaceDir: request.workspaceDir,
-            });
-          }
-
-          if (request.baseUrl !== undefined) {
-            return listMirrorBrainMemoryNarrativesFromOpenViking({
-              baseUrl: request.baseUrl,
             });
           }
 
@@ -880,12 +862,6 @@ export async function listKnowledge(
     });
   }
 
-  if (input.baseUrl !== undefined) {
-    return listMirrorBrainKnowledgeArtifactsFromOpenViking({
-      baseUrl: input.baseUrl,
-    });
-  }
-
   return [];
 }
 
@@ -900,12 +876,6 @@ export async function listSkillDrafts(
   if (input.workspaceDir !== undefined) {
     return listMirrorBrainSkillArtifactsFromQmdWorkspace({
       workspaceDir: input.workspaceDir,
-    });
-  }
-
-  if (input.baseUrl !== undefined) {
-    return listMirrorBrainSkillArtifactsFromOpenViking({
-      baseUrl: input.baseUrl,
     });
   }
 

@@ -180,7 +180,7 @@ describe('useArtifacts', () => {
       generateKnowledge: vi.fn(async () => generatedArtifact),
       generateSkill: vi.fn(),
       saveKnowledgeArtifact: vi.fn(async () => {
-        throw new Error('OpenViking save failed')
+        throw new Error('QMD save failed')
       }),
       saveSkillArtifact: vi.fn(),
     } as unknown as MirrorBrainWebAppApi

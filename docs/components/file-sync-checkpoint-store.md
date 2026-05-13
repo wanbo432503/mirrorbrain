@@ -30,5 +30,5 @@ This component persists source-specific sync checkpoints for MirrorBrain's polli
 
 ## Known Limitations
 
-- checkpoints are local operational state rather than OpenViking artifacts
+- checkpoints are local operational state rather than QMD-indexed artifacts
 - there is no file locking yet for multi-process writers

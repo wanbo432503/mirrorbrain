@@ -67,7 +67,6 @@ function createReviewedMemoryFixture(input?: {
 }
 
 describe('mirrorbrain service', () => {
-  const expectedOpenVikingBaseUrl = getMirrorBrainConfig().openViking.baseUrl;
 
   it('refuses to default runtime storage to the source directory', () => {
     const previousWorkspaceDir = process.env.MIRRORBRAIN_WORKSPACE_DIR;
@@ -1626,7 +1625,7 @@ describe('mirrorbrain service', () => {
         buildBrowserThemeNarratives: vi.fn(() => []),
         publishMemoryNarrative: vi.fn(async () => ({
           sourcePath: '/tmp/memory-narrative.json',
-          rootUri: 'viking://resources/memory-narrative',
+          rootUri: 'qmd://mirrorbrain/memory-narrative',
         })),
         listKnowledge: vi.fn(async () => []),
         listSkillDrafts: vi.fn(async () => []),
@@ -1641,7 +1640,7 @@ describe('mirrorbrain service', () => {
     expect(result.importedEvents?.at(-1)?.id).toBe('browser:11');
   });
 
-  it('falls back to workspace memory events when OpenViking memory reads fail', async () => {
+  it('falls back to workspace memory events when qmd memory reads fail', async () => {
     const service = {
       status: 'running' as const,
       config: getMirrorBrainConfig(),
@@ -1896,7 +1895,7 @@ describe('mirrorbrain service', () => {
         createCandidateMemories,
         publishCandidateMemory: vi.fn(async () => ({
           sourcePath: '/tmp/candidate.json',
-          rootUri: 'viking://resources/candidate',
+          rootUri: 'qmd://mirrorbrain/candidate',
         })),
         listKnowledge: vi.fn(async () => []),
         listSkillDrafts: vi.fn(async () => []),
@@ -1998,7 +1997,7 @@ describe('mirrorbrain service', () => {
         importSourceLedgers,
         publishCandidateMemory: vi.fn(async () => ({
           sourcePath: '/tmp/candidate.json',
-          rootUri: 'viking://resources/candidate',
+          rootUri: 'qmd://mirrorbrain/candidate',
         })),
         listKnowledge: vi.fn(async () => []),
         listSkillDrafts: vi.fn(async () => []),
@@ -2036,11 +2035,11 @@ describe('mirrorbrain service', () => {
     };
     const publishKnowledge = vi.fn(async () => ({
       sourcePath: '/tmp/knowledge.md',
-      rootUri: 'viking://resources/mirrorbrain/knowledge/knowledge-draft:reviewed:candidate:browser:aw-event-1.md',
+      rootUri: 'qmd://mirrorbrain/knowledge/knowledge-draft:reviewed:candidate:browser:aw-event-1.md',
     }));
     const publishSkill = vi.fn(async () => ({
       sourcePath: '/tmp/skill-draft.md',
-      uri: 'viking://resources/mirrorbrain/skill-drafts/skill-draft:reviewed:candidate:browser:aw-event-1.md',
+      uri: 'qmd://mirrorbrain/skill-drafts/skill-draft:reviewed:candidate:browser:aw-event-1.md',
     }));
 
     const api = createMirrorBrainService(
@@ -2089,7 +2088,7 @@ describe('mirrorbrain service', () => {
     });
   });
 
-  it('falls back to workspace copies when OpenViking listings are empty', async () => {
+  it('falls back to workspace copies when qmd listings are empty', async () => {
     const workspaceDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-service-'));
     mkdirSync(join(workspaceDir, 'mirrorbrain', 'knowledge'), {
       recursive: true,
@@ -2431,11 +2430,11 @@ describe('mirrorbrain service', () => {
     }));
     const publishKnowledge = vi.fn(async () => ({
       sourcePath: '/tmp/knowledge.md',
-      rootUri: 'viking://resources/mirrorbrain/knowledge/knowledge-draft:reviewed:candidate:browser:aw-event-1.md',
+      rootUri: 'qmd://mirrorbrain/knowledge/knowledge-draft:reviewed:candidate:browser:aw-event-1.md',
     }));
     const publishSkill = vi.fn(async () => ({
       sourcePath: '/tmp/skill-draft.md',
-      uri: 'viking://resources/mirrorbrain/skill-drafts/skill-draft:reviewed:candidate:browser:aw-event-1.md',
+      uri: 'qmd://mirrorbrain/skill-drafts/skill-draft:reviewed:candidate:browser:aw-event-1.md',
     }));
 
     const api = createMirrorBrainService(
@@ -2503,7 +2502,7 @@ describe('mirrorbrain service', () => {
     const publishReviewedMemory = vi.fn(async () => ({
       sourcePath: '/tmp/mirrorbrain-workspace/reviewed.json',
       rootUri:
-        'viking://resources/mirrorbrain/reviewed-memories/reviewed:candidate:browser:aw-event-1.json',
+        'qmd://mirrorbrain/reviewed-memories/reviewed:candidate:browser:aw-event-1.json',
     }));
 
     const api = createMirrorBrainService(
@@ -2627,7 +2626,7 @@ describe('mirrorbrain service', () => {
     const publishCandidateMemory = vi.fn(async () => ({
       sourcePath: '/tmp/mirrorbrain-workspace/candidate.json',
       rootUri:
-        'viking://resources/mirrorbrain/candidate-memories/candidate:2026-03-20:activitywatch-browser:docs-example-com:guides.json',
+        'qmd://mirrorbrain/candidate-memories/candidate:2026-03-20:activitywatch-browser:docs-example-com:guides.json',
     }));
 
     const api = createMirrorBrainService(
@@ -2729,7 +2728,7 @@ describe('mirrorbrain service', () => {
         createCandidateMemories,
         publishCandidateMemory: vi.fn(async () => ({
           sourcePath: '/tmp/mirrorbrain-workspace/candidate.json',
-          rootUri: 'viking://resources/mirrorbrain/candidate.json',
+          rootUri: 'qmd://mirrorbrain/candidate.json',
         })),
         loadBrowserPageContentArtifactFromWorkspace,
       },
@@ -2879,7 +2878,7 @@ describe('mirrorbrain service', () => {
         importSourceLedgers,
         publishCandidateMemory: vi.fn(async () => ({
           sourcePath: '/tmp/candidate.json',
-          rootUri: 'viking://resources/candidate',
+          rootUri: 'qmd://mirrorbrain/candidate',
         })),
         listKnowledge: vi.fn(async () => []),
         listSkillDrafts: vi.fn(async () => []),
@@ -2998,7 +2997,7 @@ describe('mirrorbrain service', () => {
     }));
     const publishCandidateMemory = vi.fn(async () => ({
       sourcePath: '/tmp/candidate.json',
-      rootUri: 'viking://resources/candidate',
+      rootUri: 'qmd://mirrorbrain/candidate',
     }));
 
     const api = createMirrorBrainService(
@@ -3186,7 +3185,7 @@ describe('mirrorbrain service', () => {
         importSourceLedgers,
         publishCandidateMemory: vi.fn(async () => ({
           sourcePath: '/tmp/candidate.json',
-          rootUri: 'viking://resources/candidate',
+          rootUri: 'qmd://mirrorbrain/candidate',
         })),
         listSkillDrafts: vi.fn(async () => []),
       },
@@ -3266,7 +3265,7 @@ describe('mirrorbrain service', () => {
     expect(publishReviewedMemory).not.toHaveBeenCalled();
   });
 
-  it('persists candidate memories sequentially to avoid OpenViking resource lock contention', async () => {
+  it('persists candidate memories sequentially to avoid workspace write ordering', async () => {
     const service = {
       status: 'running' as const,
       config: getMirrorBrainConfig(),
@@ -3324,7 +3323,7 @@ describe('mirrorbrain service', () => {
               publishOrder.push(`end:${artifact.id}`);
               resolve({
                 sourcePath: '/tmp/mirrorbrain-workspace/candidate-1.json',
-                rootUri: 'viking://resources/mirrorbrain/candidate-1.json',
+                rootUri: 'qmd://mirrorbrain/candidate-1.json',
               });
             };
           }),
@@ -3334,7 +3333,7 @@ describe('mirrorbrain service', () => {
         publishOrder.push(`end:${artifact.id}`);
         return {
           sourcePath: '/tmp/mirrorbrain-workspace/candidate-2.json',
-          rootUri: 'viking://resources/mirrorbrain/candidate-2.json',
+          rootUri: 'qmd://mirrorbrain/candidate-2.json',
         };
       });
 
@@ -3436,7 +3435,7 @@ describe('mirrorbrain service', () => {
       await rm(workspaceDir, { recursive: true, force: true });
     });
 
-    it('deletes candidate memory from workspace and OpenViking resources', async () => {
+    it('deletes candidate memory from workspace resources', async () => {
       const service = {
         status: 'running' as const,
         config: getMirrorBrainConfig(),

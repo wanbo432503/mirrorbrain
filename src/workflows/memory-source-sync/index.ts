@@ -1,7 +1,6 @@
 import type {
-  OpenVikingMemoryEventRecord,
-  OpenVikingMemoryEventWriter,
-} from '../../integrations/openviking-store/index.js';
+  QmdWorkspaceMemoryEventWriter,
+} from '../../integrations/qmd-workspace-store/index.js';
 import { persistMemoryEvent, type MemorySourceRegistry } from '../../modules/memory-capture/index.js';
 import type {
   MemoryEvent,
@@ -40,7 +39,7 @@ interface RunMemorySourceSyncOnceDependencies {
   sourceRegistry: MemorySourceRegistry;
   authorizeSourceSync?: MemorySourceSyncAuthorizationDependency;
   prepareEvents?: (events: MemoryEvent[]) => Promise<MemoryEvent[]>;
-  writeMemoryEvent: OpenVikingMemoryEventWriter['writeMemoryEvent'];
+  writeMemoryEvent: QmdWorkspaceMemoryEventWriter['writeMemoryEvent'];
 }
 
 function getNextCheckpoint(

@@ -2,7 +2,7 @@
 
 ## Summary
 
-This workflow connects the shell-history source plugin to MirrorBrain's generic memory-source sync pipeline so shell commands can be persisted into OpenViking as authorized memory events.
+This workflow connects the shell-history source plugin to MirrorBrain's generic memory-source sync pipeline so shell commands can be persisted into the QMD workspace as authorized memory events.
 
 ## Responsibility Boundary
 

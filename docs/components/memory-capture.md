@@ -37,7 +37,7 @@ This component is not responsible for:
 1. A source workflow resolves a registered plugin from the source registry.
 2. The plugin fetches upstream events and normalizes them into MirrorBrain `MemoryEvent` values.
 3. The workflow applies source-specific deduplication before persistence when the plugin defines it.
-4. The normalized event is wrapped for OpenViking-compatible persistence and written through the injected writer.
+4. The normalized event is wrapped for QMD workspace persistence and written through the injected writer.
 
 ## Test Strategy
 

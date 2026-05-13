@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildBrowserPageContentArtifact,
+  createBrowserPageContentEventContent,
   extractReadableTextFromHtml,
   fetchBrowserPageContent,
   isSkippableBrowserPageUrl,
@@ -38,6 +39,29 @@ describe('browser page content integration', () => {
       text: 'Open the checklist.',
       accessTimes: ['2026-04-14T09:00:00.000Z', '2026-04-14T08:00:00.000Z'],
       latestAccessedAt: '2026-04-14T09:00:00.000Z',
+    });
+  });
+
+  it('uses qmd storage metadata when enriching browser events with shared page text', () => {
+    const content = createBrowserPageContentEventContent(
+      {
+        id: 'browser-page:url-abc',
+        url: 'https://example.com/tasks',
+        title: 'Example Tasks',
+        text: 'Open the checklist.',
+        accessTimes: ['2026-04-14T09:00:00.000Z'],
+        latestAccessedAt: '2026-04-14T09:00:00.000Z',
+      },
+      {
+        sourcePath: '/workspace/mirrorbrain/browser-page-content/browser-page-url-abc.md',
+        rootUri: 'qmd://mirrorbrain/browser-page-content/browser-page-url-abc.md',
+      },
+    );
+
+    expect(content.textStorage).toEqual({
+      filePath: '/workspace/mirrorbrain/browser-page-content/browser-page-url-abc.md',
+      qmdUri: 'qmd://mirrorbrain/browser-page-content/browser-page-url-abc.md',
+      vectorizationSource: 'qmd-workspace',
     });
   });
 

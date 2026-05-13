@@ -1,7 +1,7 @@
 import {
-  createOpenVikingMemoryEventRecord,
-  type OpenVikingMemoryEventWriter,
-} from '../../integrations/openviking-store/index.js';
+  createQmdWorkspaceMemoryEventRecord,
+  type QmdWorkspaceMemoryEventWriter,
+} from '../../integrations/qmd-workspace-store/index.js';
 import type { SyncCheckpoint } from '../../integrations/file-sync-checkpoint-store/index.js';
 import type {
   MemoryEvent,
@@ -116,7 +116,7 @@ export function createMemorySourceRegistry(
 
 export async function persistMemoryEvent(
   event: MemoryEvent,
-  writer: OpenVikingMemoryEventWriter,
+  writer: QmdWorkspaceMemoryEventWriter,
 ): Promise<void> {
-  await writer.writeMemoryEvent(createOpenVikingMemoryEventRecord(event));
+  await writer.writeMemoryEvent(createQmdWorkspaceMemoryEventRecord(event));
 }

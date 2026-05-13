@@ -3,7 +3,7 @@
 ## Summary
 
 The memory events cache is the presentation cache used by the service-backed
-Memory tab. It loads raw workspace or OpenViking memory events, applies display
+Memory tab. It loads raw QMD workspace memory events, applies display
 deduplication and browser blacklist filtering, and stores the resulting event
 list in `<workspaceDir>/mirrorbrain/cache/memory-events-cache.json`.
 
@@ -12,19 +12,18 @@ list in `<workspaceDir>/mirrorbrain/cache/memory-events-cache.json`.
 This component is responsible for:
 
 - loading and saving the local memory-event cache
-- initializing the cache from workspace memory-event files before falling back
-  to OpenViking reads
+- initializing the cache from QMD workspace memory-event files
 - filtering browser events that should not be shown in the Memory tab
 - deduplicating repeated browser URL events while preserving access times
 - returning paginated and source-filtered event slices for API/UI callers
 
-It is not responsible for source capture, source-ledger parsing, OpenViking
+It is not responsible for source capture, source-ledger parsing, QMD indexing,
 resource writes, candidate-memory generation, knowledge synthesis, or skill
 generation.
 
 ## Key Interfaces
 
-- `initializeCacheFromOpenViking(...)`
+- `initializeCacheFromQmdWorkspace(...)`
 - `updateCacheWithNewEvents(...)`
 - `getEventsFromCache(...)`
 - `MemoryEventsCache`

@@ -2,7 +2,7 @@
 
 ## Summary
 
-This component fetches readable page text for browser URLs, extracts a normalized title plus plain text body, and prepares that shared content for local storage and OpenViking indexing.
+This component fetches readable page text for browser URLs, extracts a normalized title plus plain text body, and prepares that shared content for QMD workspace indexing.
 
 ## Responsibility Boundary
 
@@ -30,12 +30,12 @@ This component fetches readable page text for browser URLs, extracts a normalize
 4. For an authorized URL not already stored locally, this component fetches the recorded URL over HTTP.
 5. HTML is reduced to a readable title and plain-text body, preferring `article` first, then `main`, then a cleaned whole-page fallback.
 6. A shared browser-page artifact is created or updated for that URL, with `accessTimes` sorted from newest to oldest.
-7. The caller persists that shared artifact locally and imports it into OpenViking once per URL.
+7. The caller persists that shared artifact into the MirrorBrain workspace once per URL.
 8. When a stored text artifact is authorized and available, source
    `MemoryEvent` content is enriched with `textStorage` references containing:
    - local `filePath`
-   - OpenViking `openVikingUri`
-   - `vectorizationSource` metadata indicating OpenViking-backed indexing
+   - QMD `qmdUri`
+   - `vectorizationSource` metadata indicating QMD workspace indexing
 9. When page-content authorization is denied or no stored text artifact is
    available yet, browser sync can still attach URL-level `latestAccessedAt`
    and shared `accessTimes` metadata without any `textStorage` reference.

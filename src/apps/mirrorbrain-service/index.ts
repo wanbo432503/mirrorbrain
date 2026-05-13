@@ -15,16 +15,6 @@ import {
   type SourceLedgerStateStore,
 } from '../../integrations/source-ledger-state-store/index.js';
 import {
-  ingestMemoryEventToOpenViking,
-  listMirrorBrainMemoryEventsFromOpenViking,
-  listMirrorBrainKnowledgeArtifactsFromWorkspace,
-  listMirrorBrainMemoryEventsFromWorkspace,
-  listRawMirrorBrainMemoryEventsFromWorkspace,
-  listMirrorBrainCandidateMemoriesFromWorkspace,
-  listMirrorBrainSkillArtifactsFromWorkspace,
-  type OpenVikingMemoryEventWriter,
-} from '../../integrations/openviking-store/index.js';
-import {
   createQmdWorkspaceMemoryEventRecord,
   createQmdWorkspaceMemoryEventWriter,
   ingestCandidateMemoryToQmdWorkspace,
@@ -33,17 +23,20 @@ import {
   ingestReviewedMemoryToQmdWorkspace,
   ingestSkillArtifactToQmdWorkspace,
   listMirrorBrainCandidateMemoriesFromQmdWorkspace,
+  listMirrorBrainMemoryEventsFromQmdFiles,
   listMirrorBrainKnowledgeArtifactsFromQmdWorkspace,
   listMirrorBrainMemoryEventsFromQmdWorkspace,
   listMirrorBrainMemoryNarrativesFromQmdWorkspace,
   listMirrorBrainReviewedMemoriesFromQmdWorkspace,
   listMirrorBrainSkillArtifactsFromQmdWorkspace,
+  listRawMirrorBrainMemoryEventsFromQmdFiles,
   listRawMirrorBrainMemoryEventsFromQmdWorkspace,
+  type QmdWorkspaceMemoryEventWriter,
 } from '../../integrations/qmd-workspace-store/index.js';
 import {
   loadMemoryEventsCache,
   saveMemoryEventsCache,
-  initializeCacheFromOpenViking,
+  initializeCacheFromQmdWorkspace,
   updateCacheWithNewEvents,
   getEventsFromCache,
   type MemoryEventsCache,
@@ -165,7 +158,7 @@ interface StartMirrorBrainServiceDependencies {
   createMemoryEventWriter?: (input: {
     config: ReturnType<typeof getMirrorBrainConfig>;
     workspaceDir: string;
-  }) => OpenVikingMemoryEventWriter;
+  }) => QmdWorkspaceMemoryEventWriter;
   createSourceLedgerStateStore?: (input: {
     workspaceDir: string;
   }) => SourceLedgerStateStore;
@@ -246,7 +239,6 @@ type WorkspaceStorageInput = {
 
 type ListMemoryEventsDependency = (
   input: WorkspaceStorageInput & { query?: string },
-  fetchImpl?: Parameters<typeof listMirrorBrainMemoryEventsFromOpenViking>[1],
 ) => Promise<MemoryEventReadResult>;
 
 type ListMemoryNarrativesDependency = (
@@ -308,11 +300,11 @@ type AnalyzeWorkSessionCandidatesDependency = (
 interface CreateMirrorBrainServiceDependencies {
   queryMemory?: typeof queryMemoryFromPluginApi;
   listMemoryEvents?: ListMemoryEventsDependency;
-  listWorkspaceMemoryEvents?: typeof listMirrorBrainMemoryEventsFromWorkspace;
-  listRawWorkspaceMemoryEvents?: typeof listRawMirrorBrainMemoryEventsFromWorkspace;
+  listWorkspaceMemoryEvents?: typeof listMirrorBrainMemoryEventsFromQmdFiles;
+  listRawWorkspaceMemoryEvents?: typeof listRawMirrorBrainMemoryEventsFromQmdFiles;
   listMemoryNarratives?: ListMemoryNarrativesDependency;
   listCandidateMemories?: ListCandidateMemoriesDependency;
-  listWorkspaceCandidateMemories?: typeof listMirrorBrainCandidateMemoriesFromWorkspace;
+  listWorkspaceCandidateMemories?: typeof listMirrorBrainCandidateMemoriesFromQmdWorkspace;
   listReviewedMemories?: ListReviewedMemoriesDependency;
   listKnowledge?: ListKnowledgeArtifactsDependency;
   listSkillDrafts?: ListSkillArtifactsDependency;
@@ -341,7 +333,7 @@ interface CreateMirrorBrainServiceDependencies {
   createMemoryEventWriter?: (input: {
     config: ReturnType<typeof getMirrorBrainConfig>;
     workspaceDir: string;
-  }) => OpenVikingMemoryEventWriter;
+  }) => QmdWorkspaceMemoryEventWriter;
   createCheckpointStore?: (input: {
     workspaceDir: string;
   }) => SyncCheckpointStore;
@@ -478,24 +470,9 @@ function validateSkillArtifactId(artifactId: string): void {
 
 const SYNC_IMPORTED_EVENT_PREVIEW_LIMIT = 50;
 
-function createOpenVikingMemoryEventWriter(input: {
-  config: ReturnType<typeof getMirrorBrainConfig>;
-  workspaceDir: string;
-}): OpenVikingMemoryEventWriter {
-  return {
-    async writeMemoryEvent(record) {
-      await ingestMemoryEventToOpenViking({
-        baseUrl: input.config.openViking.baseUrl,
-        workspaceDir: input.workspaceDir,
-        event: record.payload,
-      });
-    },
-  };
-}
-
 function createDefaultMemoryEventWriter(input: {
   workspaceDir: string;
-}): OpenVikingMemoryEventWriter {
+}): QmdWorkspaceMemoryEventWriter {
   return createQmdWorkspaceMemoryEventWriter({
     workspaceDir: input.workspaceDir,
   });
@@ -786,8 +763,6 @@ export function createMirrorBrainService(
   input: CreateMirrorBrainServiceInput,
   dependencies: CreateMirrorBrainServiceDependencies = {},
 ) {
-  const baseUrl =
-    input.service.config?.openViking.baseUrl ?? getMirrorBrainConfig().openViking.baseUrl;
   const serviceConfig = input.service.config ?? getMirrorBrainConfig();
   const workspaceDir = resolveRuntimeWorkspaceDir(input.workspaceDir);
   const browserScopeId = input.browserScopeId ?? 'scope-browser';
@@ -1071,7 +1046,7 @@ export function createMirrorBrainService(
       listKnowledge({
         workspaceDir,
       }).catch(() => [] as KnowledgeArtifact[]),
-      listMirrorBrainKnowledgeArtifactsFromWorkspace({
+      listMirrorBrainKnowledgeArtifactsFromQmdWorkspace({
         workspaceDir,
       }).catch(() => [] as KnowledgeArtifact[]),
       loadDeletedArtifactIds('knowledge'),
@@ -1087,7 +1062,7 @@ export function createMirrorBrainService(
       listSkillDrafts({
         workspaceDir,
       }).catch(() => [] as SkillArtifact[]),
-      listMirrorBrainSkillArtifactsFromWorkspace({
+      listMirrorBrainSkillArtifactsFromQmdWorkspace({
         workspaceDir,
       }).catch(() => [] as SkillArtifact[]),
       loadDeletedArtifactIds('skills'),
@@ -1257,29 +1232,17 @@ export function createMirrorBrainService(
       dependencies.listMemoryEvents !== undefined ||
       dependencies.listWorkspaceMemoryEvents !== undefined
     ) {
-      return initializeCacheFromOpenViking(
-        workspaceDir,
-        baseUrl,
-        {
-          listWorkspaceMemoryEvents: listWorkspaceMemoryEvents,
-          listOpenVikingMemoryEvents: async () =>
-            listStoredMemoryEventArray({ workspaceDir }),
-        },
-      );
+      return initializeCacheFromQmdWorkspace(workspaceDir, {
+        listWorkspaceMemoryEvents: listWorkspaceMemoryEvents,
+      });
     }
 
     let cache = await loadMemoryEventsCache(workspaceDir);
 
     if (cache === null) {
-      cache = await initializeCacheFromOpenViking(
-        workspaceDir,
-        baseUrl,
-        {
-          listWorkspaceMemoryEvents: listWorkspaceMemoryEvents,
-          listOpenVikingMemoryEvents: async () =>
-            listStoredMemoryEventArray({ workspaceDir }),
-        },
-      );
+      cache = await initializeCacheFromQmdWorkspace(workspaceDir, {
+        listWorkspaceMemoryEvents: listWorkspaceMemoryEvents,
+      });
     }
 
     return cache;
@@ -1576,7 +1539,7 @@ export function createMirrorBrainService(
       scheduleMemoryNarrativeRefresh(sync, buildBrowserThemeNarratives);
 
       if (sync.importedEvents && sync.importedEvents.length > 0) {
-        void updateCacheWithNewEvents(workspaceDir, baseUrl, sync.importedEvents, 'browser').catch(
+        void updateCacheWithNewEvents(workspaceDir, sync.importedEvents, 'browser').catch(
           () => undefined,
         );
       }
@@ -1588,7 +1551,7 @@ export function createMirrorBrainService(
       scheduleMemoryNarrativeRefresh(sync, buildShellProblemNarratives);
 
       if (sync.importedEvents && sync.importedEvents.length > 0) {
-        void updateCacheWithNewEvents(workspaceDir, baseUrl, sync.importedEvents, 'shell').catch(
+        void updateCacheWithNewEvents(workspaceDir, sync.importedEvents, 'shell').catch(
           () => undefined,
         );
       }
@@ -1605,15 +1568,9 @@ export function createMirrorBrainService(
 
       const result = await importSourceLedgersForService();
 
-      await initializeCacheFromOpenViking(
-        workspaceDir,
-        baseUrl,
-        {
-          listWorkspaceMemoryEvents,
-          listOpenVikingMemoryEvents: async () =>
-            listStoredMemoryEventArray({ workspaceDir }),
-        },
-      );
+      await initializeCacheFromQmdWorkspace(workspaceDir, {
+        listWorkspaceMemoryEvents,
+      });
 
       return result;
     },

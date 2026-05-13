@@ -21,10 +21,7 @@ export default function MemoryRecord({ event }: MemoryRecordProps) {
       event.sourceType === 'browser'
     ) {
       return content.title || content.url || content.sourceSpecific?.url || 'Browser Event'
-    } else if (
-      event.sourceType === 'openviking-shell' ||
-      event.sourceType === 'shell'
-    ) {
+    } else if (event.sourceType === 'shell' || event.sourceType === 'shell-history') {
       return content.title || content.command || content.cwd || 'Shell Event'
     }
     return content.title || 'Unknown Event'

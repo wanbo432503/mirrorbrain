@@ -8,9 +8,6 @@ const DEFAULT_CONFIG: MirrorBrainConfig = {
   activityWatch: {
     baseUrl: 'http://127.0.0.1:5600',
   },
-  openViking: {
-    baseUrl: 'http://127.0.0.1:1933',
-  },
   service: {
     host: '127.0.0.1',
     port: 3007,

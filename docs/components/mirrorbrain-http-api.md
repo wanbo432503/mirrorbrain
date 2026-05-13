@@ -29,7 +29,7 @@ The HTTP API is a local-first capability surface for:
 The API is not responsible for:
 
 - direct ActivityWatch or shell-history parsing
-- OpenViking storage mechanics
+- QMD workspace storage mechanics
 - knowledge synthesis policy internals
 - skill execution
 - production authentication or multi-user authorization
@@ -218,9 +218,6 @@ Response:
     "activityWatch": {
       "baseUrl": "http://127.0.0.1:5600"
     },
-    "openViking": {
-      "baseUrl": "http://127.0.0.1:1933"
-    },
     "service": {
       "host": "127.0.0.1",
       "port": 3007
@@ -288,7 +285,7 @@ Notes:
 - Source filters are applied before pagination. They are intended for Source
   Management Recent Memory views and match Phase 4 ledger-imported
   `MemoryEvent.sourceType` plus the source instance encoded in `sourceRef`.
-- The cache is display-oriented; durable records remain in workspace/OpenViking
+- The cache is display-oriented; durable records remain in QMD workspace
   storage.
 
 ### `POST /memory/query`
@@ -938,8 +935,8 @@ Response:
 
 Notes:
 
-- Deleted knowledge tombstones suppress stale OpenViking copies.
-- Workspace files can override OpenViking fallback reads.
+- Deleted knowledge tombstones suppress stale workspace copies.
+- QMD index reads map back to workspace files.
 
 ### `POST /knowledge`
 

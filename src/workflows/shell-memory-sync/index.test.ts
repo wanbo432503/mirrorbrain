@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { createOpenVikingMemoryEventRecord } from '../../integrations/openviking-store/index.js';
+import { createQmdWorkspaceMemoryEventRecord } from '../../integrations/qmd-workspace-store/index.js';
 import { getMirrorBrainConfig } from '../../shared/config/index.js';
 import { runShellMemorySyncOnce } from './index.js';
 
@@ -55,7 +55,7 @@ describe('shell memory sync workflow', () => {
     );
 
     expect(persistedRecordIds).toEqual([
-      createOpenVikingMemoryEventRecord({
+      createQmdWorkspaceMemoryEventRecord({
         id: 'shell:shell-history:1773974100:git-status',
         sourceType: 'shell-history',
         sourceRef: 'shell-history:1773974100:git-status',
@@ -70,7 +70,7 @@ describe('shell memory sync workflow', () => {
           checkpoint: '2026-03-20T07:45:00.000Z',
         },
       }).recordId,
-      createOpenVikingMemoryEventRecord({
+      createQmdWorkspaceMemoryEventRecord({
         id: 'shell:shell-history:1773974160:pnpm-vitest-run',
         sourceType: 'shell-history',
         sourceRef: 'shell-history:1773974160:pnpm-vitest-run',

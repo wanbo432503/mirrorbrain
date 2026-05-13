@@ -99,7 +99,7 @@ describe('mirrorbrain service contract integration', () => {
 
           return {
             sourcePath: '/tmp/mirrorbrain-workspace/knowledge.md',
-            rootUri: 'viking://resources/mirrorbrain/knowledge/knowledge-draft:reviewed:candidate:browser:aw-event-1.md',
+            rootUri: 'qmd://mirrorbrain/knowledge/knowledge-draft:reviewed:candidate:browser:aw-event-1.md',
           };
         },
         publishSkill: async (input) => {
@@ -110,7 +110,7 @@ describe('mirrorbrain service contract integration', () => {
 
           return {
             sourcePath: '/tmp/mirrorbrain-workspace/skill-draft.md',
-            uri: 'viking://resources/mirrorbrain/skill-drafts/skill-draft:reviewed:candidate:browser:aw-event-1.md',
+            uri: 'qmd://mirrorbrain/skill-drafts/skill-draft:reviewed:candidate:browser:aw-event-1.md',
           };
         },
       },
@@ -213,7 +213,7 @@ describe('mirrorbrain service contract integration', () => {
 
           return {
             sourcePath: '/tmp/mirrorbrain-workspace/knowledge.md',
-            rootUri: 'viking://resources/mirrorbrain/knowledge/knowledge-draft:reviewed:candidate:browser:aw-event-1.md',
+            rootUri: 'qmd://mirrorbrain/knowledge/knowledge-draft:reviewed:candidate:browser:aw-event-1.md',
           };
         },
         publishSkill: async (input) => {
@@ -224,7 +224,7 @@ describe('mirrorbrain service contract integration', () => {
 
           return {
             sourcePath: '/tmp/mirrorbrain-workspace/skill-draft.md',
-            uri: 'viking://resources/mirrorbrain/skill-drafts/skill-draft:reviewed:candidate:browser:aw-event-1.md',
+            uri: 'qmd://mirrorbrain/skill-drafts/skill-draft:reviewed:candidate:browser:aw-event-1.md',
           };
         },
       },
@@ -296,7 +296,7 @@ describe('mirrorbrain service contract integration', () => {
           return {
             sourcePath: '/tmp/mirrorbrain-workspace/reviewed.json',
             rootUri:
-              'viking://resources/mirrorbrain/reviewed-memories/reviewed:candidate:browser:aw-event-1.json',
+              'qmd://mirrorbrain/reviewed-memories/reviewed:candidate:browser:aw-event-1.json',
           };
         },
       },
@@ -378,7 +378,7 @@ describe('mirrorbrain service contract integration', () => {
           return {
             sourcePath: '/tmp/mirrorbrain-workspace/candidate.json',
             rootUri:
-              'viking://resources/mirrorbrain/candidate-memories/candidate:browser:aw-event-1.json',
+              'qmd://mirrorbrain/candidate-memories/candidate:browser:aw-event-1.json',
           };
         },
       },

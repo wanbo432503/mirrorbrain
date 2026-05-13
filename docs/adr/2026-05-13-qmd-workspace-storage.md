@@ -2,10 +2,9 @@
 
 ## Status
 
-Accepted and implemented for the default runtime storage path. The repository
-still contains OpenViking adapter code for explicit legacy compatibility tests,
-but MirrorBrain startup, service defaults, and plugin retrieval now use the QMD
-workspace path.
+Accepted and implemented for the default runtime storage path. MirrorBrain
+startup, service defaults, plugin retrieval, and workspace persistence now use
+the QMD workspace path. The legacy OpenViking adapter source has been removed.
 
 ## Context
 
@@ -98,15 +97,13 @@ Completed in the first QMD integration slice:
 3. Replace MirrorBrain service defaults with QMD workspace reads and writes.
 4. Replace `openclaw-plugin-api` default reads with QMD-backed retrieval while
    preserving existing `MemoryQueryResult` shape.
-5. Replace startup diagnostics: keep ActivityWatch checks, remove mandatory
-   OpenViking reachability, and add QMD workspace writability checks.
+5. Replace startup diagnostics: keep ActivityWatch checks and require QMD
+   workspace writability instead of a secondary storage service.
 
 Remaining work:
 
 1. Standardize local QMD embedding model/build prerequisites and add a real
    vector embedding smoke test.
-2. Remove OpenViking compatibility code after any remaining callers have been
-   explicitly retired.
 
 ## Consequences
 
@@ -119,5 +116,5 @@ Remaining work:
   then trigger index refresh.
 - The migration must preserve memory/knowledge/skill boundaries. QMD is an
   index and retrieval engine, not a new lifecycle owner.
-- Existing OpenViking tests should be replaced gradually with workspace-store
-  and QMD-store contract tests rather than deleted in one unverified step.
+- Workspace-store and QMD-store contract tests now cover the default runtime
+  path.

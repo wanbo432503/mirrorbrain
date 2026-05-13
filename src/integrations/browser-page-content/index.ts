@@ -3,8 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import type { MemoryEvent } from '../../shared/types/index.js';
-
-import type { ingestBrowserPageContentToOpenViking } from '../openviking-store/index.js';
+import type { ingestBrowserPageContentToQmdWorkspace } from '../qmd-workspace-store/index.js';
 
 interface BrowserPageContentStorageRef {
   sourcePath: string;
@@ -305,7 +304,7 @@ export async function enrichBrowserMemoryEventWithPageContent(
   },
   dependencies: {
     fetchPageContent?: typeof fetchBrowserPageContent;
-    ingestPageContent?: typeof ingestBrowserPageContentToOpenViking;
+    ingestPageContent?: typeof ingestBrowserPageContentToQmdWorkspace;
     sharedArtifact?: BrowserPageContentArtifact;
   },
 ): Promise<MemoryEvent> {
@@ -359,7 +358,6 @@ export async function enrichBrowserMemoryEventWithPageContent(
           existingArtifact,
         });
   const stored = await ingestPage({
-    baseUrl: input.baseUrl,
     workspaceDir: input.workspaceDir,
     artifact,
   });
@@ -381,8 +379,8 @@ export function createBrowserPageContentEventContent(
     title: artifact.title,
     textStorage: {
       filePath: stored.sourcePath,
-      openVikingUri: stored.rootUri,
-      vectorizationSource: 'openviking-resource',
+      qmdUri: stored.rootUri,
+      vectorizationSource: 'qmd-workspace',
     },
     latestAccessedAt: artifact.latestAccessedAt,
     accessTimes: artifact.accessTimes,

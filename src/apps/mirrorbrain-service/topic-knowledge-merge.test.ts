@@ -87,7 +87,7 @@ describe('mirrorbrain service topic knowledge merge', () => {
     };
     const publishKnowledge = vi.fn(async () => ({
       sourcePath: '/tmp/knowledge.md',
-      rootUri: 'viking://resources/topic-knowledge',
+      rootUri: 'qmd://mirrorbrain/topic-knowledge',
     }));
     const workspaceDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-service-'));
     const api = createMirrorBrainService(
@@ -165,7 +165,7 @@ describe('mirrorbrain service topic knowledge merge', () => {
     };
     const publishKnowledge = vi.fn(async () => ({
       sourcePath: '/tmp/mirrorbrain/knowledge/topic.md',
-      rootUri: 'viking://resources/mirrorbrain/knowledge/topic.md',
+      rootUri: 'qmd://mirrorbrain/knowledge/topic.md',
     }));
 
     const api = createMirrorBrainService(

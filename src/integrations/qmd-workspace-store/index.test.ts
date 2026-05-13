@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   createQmdWorkspaceMemoryEventWriter,
   getQmdWorkspacePaths,
+  ingestBrowserPageContentToQmdWorkspace,
   listMirrorBrainMemoryEventsFromQmdWorkspace,
 } from './index.js';
 import type { MemoryEvent } from '../../shared/types/index.js';
@@ -262,5 +263,30 @@ describe('qmd-workspace-store', () => {
     );
 
     expect(results).toEqual([event]);
+  });
+
+  it('writes shared browser page content into the same qmd workspace', async () => {
+    const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-qmd-'));
+
+    const result = await ingestBrowserPageContentToQmdWorkspace({
+      workspaceDir,
+      artifact: {
+        id: 'browser-page:url-abc123',
+        url: 'https://example.com/qmd',
+        title: 'QMD page content',
+        text: 'Readable page body for qmd indexing.',
+        accessTimes: ['2026-05-13T08:00:00.000Z'],
+        latestAccessedAt: '2026-05-13T08:00:00.000Z',
+      },
+    });
+
+    const markdown = await readFile(result.sourcePath, 'utf8');
+
+    expect(result.rootUri).toBe(
+      'qmd://mirrorbrain/browser-page-content/browser-page-url-abc123.md',
+    );
+    expect(markdown).toContain('# QMD page content');
+    expect(markdown).toContain('- url: https://example.com/qmd');
+    expect(markdown).toContain('Readable page body for qmd indexing.');
   });
 });

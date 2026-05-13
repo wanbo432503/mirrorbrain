@@ -58,7 +58,7 @@ describe('mirrorbrain service memory narratives', () => {
     const buildBrowserThemeNarratives = vi.fn(() => [browserNarrative]);
     const publishMemoryNarrative = vi.fn(async () => ({
       sourcePath: '/tmp/mirrorbrain/memory-narratives/memory-narrative-browser-theme.json',
-      rootUri: 'viking://resources/mirrorbrain-memory-narratives-memory-narrative-browser-theme.json',
+      rootUri: 'qmd://mirrorbrain/mirrorbrain-memory-narratives-memory-narrative-browser-theme.json',
     }));
 
     const api = createMirrorBrainService(
@@ -120,7 +120,7 @@ describe('mirrorbrain service memory narratives', () => {
     const buildBrowserThemeNarratives = vi.fn(() => [browserNarrative]);
     const publishMemoryNarrative = vi.fn(async () => ({
       sourcePath: '/tmp/mirrorbrain/memory-narratives/memory-narrative-browser-theme.json',
-      rootUri: 'viking://resources/mirrorbrain-memory-narratives-memory-narrative-browser-theme.json',
+      rootUri: 'qmd://mirrorbrain/mirrorbrain-memory-narratives-memory-narrative-browser-theme.json',
     }));
 
     const api = createMirrorBrainService(

@@ -24,7 +24,7 @@ This component is not responsible for:
 
 - core lifecycle policy
 - source-specific ingestion logic
-- storage details for OpenViking
+- storage details for QMD workspace indexing
 - UI rendering
 
 Those concerns remain in the service, workflow, module, and integration layers.

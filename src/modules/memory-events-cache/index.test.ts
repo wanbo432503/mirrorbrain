@@ -7,7 +7,7 @@ import type { MemoryEvent } from '../../shared/types/index.js';
 import {
   loadMemoryEventsCache,
   saveMemoryEventsCache,
-  initializeCacheFromOpenViking,
+  initializeCacheFromQmdWorkspace,
   updateCacheWithNewEvents,
   getEventsFromCache,
   type MemoryEventsCache,
@@ -276,7 +276,7 @@ describe('memory-events-cache', () => {
     });
   });
 
-  describe('initializeCacheFromOpenViking', () => {
+  describe('initializeCacheFromQmdWorkspace', () => {
     it('should initialize cache from workspace filesystem when workspace has events', async () => {
       // Create memory events in workspace filesystem
       const memoryEventsDir = join(tempWorkspace, 'mirrorbrain', 'memory-events');
@@ -288,9 +288,7 @@ describe('memory-events-cache', () => {
       await writeFile(join(memoryEventsDir, 'browser:101.json'), JSON.stringify(event1));
       await writeFile(join(memoryEventsDir, 'browser:102.json'), JSON.stringify(event2));
 
-      // Initialize cache (should read from workspace filesystem, not empty OpenViking)
-      const mockBaseUrl = 'http://localhost:8080-unreachable';
-      const cache = await initializeCacheFromOpenViking(tempWorkspace, mockBaseUrl);
+      const cache = await initializeCacheFromQmdWorkspace(tempWorkspace);
 
       expect(cache.total).toBe(2);
       expect(cache.events.length).toBe(2);
@@ -298,32 +296,25 @@ describe('memory-events-cache', () => {
       expect(cache.events[1].id).toBe('browser:102');
     });
 
-    it('should prefer workspace filesystem over OpenViking even when OpenViking has no events', async () => {
-      // This mimics the user's bug: workspace has 4132 events, OpenViking has 0
+    it('should initialize from qmd workspace files without a secondary backend', async () => {
       const memoryEventsDir = join(tempWorkspace, 'mirrorbrain', 'memory-events');
       await mkdir(memoryEventsDir, { recursive: true });
 
       const event = createTestMemoryEvent('browser:existing', '2026-04-16T09:00:00Z');
       await writeFile(join(memoryEventsDir, 'browser:existing.json'), JSON.stringify(event));
 
-      // Mock OpenViking to return empty (simulating the bug scenario)
-      const mockListOpenViking = vi.fn(async () => []);
       const mockListWorkspace = vi.fn(async () => [event]);
 
-      const cache = await initializeCacheFromOpenViking(
+      const cache = await initializeCacheFromQmdWorkspace(
         tempWorkspace,
-        'http://localhost:8080',
         {
           listWorkspaceMemoryEvents: mockListWorkspace,
-          listOpenVikingMemoryEvents: mockListOpenViking,
         },
       );
 
-      // Cache should use workspace data, not OpenViking's empty result
       expect(cache.total).toBe(1);
       expect(cache.events.length).toBe(1);
       expect(mockListWorkspace).toHaveBeenCalled();
-      expect(mockListOpenViking).not.toHaveBeenCalled(); // Shouldn't call OpenViking if workspace has data
     });
 
     it('should filter blacklisted browser pages and deduplicate source-ledger browser URLs', async () => {
@@ -360,9 +351,8 @@ describe('memory-events-cache', () => {
         url: 'chrome://settings/',
       });
 
-      const cache = await initializeCacheFromOpenViking(
+      const cache = await initializeCacheFromQmdWorkspace(
         tempWorkspace,
-        'http://localhost:8080',
         {
           listWorkspaceMemoryEvents: async () => [
             docsOld,
@@ -372,7 +362,6 @@ describe('memory-events-cache', () => {
             anyAddress,
             chromeSettings,
           ],
-          listOpenVikingMemoryEvents: vi.fn(async () => []),
         },
       );
 
@@ -412,7 +401,6 @@ describe('memory-events-cache', () => {
 
       const result = await updateCacheWithNewEvents(
         tempWorkspace,
-        'http://localhost:8080',
         newEvents,
         'browser'
       );
@@ -438,7 +426,6 @@ describe('memory-events-cache', () => {
 
       const result = await updateCacheWithNewEvents(
         tempWorkspace,
-        'http://localhost:8080',
         newEvents,
         'browser'
       );
@@ -466,7 +453,6 @@ describe('memory-events-cache', () => {
 
       const result = await updateCacheWithNewEvents(
         tempWorkspace,
-        'http://localhost:8080',
         newEvents,
         'browser'
       );
@@ -488,7 +474,6 @@ describe('memory-events-cache', () => {
 
       const result = await updateCacheWithNewEvents(
         tempWorkspace,
-        'http://localhost:8080',
         [
           createLedgerBrowserMemoryEvent({
             id: 'ledger:browser:useful-old',

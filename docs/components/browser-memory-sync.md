@@ -41,7 +41,7 @@ This workflow executes the live browser ingestion loop for Phase 1. It now acts 
     large readable-page backfills complete.
 13. In a follow-up background step, check page-content authorization again,
     then either reuse an existing shared page artifact or fetch/index readable
-    page text once per URL in OpenViking.
+    page text once per URL in the QMD workspace.
 14. Repeat on the configured polling interval when polling is enabled.
 
 ## Test Strategy

@@ -136,11 +136,10 @@ subdirectories:
 - `cache/`: display-oriented memory event cache.
 - `deleted-artifacts/`: deletion tombstones for knowledge and skills.
 
-OpenViking is the current implemented retrieval/indexing backend, but the
-accepted next direction is QMD indexing markdown from this same workspace with
-derived index data under `<workspaceDir>/mirrorbrain/qmd/`. Source-specific
-upstream systems, such as ActivityWatch, are not treated as MirrorBrain's
-durable store.
+QMD is the current retrieval/indexing backend. It indexes markdown from this
+same workspace and stores derived index data under
+`<workspaceDir>/mirrorbrain/qmd/`. Source-specific upstream systems, such as
+ActivityWatch, are not treated as MirrorBrain's durable store.
 
 ## Verification
 

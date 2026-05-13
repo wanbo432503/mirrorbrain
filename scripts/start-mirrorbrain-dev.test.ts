@@ -44,9 +44,6 @@ describe('start mirrorbrain dev runtime', () => {
         activityWatch: {
           baseUrl: 'http://127.0.0.1:5600',
         },
-        openViking: {
-          baseUrl: 'http://127.0.0.1:1933',
-        },
         sync: {
           pollingIntervalMs: 900000,
           initialBackfillHours: 12,

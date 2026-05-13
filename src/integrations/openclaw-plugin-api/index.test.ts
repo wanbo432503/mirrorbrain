@@ -7,7 +7,7 @@ import {
 } from './index.js';
 
 describe('openclaw plugin api', () => {
-  it('returns theme-level memory retrieval results from OpenViking memory events', async () => {
+  it('returns theme-level memory retrieval results from QMD memory events', async () => {
     await expect(
       queryMemory(
         {
@@ -2008,7 +2008,7 @@ describe('openclaw plugin api', () => {
     });
   });
 
-  it('returns knowledge drafts from OpenViking', async () => {
+  it('returns knowledge drafts from QMD', async () => {
     await expect(
       listKnowledge(
         {
@@ -2033,7 +2033,7 @@ describe('openclaw plugin api', () => {
     ]);
   });
 
-  it('returns skill drafts from OpenViking', async () => {
+  it('returns skill drafts from QMD', async () => {
     await expect(
       listSkillDrafts(
         {

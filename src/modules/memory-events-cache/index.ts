@@ -4,9 +4,8 @@ import { join } from 'node:path';
 
 import type { MemoryEvent } from '../../shared/types/index.js';
 import {
-  listMirrorBrainMemoryEventsFromOpenViking,
-  listMirrorBrainMemoryEventsFromWorkspace,
-} from '../../integrations/openviking-store/index.js';
+  listMirrorBrainMemoryEventsFromQmdFiles,
+} from '../../integrations/qmd-workspace-store/index.js';
 import {
   evaluateMemoryEventsForIngestion,
 } from './memory-event-evaluator.js';
@@ -106,47 +105,20 @@ export async function saveMemoryEventsCache(
   await writeFile(cacheFilePath, JSON.stringify(cache, null, 2));
 }
 
-export async function initializeCacheFromOpenViking(
+export async function initializeCacheFromQmdWorkspace(
   workspaceDir: string,
-  baseUrl: string,
   dependencies?: {
-    listWorkspaceMemoryEvents?: typeof listMirrorBrainMemoryEventsFromWorkspace;
-    listOpenVikingMemoryEvents?: typeof listMirrorBrainMemoryEventsFromOpenViking;
+    listWorkspaceMemoryEvents?: typeof listMirrorBrainMemoryEventsFromQmdFiles;
   },
 ): Promise<MemoryEventsCache> {
-  const listWorkspace = dependencies?.listWorkspaceMemoryEvents ?? listMirrorBrainMemoryEventsFromWorkspace;
-  const listOpenViking = dependencies?.listOpenVikingMemoryEvents ?? listMirrorBrainMemoryEventsFromOpenViking;
+  const listWorkspace =
+    dependencies?.listWorkspaceMemoryEvents ?? listMirrorBrainMemoryEventsFromQmdFiles;
 
-  // Try workspace filesystem first (more reliable for local data)
   let allEvents: MemoryEvent[];
 
   try {
     allEvents = await listWorkspace({ workspaceDir });
-
-    // If workspace has data, use it
-    if (allEvents.length > 0) {
-      const displayEvents = prepareMemoryEventsForDisplay(allEvents);
-
-      const cache: MemoryEventsCache = {
-        version: CACHE_VERSION,
-        updatedAt: new Date().toISOString(),
-        total: displayEvents.length,
-        events: displayEvents,
-        lastSyncSummary: {},
-      };
-
-      await saveMemoryEventsCache(workspaceDir, cache);
-      return cache;
-    }
   } catch {
-    // Workspace read failed, continue to try OpenViking
-  }
-
-  // Workspace is empty or failed, try OpenViking
-  try {
-    allEvents = await listOpenViking({ baseUrl });
-  } catch {
-    // Both failed, return empty cache
     allEvents = [];
   }
 
@@ -372,14 +344,13 @@ function mergeNewEventsToCache(
 
 export async function updateCacheWithNewEvents(
   workspaceDir: string,
-  baseUrl: string,
   newEvents: MemoryEvent[],
   sourceType: 'browser' | 'shell',
 ): Promise<MemoryEventsCache> {
   let cache = await loadMemoryEventsCache(workspaceDir);
 
   if (cache === null) {
-    cache = await initializeCacheFromOpenViking(workspaceDir, baseUrl);
+    cache = await initializeCacheFromQmdWorkspace(workspaceDir);
     return cache;
   }
 

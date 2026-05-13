@@ -1,7 +1,3 @@
-import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import { homedir } from 'node:os';
-
 interface LLMConfig {
   apiBase: string;
   apiKey: string;
@@ -43,7 +39,7 @@ function readRequiredEnvConfig(env: NodeJS.ProcessEnv): LLMConfig | null {
 }
 
 /**
- * Load LLM config from MirrorBrain env first, then ~/.openviking/ov.conf.
+ * Load LLM config from explicit MirrorBrain environment variables.
  */
 export async function loadLLMConfig(): Promise<LLMConfig> {
   if (cachedConfig) return cachedConfig;
@@ -54,17 +50,9 @@ export async function loadLLMConfig(): Promise<LLMConfig> {
     return cachedConfig;
   }
 
-  const configPath = join(homedir(), '.openviking', 'ov.conf');
-  const configContent = await readFile(configPath, 'utf-8');
-  const config = JSON.parse(configContent);
-
-  cachedConfig = {
-    apiBase: config.vlm.api_base,
-    apiKey: config.vlm.api_key,
-    model: config.vlm.model,
-  };
-
-  return cachedConfig;
+  throw new Error(
+    'MIRRORBRAIN_LLM_API_BASE, MIRRORBRAIN_LLM_API_KEY, and MIRRORBRAIN_LLM_MODEL are required.',
+  );
 }
 
 /**

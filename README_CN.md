@@ -185,7 +185,7 @@ http://127.0.0.1:3007/docs
 - [MirrorBrain HTTP server](./docs/components/mirrorbrain-http-server.md)
 - [OpenClaw plugin API](./docs/components/openclaw-plugin-api.md)
 - [QMD workspace store](./docs/components/qmd-workspace-store.md)
-- [OpenViking store](./docs/components/openviking-store.md) legacy compatibility notes
+- [Source directory audit](./docs/components/source-directory-audit.md)
 - [ActivityWatch browser source](./docs/components/activitywatch-browser-source.md)
 - [Shell history source](./docs/components/shell-history-source.md)
 - [Memory review](./docs/components/memory-review.md)

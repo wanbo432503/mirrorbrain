@@ -1,5 +1,5 @@
 import type { SyncCheckpointStore } from '../../integrations/file-sync-checkpoint-store/index.js';
-import type { OpenVikingMemoryEventWriter } from '../../integrations/openviking-store/index.js';
+import type { QmdWorkspaceMemoryEventWriter } from '../../integrations/qmd-workspace-store/index.js';
 import {
   createShellHistoryMemorySourcePlugin,
   readShellHistory,
@@ -23,7 +23,7 @@ interface RunShellMemorySyncOnceDependencies {
   checkpointStore: SyncCheckpointStore;
   authorizeSourceSync?: MemorySourceSyncAuthorizationDependency;
   readShellHistory?: typeof readShellHistory;
-  writeMemoryEvent: OpenVikingMemoryEventWriter['writeMemoryEvent'];
+  writeMemoryEvent: QmdWorkspaceMemoryEventWriter['writeMemoryEvent'];
 }
 
 export type ShellMemorySyncResult = MemorySourceSyncResult;

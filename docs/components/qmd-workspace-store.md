@@ -40,10 +40,13 @@ Implemented interfaces:
 - `ingestCandidateMemoryToQmdWorkspace(...)`
 - `ingestReviewedMemoryToQmdWorkspace(...)`
 - `ingestMemoryNarrativeToQmdWorkspace(...)`
+- `ingestBrowserPageContentToQmdWorkspace(...)`
 - `ingestKnowledgeArtifactToQmdWorkspace(...)`
 - `ingestSkillArtifactToQmdWorkspace(...)`
 - `listMirrorBrainMemoryEventsFromQmdWorkspace(...)`
+- `listMirrorBrainMemoryEventsFromQmdFiles(...)`
 - `listRawMirrorBrainMemoryEventsFromQmdWorkspace(...)`
+- `listRawMirrorBrainMemoryEventsFromQmdFiles(...)`
 - `listMirrorBrainMemoryNarrativesFromQmdWorkspace(...)`
 - `listMirrorBrainCandidateMemoriesFromQmdWorkspace(...)`
 - `listMirrorBrainReviewedMemoriesFromQmdWorkspace(...)`
@@ -88,9 +91,11 @@ Tests cover:
 - QMD db/config paths stay under the configured `workspaceDir`
 - collections point at MirrorBrain workspace markdown directories
 - memory writes produce JSON state and canonical markdown for QMD indexing
+- browser page-content writes produce canonical markdown under the same
+  workspace
 - memory query results map QMD hit paths back to `MemoryEvent` records
 - QMD unified structured search is preferred before direct lexical fallback
-- startup diagnostics no longer require OpenViking reachability
+- startup diagnostics do not require a secondary storage service
 
 Remaining coverage gaps:
 
