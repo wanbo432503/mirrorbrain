@@ -68,6 +68,9 @@ the authoritative record.
 - Corrupt JSON files surface as read errors to the caller.
 - Source summaries are derived from available audit/checkpoint records and
   therefore may be incomplete before any import or recorder audit has occurred.
+- Retired legacy source state, including `agent-transcript` / `openclaw-main`,
+  is ignored when listing audit events or deriving source summaries. Current
+  agent session state is represented only by the normalized `agent` source.
 - A disabled source summary reports `lifecycleStatus: disabled` and
   `recorderStatus: stopped`; this does not delete existing memory events.
 - Recorder status is currently `unknown` until recorder supervision is wired.

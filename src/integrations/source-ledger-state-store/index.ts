@@ -145,6 +145,16 @@ function getSummaryKey(input: {
   return `${input.sourceKind}:${input.sourceInstanceId}`;
 }
 
+function isRetiredSourceState(input: {
+  sourceKind?: string;
+  sourceInstanceId?: string;
+}): boolean {
+  return (
+    input.sourceKind === 'agent-transcript' ||
+    input.sourceInstanceId === 'openclaw-main'
+  );
+}
+
 function deriveSourceInstanceSummaries(input: {
   auditEvents: SourceAuditEvent[];
   checkpoints: SourceLedgerImportCheckpoint[];
@@ -153,6 +163,10 @@ function deriveSourceInstanceSummaries(input: {
   const summaries = new Map<string, SourceInstanceSummary>();
 
   for (const event of input.auditEvents) {
+    if (isRetiredSourceState(event)) {
+      continue;
+    }
+
     if (!event.sourceKind || !event.sourceInstanceId) {
       continue;
     }
@@ -210,6 +224,10 @@ function deriveSourceInstanceSummaries(input: {
   }
 
   for (const config of input.configs) {
+    if (isRetiredSourceState(config)) {
+      continue;
+    }
+
     const key = getSummaryKey(config);
     const existing = summaries.get(key) ?? {
       sourceKind: config.sourceKind,
@@ -285,6 +303,7 @@ export function createFileSourceLedgerStateStore(
       );
 
       return auditEvents
+        .filter((event) => !isRetiredSourceState(event))
         .filter((event) =>
           filter.sourceKind === undefined
             ? true

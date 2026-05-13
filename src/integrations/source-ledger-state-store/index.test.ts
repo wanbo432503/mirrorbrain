@@ -166,4 +166,48 @@ describe('source ledger state store', () => {
       }),
     ]);
   });
+
+  it('omits retired openclaw source state from audit listings and summaries', async () => {
+    const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-state-'));
+    const store = createFileSourceLedgerStateStore({ workspaceDir });
+
+    await store.writeSourceAuditEvent(
+      createAuditEvent({
+        id: 'source-audit:retired-openclaw-imported',
+        sourceKind: 'agent-transcript' as never,
+        sourceInstanceId: 'openclaw-main',
+        message: 'Imported legacy agent transcript.',
+      }),
+    );
+    await store.writeSourceAuditEvent(
+      createAuditEvent({
+        id: 'source-audit:agent-imported',
+        sourceKind: 'agent',
+        sourceInstanceId: 'agent-main',
+        message: 'Imported agent session.',
+      }),
+    );
+    await store.writeSourceInstanceConfig({
+      sourceKind: 'agent-transcript' as never,
+      sourceInstanceId: 'openclaw-main',
+      enabled: true,
+      updatedAt: '2026-05-12T11:00:00.000Z',
+      updatedBy: 'mirrorbrain-web',
+    });
+
+    await expect(store.listSourceAuditEvents({})).resolves.toEqual([
+      expect.objectContaining({
+        id: 'source-audit:agent-imported',
+        sourceKind: 'agent',
+        sourceInstanceId: 'agent-main',
+      }),
+    ]);
+    await expect(store.listSourceInstanceSummaries()).resolves.toEqual([
+      expect.objectContaining({
+        sourceKind: 'agent',
+        sourceInstanceId: 'agent-main',
+        importedCount: 1,
+      }),
+    ]);
+  });
 });
