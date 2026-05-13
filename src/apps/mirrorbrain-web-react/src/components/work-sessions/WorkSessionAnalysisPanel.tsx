@@ -35,6 +35,18 @@ function formatWindow(result: WorkSessionAnalysisResult): string {
 
 type TreeMode = 'preview' | 'published'
 
+function buildAssociatedMemoryEventItems(topic: WorkSessionPreviewTopicNode) {
+  const labels = topic.candidate.relationHints.length > 0
+    ? topic.candidate.relationHints
+    : topic.candidate.memoryEventIds
+
+  return labels.map((label, index) => ({
+    id: topic.candidate.memoryEventIds[index] ?? `${topic.candidate.id}:${index}`,
+    label,
+    sourceType: topic.sourceTypes[index] ?? topic.sourceTypes[0] ?? 'memory',
+  }))
+}
+
 export default function WorkSessionAnalysisPanel({
   api,
 }: WorkSessionAnalysisPanelProps) {
@@ -414,13 +426,45 @@ export default function WorkSessionAnalysisPanel({
                     <h3 className="break-words font-heading text-base font-semibold text-ink">
                       {topic.topicName}
                     </h3>
-                    <p className="mt-1 break-words text-sm text-inkMuted">
-                      {topic.candidate.summary}
-                    </p>
+                    {knowledge === undefined && (
+                      <p className="mt-1 break-words text-sm text-inkMuted">
+                        {topic.candidate.summary}
+                      </p>
+                    )}
                     {knowledge ? (
-                      <div className="mt-3 whitespace-pre-wrap break-words rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm leading-6 text-ink">
-                        {knowledge.body}
-                      </div>
+                      <>
+                        <div className="mt-3 whitespace-pre-wrap break-words rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm leading-6 text-ink">
+                          {knowledge.body}
+                        </div>
+                        <section className="mt-3 rounded border border-slate-200 bg-white px-3 py-3">
+                          <h4 className="text-xs font-semibold uppercase text-inkMuted">
+                            Associated memory events
+                          </h4>
+                          <ul
+                            aria-label="Associated memory events"
+                            className="mt-2 grid gap-2"
+                          >
+                            {buildAssociatedMemoryEventItems(topic).map((item, index) => (
+                              <li
+                                key={item.id}
+                                className="flex min-w-0 items-start gap-2 rounded border border-slate-100 bg-slate-50 px-3 py-2"
+                              >
+                                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                                  {index + 1}
+                                </span>
+                                <div className="min-w-0 flex-1">
+                                  <p className="break-words text-sm font-medium text-ink">
+                                    {item.label}
+                                  </p>
+                                  <p className="mt-1 text-xs text-inkMuted">
+                                    {item.sourceType}
+                                  </p>
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        </section>
+                      </>
                     ) : (
                       <div className="mt-3 rounded border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-sm text-inkMuted">
                         Knowledge has not been generated for this topic.

@@ -14,9 +14,11 @@ configured scan interval. The lower-level workflow exposes a 30-minute default
 schedule, while the MirrorBrain service local runtime supplies a one-minute
 interval so newly captured source-ledger records are imported promptly.
 
-The workflow keeps source acquisition behind the ledger boundary. It reads
-ledger files; it does not collect browser, file, shell, screenshot, audio, or
-agent activity.
+The workflow keeps source acquisition behind the ledger boundary for activity
+records. For browser ledger entries whose `page_content` is empty or only
+duplicates the URL, it performs a best-effort readable page fetch before writing
+the resulting `MemoryEvent`, so downstream review and knowledge generation have
+substantive page text instead of URL-only placeholders.
 
 ## Responsibility Boundary
 
@@ -28,6 +30,8 @@ This workflow is responsible for:
 - calling `importSourceLedgerText(...)` for line-level validation and
   normalization
 - persisting imported `MemoryEvent` records through injected dependencies
+- enriching sparse browser ledger entries with readable page text before the
+  memory write
 - persisting operational `SourceAuditEvent` records through injected
   dependencies
 - exposing the default 30-minute scan cadence as a workflow-level configuration
@@ -37,6 +41,7 @@ This workflow is responsible for:
 This workflow is not responsible for:
 
 - source recorder execution
+- broad crawling or refetching pages that already contain useful ledger text
 - source-instance configuration storage
 - QMD workspace persistence details
 - UI presentation
@@ -63,10 +68,13 @@ injected so the service layer can choose the durable backend.
 6. The workflow imports only lines after the checkpoint.
 7. When the caller provides a source enablement callback, the workflow checks
    each imported event's source kind and instance before memory writes.
-8. The workflow writes imported memory events for enabled source instances.
-9. The workflow writes audit events for imported lines, malformed skipped
+8. Browser events with sparse `page_content` fetch readable page text from the
+   ledger URL. Fetch failures fall back to the original ledger content and do
+   not fail the import.
+9. The workflow writes imported memory events for enabled source instances.
+10. The workflow writes audit events for imported lines, malformed skipped
    lines, and disabled-source skipped events.
-10. The workflow persists the next checkpoint for each scanned ledger.
+11. The workflow persists the next checkpoint for each scanned ledger.
 
 ## Inputs And Outputs
 
@@ -78,6 +86,7 @@ Inputs:
 - checkpoint reader/writer
 - memory event writer
 - source audit writer
+- optional browser page-content fetcher
 - optional source enablement callback
 
 Outputs:
@@ -96,6 +105,10 @@ Outputs:
 - Filesystem read failures outside a missing ledger root are surfaced to the
   caller.
 - Scheduled import failures do not stop future polling ticks.
+- Browser page fetch failures are non-fatal and preserve the original imported
+  event.
+- Browser enrichment only runs for sparse `page_content`, currently empty text
+  or text equal to the URL.
 - Checkpoints are currently line-number based. A later scanner can add
   file-size or mtime prefiltering without changing the workflow contract.
 - The workflow does not own authorization policy, but it can enforce the
@@ -111,5 +124,5 @@ pnpm vitest run src/workflows/source-ledger-import/index.test.ts
 
 The tests cover daily ledger scanning, imported memory-event writes, audit-event
 writes, disabled source-instance skips before memory writes, bad-line
-continuation, checkpointed manual import behavior, the 30-minute scan schedule,
-and polling start/stop behavior.
+continuation, checkpointed manual import behavior, sparse browser page-content
+enrichment, the 30-minute scan schedule, and polling start/stop behavior.

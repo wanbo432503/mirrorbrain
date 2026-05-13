@@ -2,6 +2,10 @@ import { readdir, readFile } from 'node:fs/promises';
 import { join, relative, sep } from 'node:path';
 
 import {
+  fetchBrowserPageContent,
+  isSkippableBrowserPageUrl,
+} from '../../integrations/browser-page-content/index.js';
+import {
   importSourceLedgerText,
   type SourceAuditEvent,
   type SourceLedgerImportCheckpoint,
@@ -43,6 +47,7 @@ interface ImportChangedSourceLedgersDependencies {
   writeCheckpoint(checkpoint: SourceLedgerImportCheckpoint): Promise<void>;
   writeMemoryEvent(event: MemoryEvent): Promise<void>;
   writeSourceAuditEvent(event: SourceAuditEvent): Promise<void>;
+  fetchBrowserPageContent?: typeof fetchBrowserPageContent;
   isSourceImportAllowed?(source: {
     sourceKind: SourceLedgerKind;
     sourceInstanceId: string;
@@ -158,6 +163,113 @@ function createSkippedAuditEvent(input: {
   };
 }
 
+function getBrowserEventUrl(event: MemoryEvent): string | null {
+  const sourceSpecific = event.content.sourceSpecific;
+
+  if (
+    typeof sourceSpecific === 'object' &&
+    sourceSpecific !== null &&
+    typeof (sourceSpecific as { url?: unknown }).url === 'string'
+  ) {
+    return (sourceSpecific as { url: string }).url;
+  }
+
+  const entities = Array.isArray(event.content.entities)
+    ? event.content.entities
+    : [];
+  const urlEntity = entities.find(
+    (entity): entity is { kind: string; ref?: string; label: string } =>
+      typeof entity === 'object' &&
+      entity !== null &&
+      'kind' in entity &&
+      entity.kind === 'url' &&
+      (typeof (entity as { ref?: unknown }).ref === 'string' ||
+        typeof (entity as { label?: unknown }).label === 'string'),
+  );
+
+  return urlEntity?.ref ?? urlEntity?.label ?? null;
+}
+
+function summarizePageText(text: string): string {
+  return text
+    .replace(/\s+/gu, ' ')
+    .trim()
+    .slice(0, 280);
+}
+
+function shouldFetchBrowserPageContent(event: MemoryEvent, url: string): boolean {
+  const sourceSpecific = event.content.sourceSpecific;
+  const pageContent =
+    typeof sourceSpecific === 'object' &&
+    sourceSpecific !== null &&
+    typeof (sourceSpecific as { pageContent?: unknown }).pageContent === 'string'
+      ? (sourceSpecific as { pageContent: string }).pageContent.trim()
+      : '';
+
+  return pageContent.length === 0 || pageContent === url;
+}
+
+async function enrichBrowserLedgerMemoryEvent(
+  event: MemoryEvent,
+  input: {
+    fetchedAt: string;
+    fetchBrowserPageContent?: typeof fetchBrowserPageContent;
+  },
+): Promise<MemoryEvent> {
+  if (event.sourceType !== 'browser') {
+    return event;
+  }
+
+  const url = getBrowserEventUrl(event);
+  const title =
+    typeof event.content.title === 'string' && event.content.title.length > 0
+      ? event.content.title
+      : 'Untitled Page';
+
+  if (
+    url === null ||
+    !/^https?:\/\//iu.test(url) ||
+    isSkippableBrowserPageUrl(url) ||
+    !shouldFetchBrowserPageContent(event, url)
+  ) {
+    return event;
+  }
+
+  const fetchPage = input.fetchBrowserPageContent ?? fetchBrowserPageContent;
+
+  try {
+    const page = await fetchPage({
+      url,
+      title,
+      fetchedAt: input.fetchedAt,
+    });
+
+    if (page.text.trim().length === 0) {
+      return event;
+    }
+
+    return {
+      ...event,
+      content: {
+        ...event.content,
+        title: page.title || title,
+        summary: summarizePageText(page.text),
+        sourceSpecific: {
+          ...(typeof event.content.sourceSpecific === 'object' &&
+          event.content.sourceSpecific !== null
+            ? event.content.sourceSpecific
+            : {}),
+          pageContent: page.text,
+          pageContentSource: 'web-fetch',
+          pageContentFetchedAt: page.fetchedAt,
+        },
+      },
+    };
+  } catch {
+    return event;
+  }
+}
+
 async function listLedgerFiles(ledgersRoot: string): Promise<string[]> {
   let dateDirectories: string[];
 
@@ -234,7 +346,12 @@ export async function importChangedSourceLedgers(
         continue;
       }
 
-      await dependencies.writeMemoryEvent(event);
+      await dependencies.writeMemoryEvent(
+        await enrichBrowserLedgerMemoryEvent(event, {
+          fetchedAt: input.importedAt,
+          fetchBrowserPageContent: dependencies.fetchBrowserPageContent,
+        }),
+      );
       ledgerImportedCount += 1;
     }
 

@@ -27,6 +27,8 @@ The component owns:
 - Loading the Published Project -> Topic -> Knowledge tree from the API.
 - Rendering the returned analysis window, excluded event count, generated
   knowledge content, source types, and provenance event counts.
+- Rendering the memory events associated with a generated preview knowledge item
+  directly below the generated knowledge body as a compact item list.
 - Rendering `Preview` and `Published` tree modes in the left-side navigation.
 - Rendering Preview as Project -> Topic -> one generated Knowledge item per
   topic, where the project is task-level and must not simply mirror source
@@ -115,6 +117,8 @@ The tests verify:
   Knowledge hierarchy.
 - Preview topics do not expose `Publish` until the user explicitly generates
   preview knowledge.
+- Generated preview knowledge renders associated memory events below the
+  knowledge body, not above it.
 - The panel publishes preview knowledge through review, draft generation, and
   article publication API calls.
 - The app routes the Review surface to the work-session review panel and no

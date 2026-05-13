@@ -326,6 +326,22 @@ describe('WorkSessionAnalysisPanel', () => {
         name: 'Generate knowledge for Source ledger',
       }),
     )
+    const knowledgeBody = await screen.findByText((content) =>
+      content.includes('## Systematic knowledge'),
+    )
+    const associatedHeading = await screen.findByText('Associated memory events')
+    expect(
+      Boolean(
+        knowledgeBody.compareDocumentPosition(associatedHeading) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ),
+    ).toBe(true)
+    const associatedList = screen.getByRole('list', {
+      name: 'Associated memory events',
+    })
+    expect(associatedList).not.toBeNull()
+    expect(within(associatedList).getByText('Source ledger')).not.toBeNull()
+    expect(within(associatedList).getByText('Run tests')).not.toBeNull()
     await user.click(await screen.findByRole('button', { name: 'Publish' }))
 
     expect(api.reviewWorkSessionCandidate).toHaveBeenCalledWith(candidate, {
