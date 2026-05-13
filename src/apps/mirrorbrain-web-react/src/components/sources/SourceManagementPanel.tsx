@@ -16,14 +16,14 @@ import LoadingSpinner from '../common/LoadingSpinner'
 import Pagination from '../common/Pagination'
 import MemoryPanel from '../memory/MemoryPanel'
 
-type SourceDetailTab = 'Overview' | 'Sources' | 'Settings'
+type SourceDetailTab = 'Sources' | 'Settings'
 
 interface SourceManagementPanelProps {
   api?: MirrorBrainWebAppApi
 }
 
 const ALL_MAIN_SOURCES_KEY = 'all-main-sources'
-const DETAIL_TABS: SourceDetailTab[] = ['Overview', 'Sources', 'Settings']
+const DETAIL_TABS: SourceDetailTab[] = ['Sources', 'Settings']
 const SOURCE_HISTORY_PAGE_SIZE = 10
 
 function getSourceKey(source: {
@@ -43,7 +43,7 @@ export default function SourceManagementPanel({
   const sourceApi = api ?? defaultApi
   const [sources, setSources] = useState<SourceInstanceSummary[]>([])
   const [selectedSourceKey, setSelectedSourceKey] = useState<string>(ALL_MAIN_SOURCES_KEY)
-  const [selectedTab, setSelectedTab] = useState<SourceDetailTab>('Overview')
+  const [selectedTab, setSelectedTab] = useState<SourceDetailTab>('Sources')
   const [sourceMemoryEvents, setSourceMemoryEvents] = useState<MemoryEvent[]>([])
   const [sourceMemoryPagination, setSourceMemoryPagination] =
     useState<PaginatedMemoryEvents['pagination'] | null>(null)
@@ -186,7 +186,7 @@ export default function SourceManagementPanel({
             }`}
             onClick={() => {
               setSelectedSourceKey(ALL_MAIN_SOURCES_KEY)
-              setSelectedTab('Overview')
+              setSelectedTab('Sources')
               setSourceHistoryPage(1)
             }}
           >
@@ -209,7 +209,7 @@ export default function SourceManagementPanel({
                 }`}
                 onClick={() => {
                   setSelectedSourceKey(sourceKey)
-                  setSelectedTab('Overview')
+                  setSelectedTab('Sources')
                   setSourceHistoryPage(1)
                 }}
               >
@@ -296,28 +296,28 @@ export default function SourceManagementPanel({
               data-testid="source-detail-body"
               className="mt-4 flex min-h-0 flex-1 flex-col overflow-hidden"
             >
-              {selectedTab === 'Overview' && (
-                <div className="grid min-h-0 auto-rows-max grid-cols-2 gap-3 overflow-y-auto text-sm lg:grid-cols-4">
-                  <Metric label="Imported" value={selectedSource.importedCount} />
-                  <Metric label="Skipped" value={selectedSource.skippedCount} />
-                  <Metric label="Recorder" value={selectedSource.recorderStatus} />
-                  <Metric
-                    label="Checkpoint"
-                    value={selectedSource.checkpointSummary ?? 'none'}
-                  />
-                  {selectedSource.latestWarning && (
-                    <div className="col-span-full rounded-sm border border-amber-300 bg-amber-50 p-3 text-amber-800">
-                      {selectedSource.latestWarning}
-                    </div>
-                  )}
-                </div>
-              )}
-
               {selectedTab === 'Sources' && (
                 <div
                   data-testid="source-history-panel"
                   className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden"
                 >
+                  <div
+                    data-testid="source-summary-panel"
+                    className="grid shrink-0 grid-cols-2 gap-3 text-sm lg:grid-cols-4"
+                  >
+                    <Metric label="Imported" value={selectedSource.importedCount} />
+                    <Metric label="Skipped" value={selectedSource.skippedCount} />
+                    <Metric label="Recorder" value={selectedSource.recorderStatus} />
+                    <Metric
+                      label="Checkpoint"
+                      value={selectedSource.checkpointSummary ?? 'none'}
+                    />
+                    {selectedSource.latestWarning && (
+                      <div className="col-span-full rounded-sm border border-amber-300 bg-amber-50 p-3 text-amber-800">
+                        {selectedSource.latestWarning}
+                      </div>
+                    )}
+                  </div>
                   {isLoadingSourceMemory && (
                     <div className="flex min-h-0 flex-1 items-center justify-center">
                       <LoadingSpinner />

@@ -25,6 +25,9 @@ This component is responsible for:
 - preserving the same flex-based containment for individual source detail
   panels, where the source header and tabs stay inside the right panel and only
   source-history records scroll within the tab body
+- placing source status summary metrics at the top of the individual source
+  `Sources` subtab, directly below the subtab row and above the memory event
+  list
 - showing source-specific imported memory records from `GET /memory` with
   source filters and pagination
 - enabling or disabling source instances through `PATCH /sources/config`
@@ -73,10 +76,11 @@ The API responses use `SourceLedgerImportResult`, `SourceInstanceSummary`, and
 6. When the user selects an individual source, the app calls `GET /memory`
    with the selected source kind and instance id to populate the `Sources`
    history tab.
-7. The selected source detail panel displays overview, source history, and
-   settings tabs.
-8. Source history uses paginated memory queries so the user can browse all
-   imported records for that source instead of only a fixed recent subset.
+7. The selected source detail panel displays only `Sources` and `Settings`
+   tabs.
+8. The `Sources` tab first shows the source summary metrics that used to live
+   in `Overview`, then shows paginated source history so the user can browse
+   all imported records for that source instead of only a fixed recent subset.
 9. When the user enables or disables a source, the app calls
    `PATCH /sources/config`, writes audit-backed config through the service, and
    reloads source statuses.
@@ -96,9 +100,9 @@ The API responses use `SourceLedgerImportResult`, `SourceInstanceSummary`, and
   the app does not hide pagination controls below the panel boundary.
 - Individual source detail panels must also remain `min-height: 0` flex
   columns. The selected source header, tab row, active tab body, source-history
-  list, and pagination footer are separate flex regions so records for
-  `openclaw-main`, `chrome-main`, `filesystem-main`, `desktop-main`, and
-  `shell-main` stay inside the application viewport.
+  summary, source-history list, and pagination footer are separate flex regions
+  so records for `openclaw-main`, `chrome-main`, `filesystem-main`,
+  `desktop-main`, and `shell-main` stay inside the application viewport.
 
 ## Test Strategy
 
@@ -112,8 +116,9 @@ corepack pnpm vitest run \
   src/App.test.tsx
 ```
 
-The tests cover source API client calls, source status rendering, source
-history pagination, removal of the single-source audit/import controls, manual
-global import feedback, the `All-Main Sources` global memory view, flex
-right-panel scroll boundaries for both global and individual source detail
-views, and the top-level `memory sources` tab integration.
+The tests cover source API client calls, source status rendering inside the
+`Sources` subtab, source history pagination, removal of the single-source
+overview/audit/import controls, manual global import feedback, the `All-Main
+Sources` global memory view, flex right-panel scroll boundaries for both global
+and individual source detail views, and the top-level `memory sources` tab
+integration.

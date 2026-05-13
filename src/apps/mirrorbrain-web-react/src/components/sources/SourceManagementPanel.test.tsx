@@ -240,11 +240,16 @@ describe('SourceManagementPanel', () => {
       expect(sourceDetailBody.className.split(/\s+/)).toEqual(
         expect.arrayContaining(['flex', 'min-h-0', 'flex-1', 'flex-col', 'overflow-hidden']),
       )
+      expect(screen.queryByRole('tab', { name: 'Overview' })).toBeNull()
+      expect(screen.getByRole('tab', { name: 'Sources' }).getAttribute('aria-selected')).toBe(
+        'true',
+      )
+      expect(screen.getByRole('tab', { name: 'Settings' })).not.toBeNull()
 
-      await userEvent.click(screen.getByRole('tab', { name: 'Sources' }))
       expect(await screen.findByText(`History for ${source.sourceInstanceId} 1`)).not.toBeNull()
 
       const sourceHistoryPanel = screen.getByTestId('source-history-panel')
+      const sourceSummaryPanel = screen.getByTestId('source-summary-panel')
       const sourceHistoryScrollRegion = screen.getByTestId('source-history-scroll-region')
       const sourceHistoryPaginationFooter = screen.getByTestId(
         'source-history-pagination-footer',
@@ -253,6 +258,16 @@ describe('SourceManagementPanel', () => {
       expect(sourceHistoryPanel.className.split(/\s+/)).toEqual(
         expect.arrayContaining(['flex', 'min-h-0', 'flex-1', 'flex-col', 'overflow-hidden']),
       )
+      expect(within(sourceSummaryPanel).getByText('Imported')).not.toBeNull()
+      expect(within(sourceSummaryPanel).getByText('18')).not.toBeNull()
+      expect(
+        sourceHistoryPanel.compareDocumentPosition(sourceSummaryPanel) &
+          Node.DOCUMENT_POSITION_CONTAINED_BY,
+      ).toBeTruthy()
+      expect(
+        sourceSummaryPanel.compareDocumentPosition(sourceHistoryScrollRegion) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy()
       expect(sourceHistoryScrollRegion.className.split(/\s+/)).toEqual(
         expect.arrayContaining(['min-h-0', 'flex-1', 'overflow-y-auto']),
       )
@@ -262,7 +277,7 @@ describe('SourceManagementPanel', () => {
     }
   })
 
-  it('shows source overview, paginated source history, and settings without audit or manual import', async () => {
+  it('shows source summary above paginated source history and settings without extra source tabs', async () => {
     const pageOneMemory = {
       items: [
         {
@@ -356,16 +371,31 @@ describe('SourceManagementPanel', () => {
 
     expect(screen.getAllByText('chrome-main')).toHaveLength(2)
     expect(screen.getByText('degraded')).not.toBeNull()
-    expect(screen.getByText('Imported')).not.toBeNull()
-    expect(screen.getByText('2')).not.toBeNull()
-    expect(screen.getByText('Skipped')).not.toBeNull()
-    expect(screen.getAllByText('1').length).toBeGreaterThan(0)
 
+    expect(screen.queryByRole('tab', { name: 'Overview' })).toBeNull()
     expect(screen.queryByRole('tab', { name: 'Recent Memory' })).toBeNull()
     expect(screen.queryByRole('tab', { name: 'Audit' })).toBeNull()
 
-    await userEvent.click(screen.getByRole('tab', { name: 'Sources' }))
     await screen.findByText('Browser source history page 1')
+    const sourceHistoryPanel = screen.getByTestId('source-history-panel')
+    const sourceSummaryPanel = within(sourceHistoryPanel).getByTestId('source-summary-panel')
+    const sourceHistoryScrollRegion = within(sourceHistoryPanel).getByTestId(
+      'source-history-scroll-region',
+    )
+    expect(within(sourceSummaryPanel).getByText('Imported')).not.toBeNull()
+    expect(within(sourceSummaryPanel).getByText('2')).not.toBeNull()
+    expect(within(sourceSummaryPanel).getByText('Skipped')).not.toBeNull()
+    expect(within(sourceSummaryPanel).getByText('1')).not.toBeNull()
+    expect(within(sourceSummaryPanel).getByText('Recorder')).not.toBeNull()
+    expect(within(sourceSummaryPanel).getByText('unknown')).not.toBeNull()
+    expect(within(sourceSummaryPanel).getByText('Checkpoint')).not.toBeNull()
+    expect(
+      within(sourceSummaryPanel).getByText('ledgers/2026-05-12/browser.jsonl next line 4'),
+    ).not.toBeNull()
+    expect(
+      sourceSummaryPanel.compareDocumentPosition(sourceHistoryScrollRegion) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
     expect(screen.getByText('Imported browser page from this source.')).not.toBeNull()
     expect(screen.getByText('Showing 1 of 11 source records (page 1 of 2)')).not.toBeNull()
     expect(api.listMemory).toHaveBeenCalledWith(1, 10, {
