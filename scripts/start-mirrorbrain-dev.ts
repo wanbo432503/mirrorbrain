@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { open, mkdir } from 'node:fs/promises';
+import { access, open, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { readFile } from 'node:fs/promises';
 
@@ -42,7 +42,7 @@ interface StartMirrorBrainDevRuntimeInput {
 
 type MirrorBrainStartupComponent =
   | 'MirrorBrain config'
-  | 'OpenViking'
+  | 'QMD Workspace'
   | 'ActivityWatch'
   | 'MirrorBrain startup';
 
@@ -83,7 +83,7 @@ type MirrorBrainStartupCliResult =
         serviceAddress: string;
         processId: number;
         logPath: string;
-        dependencyStatus: Record<'OpenViking' | 'ActivityWatch', 'ready'>;
+        dependencyStatus: Record<'QMD Workspace' | 'ActivityWatch', 'ready'>;
         nextSteps: string[];
       };
     };
@@ -126,7 +126,6 @@ function parseInteger(value: string | undefined, fallback: number): number {
 const REQUIRED_ENV_EXAMPLES: Record<string, string> = {
   MIRRORBRAIN_WORKSPACE_DIR: '/path_to_workspace/mirrorbrain-workspace',
   MIRRORBRAIN_ACTIVITYWATCH_BASE_URL: 'http://127.0.0.1:5600',
-  MIRRORBRAIN_OPENVIKING_BASE_URL: 'http://127.0.0.1:1933',
 };
 
 function parseDotEnvFile(content: string): NodeJS.ProcessEnv {
@@ -199,9 +198,7 @@ export function getMirrorBrainDevConfig(
           defaultConfig.activityWatch.baseUrl,
       },
       openViking: {
-        baseUrl:
-          env.MIRRORBRAIN_OPENVIKING_BASE_URL ??
-          defaultConfig.openViking.baseUrl,
+        baseUrl: defaultConfig.openViking.baseUrl,
       },
       sync: {
         pollingIntervalMs: parseInteger(
@@ -239,25 +236,6 @@ export async function assertMirrorBrainDependenciesReachable(
     );
   }
 
-  let openVikingResponse: Response;
-
-  try {
-    openVikingResponse = await fetchImpl(
-      `${config.openViking.baseUrl}/api/v1/fs/ls?uri=${encodeURIComponent(
-        'viking://resources/',
-      )}&output=original`,
-    );
-  } catch {
-    throw new Error(
-      `OpenViking is unreachable for the local MVP runtime. URL: ${config.openViking.baseUrl}`,
-    );
-  }
-
-  if (!openVikingResponse.ok) {
-    throw new Error(
-      `OpenViking is unreachable for the local MVP runtime. URL: ${config.openViking.baseUrl}`,
-    );
-  }
 }
 
 function collectMissingRequiredEnvIssues(
@@ -282,26 +260,18 @@ function collectMissingRequiredEnvIssues(
 export async function inspectMirrorBrainStartupDependencies(
   config: MirrorBrainConfig,
   fetchImpl: typeof fetch = fetch,
+  workspaceDir: string = process.cwd(),
 ): Promise<MirrorBrainStartupIssue[]> {
   const issues: MirrorBrainStartupIssue[] = [];
 
   try {
-    const openVikingResponse = await fetchImpl(
-      `${config.openViking.baseUrl}/api/v1/fs/ls?uri=${encodeURIComponent(
-        'viking://resources/',
-      )}&output=original`,
-    );
-
-    if (!openVikingResponse.ok) {
-      issues.push({
-        component: 'OpenViking',
-        message: `OpenViking is unreachable at ${config.openViking.baseUrl}.`,
-      });
-    }
+    const qmdDir = join(workspaceDir, 'mirrorbrain', 'qmd');
+    await mkdir(qmdDir, { recursive: true });
+    await access(qmdDir);
   } catch {
     issues.push({
-      component: 'OpenViking',
-      message: `OpenViking is unreachable at ${config.openViking.baseUrl}.`,
+      component: 'QMD Workspace',
+      message: `QMD index directory is not writable under ${workspaceDir}.`,
     });
   }
 
@@ -435,14 +405,14 @@ export async function runMirrorBrainStartupCli(
     ...projectEnv,
     ...input.env,
   };
-  const { config } = getMirrorBrainDevConfig(mergedEnv);
+  const { config, workspaceDir } = getMirrorBrainDevConfig(mergedEnv);
   const inspectDependencies =
     dependencies.inspectDependencies ?? inspectMirrorBrainStartupDependencies;
   const startDetachedProcess =
     dependencies.startDetachedProcess ?? startMirrorBrainDetachedProcess;
   const issues = [
     ...collectMissingRequiredEnvIssues(mergedEnv),
-    ...(await inspectDependencies(config)),
+    ...(await inspectDependencies(config, fetch, workspaceDir)),
   ];
 
   if (issues.length > 0) {
@@ -466,7 +436,7 @@ export async function runMirrorBrainStartupCli(
       processId: detachedProcess.processId,
       logPath: detachedProcess.logPath,
       dependencyStatus: {
-        OpenViking: 'ready',
+        'QMD Workspace': 'ready',
         ActivityWatch: 'ready',
       },
       nextSteps: [
@@ -657,7 +627,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         console.log(`MirrorBrain service: ${result.summary.serviceAddress}`);
         console.log(`MirrorBrain pid: ${result.summary.processId}`);
         console.log(`MirrorBrain logs: ${result.summary.logPath}`);
-        console.log('OpenViking: ready');
+        console.log('QMD Workspace: ready');
         console.log('ActivityWatch: ready');
 
         for (const nextStep of result.summary.nextSteps) {

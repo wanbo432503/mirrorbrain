@@ -11,7 +11,8 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
   interval
 - starts the built-in source-ledger recorder supervisor for browser, file,
   screenshot, shell, and agent-transcript source instances
-- wires source-ledger import to checkpoint persistence, source audit persistence, source enablement checks, and OpenViking memory ingestion
+- wires source-ledger import to checkpoint persistence, source audit
+  persistence, source enablement checks, and QMD workspace memory ingestion
 - exposes an explicit shell-history sync operation when a shell history path is configured
 - exposes explicit Phase 4 source-ledger import for manual Import Sources
   operations, immediately scanning ledgers and best-effort refreshing the
@@ -24,14 +25,18 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 - wires separate page-content capture authorization into browser page text backfill
 - exposes the high-level service contract used by `openclaw`
 - keeps raw memory listing and `openclaw` retrieval shaping as separate concerns
-- falls back to workspace-cached raw memory events when OpenViking-backed memory reads fail
+- reads memory, knowledge, and skill artifacts from the QMD workspace by
+  default, with workspace file fallback for raw review flows
 - schedules browser theme narrative rebuilds after explicit browser sync calls through the service contract
 - schedules shell problem narrative rebuilds after explicit shell sync calls through the service contract
-- forwards `openclaw` retrieval calls to the OpenViking-backed plugin API with the configured base URL
+- forwards `openclaw` retrieval calls to the plugin API with the configured
+  workspace directory
 - exposes daily candidate-memory generation, refresh, and review suggestion operations
 - exposes explicit candidate review decisions as service-level operations
-- publishes knowledge and skill artifacts through explicit OpenViking-backed service methods
-- deletes persisted knowledge and skill artifacts through workspace-backed tombstones so removed ids stay hidden even if OpenViking still lists older copies
+- publishes knowledge and skill artifacts through explicit QMD workspace
+  service methods
+- deletes persisted knowledge and skill artifacts through workspace-backed
+  tombstones so removed ids stay hidden from later QMD/workspace reads
 - generates source-content-aware knowledge drafts from reviewed memories before publishing them
 - schedules the knowledge lint workflow after reviewed-memory knowledge generation and regeneration
 - exposes topic-merge helper methods that turn daily-review drafts into topic merge candidates and publish topic knowledge artifacts
@@ -48,7 +53,7 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 ## Data Flow
 
 1. Load MirrorBrain config.
-2. Create a file-backed sync checkpoint store and an OpenViking-backed memory writer.
+2. Create a file-backed sync checkpoint store and a QMD workspace memory writer.
 3. Build a runtime source authorization policy from `getAuthorizationScope(...)`.
 4. Build a separate page-content capture authorization callback, using the injected dependency when present and denying readable page text capture by default.
 5. Start the built-in source-ledger recorder supervisor with the default Phase 4 source instances, using persisted source-instance configuration to disable configured sources and a one-minute runtime interval so enabled recorders keep appending fresh ledgers.
@@ -69,8 +74,11 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 15. Generate Knowledge Article Drafts by loading persisted reviewed work-session ids, then persist the draft in the article store.
 16. Publish Knowledge Article Drafts under a project/topic, saving current-best versions and any superseded prior version for the same stable `articleId`.
 17. List Knowledge Article history for a project/topic pair.
-18. List raw imported memory when review-oriented workflows need event-level records, preferring OpenViking-backed reads and falling back to workspace-cached memory-event files when storage reads fail.
-19. Forward `openclaw` memory retrieval calls through the configured OpenViking base URL and return shaped retrieval results.
+18. List raw imported memory when review-oriented workflows need event-level
+    records, preferring the QMD workspace read path and falling back to
+    workspace-cached memory-event files when storage reads fail.
+19. Forward `openclaw` memory retrieval calls through the configured workspace
+    directory and return shaped retrieval results.
 20. Before daily candidate generation or refresh, run Phase 4 source-ledger import so the workspace raw-event cache reflects newly recorded daily JSONL ledgers.
 13. If candidates already exist for a review date and the sync imports no new browser events, return the existing candidates without rebuilding them.
 14. If candidates already exist for a review date and source-ledger import adds new memory events, rebuild the daily candidates from current raw workspace memory history so late-day activity is included.
@@ -79,7 +87,8 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 17. Before candidate generation, enrich browser events with stored `browser-page-content` text when a page artifact is available in the workspace so review grouping can use page semantics instead of URL/title alone.
 18. Return suggestion-only AI review hints without promoting any candidate, including keep-score and supporting reasons for the review UI.
 19. Record explicit keep or discard decisions and publish reviewed memory artifacts.
-20. Forward explicit knowledge and skill publishing calls to the OpenViking ingestion adapter.
+20. Forward explicit knowledge and skill publishing calls to the QMD workspace
+    adapter.
 21. Build topic-knowledge merge candidates from stored draft knowledge artifacts when requested.
 22. Merge a daily-review draft into topic knowledge, publishing the new current-best artifact and any superseded previous version.
 23. List current-best topic knowledge summaries, fetch the current-best artifact for one topic key, and return topic history in newest-first order.
@@ -87,7 +96,9 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 25. After the generated artifact is published and returned, schedule asynchronous knowledge lint to refresh relation metadata, tombstone mechanically duplicated generated drafts, and publish reviewable merge candidates for similar knowledge.
 26. Approve a knowledge draft or merge candidate by loading the persisted artifact by id and passing it through the existing topic-knowledge merge workflow.
 27. If the caller provides a draft snapshot, approve uses that snapshot after verifying its id matches `draftId`; this preserves the visible UI draft, source reviewed-memory ids, provenance refs, and recent edits even when an older persisted draft with the same id exists. If no snapshot is provided, approve falls back to the persisted knowledge list.
-28. When a knowledge or skill artifact is deleted, remove the workspace copy and record a service-level tombstone under `mirrorbrain/deleted-artifacts/` so later reads suppress both workspace and OpenViking copies of that id.
+28. When a knowledge or skill artifact is deleted, remove the workspace copy
+    and record a service-level tombstone under `mirrorbrain/deleted-artifacts/`
+    so later reads suppress stored copies of that id.
 29. When a deleted artifact id is published again later, clear its tombstone before persisting the fresh artifact so it becomes visible again.
 
 ## Operational Note
@@ -114,16 +125,19 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
 - unit tests verify manual Phase 4 work-session analysis builds pending candidates from explicit 6h, 24h, or 7d analysis windows
 - unit tests verify explicit work-session review can create a confirmed project and reviewed session
 - unit tests verify persisted reviewed work-session ids can generate Knowledge Article Drafts, unpersisted ids are rejected, and published article versions preserve stable article lineages
-- unit tests verify the service forwards retrieval calls to the plugin API with the configured OpenViking base URL and retrieval input
+- unit tests verify the service forwards retrieval calls to the plugin API with
+  the configured QMD workspace directory and retrieval input
 - unit tests verify review-oriented flows still use raw memory event listing where needed
-- unit tests verify raw memory reads fall back to workspace-cached events when OpenViking reads fail
+- unit tests verify raw memory reads fall back to workspace-cached events when
+  stored reads fail
 - unit and integration tests verify daily candidate memories can be created and published through the service contract
 - unit tests verify daily candidate generation imports source ledgers before reading workspace raw events
 - unit tests verify existing daily candidates are reused when source-ledger import adds no new events and regenerated when source-ledger import adds new events
 - unit tests verify daily candidate regeneration excludes memory events and URLs already consumed by published knowledge
 - unit and integration tests verify candidate review suggestions stay suggestion-only
 - unit and integration tests verify explicit keep and discard review decisions publish reviewed memory artifacts through the service contract
-- unit and integration tests verify the service forwards explicit knowledge and skill publishing calls to OpenViking ingestion with runtime configuration
+- unit and integration tests verify the service forwards explicit knowledge and
+  skill publishing calls to QMD workspace ingestion with runtime configuration
 - unit tests verify deleting persisted knowledge and skill artifacts removes workspace copies and suppresses later reads through tombstones
 - unit and integration tests verify reviewed memories can be turned into publishable Phase 3-ready knowledge artifacts through the service contract, including captured page text in the generated body
 - unit tests verify reviewed-memory knowledge generation schedules asynchronous knowledge lint after publishing the generated artifact
@@ -149,13 +163,18 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
 - source enable/disable updates are persisted and audited; both recorder startup and source-ledger import enforce disabled source instances
 - source-ledger state derives source summaries from checkpoint and audit history; richer live recorder health reporting is still a later operational improvement
 - the retrieval contract now accepts lightweight query and filter input, but still uses minimal result shaping rather than mature ranking
-- raw memory list endpoints can fall back to workspace-cached memory-event files when OpenViking reads fail, so event history may appear before the corresponding OpenViking-backed retrieval views fully recover
+- raw memory list endpoints can fall back to workspace-cached memory-event
+  files when stored reads fail, so event history may appear before QMD search
+  fully refreshes
 - stored browser and shell narratives are rebuilt after explicit service sync operations, but the rebuild now happens in the background and may lag slightly behind the returned sync summary
 - browser activity should now enter ordinary retrieval through daily JSONL source ledgers and import; legacy browser sync remains a service method for review flows that have not yet moved fully behind the ledger boundary
 - generation remains caller-driven; the service exposes explicit methods but does not schedule daily review or skill extraction automatically
 - knowledge lint is a background maintenance workflow; it refreshes relations, deletes only mechanically duplicated generated drafts, and creates merge candidates for similar notes, while published knowledge updates still require the approval and topic-merge path
-- knowledge and skill artifact deletion currently relies on service-owned tombstones rather than a documented OpenViking hard-delete path in this service layer, so upstream OpenViking resources may still exist even though MirrorBrain no longer surfaces them
-- candidate deletion removes both the MirrorBrain workspace candidate file and the corresponding OpenViking resource
+- knowledge and skill artifact deletion currently relies on service-owned
+  tombstones; QMD index refresh semantics for deleted artifacts are still a
+  follow-up hardening task
+- candidate deletion removes the MirrorBrain workspace candidate file and
+  invokes the configured store cleanup dependency when one is injected
 - candidate generation is heuristic and bounded to at most 10 tasks per review window
 - work-session analysis is explicit and user-triggered; the service does not schedule background sessionization
 - AI review suggestions are heuristic placeholders in Phase 1

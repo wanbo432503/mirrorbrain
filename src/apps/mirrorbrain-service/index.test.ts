@@ -1053,7 +1053,7 @@ describe('mirrorbrain service', () => {
     );
   });
 
-  it('creates an openclaw-facing service contract that queries OpenViking through the configured base URL and forwards retrieval input', async () => {
+  it('creates an openclaw-facing service contract that queries the qmd workspace and forwards retrieval input', async () => {
     const service = {
       status: 'running' as const,
       config: getMirrorBrainConfig(),
@@ -1086,6 +1086,7 @@ describe('mirrorbrain service', () => {
     const api = createMirrorBrainService(
       {
         service,
+        workspaceDir: '/tmp/mirrorbrain-workspace',
       },
       {
         queryMemory,
@@ -1106,7 +1107,7 @@ describe('mirrorbrain service', () => {
     await api.listSkillDrafts();
 
     expect(queryMemory).toHaveBeenCalledWith({
-      baseUrl: expectedOpenVikingBaseUrl,
+      workspaceDir: '/tmp/mirrorbrain-workspace',
       query: 'What did I work on yesterday?',
       timeRange: {
         startAt: '2026-03-20T00:00:00.000Z',
@@ -1115,10 +1116,10 @@ describe('mirrorbrain service', () => {
       sourceTypes: ['browser'],
     });
     expect(listKnowledge).toHaveBeenCalledWith({
-      baseUrl: expectedOpenVikingBaseUrl,
+      workspaceDir: '/tmp/mirrorbrain-workspace',
     });
     expect(listSkillDrafts).toHaveBeenCalledWith({
-      baseUrl: expectedOpenVikingBaseUrl,
+      workspaceDir: '/tmp/mirrorbrain-workspace',
     });
     expect(api.service).toBe(service);
   });
@@ -1978,7 +1979,7 @@ describe('mirrorbrain service', () => {
     ]);
   });
 
-  it('persists knowledge and skill artifacts through the configured OpenViking writers', async () => {
+  it('persists knowledge and skill artifacts through the configured qmd workspace writers', async () => {
     const service = {
       status: 'running' as const,
       config: getMirrorBrainConfig(),
@@ -2031,7 +2032,6 @@ describe('mirrorbrain service', () => {
     });
 
     expect(publishKnowledge).toHaveBeenCalledWith({
-      baseUrl: expectedOpenVikingBaseUrl,
       workspaceDir: '/tmp/mirrorbrain-workspace',
       artifact: {
         id: 'knowledge-draft:reviewed:candidate:browser:aw-event-1',
@@ -2040,7 +2040,6 @@ describe('mirrorbrain service', () => {
       },
     });
     expect(publishSkill).toHaveBeenCalledWith({
-      baseUrl: expectedOpenVikingBaseUrl,
       workspaceDir: '/tmp/mirrorbrain-workspace',
       artifact: {
         id: 'skill-draft:reviewed:candidate:browser:aw-event-1',
@@ -2423,7 +2422,6 @@ describe('mirrorbrain service', () => {
     });
     expect(generateSkillDraft).toHaveBeenCalledWith(reviewedMemories);
     expect(publishKnowledge).toHaveBeenCalledWith({
-      baseUrl: expectedOpenVikingBaseUrl,
       workspaceDir: '/tmp/mirrorbrain-workspace',
       artifact: {
         id: 'knowledge-draft:reviewed:candidate:browser:aw-event-1',
@@ -2432,7 +2430,6 @@ describe('mirrorbrain service', () => {
       },
     });
     expect(publishSkill).toHaveBeenCalledWith({
-      baseUrl: expectedOpenVikingBaseUrl,
       workspaceDir: '/tmp/mirrorbrain-workspace',
       artifact: {
         id: 'skill-draft:reviewed:candidate:browser:aw-event-1',
@@ -2524,7 +2521,6 @@ describe('mirrorbrain service', () => {
       },
     );
     expect(publishReviewedMemory).toHaveBeenCalledWith({
-      baseUrl: expectedOpenVikingBaseUrl,
       workspaceDir: process.cwd(),
       artifact: createReviewedMemoryFixture(),
     });
@@ -3452,7 +3448,7 @@ describe('mirrorbrain service', () => {
 
       await expect(access(filePath)).rejects.toThrow();
       expect(deleteCandidateMemoryResource).toHaveBeenCalledWith({
-        baseUrl: service.config.openViking.baseUrl,
+        workspaceDir,
         candidateMemoryId: candidateId,
       });
 
@@ -3503,7 +3499,7 @@ describe('mirrorbrain service', () => {
       // Delete non-existent candidate - should succeed without error
       await expect(api.deleteCandidateMemory(candidateId)).resolves.toBeUndefined();
       expect(deleteCandidateMemoryResource).toHaveBeenCalledWith({
-        baseUrl: service.config.openViking.baseUrl,
+        workspaceDir,
         candidateMemoryId: candidateId,
       });
 

@@ -59,8 +59,6 @@ function createReviewedMemoryFixture(): ReviewedMemory {
 }
 
 describe('mirrorbrain service contract integration', () => {
-  const expectedOpenVikingBaseUrl = getMirrorBrainConfig().openViking.baseUrl;
-
   it('publishes knowledge and skill artifacts through the service contract', async () => {
     const published: Array<{
       kind: 'knowledge' | 'skill';
@@ -136,7 +134,6 @@ describe('mirrorbrain service contract integration', () => {
       {
         kind: 'knowledge',
         payload: {
-          baseUrl: expectedOpenVikingBaseUrl,
           workspaceDir: '/tmp/mirrorbrain-workspace',
           artifact: {
             id: 'knowledge-draft:reviewed:candidate:browser:aw-event-1',
@@ -148,7 +145,6 @@ describe('mirrorbrain service contract integration', () => {
       {
         kind: 'skill',
         payload: {
-          baseUrl: expectedOpenVikingBaseUrl,
           workspaceDir: '/tmp/mirrorbrain-workspace',
           artifact: {
             id: 'skill-draft:reviewed:candidate:browser:aw-event-1',
@@ -241,7 +237,6 @@ describe('mirrorbrain service contract integration', () => {
       {
         kind: 'knowledge',
         payload: {
-          baseUrl: expectedOpenVikingBaseUrl,
           workspaceDir: '/tmp/mirrorbrain-workspace',
           artifact: {
             id: 'knowledge-draft:reviewed:candidate:browser:aw-event-1',
@@ -253,7 +248,6 @@ describe('mirrorbrain service contract integration', () => {
       {
         kind: 'skill',
         payload: {
-          baseUrl: expectedOpenVikingBaseUrl,
           workspaceDir: '/tmp/mirrorbrain-workspace',
           artifact: {
             id: 'skill-draft:reviewed:candidate:browser:aw-event-1',

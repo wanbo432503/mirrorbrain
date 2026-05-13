@@ -199,7 +199,6 @@ describe('mirrorbrain service topic knowledge merge', () => {
 
     expect(published.artifact.id).toBe('topic-knowledge:vitest-config:v2');
     expect(publishKnowledge).toHaveBeenNthCalledWith(1, {
-      baseUrl: getMirrorBrainConfig().openViking.baseUrl,
       workspaceDir,
       artifact: expect.objectContaining({
         id: 'topic-knowledge:vitest-config:v1',
@@ -207,7 +206,6 @@ describe('mirrorbrain service topic knowledge merge', () => {
       }),
     });
     expect(publishKnowledge).toHaveBeenNthCalledWith(2, {
-      baseUrl: getMirrorBrainConfig().openViking.baseUrl,
       workspaceDir,
       artifact: published.artifact,
     });

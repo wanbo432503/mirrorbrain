@@ -201,8 +201,8 @@ The preferred order of implementation is to make this slice pass end to end with
 ## Data And Storage Guidance
 
 The original Phase 1 MVP used `OpenViking` as the primary local storage and
-retrieval layer. The next storage architecture replaces that dependency with a
-workspace-owned QMD-backed retrieval layer; see
+retrieval layer. The current default storage architecture replaces that
+runtime dependency with a workspace-owned QMD-backed retrieval layer; see
 `docs/adr/2026-05-13-qmd-workspace-storage.md`.
 
 Target storage rules:

@@ -37,7 +37,8 @@ It is not responsible for:
 ## Data Flow
 
 1. The startup flow loads the project-root `.env` file when present and then overlays explicit shell environment variables on top of it.
-2. The CLI checks required local configuration, ActivityWatch browser-data availability, and OpenViking reachability.
+2. The CLI checks required local configuration, ActivityWatch browser-data
+   availability, and QMD workspace writability.
 3. If checks pass, the CLI launches MirrorBrain as a detached child process and prints a startup summary with service address, pid, and log path.
 4. Inside the child process, the React web app is built by a Vite watcher into
    the default app `dist/` directory or a caller-provided isolated output
@@ -56,13 +57,16 @@ It is not responsible for:
 
 ## Failure Modes And Operational Constraints
 
-- startup reports grouped issues for config, ActivityWatch, OpenViking, and runtime startup before exiting
+- startup reports grouped issues for config, ActivityWatch, QMD workspace
+  readiness, and runtime startup before exiting
 - startup expects the local environment variables in `.env` to be present even when some runtime defaults exist in code
 - `MIRRORBRAIN_BROWSER_BUCKET_ID` pins the ActivityWatch browser bucket used by
   browser source-ledger capture; when omitted, MirrorBrain auto-discovers the
   most recently updated `aw-watcher-web*` bucket
 - `MIRRORBRAIN_LLM_API_BASE`, `MIRRORBRAIN_LLM_API_KEY`, and `MIRRORBRAIN_LLM_MODEL` configure the OpenAI-compatible chat model used by MirrorBrain title and knowledge generation
-- `MIRRORBRAIN_EMBEDDING_API_BASE`, `MIRRORBRAIN_EMBEDDING_API_KEY`, `MIRRORBRAIN_EMBEDDING_MODEL`, and `MIRRORBRAIN_EMBEDDING_DIMENSION` document the embedding model that OpenViking should use for MirrorBrain resource indexing
+- QMD stores derived SQLite/vector index state under
+  `<workspaceDir>/mirrorbrain/qmd/`; deleting that directory should be treated
+  as index loss, not durable data loss
 - shell history remains opt-in and is only wired when `MIRRORBRAIN_SHELL_HISTORY_PATH` is explicitly configured
 - source-ledger import polling reads only MirrorBrain-owned ledger files under
   `<workspaceDir>/mirrorbrain/ledgers`; source acquisition remains behind

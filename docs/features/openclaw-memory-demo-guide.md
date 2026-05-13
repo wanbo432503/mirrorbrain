@@ -18,7 +18,6 @@ Before running this demo, all of the following should already be true:
 
 - `ActivityWatch` is running locally
 - `aw-watcher-web` is installed and actively producing browser events
-- `OpenViking` is running locally
 - MirrorBrain dependencies are configured in `.env`
 - `pnpm dev` has been run successfully and reported the MirrorBrain service address
 
@@ -135,7 +134,7 @@ Symptoms:
 
 Checks:
 
-- confirm `pnpm dev` reported `ActivityWatch` and `OpenViking` as ready
+- confirm `pnpm dev` reported `ActivityWatch` and `QMD Workspace` as ready
 - confirm `ActivityWatch` has browser events in the last hour
 - confirm browser activity from yesterday actually exists in the underlying source
 - inspect `GET /memory` to see whether raw browser memory events are present

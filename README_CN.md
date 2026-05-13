@@ -73,7 +73,8 @@ Phase 1 已经证明了本地垂直切片。当前方向是 Phase 2 的 `opencla
 - Fastify HTTP service，提供 OpenAPI JSON 和 Swagger UI。
 - React Web UI，用于本地控制、review、知识浏览和 skill draft 检查。
 - 本地 workspace artifacts，用于可检查记录和回退读取。
-- 基于 OpenViking 的本地索引与检索能力。
+- 基于 QMD 的本地索引与检索能力，索引数据保存在同一个
+  `mirrorbrain-workspace` 下。
 
 ### 当前非目标
 
@@ -92,12 +93,10 @@ Phase 1 已经证明了本地垂直切片。当前方向是 Phase 2 的 `opencla
 - `pnpm`
 - 本地运行中的 ActivityWatch
 - 安装在目标浏览器中的 `aw-watcher-web`
-- 本地运行中的 OpenViking
 
 默认本地地址：
 
 - ActivityWatch: `http://127.0.0.1:5600`
-- OpenViking: `http://127.0.0.1:1933`
 - MirrorBrain: `http://127.0.0.1:3007`
 
 ### 2. 启动 ActivityWatch
@@ -107,58 +106,11 @@ Phase 1 已经证明了本地垂直切片。当前方向是 Phase 2 的 `opencla
 3. 在需要授权的浏览器中安装 `aw-watcher-web`。
 4. 确认 ActivityWatch UI 中能看到浏览器 tab events。
 
-### 3. 启动 OpenViking
-
-安装服务端：
-
-```bash
-pip install openviking --upgrade --force-reinstall
-```
-
-创建 `~/.openviking/ov.conf`：
-
-```json
-{
-  "storage": {
-    "workspace": "/path_to_workspace/openviking_workspace"
-  },
-  "log": {
-    "level": "INFO",
-    "output": "stdout"
-  },
-  "embedding": {
-    "dense": {
-      "api_base": "<MIRRORBRAIN_EMBEDDING_API_BASE>",
-      "api_key": "<MIRRORBRAIN_EMBEDDING_API_KEY>",
-      "provider": "openai",
-      "dimension": 1024,
-      "model": "<MIRRORBRAIN_EMBEDDING_MODEL>"
-    },
-    "max_concurrent": 10
-  },
-  "vlm": {
-    "api_base": "<MIRRORBRAIN_LLM_API_BASE>",
-    "api_key": "<MIRRORBRAIN_LLM_API_KEY>",
-    "provider": "openai",
-    "model": "<MIRRORBRAIN_LLM_MODEL>",
-    "max_concurrent": 32
-  }
-}
-```
-
-启动 OpenViking：
-
-```bash
-export OPENVIKING_CONFIG_FILE=~/.openviking/ov.conf
-openviking-server
-```
-
-MirrorBrain 启动前需要 OpenViking 已经可访问。
-
-### 4. 配置 MirrorBrain
+### 3. 配置 MirrorBrain
 
 ```bash
 pnpm install
+pnpm --dir src/apps/mirrorbrain-web-react install
 cp .env.example .env
 ```
 
@@ -166,29 +118,26 @@ cp .env.example .env
 
 ```bash
 MIRRORBRAIN_ACTIVITYWATCH_BASE_URL=http://127.0.0.1:5600
-MIRRORBRAIN_OPENVIKING_BASE_URL=http://127.0.0.1:1933
+MIRRORBRAIN_BROWSER_BUCKET_ID=aw-watcher-web-chrome_laptop
 MIRRORBRAIN_WORKSPACE_DIR=/path_to_workspace/mirrorbrain-workspace
 MIRRORBRAIN_SHELL_HISTORY_PATH=/path_to_workspace/.zsh_history
 MIRRORBRAIN_LLM_API_BASE=http://127.0.0.1:8000/v1
 MIRRORBRAIN_LLM_API_KEY=replace-with-your-llm-api-key
 MIRRORBRAIN_LLM_MODEL=replace-with-your-llm-model
-MIRRORBRAIN_EMBEDDING_API_BASE=http://127.0.0.1:8000/v1
-MIRRORBRAIN_EMBEDDING_API_KEY=replace-with-your-embedding-api-key
-MIRRORBRAIN_EMBEDDING_MODEL=replace-with-your-embedding-model
-MIRRORBRAIN_EMBEDDING_DIMENSION=1024
 ```
 
 MirrorBrain 直接读取 `MIRRORBRAIN_LLM_*` 用于 knowledge 和 title
-generation。OpenViking 从 `~/.openviking/ov.conf` 读取 embedding 配置，
-所以需要保持两个配置文件一致。
+generation。memory、knowledge 和 skill artifacts 保存在
+`MIRRORBRAIN_WORKSPACE_DIR` 下，QMD 的派生 SQLite/vector 索引保存在
+`<workspaceDir>/mirrorbrain/qmd/` 下。
 
-### 5. 运行 MirrorBrain
+### 4. 运行 MirrorBrain
 
 ```bash
 pnpm dev
 ```
 
-启动命令会校验本地配置，检查 OpenViking 和 ActivityWatch 是否就绪，启动
+启动命令会校验本地配置，检查 QMD Workspace 和 ActivityWatch 是否就绪，启动
 React build watcher，启动本地 HTTP service，在配置 shell history 时启用
 shell sync，并输出 service address、process id 和 log path。
 
@@ -204,7 +153,7 @@ http://127.0.0.1:3007
 http://127.0.0.1:3007/docs
 ```
 
-### 6. 验证本地流程
+### 5. 验证本地流程
 
 在 Web UI 中：
 
@@ -235,7 +184,8 @@ http://127.0.0.1:3007/docs
 - [MirrorBrain service](./docs/components/mirrorbrain-service.md)
 - [MirrorBrain HTTP server](./docs/components/mirrorbrain-http-server.md)
 - [OpenClaw plugin API](./docs/components/openclaw-plugin-api.md)
-- [OpenViking store](./docs/components/openviking-store.md)
+- [QMD workspace store](./docs/components/qmd-workspace-store.md)
+- [OpenViking store](./docs/components/openviking-store.md) legacy compatibility notes
 - [ActivityWatch browser source](./docs/components/activitywatch-browser-source.md)
 - [Shell history source](./docs/components/shell-history-source.md)
 - [Memory review](./docs/components/memory-review.md)

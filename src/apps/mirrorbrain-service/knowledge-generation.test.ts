@@ -94,7 +94,6 @@ describe('mirrorbrain service knowledge generation', () => {
       expect.stringContaining('Step 1: install Vitest'),
     );
     expect(publishKnowledge).toHaveBeenCalledWith({
-      baseUrl: getMirrorBrainConfig().openViking.baseUrl,
       workspaceDir: '/tmp/mirrorbrain-workspace',
       artifact,
     });

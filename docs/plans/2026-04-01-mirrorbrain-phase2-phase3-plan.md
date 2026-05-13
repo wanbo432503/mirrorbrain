@@ -158,15 +158,16 @@ Remaining non-goal / follow-up territory after Phase 3:
 
 ## Storage Backend Direction Update
 
-The next storage direction replaces OpenViking with QMD as an in-process
+The current storage direction replaces OpenViking with QMD as an in-process
 workspace retrieval/indexing layer. The authoritative durable workspace remains
-`mirrorbrain-workspace`; QMD must read markdown from that workspace and store
-its sqlite/vector index under the same workspace, not in a separate
-`openviking-workspace` or QMD content workspace.
+`mirrorbrain-workspace`; QMD reads markdown from that workspace and stores its
+sqlite/vector index under the same workspace, not in a separate
+`openviking-workspace` or QMD content workspace. Existing OpenViking data is
+not migrated in this slice.
 
 Design reference: `docs/adr/2026-05-13-qmd-workspace-storage.md`.
 
-Migration priorities:
+Implemented migration priorities:
 
 1. keep MirrorBrain workspace files as the durable source of truth
 2. add QMD indexing as rebuildable derived state under
@@ -261,12 +262,11 @@ When dependencies are missing, it should:
 #### Retrieval Backend Setup Support
 
 The first implementation used OpenViking reachability checks. The QMD migration
-should replace those checks with:
+now replaces those checks with:
 
 - workspace path validation
 - QMD index path validation under `<workspaceDir>/mirrorbrain/qmd/`
-- guidance for rebuilding the QMD index when workspace markdown changes
-- clear reporting when QMD package/model/index initialization fails
+- clear reporting when the QMD workspace index path is not writable
 - reuse values from existing `.env` or adjacent local configuration when that is safe and obvious
 
 #### ActivityWatch Setup Support

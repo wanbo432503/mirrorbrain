@@ -2,8 +2,10 @@
 
 ## Status
 
-Accepted for the next storage-backend migration. The current implementation
-still contains OpenViking-backed runtime code until the migration is completed.
+Accepted and implemented for the default runtime storage path. The repository
+still contains OpenViking adapter code for explicit legacy compatibility tests,
+but MirrorBrain startup, service defaults, and plugin retrieval now use the QMD
+workspace path.
 
 ## Context
 
@@ -84,20 +86,27 @@ Non-responsibilities:
 - skill approval or execution policy
 - duplicating markdown into a second workspace
 
-## Migration Plan
+## Implementation Plan
 
-1. Extract workspace artifact persistence out of the current OpenViking adapter
-   so durable writes are clearly filesystem-owned.
-2. Add `qmd-workspace-store` behind tests that prove db/config paths stay under
+Completed in the first QMD integration slice:
+
+1. Add `qmd-workspace-store` behind tests that prove db/config paths stay under
    `MIRRORBRAIN_WORKSPACE_DIR`.
-3. Generate canonical markdown projections for retrieval-relevant memory events
-   and narratives without duplicating source text outside the workspace.
-4. Replace OpenViking read paths in `openclaw-plugin-api` with QMD-backed
-   retrieval while preserving existing `MemoryQueryResult` shape.
+2. Generate canonical markdown projections for retrieval-relevant memory
+   events, candidate memories, reviewed memories, memory narratives, knowledge,
+   and skill artifacts without duplicating source text outside the workspace.
+3. Replace MirrorBrain service defaults with QMD workspace reads and writes.
+4. Replace `openclaw-plugin-api` default reads with QMD-backed retrieval while
+   preserving existing `MemoryQueryResult` shape.
 5. Replace startup diagnostics: keep ActivityWatch checks, remove mandatory
-   OpenViking reachability, and add QMD index health/rebuild guidance.
-6. Retire OpenViking-specific imports, config, docs, and compatibility tests
-   after all runtime reads and writes use workspace/QMD.
+   OpenViking reachability, and add QMD workspace writability checks.
+
+Remaining work:
+
+1. Standardize local QMD embedding model/build prerequisites and add a real
+   vector embedding smoke test.
+2. Remove OpenViking compatibility code after any remaining callers have been
+   explicitly retired.
 
 ## Consequences
 

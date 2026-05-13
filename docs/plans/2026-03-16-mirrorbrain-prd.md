@@ -113,6 +113,10 @@ For the first browser slice:
 Current repository status:
 
 - the original MVP slice supported the browser source first
+- the default runtime storage path now writes MirrorBrain artifacts into
+  `mirrorbrain-workspace` and uses QMD indexing under
+  `<workspaceDir>/mirrorbrain/qmd/`; existing data migration is intentionally
+  out of scope for this change
 - the current repository also supports configured shell-history sync and
   shell-oriented recall surfaces
 - `openclaw` conversation history remains part of the broader product plan but
@@ -175,8 +179,8 @@ Phase 1 excludes:
 ### Storage And Synchronization
 
 - The original Phase 1 MVP used `OpenViking` as the primary local storage and
-  retrieval layer; the next target is a QMD-backed retrieval layer rooted in
-  `mirrorbrain-workspace`
+  retrieval layer; the default target is now a QMD-backed retrieval layer
+  rooted in `mirrorbrain-workspace`
 - raw normalized `MemoryEvent` records should be written into MirrorBrain-owned
   workspace artifacts, not kept only in upstream source systems
 - retrieval-relevant markdown should be indexed in place by QMD, with QMD index

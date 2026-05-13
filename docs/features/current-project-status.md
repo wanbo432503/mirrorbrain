@@ -49,9 +49,9 @@ owning MirrorBrain's internal workflows.
   persistence.
 - Best-effort shell command secret redaction before MirrorBrain storage,
   including command-derived shell memory identifiers.
-- Browser page-content capture and workspace/OpenViking storage, gated by a
+- Browser page-content capture and workspace/QMD storage, gated by a
   separate page-content authorization dependency.
-- OpenViking-backed artifact persistence and workspace fallback reads.
+- QMD-backed artifact persistence and workspace fallback reads.
 - Memory event display cache with filtering, deduplication, and pagination.
 - Daily candidate memory generation.
 - Candidate review suggestions.

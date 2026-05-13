@@ -86,7 +86,6 @@ describe('mirrorbrain service memory narratives', () => {
       memoryEvents: expectedMemoryEvents,
     });
     expect(publishMemoryNarrative).toHaveBeenCalledWith({
-      baseUrl: getMirrorBrainConfig().openViking.baseUrl,
       workspaceDir: process.cwd(),
       artifact: browserNarrative,
     });

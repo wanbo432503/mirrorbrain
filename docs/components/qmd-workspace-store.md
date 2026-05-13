@@ -2,24 +2,22 @@
 
 ## Summary
 
-The QMD Workspace Store is the target storage/retrieval adapter that will
-replace MirrorBrain's OpenViking-backed adapter. It uses `mirrorbrain-workspace`
-as the only durable workspace and keeps QMD index/vector data inside that same
-workspace.
-
-This document describes the target component. Runtime code still uses the
-OpenViking adapter until the migration is implemented.
+The QMD Workspace Store is MirrorBrain's default storage and retrieval adapter.
+It uses `mirrorbrain-workspace` as the only durable workspace and keeps QMD
+SQLite/vector index data inside that same workspace.
 
 ## Responsibility Boundary
 
 The component is responsible for:
 
-- opening a QMD store with `dbPath` under `<workspaceDir>/mirrorbrain/qmd/`
+- opening a QMD store with `dbPath` at
+  `<workspaceDir>/mirrorbrain/qmd/index.sqlite`
 - configuring QMD collections that point at MirrorBrain-owned markdown
   directories under `<workspaceDir>/mirrorbrain/`
 - updating or rebuilding the QMD index after retrieval-relevant markdown
   changes
-- serving keyword, vector, and hybrid retrieval for MirrorBrain read paths
+- serving QMD-backed retrieval for memory read paths through QMD's unified
+  structured search, with direct lexical fallback when needed
 - mapping QMD search hits back into MirrorBrain memory, knowledge, and skill
   DTOs with provenance preserved
 
@@ -33,15 +31,24 @@ The component is not responsible for:
 
 ## Key Interfaces
 
-Planned interfaces:
+Implemented interfaces:
 
-- `createQmdWorkspaceStore({ workspaceDir })`
-- `ensureQmdWorkspaceIndex({ workspaceDir })`
-- `rebuildQmdWorkspaceIndex({ workspaceDir })`
-- `queryQmdWorkspaceMemory(...)`
-- `queryQmdWorkspaceKnowledge(...)`
-- `queryQmdWorkspaceSkills(...)`
-- `getQmdWorkspaceDocument(...)`
+- `getQmdWorkspacePaths(workspaceDir)`
+- `createQmdWorkspaceMemoryEventRecord(event)`
+- `createQmdWorkspaceMemoryEventWriter({ workspaceDir })`
+- `ingestMemoryEventToQmdWorkspace(...)`
+- `ingestCandidateMemoryToQmdWorkspace(...)`
+- `ingestReviewedMemoryToQmdWorkspace(...)`
+- `ingestMemoryNarrativeToQmdWorkspace(...)`
+- `ingestKnowledgeArtifactToQmdWorkspace(...)`
+- `ingestSkillArtifactToQmdWorkspace(...)`
+- `listMirrorBrainMemoryEventsFromQmdWorkspace(...)`
+- `listRawMirrorBrainMemoryEventsFromQmdWorkspace(...)`
+- `listMirrorBrainMemoryNarrativesFromQmdWorkspace(...)`
+- `listMirrorBrainCandidateMemoriesFromQmdWorkspace(...)`
+- `listMirrorBrainReviewedMemoriesFromQmdWorkspace(...)`
+- `listMirrorBrainKnowledgeArtifactsFromQmdWorkspace(...)`
+- `listMirrorBrainSkillArtifactsFromQmdWorkspace(...)`
 
 The adapter should use QMD as a Node library, not as a required long-running
 HTTP or MCP service.
@@ -51,11 +58,14 @@ HTTP or MCP service.
 1. MirrorBrain writes durable artifacts under `<workspaceDir>/mirrorbrain/`.
 2. Retrieval-relevant artifacts expose one canonical markdown projection in
    that workspace.
-3. QMD indexes the workspace markdown in place.
-4. QMD stores its sqlite/vector index under `<workspaceDir>/mirrorbrain/qmd/`.
-5. Retrieval calls query QMD and map results back to existing MirrorBrain
+3. QMD indexes the workspace markdown in place through `@tobilu/qmd`.
+4. QMD stores its SQLite/vector index under `<workspaceDir>/mirrorbrain/qmd/`.
+5. Memory retrieval calls QMD structured lexical search with reranking
+   disabled, then falls back to direct lexical search if unified search is
+   unavailable or returns no hits.
+6. Retrieval calls map QMD result paths back to existing MirrorBrain
    response contracts.
-6. If the index is missing or stale, MirrorBrain can rebuild it from the
+7. If the index is missing or stale, MirrorBrain can rebuild it from the
    workspace without consulting a second artifact store.
 
 ## Failure Modes And Operational Constraints
@@ -73,12 +83,18 @@ HTTP or MCP service.
 
 ## Test Strategy
 
-Migration tests should cover:
+Tests cover:
 
 - QMD db/config paths stay under the configured `workspaceDir`
 - collections point at MirrorBrain workspace markdown directories
-- index rebuild works from workspace markdown only
-- missing index state can be recreated
-- memory query results preserve existing `MemoryQueryResult` shape
-- deletion or revocation refreshes QMD-derived search visibility
+- memory writes produce JSON state and canonical markdown for QMD indexing
+- memory query results map QMD hit paths back to `MemoryEvent` records
+- QMD unified structured search is preferred before direct lexical fallback
 - startup diagnostics no longer require OpenViking reachability
+
+Remaining coverage gaps:
+
+- a real QMD embedding smoke test is still needed once local QMD model/build
+  prerequisites are standardized
+- deletion or revocation should refresh QMD-derived search visibility after the
+  revocation policy is finalized

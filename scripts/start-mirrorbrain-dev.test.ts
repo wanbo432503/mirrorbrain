@@ -20,11 +20,8 @@ describe('start mirrorbrain dev runtime', () => {
     expect(envExample).toContain('MIRRORBRAIN_LLM_API_BASE=');
     expect(envExample).toContain('MIRRORBRAIN_LLM_API_KEY=');
     expect(envExample).toContain('MIRRORBRAIN_LLM_MODEL=');
-    expect(envExample).toContain('MIRRORBRAIN_EMBEDDING_API_BASE=');
-    expect(envExample).toContain('MIRRORBRAIN_EMBEDDING_API_KEY=');
-    expect(envExample).toContain('MIRRORBRAIN_EMBEDDING_MODEL=');
-    expect(envExample).toContain('MIRRORBRAIN_EMBEDDING_DIMENSION=');
     expect(envExample).toContain('MIRRORBRAIN_BROWSER_BUCKET_ID=');
+    expect(envExample).not.toContain('MIRRORBRAIN_OPENVIKING_BASE_URL=');
   });
 
   it('parses environment overrides and sensible defaults for the local MVP runtime', () => {
@@ -34,7 +31,6 @@ describe('start mirrorbrain dev runtime', () => {
         MIRRORBRAIN_HTTP_HOST: '0.0.0.0',
         MIRRORBRAIN_WORKSPACE_DIR: '/tmp/mirrorbrain-workspace',
         MIRRORBRAIN_ACTIVITYWATCH_BASE_URL: 'http://127.0.0.1:5600',
-        MIRRORBRAIN_OPENVIKING_BASE_URL: 'http://127.0.0.1:8080',
         MIRRORBRAIN_SYNC_INTERVAL_MS: '900000',
         MIRRORBRAIN_INITIAL_BACKFILL_HOURS: '12',
       }),
@@ -49,7 +45,7 @@ describe('start mirrorbrain dev runtime', () => {
           baseUrl: 'http://127.0.0.1:5600',
         },
         openViking: {
-          baseUrl: 'http://127.0.0.1:8080',
+          baseUrl: 'http://127.0.0.1:1933',
         },
         sync: {
           pollingIntervalMs: 900000,
@@ -59,12 +55,11 @@ describe('start mirrorbrain dev runtime', () => {
     });
   });
 
-  it('fails fast when ActivityWatch or OpenViking is unreachable', async () => {
+  it('fails fast when ActivityWatch is unreachable', async () => {
     await expect(
       assertMirrorBrainDependenciesReachable(
         getMirrorBrainDevConfig({
           MIRRORBRAIN_ACTIVITYWATCH_BASE_URL: 'http://127.0.0.1:5600',
-          MIRRORBRAIN_OPENVIKING_BASE_URL: 'http://127.0.0.1:8080',
         }).config,
         async (input) => {
           if (String(input).includes('5600')) {
@@ -82,7 +77,6 @@ describe('start mirrorbrain dev runtime', () => {
       assertMirrorBrainDependenciesReachable(
         getMirrorBrainDevConfig({
           MIRRORBRAIN_ACTIVITYWATCH_BASE_URL: 'http://127.0.0.1:5600',
-          MIRRORBRAIN_OPENVIKING_BASE_URL: 'http://127.0.0.1:8080',
         }).config,
         async (input) => {
           if (String(input).includes('5600')) {
@@ -97,24 +91,20 @@ describe('start mirrorbrain dev runtime', () => {
     );
   });
 
-  it('wraps network-level OpenViking failures with a clear startup message', async () => {
-    await expect(
-      assertMirrorBrainDependenciesReachable(
-        getMirrorBrainDevConfig({
-          MIRRORBRAIN_ACTIVITYWATCH_BASE_URL: 'http://127.0.0.1:5600',
-          MIRRORBRAIN_OPENVIKING_BASE_URL: 'http://127.0.0.1:8080',
-        }).config,
-        async (input) => {
-          if (String(input).includes('8080')) {
-            throw new TypeError('fetch failed');
-          }
+  it('validates ActivityWatch without requiring a separate storage service health check', async () => {
+    const requestedUrls: string[] = [];
 
-          return new Response('{}', { status: 200 });
-        },
-      ),
-    ).rejects.toThrow(
-      'OpenViking is unreachable for the local MVP runtime.',
+    await assertMirrorBrainDependenciesReachable(
+      getMirrorBrainDevConfig({
+        MIRRORBRAIN_ACTIVITYWATCH_BASE_URL: 'http://127.0.0.1:5600',
+      }).config,
+      async (input) => {
+        requestedUrls.push(String(input));
+        return new Response('{}', { status: 200 });
+      },
     );
+
+    expect(requestedUrls).toEqual(['http://127.0.0.1:5600/api/0/buckets']);
   });
 
   it('waits for the React dist index to appear after the build watcher starts', async () => {
@@ -189,7 +179,6 @@ describe('start mirrorbrain dev runtime', () => {
         env: {
           MIRRORBRAIN_WORKSPACE_DIR: '/tmp/mirrorbrain-workspace',
           MIRRORBRAIN_ACTIVITYWATCH_BASE_URL: 'http://127.0.0.1:5600',
-          MIRRORBRAIN_OPENVIKING_BASE_URL: 'http://127.0.0.1:1933',
         },
       },
       {
@@ -782,7 +771,6 @@ describe('start mirrorbrain dev runtime', () => {
       join(projectDir, '.env'),
       [
         'MIRRORBRAIN_ACTIVITYWATCH_BASE_URL=http://127.0.0.1:5600',
-        'MIRRORBRAIN_OPENVIKING_BASE_URL=http://127.0.0.1:1933',
       ].join('\n'),
     );
 
@@ -952,9 +940,6 @@ describe('start mirrorbrain dev runtime', () => {
         activityWatch: {
           baseUrl: 'http://127.0.0.1:5600',
         },
-        openViking: {
-          baseUrl: 'http://127.0.0.1:1933',
-        },
       }),
       workspaceDir: process.cwd(),
     });
@@ -972,8 +957,8 @@ describe('start mirrorbrain dev runtime', () => {
       {
         inspectDependencies: vi.fn(async () => [
           {
-            component: 'OpenViking' as const,
-            message: 'OpenViking is unreachable at http://127.0.0.1:1933.',
+            component: 'QMD Workspace' as const,
+            message: 'QMD index directory is not writable.',
           },
           {
             component: 'ActivityWatch' as const,
@@ -991,10 +976,9 @@ describe('start mirrorbrain dev runtime', () => {
         'MirrorBrain config': [
           'Missing required env var MIRRORBRAIN_WORKSPACE_DIR. Example: /path_to_workspace/mirrorbrain-workspace',
           'Missing required env var MIRRORBRAIN_ACTIVITYWATCH_BASE_URL. Example: http://127.0.0.1:5600',
-          'Missing required env var MIRRORBRAIN_OPENVIKING_BASE_URL. Example: http://127.0.0.1:1933',
         ],
-        OpenViking: [
-          'OpenViking is unreachable at http://127.0.0.1:1933.',
+        'QMD Workspace': [
+          'QMD index directory is not writable.',
         ],
         ActivityWatch: [
           'No browser events were found in the last hour for ActivityWatch.',
@@ -1016,7 +1000,6 @@ describe('start mirrorbrain dev runtime', () => {
         env: {
           MIRRORBRAIN_WORKSPACE_DIR: '/tmp/mirrorbrain-workspace',
           MIRRORBRAIN_ACTIVITYWATCH_BASE_URL: 'http://127.0.0.1:5600',
-          MIRRORBRAIN_OPENVIKING_BASE_URL: 'http://127.0.0.1:1933',
         },
         projectDir,
       },
@@ -1033,7 +1016,7 @@ describe('start mirrorbrain dev runtime', () => {
         processId: 4242,
         logPath: '/tmp/mirrorbrain-dev.log',
         dependencyStatus: {
-          OpenViking: 'ready',
+          'QMD Workspace': 'ready',
           ActivityWatch: 'ready',
         },
         nextSteps: [

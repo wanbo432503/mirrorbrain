@@ -2,12 +2,16 @@
 
 ## Summary
 
-This component is MirrorBrain's plugin-facing retrieval surface for `openclaw`. It exposes async read operations for memory, knowledge, and skill artifacts by loading them from OpenViking-backed storage, and now prefers stored offline memory narratives for browser work-recall and shell problem-solving queries before falling back to raw-event shaping.
+This component is MirrorBrain's plugin-facing retrieval surface for `openclaw`.
+It exposes async read operations for memory, knowledge, and skill artifacts by
+loading them from the QMD workspace store by default, and it prefers stored
+offline memory narratives for browser work-recall and shell problem-solving
+queries before falling back to raw-event shaping.
 
 ## Responsibility Boundary
 
 - exposes the retrieval contract consumed by `openclaw`
-- delegates storage access to the OpenViking adapter
+- delegates default storage access to the QMD workspace adapter
 - returns domain-shaped artifacts rather than raw filesystem responses
 - keeps the retrieval contract thin while shaping memory events or stored memory narratives into higher-level results that are easier for `openclaw` to use in chat
 - does not own sync, review, knowledge generation, or skill generation
@@ -23,9 +27,12 @@ This component is MirrorBrain's plugin-facing retrieval surface for `openclaw`. 
 
 ## Data Flow
 
-1. `openclaw` calls a MirrorBrain retrieval method with the OpenViking base URL and, for memory, a natural-language query plus optional filters.
-2. The plugin API delegates raw storage reads to the OpenViking store adapter.
-3. The store adapter lists MirrorBrain artifact URIs and reads their content.
+1. `openclaw` calls a MirrorBrain retrieval method with the MirrorBrain
+   workspace directory and, for memory, a natural-language query plus optional
+   filters.
+2. The plugin API delegates raw storage reads to the QMD workspace adapter.
+3. The store adapter indexes MirrorBrain workspace markdown through QMD and
+   maps result paths back to MirrorBrain artifacts.
 4. For memory retrieval, the plugin API first checks whether stored `MemoryNarrative` artifacts already exist for the relevant browser work-recall or shell solve-oriented query.
 5. If those offline narratives exist, the plugin API returns them directly as the preferred retrieval layer.
 6. If no stored narratives exist for the query, the plugin API falls back to shaping raw `MemoryEvent` records into higher-level results.

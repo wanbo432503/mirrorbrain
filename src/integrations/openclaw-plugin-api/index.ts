@@ -13,24 +13,35 @@ import {
   listMirrorBrainMemoryNarrativesFromOpenViking,
   listMirrorBrainSkillArtifactsFromOpenViking,
 } from '../openviking-store/index.js';
+import {
+  listMirrorBrainKnowledgeArtifactsFromQmdWorkspace,
+  listMirrorBrainMemoryEventsFromQmdWorkspace,
+  listMirrorBrainMemoryNarrativesFromQmdWorkspace,
+  listMirrorBrainSkillArtifactsFromQmdWorkspace,
+} from '../qmd-workspace-store/index.js';
 
 interface QueryMemoryInput {
-  baseUrl: string;
+  baseUrl?: string;
+  workspaceDir?: string;
   query: string;
   timeRange?: MemoryTimeRange;
   sourceTypes?: MemoryRetrievalQueryInput['sourceTypes'];
 }
 
 interface ListMemoryEventsInput {
-  baseUrl: string;
+  baseUrl?: string;
+  workspaceDir?: string;
+  query?: string;
 }
 
 interface ListKnowledgeInput {
-  baseUrl: string;
+  baseUrl?: string;
+  workspaceDir?: string;
 }
 
 interface ListSkillDraftsInput {
-  baseUrl: string;
+  baseUrl?: string;
+  workspaceDir?: string;
 }
 
 interface OpenClawPluginApiDependencies {
@@ -582,18 +593,52 @@ export async function queryMemory(
   dependencies: OpenClawPluginApiDependencies = {},
 ): Promise<MemoryQueryResult> {
   const listMemoryEvents =
-    dependencies.listMemoryEvents ?? listMirrorBrainMemoryEventsFromOpenViking;
+    dependencies.listMemoryEvents ??
+    (async (request: ListMemoryEventsInput): Promise<MemoryEvent[]> => {
+      if (request.workspaceDir !== undefined) {
+        return listMirrorBrainMemoryEventsFromQmdWorkspace({
+          workspaceDir: request.workspaceDir,
+          query: request.query,
+        });
+      }
+
+      if (request.baseUrl !== undefined) {
+        return listMirrorBrainMemoryEventsFromOpenViking({
+          baseUrl: request.baseUrl,
+        });
+      }
+
+      return [];
+    });
   const listMemoryNarratives =
-    dependencies.listMemoryNarratives ?? listMirrorBrainMemoryNarrativesFromOpenViking;
+    dependencies.listMemoryNarratives ??
+    (async (request: ListMemoryEventsInput): Promise<MemoryNarrative[]> => {
+      if (request.workspaceDir !== undefined) {
+        return listMirrorBrainMemoryNarrativesFromQmdWorkspace({
+          workspaceDir: request.workspaceDir,
+        });
+      }
+
+      if (request.baseUrl !== undefined) {
+        return listMirrorBrainMemoryNarrativesFromOpenViking({
+          baseUrl: request.baseUrl,
+        });
+      }
+
+      return [];
+    });
   const shouldLoadNarratives =
     isBrowserWorkRecallQuery(input) || isShellProblemSolvingQuery(input);
   const [events, storedNarratives] = await Promise.all([
     listMemoryEvents({
       baseUrl: input.baseUrl,
+      workspaceDir: input.workspaceDir,
+      query: input.query,
     }),
     shouldLoadNarratives
       ? listMemoryNarratives({
           baseUrl: input.baseUrl,
+          workspaceDir: input.workspaceDir,
         })
       : Promise.resolve([]),
   ]);
@@ -823,19 +868,44 @@ export async function listKnowledge(
   input: ListKnowledgeInput,
   dependencies: OpenClawPluginApiDependencies = {},
 ): Promise<KnowledgeArtifact[]> {
-  const listKnowledgeArtifacts =
-    dependencies.listKnowledgeArtifacts ??
-    listMirrorBrainKnowledgeArtifactsFromOpenViking;
+  if (dependencies.listKnowledgeArtifacts !== undefined) {
+    return dependencies.listKnowledgeArtifacts(input);
+  }
 
-  return listKnowledgeArtifacts(input);
+  if (input.workspaceDir !== undefined) {
+    return listMirrorBrainKnowledgeArtifactsFromQmdWorkspace({
+      workspaceDir: input.workspaceDir,
+    });
+  }
+
+  if (input.baseUrl !== undefined) {
+    return listMirrorBrainKnowledgeArtifactsFromOpenViking({
+      baseUrl: input.baseUrl,
+    });
+  }
+
+  return [];
 }
 
 export async function listSkillDrafts(
   input: ListSkillDraftsInput,
   dependencies: OpenClawPluginApiDependencies = {},
 ): Promise<SkillArtifact[]> {
-  const listSkillArtifacts =
-    dependencies.listSkillArtifacts ?? listMirrorBrainSkillArtifactsFromOpenViking;
+  if (dependencies.listSkillArtifacts !== undefined) {
+    return dependencies.listSkillArtifacts(input);
+  }
 
-  return listSkillArtifacts(input);
+  if (input.workspaceDir !== undefined) {
+    return listMirrorBrainSkillArtifactsFromQmdWorkspace({
+      workspaceDir: input.workspaceDir,
+    });
+  }
+
+  if (input.baseUrl !== undefined) {
+    return listMirrorBrainSkillArtifactsFromOpenViking({
+      baseUrl: input.baseUrl,
+    });
+  }
+
+  return [];
 }

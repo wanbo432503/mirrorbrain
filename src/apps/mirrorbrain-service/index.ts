@@ -15,25 +15,31 @@ import {
   type SourceLedgerStateStore,
 } from '../../integrations/source-ledger-state-store/index.js';
 import {
-  createOpenVikingMemoryEventRecord,
-  ingestCandidateMemoryToOpenViking,
-  deleteCandidateMemoryFromOpenViking,
   ingestMemoryEventToOpenViking,
-  ingestKnowledgeArtifactToOpenViking,
-  ingestMemoryNarrativeToOpenViking,
-  ingestReviewedMemoryToOpenViking,
-  ingestSkillArtifactToOpenViking,
   listMirrorBrainMemoryEventsFromOpenViking,
   listMirrorBrainKnowledgeArtifactsFromWorkspace,
   listMirrorBrainMemoryEventsFromWorkspace,
   listRawMirrorBrainMemoryEventsFromWorkspace,
-  listMirrorBrainMemoryNarrativesFromOpenViking,
-  listMirrorBrainCandidateMemoriesFromOpenViking,
   listMirrorBrainCandidateMemoriesFromWorkspace,
-  listMirrorBrainReviewedMemoriesFromOpenViking,
   listMirrorBrainSkillArtifactsFromWorkspace,
   type OpenVikingMemoryEventWriter,
 } from '../../integrations/openviking-store/index.js';
+import {
+  createQmdWorkspaceMemoryEventRecord,
+  createQmdWorkspaceMemoryEventWriter,
+  ingestCandidateMemoryToQmdWorkspace,
+  ingestKnowledgeArtifactToQmdWorkspace,
+  ingestMemoryNarrativeToQmdWorkspace,
+  ingestReviewedMemoryToQmdWorkspace,
+  ingestSkillArtifactToQmdWorkspace,
+  listMirrorBrainCandidateMemoriesFromQmdWorkspace,
+  listMirrorBrainKnowledgeArtifactsFromQmdWorkspace,
+  listMirrorBrainMemoryEventsFromQmdWorkspace,
+  listMirrorBrainMemoryNarrativesFromQmdWorkspace,
+  listMirrorBrainReviewedMemoriesFromQmdWorkspace,
+  listMirrorBrainSkillArtifactsFromQmdWorkspace,
+  listRawMirrorBrainMemoryEventsFromQmdWorkspace,
+} from '../../integrations/qmd-workspace-store/index.js';
 import {
   loadMemoryEventsCache,
   saveMemoryEventsCache,
@@ -44,8 +50,6 @@ import {
   type MemoryEventSourceFilter,
 } from '../../modules/memory-events-cache/index.js';
 import {
-  listKnowledge as listKnowledgeFromPluginApi,
-  listSkillDrafts as listSkillDraftsFromPluginApi,
   queryMemory as queryMemoryFromPluginApi,
 } from '../../integrations/openclaw-plugin-api/index.js';
 import {
@@ -223,10 +227,59 @@ type MemoryEventReadResult =
       };
     };
 
+type WorkspaceStorageInput = {
+  workspaceDir: string;
+  baseUrl?: string;
+};
+
 type ListMemoryEventsDependency = (
-  input: { baseUrl: string },
+  input: WorkspaceStorageInput & { query?: string },
   fetchImpl?: Parameters<typeof listMirrorBrainMemoryEventsFromOpenViking>[1],
 ) => Promise<MemoryEventReadResult>;
+
+type ListMemoryNarrativesDependency = (
+  input: WorkspaceStorageInput,
+) => Promise<MemoryNarrative[]>;
+
+type ListCandidateMemoriesDependency = (
+  input: WorkspaceStorageInput,
+) => Promise<CandidateMemory[]>;
+
+type ListReviewedMemoriesDependency = (
+  input: WorkspaceStorageInput,
+) => Promise<ReviewedMemory[]>;
+
+type ListKnowledgeArtifactsDependency = (
+  input: WorkspaceStorageInput,
+) => Promise<KnowledgeArtifact[]>;
+
+type ListSkillArtifactsDependency = (
+  input: WorkspaceStorageInput,
+) => Promise<SkillArtifact[]>;
+
+type PublishMemoryNarrativeDependency = (
+  input: WorkspaceStorageInput & { artifact: MemoryNarrative },
+) => Promise<unknown>;
+
+type PublishKnowledgeDependency = (
+  input: WorkspaceStorageInput & { artifact: KnowledgeArtifact },
+) => Promise<unknown>;
+
+type PublishSkillDependency = (
+  input: WorkspaceStorageInput & { artifact: SkillArtifact },
+) => Promise<unknown>;
+
+type PublishCandidateMemoryDependency = (
+  input: WorkspaceStorageInput & { artifact: CandidateMemory },
+) => Promise<unknown>;
+
+type PublishReviewedMemoryDependency = (
+  input: WorkspaceStorageInput & { artifact: ReviewedMemory },
+) => Promise<unknown>;
+
+type DeleteCandidateMemoryResourceDependency = (
+  input: WorkspaceStorageInput & { candidateMemoryId: string },
+) => Promise<unknown>;
 
 type CreateCandidateMemoriesDependency = (
   input: Parameters<typeof createCandidateMemories>[0],
@@ -245,18 +298,18 @@ interface CreateMirrorBrainServiceDependencies {
   listMemoryEvents?: ListMemoryEventsDependency;
   listWorkspaceMemoryEvents?: typeof listMirrorBrainMemoryEventsFromWorkspace;
   listRawWorkspaceMemoryEvents?: typeof listRawMirrorBrainMemoryEventsFromWorkspace;
-  listMemoryNarratives?: typeof listMirrorBrainMemoryNarrativesFromOpenViking;
-  listCandidateMemories?: typeof listMirrorBrainCandidateMemoriesFromOpenViking;
+  listMemoryNarratives?: ListMemoryNarrativesDependency;
+  listCandidateMemories?: ListCandidateMemoriesDependency;
   listWorkspaceCandidateMemories?: typeof listMirrorBrainCandidateMemoriesFromWorkspace;
-  listReviewedMemories?: typeof listMirrorBrainReviewedMemoriesFromOpenViking;
-  listKnowledge?: typeof listKnowledgeFromPluginApi;
-  listSkillDrafts?: typeof listSkillDraftsFromPluginApi;
-  publishMemoryNarrative?: typeof ingestMemoryNarrativeToOpenViking;
-  publishKnowledge?: typeof ingestKnowledgeArtifactToOpenViking;
-  publishSkill?: typeof ingestSkillArtifactToOpenViking;
-  publishCandidateMemory?: typeof ingestCandidateMemoryToOpenViking;
-  publishReviewedMemory?: typeof ingestReviewedMemoryToOpenViking;
-  deleteCandidateMemoryResource?: typeof deleteCandidateMemoryFromOpenViking;
+  listReviewedMemories?: ListReviewedMemoriesDependency;
+  listKnowledge?: ListKnowledgeArtifactsDependency;
+  listSkillDrafts?: ListSkillArtifactsDependency;
+  publishMemoryNarrative?: PublishMemoryNarrativeDependency;
+  publishKnowledge?: PublishKnowledgeDependency;
+  publishSkill?: PublishSkillDependency;
+  publishCandidateMemory?: PublishCandidateMemoryDependency;
+  publishReviewedMemory?: PublishReviewedMemoryDependency;
+  deleteCandidateMemoryResource?: DeleteCandidateMemoryResourceDependency;
   undoReviewedMemory?: (reviewedMemoryId: string, workspaceDir: string) => Promise<void>;
   buildBrowserThemeNarratives?: typeof generateBrowserThemeNarratives;
   buildShellProblemNarratives?: typeof generateShellProblemNarratives;
@@ -428,6 +481,14 @@ function createOpenVikingMemoryEventWriter(input: {
   };
 }
 
+function createDefaultMemoryEventWriter(input: {
+  workspaceDir: string;
+}): OpenVikingMemoryEventWriter {
+  return createQmdWorkspaceMemoryEventWriter({
+    workspaceDir: input.workspaceDir,
+  });
+}
+
 function summarizeImportedEvents(
   sync: BrowserMemorySyncResult | ShellMemorySyncResult,
 ): BrowserMemorySyncResult | ShellMemorySyncResult {
@@ -469,7 +530,7 @@ export function startMirrorBrainService(
     workspaceDir,
   });
   const memoryEventWriter = (
-    dependencies.createMemoryEventWriter ?? createOpenVikingMemoryEventWriter
+    dependencies.createMemoryEventWriter ?? createDefaultMemoryEventWriter
   )({
     config,
     workspaceDir,
@@ -619,7 +680,7 @@ export function startMirrorBrainService(
         writeCheckpoint: sourceLedgerStateStore.writeCheckpoint,
         writeMemoryEvent: async (event) => {
           await memoryEventWriter.writeMemoryEvent(
-            createOpenVikingMemoryEventRecord(event),
+            createQmdWorkspaceMemoryEventRecord(event),
           );
         },
         writeSourceAuditEvent: sourceLedgerStateStore.writeSourceAuditEvent,
@@ -724,34 +785,35 @@ export function createMirrorBrainService(
   const now = dependencies.now ?? (() => new Date().toISOString());
   const queryMemory = dependencies.queryMemory ?? queryMemoryFromPluginApi;
   const listMemoryEvents =
-    dependencies.listMemoryEvents ?? listMirrorBrainMemoryEventsFromOpenViking;
+    dependencies.listMemoryEvents ?? listMirrorBrainMemoryEventsFromQmdWorkspace;
   const listWorkspaceMemoryEvents =
-    dependencies.listWorkspaceMemoryEvents ?? listMirrorBrainMemoryEventsFromWorkspace;
+    dependencies.listWorkspaceMemoryEvents ?? listMirrorBrainMemoryEventsFromQmdWorkspace;
   const listRawWorkspaceMemoryEvents =
-    dependencies.listRawWorkspaceMemoryEvents ?? listRawMirrorBrainMemoryEventsFromWorkspace;
+    dependencies.listRawWorkspaceMemoryEvents ?? listRawMirrorBrainMemoryEventsFromQmdWorkspace;
   const listMemoryNarratives =
-    dependencies.listMemoryNarratives ?? listMirrorBrainMemoryNarrativesFromOpenViking;
+    dependencies.listMemoryNarratives ?? listMirrorBrainMemoryNarrativesFromQmdWorkspace;
   const listCandidateMemories =
-    dependencies.listCandidateMemories ?? listMirrorBrainCandidateMemoriesFromOpenViking;
+    dependencies.listCandidateMemories ?? listMirrorBrainCandidateMemoriesFromQmdWorkspace;
   const listWorkspaceCandidateMemories =
-    dependencies.listWorkspaceCandidateMemories ?? listMirrorBrainCandidateMemoriesFromWorkspace;
-  const listKnowledge = dependencies.listKnowledge ?? listKnowledgeFromPluginApi;
+    dependencies.listWorkspaceCandidateMemories ?? listMirrorBrainCandidateMemoriesFromQmdWorkspace;
+  const listKnowledge =
+    dependencies.listKnowledge ?? listMirrorBrainKnowledgeArtifactsFromQmdWorkspace;
   const listSkillDrafts =
-    dependencies.listSkillDrafts ?? listSkillDraftsFromPluginApi;
+    dependencies.listSkillDrafts ?? listMirrorBrainSkillArtifactsFromQmdWorkspace;
   const publishMemoryNarrative =
-    dependencies.publishMemoryNarrative ?? ingestMemoryNarrativeToOpenViking;
+    dependencies.publishMemoryNarrative ?? ingestMemoryNarrativeToQmdWorkspace;
   const publishKnowledge =
-    dependencies.publishKnowledge ?? ingestKnowledgeArtifactToOpenViking;
+    dependencies.publishKnowledge ?? ingestKnowledgeArtifactToQmdWorkspace;
   const publishSkill =
-    dependencies.publishSkill ?? ingestSkillArtifactToOpenViking;
+    dependencies.publishSkill ?? ingestSkillArtifactToQmdWorkspace;
   const publishCandidateMemory =
-    dependencies.publishCandidateMemory ?? ingestCandidateMemoryToOpenViking;
+    dependencies.publishCandidateMemory ?? ingestCandidateMemoryToQmdWorkspace;
   const publishReviewedMemory =
-    dependencies.publishReviewedMemory ?? ingestReviewedMemoryToOpenViking;
+    dependencies.publishReviewedMemory ?? ingestReviewedMemoryToQmdWorkspace;
   const deleteCandidateMemoryResource =
-    dependencies.deleteCandidateMemoryResource ?? deleteCandidateMemoryFromOpenViking;
+    dependencies.deleteCandidateMemoryResource ?? (async () => undefined);
   const memoryEventWriter = (
-    dependencies.createMemoryEventWriter ?? createOpenVikingMemoryEventWriter
+    dependencies.createMemoryEventWriter ?? createDefaultMemoryEventWriter
   )({
     config: serviceConfig,
     workspaceDir,
@@ -830,7 +892,7 @@ export function createMirrorBrainService(
     }
 
     await deleteCandidateMemoryResource({
-      baseUrl,
+      workspaceDir,
       candidateMemoryId,
     });
 
@@ -993,9 +1055,9 @@ export function createMirrorBrainService(
     }
   };
   const loadKnowledgeArtifacts = async (): Promise<KnowledgeArtifact[]> => {
-    const [openVikingKnowledge, workspaceKnowledge, deletedKnowledgeIds] = await Promise.all([
+    const [storedKnowledge, workspaceKnowledge, deletedKnowledgeIds] = await Promise.all([
       listKnowledge({
-        baseUrl,
+        workspaceDir,
       }).catch(() => [] as KnowledgeArtifact[]),
       listMirrorBrainKnowledgeArtifactsFromWorkspace({
         workspaceDir,
@@ -1004,14 +1066,14 @@ export function createMirrorBrainService(
     ]);
 
     return mergeArtifactsById(
-      openVikingKnowledge.filter((artifact) => !deletedKnowledgeIds.has(artifact.id)),
+      storedKnowledge.filter((artifact) => !deletedKnowledgeIds.has(artifact.id)),
       workspaceKnowledge,
     );
   };
   const loadSkillArtifacts = async (): Promise<SkillArtifact[]> => {
-    const [openVikingSkills, workspaceSkills, deletedSkillIds] = await Promise.all([
+    const [storedSkills, workspaceSkills, deletedSkillIds] = await Promise.all([
       listSkillDrafts({
-        baseUrl,
+        workspaceDir,
       }).catch(() => [] as SkillArtifact[]),
       listMirrorBrainSkillArtifactsFromWorkspace({
         workspaceDir,
@@ -1020,7 +1082,7 @@ export function createMirrorBrainService(
     ]);
 
     return mergeArtifactsById(
-      openVikingSkills.filter((artifact) => !deletedSkillIds.has(artifact.id)),
+      storedSkills.filter((artifact) => !deletedSkillIds.has(artifact.id)),
       workspaceSkills.filter((artifact) => !deletedSkillIds.has(artifact.id)),
     );
   };
@@ -1028,7 +1090,6 @@ export function createMirrorBrainService(
     await Promise.all(
       artifacts.map((artifact) =>
         publishMemoryNarrative({
-          baseUrl,
           workspaceDir,
           artifact,
         }),
@@ -1111,7 +1172,6 @@ export function createMirrorBrainService(
     await Promise.all(
       criticalArtifacts.map((artifact) =>
         publishKnowledge({
-          baseUrl,
           workspaceDir,
           artifact,
         }),
@@ -1120,7 +1180,6 @@ export function createMirrorBrainService(
     void Promise.all(
       relationOnlyArtifacts.map((artifact) =>
         publishKnowledge({
-          baseUrl,
           workspaceDir,
           artifact,
         }),
@@ -1156,7 +1215,6 @@ export function createMirrorBrainService(
       await Promise.all(
         plan.updateArtifacts.map((artifact) =>
           publishKnowledge({
-            baseUrl,
             workspaceDir,
             artifact,
           }),
@@ -1165,7 +1223,6 @@ export function createMirrorBrainService(
       await Promise.all(
         plan.mergeCandidateArtifacts.map((artifact) =>
           publishKnowledge({
-            baseUrl,
             workspaceDir,
             artifact,
           }),
@@ -1179,8 +1236,8 @@ export function createMirrorBrainService(
       );
     });
   };
-  const listOpenVikingMemoryEventArray = async (
-    input: { baseUrl: string },
+  const listStoredMemoryEventArray = async (
+    input: WorkspaceStorageInput & { query?: string },
   ): Promise<MemoryEvent[]> =>
     normalizeMemoryEventReadResult(await listMemoryEvents(input));
   const loadOrInitializeCache = async (): Promise<MemoryEventsCache> => {
@@ -1193,7 +1250,8 @@ export function createMirrorBrainService(
         baseUrl,
         {
           listWorkspaceMemoryEvents: listWorkspaceMemoryEvents,
-          listOpenVikingMemoryEvents: listOpenVikingMemoryEventArray,
+          listOpenVikingMemoryEvents: async () =>
+            listStoredMemoryEventArray({ workspaceDir }),
         },
       );
     }
@@ -1206,7 +1264,8 @@ export function createMirrorBrainService(
         baseUrl,
         {
           listWorkspaceMemoryEvents: listWorkspaceMemoryEvents,
-          listOpenVikingMemoryEvents: listOpenVikingMemoryEventArray,
+          listOpenVikingMemoryEvents: async () =>
+            listStoredMemoryEventArray({ workspaceDir }),
         },
       );
     }
@@ -1215,7 +1274,7 @@ export function createMirrorBrainService(
   };
   const loadMemoryEvents = async (): Promise<MemoryEvent[]> => {
     try {
-      return await listOpenVikingMemoryEventArray({ baseUrl });
+      return await listStoredMemoryEventArray({ workspaceDir });
     } catch {
       return listWorkspaceMemoryEvents({
         workspaceDir,
@@ -1300,9 +1359,8 @@ export function createMirrorBrainService(
   };
   const loadCandidateMemories = async (): Promise<CandidateMemory[]> => {
     try {
-      const result = await listCandidateMemories({ baseUrl });
+      const result = await listCandidateMemories({ workspaceDir });
 
-      // Fallback to workspace if OpenViking returns empty
       if (result.length === 0) {
         return listWorkspaceCandidateMemories({
           workspaceDir,
@@ -1318,11 +1376,11 @@ export function createMirrorBrainService(
   };
   const loadReviewedMemories = async (): Promise<ReviewedMemory[]> => {
     if (dependencies.listReviewedMemories !== undefined) {
-      return dependencies.listReviewedMemories({ baseUrl });
+      return dependencies.listReviewedMemories({ workspaceDir });
     }
 
     try {
-      return await listMirrorBrainReviewedMemoriesFromOpenViking({ baseUrl });
+      return await listMirrorBrainReviewedMemoriesFromQmdWorkspace({ workspaceDir });
     } catch {
       const reviewedDir = join(workspaceDir, 'mirrorbrain', 'reviewed-memories');
 
@@ -1361,7 +1419,7 @@ export function createMirrorBrainService(
         writeCheckpoint: sourceLedgerStateStore.writeCheckpoint,
         writeMemoryEvent: async (event) => {
           await memoryEventWriter.writeMemoryEvent(
-            createOpenVikingMemoryEventRecord(event),
+            createQmdWorkspaceMemoryEventRecord(event),
           );
         },
         writeSourceAuditEvent: sourceLedgerStateStore.writeSourceAuditEvent,
@@ -1540,7 +1598,8 @@ export function createMirrorBrainService(
         baseUrl,
         {
           listWorkspaceMemoryEvents,
-          listOpenVikingMemoryEvents: listOpenVikingMemoryEventArray,
+          listOpenVikingMemoryEvents: async () =>
+            listStoredMemoryEventArray({ workspaceDir }),
         },
       );
 
@@ -1702,11 +1761,11 @@ export function createMirrorBrainService(
     },
     listMemoryNarratives: () =>
       listMemoryNarratives({
-        baseUrl,
+        workspaceDir,
       }),
     queryMemory: (input: MemoryQueryInput) =>
       queryMemory({
-        baseUrl,
+        workspaceDir,
         query: input.query,
         timeRange: input.timeRange,
         sourceTypes: input.sourceTypes,
@@ -1798,14 +1857,13 @@ export function createMirrorBrainService(
       return mergeTopicKnowledgeCandidate(mergeCandidate, mergedAt);
     },
     listSkillDrafts: loadSkillArtifacts,
-    publishKnowledge: async (artifact: Parameters<typeof ingestKnowledgeArtifactToOpenViking>[0]['artifact']) => {
+    publishKnowledge: async (artifact: KnowledgeArtifact) => {
       await clearDeletedArtifact('knowledge', artifact.id);
       await refreshKnowledgeRelations([artifact]);
     },
-    publishSkillDraft: (artifact: Parameters<typeof ingestSkillArtifactToOpenViking>[0]['artifact']) =>
+    publishSkillDraft: (artifact: SkillArtifact) =>
       clearDeletedArtifact('skills', artifact.id).then(() =>
         publishSkill({
-          baseUrl,
           workspaceDir,
           artifact,
         }),
@@ -1832,7 +1890,6 @@ export function createMirrorBrainService(
 
       await clearDeletedArtifact('skills', artifact.id);
       await publishSkill({
-        baseUrl,
         workspaceDir,
         artifact,
       });
@@ -1922,7 +1979,6 @@ export function createMirrorBrainService(
       const artifact = await reviewMemory(candidate, review);
 
       await publishReviewedMemory({
-        baseUrl,
         workspaceDir,
         artifact,
       });
@@ -2020,7 +2076,6 @@ export function createMirrorBrainService(
 
       for (const artifact of artifacts) {
         await publishCandidateMemory({
-          baseUrl,
           workspaceDir,
           artifact,
         });
@@ -2052,7 +2107,6 @@ export function createMirrorBrainService(
       }
 
       await publishCandidateMemory({
-        baseUrl,
         workspaceDir,
         artifact,
       });
