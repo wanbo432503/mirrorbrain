@@ -612,21 +612,23 @@ export async function queryMemory(
     });
   const listMemoryNarratives =
     dependencies.listMemoryNarratives ??
-    (async (request: ListMemoryEventsInput): Promise<MemoryNarrative[]> => {
-      if (request.workspaceDir !== undefined) {
-        return listMirrorBrainMemoryNarrativesFromQmdWorkspace({
-          workspaceDir: request.workspaceDir,
-        });
-      }
+    (dependencies.listMemoryEvents !== undefined
+      ? async (): Promise<MemoryNarrative[]> => []
+      : async (request: ListMemoryEventsInput): Promise<MemoryNarrative[]> => {
+          if (request.workspaceDir !== undefined) {
+            return listMirrorBrainMemoryNarrativesFromQmdWorkspace({
+              workspaceDir: request.workspaceDir,
+            });
+          }
 
-      if (request.baseUrl !== undefined) {
-        return listMirrorBrainMemoryNarrativesFromOpenViking({
-          baseUrl: request.baseUrl,
-        });
-      }
+          if (request.baseUrl !== undefined) {
+            return listMirrorBrainMemoryNarrativesFromOpenViking({
+              baseUrl: request.baseUrl,
+            });
+          }
 
-      return [];
-    });
+          return [];
+        });
   const shouldLoadNarratives =
     isBrowserWorkRecallQuery(input) || isShellProblemSolvingQuery(input);
   const [events, storedNarratives] = await Promise.all([

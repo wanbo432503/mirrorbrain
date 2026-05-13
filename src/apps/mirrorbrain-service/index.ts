@@ -208,6 +208,18 @@ const DEFAULT_SUPERVISED_SOURCE_INSTANCES: SupervisedSourceInstance[] = [
 
 const SOURCE_LEDGER_RUNTIME_INTERVAL_MS = 60 * 1000;
 
+function resolveRuntimeWorkspaceDir(workspaceDir: string | undefined): string {
+  const resolvedWorkspaceDir = workspaceDir ?? process.env.MIRRORBRAIN_WORKSPACE_DIR;
+
+  if (resolvedWorkspaceDir === undefined || resolvedWorkspaceDir.length === 0) {
+    throw new ValidationError(
+      'workspaceDir is required; refusing to use the source directory as a MirrorBrain workspace.',
+    );
+  }
+
+  return resolvedWorkspaceDir;
+}
+
 interface CreateMirrorBrainServiceInput {
   service: MirrorBrainRuntimeService;
   workspaceDir?: string;
@@ -511,7 +523,7 @@ export function startMirrorBrainService(
   config: ReturnType<typeof getMirrorBrainConfig>;
 } {
   const config = input.config ?? getMirrorBrainConfig();
-  const workspaceDir = input.workspaceDir ?? process.cwd();
+  const workspaceDir = resolveRuntimeWorkspaceDir(input.workspaceDir);
   const configuredBrowserBucketId = input.browserBucketId;
   const browserScopeId = input.browserScopeId ?? 'scope-browser';
   const shellHistoryPath = input.shellHistoryPath;
@@ -777,7 +789,7 @@ export function createMirrorBrainService(
   const baseUrl =
     input.service.config?.openViking.baseUrl ?? getMirrorBrainConfig().openViking.baseUrl;
   const serviceConfig = input.service.config ?? getMirrorBrainConfig();
-  const workspaceDir = input.workspaceDir ?? process.cwd();
+  const workspaceDir = resolveRuntimeWorkspaceDir(input.workspaceDir);
   const browserScopeId = input.browserScopeId ?? 'scope-browser';
   const knowledgeArticleStore = createFileKnowledgeArticleStore({
     workspaceDir,

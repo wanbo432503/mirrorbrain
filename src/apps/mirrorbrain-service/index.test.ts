@@ -69,6 +69,43 @@ function createReviewedMemoryFixture(input?: {
 describe('mirrorbrain service', () => {
   const expectedOpenVikingBaseUrl = getMirrorBrainConfig().openViking.baseUrl;
 
+  it('refuses to default runtime storage to the source directory', () => {
+    const previousWorkspaceDir = process.env.MIRRORBRAIN_WORKSPACE_DIR;
+    delete process.env.MIRRORBRAIN_WORKSPACE_DIR;
+
+    try {
+      expect(() =>
+        startMirrorBrainService(
+          {
+            config: getMirrorBrainConfig(),
+          },
+          {
+            startBrowserSyncPolling: vi.fn(),
+            startSourceLedgerImportPolling: vi.fn(),
+          },
+        ),
+      ).toThrow('workspaceDir is required');
+
+      expect(() =>
+        createMirrorBrainService({
+          service: {
+            status: 'running',
+            config: getMirrorBrainConfig(),
+            syncBrowserMemory: vi.fn(),
+            syncShellMemory: vi.fn(),
+            stop: vi.fn(),
+          },
+        }),
+      ).toThrow('workspaceDir is required');
+    } finally {
+      if (previousWorkspaceDir === undefined) {
+        delete process.env.MIRRORBRAIN_WORKSPACE_DIR;
+      } else {
+        process.env.MIRRORBRAIN_WORKSPACE_DIR = previousWorkspaceDir;
+      }
+    }
+  });
+
   it('starts ledger import polling without starting legacy browser sync polling by default', () => {
     const stopPolling = vi.fn();
     const stopSourceImportPolling = vi.fn();
@@ -2521,7 +2558,7 @@ describe('mirrorbrain service', () => {
       },
     );
     expect(publishReviewedMemory).toHaveBeenCalledWith({
-      workspaceDir: process.cwd(),
+      workspaceDir: process.env.MIRRORBRAIN_WORKSPACE_DIR,
       artifact: createReviewedMemoryFixture(),
     });
   });
@@ -2618,7 +2655,7 @@ describe('mirrorbrain service', () => {
     ]);
 
     expect(listRawWorkspaceMemoryEvents).toHaveBeenCalledWith({
-      workspaceDir: process.cwd(),
+      workspaceDir: process.env.MIRRORBRAIN_WORKSPACE_DIR,
     });
     expect(createCandidateMemories).toHaveBeenCalledWith({
       reviewDate: '2026-03-20',
@@ -2701,7 +2738,7 @@ describe('mirrorbrain service', () => {
     await api.createDailyCandidateMemories('2026-04-14', 'Asia/Shanghai');
 
     expect(loadBrowserPageContentArtifactFromWorkspace).toHaveBeenCalledWith({
-      workspaceDir: process.cwd(),
+      workspaceDir: process.env.MIRRORBRAIN_WORKSPACE_DIR,
       url: 'https://docs.example.com/reference/cache-invalidation',
     });
     expect(createCandidateMemories).toHaveBeenCalledWith({

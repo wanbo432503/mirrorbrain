@@ -278,7 +278,14 @@ export async function retrievePageContent(
     const loadArtifact =
       deps.loadBrowserPageContentArtifactFromWorkspace ??
       loadBrowserPageContentArtifactFromWorkspace;
-    const workspaceDir = deps.workspaceDir ?? process.cwd();
+    const workspaceDir = deps.workspaceDir ?? process.env.MIRRORBRAIN_WORKSPACE_DIR;
+
+    if (workspaceDir === undefined || workspaceDir.length === 0) {
+      throw new Error(
+        'workspaceDir is required; refusing to use the source directory as a MirrorBrain workspace.',
+      );
+    }
+
     const artifact: BrowserPageContentArtifact | null = await loadArtifact({
       workspaceDir,
       url,

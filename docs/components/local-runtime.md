@@ -60,6 +60,9 @@ It is not responsible for:
 - startup reports grouped issues for config, ActivityWatch, QMD workspace
   readiness, and runtime startup before exiting
 - startup expects the local environment variables in `.env` to be present even when some runtime defaults exist in code
+- startup and runtime service construction require an explicit
+  `MIRRORBRAIN_WORKSPACE_DIR` or injected `workspaceDir`; MirrorBrain refuses
+  to fall back to the repository working directory for durable storage
 - `MIRRORBRAIN_BROWSER_BUCKET_ID` pins the ActivityWatch browser bucket used by
   browser source-ledger capture; when omitted, MirrorBrain auto-discovers the
   most recently updated `aw-watcher-web*` bucket

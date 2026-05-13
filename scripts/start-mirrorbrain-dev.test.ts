@@ -55,10 +55,19 @@ describe('start mirrorbrain dev runtime', () => {
     });
   });
 
+  it('rejects runtime config without an explicit workspace directory', () => {
+    expect(() =>
+      getMirrorBrainDevConfig({
+        MIRRORBRAIN_ACTIVITYWATCH_BASE_URL: 'http://127.0.0.1:5600',
+      }),
+    ).toThrow('MIRRORBRAIN_WORKSPACE_DIR is required');
+  });
+
   it('fails fast when ActivityWatch is unreachable', async () => {
     await expect(
       assertMirrorBrainDependenciesReachable(
         getMirrorBrainDevConfig({
+          MIRRORBRAIN_WORKSPACE_DIR: '/tmp/mirrorbrain-workspace',
           MIRRORBRAIN_ACTIVITYWATCH_BASE_URL: 'http://127.0.0.1:5600',
         }).config,
         async (input) => {
@@ -76,6 +85,7 @@ describe('start mirrorbrain dev runtime', () => {
     await expect(
       assertMirrorBrainDependenciesReachable(
         getMirrorBrainDevConfig({
+          MIRRORBRAIN_WORKSPACE_DIR: '/tmp/mirrorbrain-workspace',
           MIRRORBRAIN_ACTIVITYWATCH_BASE_URL: 'http://127.0.0.1:5600',
         }).config,
         async (input) => {
@@ -96,6 +106,7 @@ describe('start mirrorbrain dev runtime', () => {
 
     await assertMirrorBrainDependenciesReachable(
       getMirrorBrainDevConfig({
+        MIRRORBRAIN_WORKSPACE_DIR: '/tmp/mirrorbrain-workspace',
         MIRRORBRAIN_ACTIVITYWATCH_BASE_URL: 'http://127.0.0.1:5600',
       }).config,
       async (input) => {
@@ -770,6 +781,7 @@ describe('start mirrorbrain dev runtime', () => {
     writeFileSync(
       join(projectDir, '.env'),
       [
+        'MIRRORBRAIN_WORKSPACE_DIR=/tmp/mirrorbrain-workspace',
         'MIRRORBRAIN_ACTIVITYWATCH_BASE_URL=http://127.0.0.1:5600',
       ].join('\n'),
     );
@@ -941,7 +953,7 @@ describe('start mirrorbrain dev runtime', () => {
           baseUrl: 'http://127.0.0.1:5600',
         },
       }),
-      workspaceDir: process.cwd(),
+      workspaceDir: '/tmp/mirrorbrain-workspace',
     });
   });
 
@@ -974,7 +986,6 @@ describe('start mirrorbrain dev runtime', () => {
       status: 'failed',
       issuesByComponent: {
         'MirrorBrain config': [
-          'Missing required env var MIRRORBRAIN_WORKSPACE_DIR. Example: /path_to_workspace/mirrorbrain-workspace',
           'Missing required env var MIRRORBRAIN_ACTIVITYWATCH_BASE_URL. Example: http://127.0.0.1:5600',
         ],
         'QMD Workspace': [

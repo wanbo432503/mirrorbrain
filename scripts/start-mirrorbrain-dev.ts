@@ -175,6 +175,14 @@ export function getMirrorBrainDevConfig(
   env: NodeJS.ProcessEnv = process.env,
 ): MirrorBrainDevConfigResult {
   const defaultConfig = getMirrorBrainConfig();
+  const workspaceDir = env.MIRRORBRAIN_WORKSPACE_DIR;
+
+  if (workspaceDir === undefined || workspaceDir.length === 0) {
+    throw new Error(
+      'MIRRORBRAIN_WORKSPACE_DIR is required; refusing to use the source directory as a workspace.',
+    );
+  }
+
   const browserBucketId =
     env.MIRRORBRAIN_BROWSER_BUCKET_ID !== undefined &&
     env.MIRRORBRAIN_BROWSER_BUCKET_ID.length > 0
@@ -182,7 +190,7 @@ export function getMirrorBrainDevConfig(
       : undefined;
 
   return {
-    workspaceDir: env.MIRRORBRAIN_WORKSPACE_DIR ?? process.cwd(),
+    workspaceDir,
     ...(browserBucketId === undefined ? {} : { browserBucketId }),
     config: {
       service: {

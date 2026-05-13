@@ -98,7 +98,14 @@ export async function runBrowserMemorySyncOnce(
   input: RunBrowserMemorySyncOnceInput,
   dependencies: RunBrowserMemorySyncOnceDependencies,
 ): Promise<BrowserMemorySyncResult> {
-  const workspaceDir = input.workspaceDir ?? process.cwd();
+  const workspaceDir = input.workspaceDir ?? process.env.MIRRORBRAIN_WORKSPACE_DIR;
+
+  if (workspaceDir === undefined || workspaceDir.length === 0) {
+    throw new Error(
+      'workspaceDir is required; refusing to use the source directory as a MirrorBrain workspace.',
+    );
+  }
+
   const fetchPage = dependencies.fetchPageContent ?? fetchBrowserPageContent;
   const ingestPage =
     dependencies.ingestPageContent ?? ingestBrowserPageContentToOpenViking;

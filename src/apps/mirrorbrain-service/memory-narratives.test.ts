@@ -86,7 +86,7 @@ describe('mirrorbrain service memory narratives', () => {
       memoryEvents: expectedMemoryEvents,
     });
     expect(publishMemoryNarrative).toHaveBeenCalledWith({
-      workspaceDir: process.cwd(),
+      workspaceDir: process.env.MIRRORBRAIN_WORKSPACE_DIR,
       artifact: browserNarrative,
     });
   });
