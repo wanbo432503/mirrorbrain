@@ -30,9 +30,9 @@ This component is responsible for:
   list
 - showing source-specific imported memory records from `GET /memory` with
   source filters and pagination
-- presenting user-facing source labels such as `Agent`, `Chrome`, `Files`,
-  `Screenshot`, `Shell`, and `Recording` instead of exposing internal
-  `*-main` source instance ids as navigation names
+- presenting user-facing source labels such as `Agent`, `Browser`, `Files`,
+  `Screenshot`, `Shell`, and `Audio` instead of exposing internal `*-main`
+  source instance ids as navigation names
 - enabling or disabling source instances through `PATCH /sources/config`
 - keeping memory source management separate from memory review, knowledge
   review, and skill execution tabs
@@ -94,9 +94,12 @@ The API responses use `SourceLedgerImportResult`, `SourceInstanceSummary`, and
   source records.
 - Source enablement is persisted and audited. Recorder status remains read-only
   until recorder supervision reports real runtime state.
-- The `Recording` source represents authorized audio-recording ledger imports.
+- The `Audio` source represents authorized audio-recording ledger imports.
   This UI only displays, imports, and configures the source; it does not start
   microphone capture.
+- Legacy `agent-transcript` / `openclaw-main` source summaries are hidden from
+  the left rail because the current product-facing source is the normalized
+  `Agent` sessions source.
 - Source history shows imported `MemoryEvent` records for the selected source.
   It remains read-only; review and knowledge synthesis still happen through
   their explicit workflows.
@@ -107,8 +110,8 @@ The API responses use `SourceLedgerImportResult`, `SourceInstanceSummary`, and
 - Individual source detail panels must also remain `min-height: 0` flex
   columns. The selected source header, tab row, active tab body, source-history
   summary, source-history list, and pagination footer are separate flex regions
-  so records for Agent, Chrome, Files, Screenshot, Recording, and Shell stay
-  inside the application viewport.
+  so records for Agent, Browser, Files, Screenshot, Audio, and Shell stay inside
+  the application viewport.
 
 ## Test Strategy
 
@@ -126,5 +129,5 @@ The tests cover source API client calls, source status rendering inside the
 `Sources` subtab, source history pagination, removal of the single-source
 overview/audit/import controls, manual global import feedback, the `All
 Sources` global memory view, user-facing source labels including Screenshot and
-Recording, flex right-panel scroll boundaries for both global and individual
+Audio, flex right-panel scroll boundaries for both global and individual
 source detail views, and the top-level `memory sources` tab integration.

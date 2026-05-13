@@ -423,7 +423,7 @@ pagination layout without an extra subtab. The action row keeps only
 `Import Sources`, with import feedback displayed to the left of that button.
 Selecting an individual source keeps the source-specific management surface,
 but the navigation labels should use product-facing names such as Agent,
-Chrome, Files, Screenshot, Recording, and Shell instead of internal `*-main`
+Browser, Files, Screenshot, Audio, and Shell instead of internal `*-main`
 source instance ids.
 
 Each source instance has a detail page with tabs:

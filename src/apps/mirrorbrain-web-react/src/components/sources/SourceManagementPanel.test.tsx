@@ -158,40 +158,53 @@ describe('SourceManagementPanel', () => {
   it('keeps each selected source detail panel inside the flex viewport', async () => {
     const sourceSummaries = [
       {
+        sourceKind: 'agent-transcript' as const,
+        sourceInstanceId: 'openclaw-main',
+        displayName: 'Openclaw',
+        displayDescription: 'legacy agent transcript',
+        visible: false,
+      },
+      {
         sourceKind: 'agent' as const,
         sourceInstanceId: 'agent-main',
         displayName: 'Agent',
         displayDescription: 'Sessions',
+        visible: true,
       },
       {
         sourceKind: 'browser' as const,
         sourceInstanceId: 'chrome-main',
-        displayName: 'Chrome',
-        displayDescription: 'browser',
+        displayName: 'Browser',
+        displayDescription: 'browser history',
+        visible: true,
       },
       {
         sourceKind: 'file-activity' as const,
         sourceInstanceId: 'filesystem-main',
         displayName: 'Files',
         displayDescription: 'file activity',
+        visible: true,
       },
       {
         sourceKind: 'screenshot' as const,
         sourceInstanceId: 'desktop-main',
         displayName: 'Screenshot',
         displayDescription: 'screen capture',
+        visible: true,
       },
       {
         sourceKind: 'shell' as const,
         sourceInstanceId: 'shell-main',
         displayName: 'Shell',
-        displayDescription: 'terminal',
+        displayDescription: 'terminal history',
+        visible: true,
       },
       {
         sourceKind: 'audio-recording' as const,
         sourceInstanceId: 'recording-main',
-        displayName: 'Recording',
+        displayName: 'Audio',
         displayDescription: 'audio recording',
+        visible: true,
       },
     ].map((source) => ({
       ...source,
@@ -237,7 +250,14 @@ describe('SourceManagementPanel', () => {
 
     renderSourceManagementPanel(api)
 
-    for (const source of sourceSummaries) {
+    expect(await screen.findByRole('button', { name: /browser browser history/i })).not.toBeNull()
+    expect(screen.getByRole('button', { name: /audio audio recording/i })).not.toBeNull()
+    expect(screen.getByRole('button', { name: /shell terminal history/i })).not.toBeNull()
+    expect(screen.queryByRole('button', { name: /openclaw/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /chrome browser/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /recording audio recording/i })).toBeNull()
+
+    for (const source of sourceSummaries.filter((source) => source.visible)) {
       await userEvent.click(
         await screen.findByRole('button', {
           name: new RegExp(`${source.displayName} ${source.displayDescription}`, 'i'),
@@ -385,9 +405,9 @@ describe('SourceManagementPanel', () => {
 
     renderSourceManagementPanel(api)
 
-    await userEvent.click(await screen.findByRole('button', { name: /chrome browser/i }))
+    await userEvent.click(await screen.findByRole('button', { name: /browser browser history/i }))
 
-    expect(screen.getAllByText('Chrome')).toHaveLength(2)
+    expect(screen.getAllByText('Browser')).toHaveLength(2)
     expect(screen.getByText('degraded')).not.toBeNull()
 
     expect(screen.queryByRole('tab', { name: 'Overview' })).toBeNull()

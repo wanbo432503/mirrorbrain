@@ -32,8 +32,8 @@ const SOURCE_DISPLAY_BY_KEY: Record<string, { name: string; description: string 
     description: 'Sessions',
   },
   'browser:chrome-main': {
-    name: 'Chrome',
-    description: 'browser',
+    name: 'Browser',
+    description: 'browser history',
   },
   'file-activity:filesystem-main': {
     name: 'Files',
@@ -44,12 +44,12 @@ const SOURCE_DISPLAY_BY_KEY: Record<string, { name: string; description: string 
     description: 'screen capture',
   },
   'audio-recording:recording-main': {
-    name: 'Recording',
+    name: 'Audio',
     description: 'audio recording',
   },
   'shell:shell-main': {
     name: 'Shell',
-    description: 'terminal',
+    description: 'terminal history',
   },
 }
 
@@ -63,7 +63,7 @@ function getSourceKey(source: {
 function formatSourceKindLabel(sourceKind: SourceLedgerKind): string {
   switch (sourceKind) {
     case 'browser':
-      return 'browser'
+      return 'browser history'
     case 'file-activity':
       return 'file activity'
     case 'screenshot':
@@ -71,10 +71,17 @@ function formatSourceKindLabel(sourceKind: SourceLedgerKind): string {
     case 'audio-recording':
       return 'audio recording'
     case 'shell':
-      return 'terminal'
+      return 'terminal history'
     case 'agent':
       return 'Sessions'
   }
+}
+
+function isVisibleSource(source: {
+  sourceKind: string
+  sourceInstanceId: string
+}): boolean {
+  return source.sourceKind !== 'agent-transcript' && source.sourceInstanceId !== 'openclaw-main'
 }
 
 function formatFallbackSourceName(sourceInstanceId: string): string {
@@ -118,10 +125,12 @@ export default function SourceManagementPanel({
   const [isUpdatingConfig, setIsUpdatingConfig] = useState(false)
   const [feedback, setFeedback] = useState<string | null>(null)
 
+  const visibleSources = useMemo(() => sources.filter(isVisibleSource), [sources])
+
   const selectedSource =
     selectedSourceKey === ALL_MAIN_SOURCES_KEY
       ? null
-      : sources.find((source) => getSourceKey(source) === selectedSourceKey) ?? null
+      : visibleSources.find((source) => getSourceKey(source) === selectedSourceKey) ?? null
 
   const loadSources = async () => {
     const loadedSources = await sourceApi.listSourceStatuses()
@@ -131,7 +140,9 @@ export default function SourceManagementPanel({
         return current
       }
 
-      return loadedSources.some((source) => getSourceKey(source) === current)
+      return loadedSources.some(
+        (source) => isVisibleSource(source) && getSourceKey(source) === current,
+      )
         ? current
         : ALL_MAIN_SOURCES_KEY
     })
@@ -258,7 +269,7 @@ export default function SourceManagementPanel({
             <span className="block font-semibold">All Sources</span>
             <span className="block text-xs text-inkMuted-80">memory events</span>
           </button>
-          {sources.map((source) => {
+          {visibleSources.map((source) => {
             const sourceKey = getSourceKey(source)
             const isSelected = sourceKey === selectedSourceKey
             const sourceDisplay = getSourceDisplay(source)
