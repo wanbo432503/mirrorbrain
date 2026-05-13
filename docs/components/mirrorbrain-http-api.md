@@ -71,7 +71,7 @@ use that shared contract.
 type MirrorBrainSourceCategory =
   | 'browser'
   | 'shell'
-  | 'openclaw-conversation';
+  | 'agent';
 ```
 
 ### Memory Event
@@ -311,7 +311,7 @@ Request fields:
 | --- | --- | --- |
 | `query` | yes | Natural-language retrieval request. |
 | `timeRange` | no | Optional inclusive retrieval window. |
-| `sourceTypes` | no | Optional source filters: `browser`, `shell`, `openclaw-conversation`. |
+| `sourceTypes` | no | Optional source filters: `browser`, `shell`, `agent`. |
 
 Response:
 

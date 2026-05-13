@@ -97,9 +97,9 @@ The API responses use `SourceLedgerImportResult`, `SourceInstanceSummary`, and
 - The `Audio` source represents authorized audio-recording ledger imports.
   This UI only displays, imports, and configures the source; it does not start
   microphone capture.
-- Legacy `agent-transcript` / `openclaw-main` source summaries are hidden from
-  the left rail because the current product-facing source is the normalized
-  `Agent` sessions source.
+- Agent session records are exposed through the normalized `Agent` sessions
+  source. The source-management UI does not keep a separate Openclaw source
+  compatibility path.
 - Source history shows imported `MemoryEvent` records for the selected source.
   It remains read-only; review and knowledge synthesis still happen through
   their explicit workflows.

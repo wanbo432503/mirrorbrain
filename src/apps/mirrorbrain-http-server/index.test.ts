@@ -1103,6 +1103,67 @@ describe('mirrorbrain http server', () => {
     });
   });
 
+  it('accepts agent source filters and rejects retired openclaw conversation filters', async () => {
+    const service = {
+      service: {
+        status: 'running' as const,
+        config: getMirrorBrainConfig(),
+        stop: vi.fn(),
+      },
+      syncBrowserMemory: vi.fn(),
+      syncShellMemory: vi.fn(),
+      listMemoryEvents: vi.fn(),
+      queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
+      listKnowledge: vi.fn(async () => []),
+      listSkillDrafts: vi.fn(async () => []),
+      createDailyCandidateMemories: vi.fn(),
+      suggestCandidateReviews: vi.fn(),
+      reviewCandidateMemory: vi.fn(),
+      undoCandidateReview: vi.fn(),
+      deleteCandidateMemory: vi.fn(),
+      generateKnowledgeFromReviewedMemories: vi.fn(),
+      generateSkillDraftFromReviewedMemories: vi.fn(),
+      publishKnowledge: vi.fn(),
+      publishSkillDraft: vi.fn(),
+    };
+
+    const server = await startMirrorBrainHttpServer({
+      service,
+      port: 0,
+    });
+    servers.push(server);
+
+    const agentResponse = await fetch(`${server.origin}/memory/query`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        query: 'What agent sessions did I run?',
+        sourceTypes: ['agent'],
+      }),
+    });
+
+    expect(agentResponse.status).toBe(200);
+    expect(service.queryMemory).toHaveBeenCalledWith({
+      query: 'What agent sessions did I run?',
+      sourceTypes: ['agent'],
+    });
+
+    const retiredResponse = await fetch(`${server.origin}/memory/query`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        query: 'What agent sessions did I run?',
+        sourceTypes: ['openclaw-conversation'],
+      }),
+    });
+
+    expect(retiredResponse.status).toBe(400);
+  });
+
   it('serves candidate review and artifact generation endpoints through the local HTTP API', async () => {
     const createDailyCandidateMemories = vi.fn(
       async (_reviewDate: string): Promise<CandidateMemory[]> => [

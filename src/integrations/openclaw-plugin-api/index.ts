@@ -650,7 +650,7 @@ export async function queryMemory(
         return event.sourceType.includes('shell');
       }
 
-      return event.sourceType.includes('openclaw');
+      return event.sourceType.includes('agent');
     });
   });
   const groupedEvents = new Map<string, MemoryEvent[]>();

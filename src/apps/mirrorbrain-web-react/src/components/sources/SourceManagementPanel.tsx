@@ -77,13 +77,6 @@ function formatSourceKindLabel(sourceKind: SourceLedgerKind): string {
   }
 }
 
-function isVisibleSource(source: {
-  sourceKind: string
-  sourceInstanceId: string
-}): boolean {
-  return source.sourceKind !== 'agent-transcript' && source.sourceInstanceId !== 'openclaw-main'
-}
-
 function formatFallbackSourceName(sourceInstanceId: string): string {
   return sourceInstanceId
     .replace(/-main$/u, '')
@@ -125,12 +118,10 @@ export default function SourceManagementPanel({
   const [isUpdatingConfig, setIsUpdatingConfig] = useState(false)
   const [feedback, setFeedback] = useState<string | null>(null)
 
-  const visibleSources = useMemo(() => sources.filter(isVisibleSource), [sources])
-
   const selectedSource =
     selectedSourceKey === ALL_MAIN_SOURCES_KEY
       ? null
-      : visibleSources.find((source) => getSourceKey(source) === selectedSourceKey) ?? null
+      : sources.find((source) => getSourceKey(source) === selectedSourceKey) ?? null
 
   const loadSources = async () => {
     const loadedSources = await sourceApi.listSourceStatuses()
@@ -140,9 +131,7 @@ export default function SourceManagementPanel({
         return current
       }
 
-      return loadedSources.some(
-        (source) => isVisibleSource(source) && getSourceKey(source) === current,
-      )
+      return loadedSources.some((source) => getSourceKey(source) === current)
         ? current
         : ALL_MAIN_SOURCES_KEY
     })
@@ -269,7 +258,7 @@ export default function SourceManagementPanel({
             <span className="block font-semibold">All Sources</span>
             <span className="block text-xs text-inkMuted-80">memory events</span>
           </button>
-          {visibleSources.map((source) => {
+          {sources.map((source) => {
             const sourceKey = getSourceKey(source)
             const isSelected = sourceKey === selectedSourceKey
             const sourceDisplay = getSourceDisplay(source)

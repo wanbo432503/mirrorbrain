@@ -70,6 +70,76 @@ describe('openclaw plugin api', () => {
     });
   });
 
+  it('filters agent session memory through the agent source type', async () => {
+    await expect(
+      queryMemory(
+        {
+          baseUrl: 'http://127.0.0.1:1933',
+          query: 'What agent sessions did I run yesterday?',
+          timeRange: {
+            startAt: '2026-05-12T00:00:00.000Z',
+            endAt: '2026-05-12T23:59:59.999Z',
+          },
+          sourceTypes: ['agent'],
+        },
+        {
+          listMemoryEvents: async () => [
+            {
+              id: 'agent:codex-1',
+              sourceType: 'agent',
+              sourceRef: 'agent:agent-main:codex-1',
+              timestamp: '2026-05-12T10:13:00.000Z',
+              authorizationScopeId: 'scope-agent',
+              content: {
+                title: 'Implement Phase 4 importer',
+              },
+              captureMetadata: {
+                upstreamSource: 'source-ledger:agent',
+                checkpoint: 'ledgers/2026-05-12/agent.jsonl:1',
+              },
+            },
+            {
+              id: 'browser:ignored',
+              sourceType: 'browser',
+              sourceRef: 'browser:chrome-main:ignored',
+              timestamp: '2026-05-12T10:20:00.000Z',
+              authorizationScopeId: 'scope-browser',
+              content: {
+                title: 'Ignored browser memory',
+              },
+              captureMetadata: {
+                upstreamSource: 'source-ledger:browser',
+                checkpoint: 'ledgers/2026-05-12/browser.jsonl:1',
+              },
+            },
+          ],
+        },
+      ),
+    ).resolves.toMatchObject({
+      timeRange: {
+        startAt: '2026-05-12T00:00:00.000Z',
+        endAt: '2026-05-12T23:59:59.999Z',
+      },
+      items: [
+        {
+          id: 'memory-result:agent-implement-phase-4-importer',
+          theme: 'Implement Phase 4 importer',
+          title: 'Implement Phase 4 importer',
+          summary:
+            '1 matching memory event about Implement Phase 4 importer during the requested time range.',
+          sourceRefs: [
+            {
+              id: 'agent:codex-1',
+              sourceType: 'agent',
+              sourceRef: 'agent:agent-main:codex-1',
+              timestamp: '2026-05-12T10:13:00.000Z',
+            },
+          ],
+        },
+      ],
+    });
+  });
+
   it('groups shell history events by command name for generic shell recall queries', async () => {
     await expect(
       queryMemory(

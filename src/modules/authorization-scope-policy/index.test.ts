@@ -18,23 +18,18 @@ describe('authorization scope policy', () => {
     expect(isSourceCategoryAuthorized(scope, 'shell')).toBe(false);
   });
 
-  it('supports shell and openclaw-conversation source categories', () => {
+  it('supports shell and agent source categories', () => {
     const shellScope = createAuthorizationScope({
       id: 'scope-shell',
       sourceCategory: 'shell',
     });
-    const conversationScope = createAuthorizationScope({
-      id: 'scope-conversation',
-      sourceCategory: 'openclaw-conversation',
+    const agentScope = createAuthorizationScope({
+      id: 'scope-agent',
+      sourceCategory: 'agent',
     });
 
     expect(isSourceCategoryAuthorized(shellScope, 'shell')).toBe(true);
-    expect(
-      isSourceCategoryAuthorized(
-        conversationScope,
-        'openclaw-conversation',
-      ),
-    ).toBe(true);
+    expect(isSourceCategoryAuthorized(agentScope, 'agent')).toBe(true);
   });
 
   it('disables future ingestion after revocation', () => {

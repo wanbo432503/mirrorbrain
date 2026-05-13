@@ -234,7 +234,7 @@ const memoryQueryRequestSchema = {
       type: 'array',
       items: {
         type: 'string',
-        enum: ['browser', 'shell', 'openclaw-conversation'],
+        enum: ['browser', 'shell', 'agent'],
       },
     },
   },

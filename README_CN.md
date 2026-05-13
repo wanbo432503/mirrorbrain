@@ -53,7 +53,7 @@ Project / Topic 的 Knowledge Article。
 - 从 ActivityWatch 和 `aw-watcher-web` 同步经过授权的浏览器活动。
 - 在显式配置后同步经过授权的 shell history 文件。
 - 通过统一 source-ledger 边界导入 Phase 4 daily JSONL ledgers，覆盖
-  browser、file activity、screenshot、shell 和 agent transcript 等来源类型。
+  browser、file activity、screenshot、shell 和 agent session 等来源类型。
 - 记录 source status、source audit events 和 per-ledger checkpoints，方便
   查看导入与 recorder 状态。
 - 捕获浏览器页面正文，以提升 review 和 synthesis 质量。
@@ -94,7 +94,7 @@ Project / Topic 的 Knowledge Article。
 ### 当前非目标
 
 - 尚未实现文档导入。
-- file activity、screenshot、更完整 shell session 和 agent transcript
+- file activity、screenshot、更完整 shell session 和 agent session
   directory 的真实 recorder 尚未全部完成。
 - 生产部署、多用户鉴权、保留策略和网络安全加固不属于当前 local-first 基线。
 - 除 draft generation 和 safety metadata 之外，尚未实现自主 skill execution。

@@ -75,7 +75,7 @@ export interface MirrorBrainSyncConfig {
 export type MirrorBrainSourceCategory =
   | 'browser'
   | 'shell'
-  | 'openclaw-conversation';
+  | 'agent';
 
 export interface MirrorBrainEndpointConfig {
   baseUrl: string;
