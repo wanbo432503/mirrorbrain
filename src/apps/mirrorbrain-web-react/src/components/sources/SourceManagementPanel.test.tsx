@@ -454,9 +454,17 @@ describe('SourceManagementPanel', () => {
     expect(api.listSourceAuditEvents).not.toHaveBeenCalled()
   })
 
-  it('shows read-only JSONL ledger formats for third-party source integration', async () => {
+  it('shows only the selected source JSONL ledger format as formatted JSON', async () => {
     const api = {
       listSourceStatuses: vi.fn(async () => [
+        {
+          sourceKind: 'agent' as const,
+          sourceInstanceId: 'agent-main',
+          lifecycleStatus: 'enabled' as const,
+          recorderStatus: 'unknown' as const,
+          importedCount: 0,
+          skippedCount: 0,
+        },
         {
           sourceKind: 'browser' as const,
           sourceInstanceId: 'chrome-main',
@@ -482,34 +490,39 @@ describe('SourceManagementPanel', () => {
 
     renderSourceManagementPanel(api)
 
-    await userEvent.click(await screen.findByRole('button', { name: /browser browser history/i }))
+    await userEvent.click(await screen.findByRole('button', { name: /agent sessions/i }))
     await userEvent.click(screen.getByRole('tab', { name: 'Ledger Format' }))
 
     const ledgerFormatPanel = screen.getByTestId('ledger-format-panel')
 
     expect(within(ledgerFormatPanel).getByText('Source Ledger JSONL')).not.toBeNull()
-    expect(within(ledgerFormatPanel).getByText('browser')).not.toBeNull()
-    expect(within(ledgerFormatPanel).getByText('file-activity')).not.toBeNull()
-    expect(within(ledgerFormatPanel).getByText('screenshot')).not.toBeNull()
-    expect(within(ledgerFormatPanel).getByText('audio-recording')).not.toBeNull()
-    expect(within(ledgerFormatPanel).getByText('shell')).not.toBeNull()
     expect(within(ledgerFormatPanel).getByText('agent')).not.toBeNull()
-
-    const browserExample = within(ledgerFormatPanel).getByLabelText(
-      'browser ledger JSONL example',
-    )
-    expect(browserExample.getAttribute('data-language')).toBe('jsonl')
-    expect(browserExample.className).toContain('language-jsonl')
-    expect(browserExample.textContent).toContain('"sourceKind":"browser"')
-    expect(browserExample.textContent).toContain('"page_content"')
-    expect(within(browserExample).getAllByText(/"sourceKind"/u)[0].className).toContain(
-      'text-sky-700',
-    )
+    expect(within(ledgerFormatPanel).queryByText('browser')).toBeNull()
+    expect(within(ledgerFormatPanel).queryByText('file-activity')).toBeNull()
 
     const agentExample = within(ledgerFormatPanel).getByLabelText(
       'agent ledger JSONL example',
     )
-    expect(agentExample.textContent).toContain('"sourceKind":"agent"')
+    expect(agentExample.getAttribute('data-language')).toBe('jsonl')
+    expect(agentExample.className).toContain('language-jsonl')
+    expect(agentExample.textContent).toContain('{\n  "schemaVersion": "1",')
+    expect(agentExample.textContent).toContain('  "sourceKind": "agent",')
     expect(agentExample.textContent).toContain('"finalResultSummary"')
+    expect(within(agentExample).getAllByText(/"sourceKind"/u)[0].className).toContain(
+      'text-sky-700',
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: /browser browser history/i }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Ledger Format' }))
+
+    const browserPanel = screen.getByTestId('ledger-format-panel')
+    expect(within(browserPanel).getByText('browser')).not.toBeNull()
+    expect(within(browserPanel).queryByText('agent')).toBeNull()
+
+    const browserExample = within(browserPanel).getByLabelText(
+      'browser ledger JSONL example',
+    )
+    expect(browserExample.textContent).toContain('  "sourceKind": "browser",')
+    expect(browserExample.textContent).toContain('"page_content"')
   })
 })

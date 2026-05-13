@@ -447,9 +447,9 @@ The `Sources` tab shows the source summary metrics first:
 Below those metrics, the `Sources` tab shows paginated imported `MemoryEvent`
 records for that source.
 
-The `Ledger Format` tab shows a read-only JSONL reference for every supported
+The `Ledger Format` tab shows a read-only JSONL reference for the selected
 source-ledger type so third-party applications can construct compatible ledger
-files without relying on source-specific UI code.
+files without seeing unrelated source payloads.
 
 Settings supports:
 

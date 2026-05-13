@@ -30,8 +30,8 @@ This component is responsible for:
   list
 - showing source-specific imported memory records from `GET /memory` with
   source filters and pagination
-- showing a read-only `Ledger Format` subtab with JSONL examples for every
-  source-ledger type currently accepted by MirrorBrain
+- showing a read-only `Ledger Format` subtab with the JSONL example for the
+  selected source-ledger type
 - presenting user-facing source labels such as `Agent`, `Browser`, `Files`,
   `Screenshot`, `Shell`, and `Audio` instead of exposing internal `*-main`
   source instance ids as navigation names
@@ -86,10 +86,9 @@ The API responses use `SourceLedgerImportResult`, `SourceInstanceSummary`, and
 8. The `Sources` tab first shows the source summary metrics that used to live
    in `Overview`, then shows paginated source history so the user can browse
    all imported records for that source instead of only a fixed recent subset.
-9. The `Ledger Format` tab shows read-only JSONL examples for browser,
-   file-activity, screenshot, audio-recording, shell, and agent ledgers. Each
-   example uses one JSON object per line and renders JSONL syntax highlighting
-   in the browser.
+9. The `Ledger Format` tab shows the read-only JSONL example for the selected
+   source kind only. The example uses formatted multi-line JSON for readability
+   while preserving JSONL syntax highlighting in the browser.
 10. When the user enables or disables a source, the app calls
    `PATCH /sources/config`, writes audit-backed config through the service, and
    reloads source statuses.
@@ -110,8 +109,8 @@ The API responses use `SourceLedgerImportResult`, `SourceInstanceSummary`, and
   It remains read-only; review and knowledge synthesis still happen through
   their explicit workflows.
 - The ledger format reference is static, read-only UI derived from the importer
-  contract. It is an integration aid for third-party applications and does not
-  write or validate ledger data.
+  contract. It is scoped to the selected source, acts as an integration aid for
+  third-party applications, and does not write or validate ledger data.
 - The `All Sources` right panel must remain a `min-height: 0` flex column.
   The memory event list is the only vertically scrolling region; the import
   action row and pagination footer stay outside that scroll area so resizing

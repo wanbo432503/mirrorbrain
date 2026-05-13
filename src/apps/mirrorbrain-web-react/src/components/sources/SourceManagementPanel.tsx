@@ -32,136 +32,160 @@ const SOURCE_LEDGER_FORMATS = [
     title: 'Browser',
     description: 'browser history',
     fileName: 'browser.jsonl',
-    example: JSON.stringify({
-      schemaVersion: '1',
-      sourceKind: 'browser',
-      sourceInstanceId: 'chrome-main',
-      occurredAt: '2026-05-12T10:00:00.000Z',
-      payload: {
-        id: 'page-161',
-        title: 'MirrorBrain source ledger design',
-        url: 'https://example.com/mirrorbrain/source-ledgers',
-        page_content: 'Readable page text captured from an authorized browser source.',
+    example: JSON.stringify(
+      {
+        schemaVersion: '1',
+        sourceKind: 'browser',
+        sourceInstanceId: 'chrome-main',
+        occurredAt: '2026-05-12T10:00:00.000Z',
+        payload: {
+          id: 'page-161',
+          title: 'MirrorBrain source ledger design',
+          url: 'https://example.com/mirrorbrain/source-ledgers',
+          page_content: 'Readable page text captured from an authorized browser source.',
+        },
       },
-    }),
+      null,
+      2,
+    ),
   },
   {
     sourceKind: 'file-activity',
     title: 'Files',
     description: 'file activity',
     fileName: 'file-activity.jsonl',
-    example: JSON.stringify({
-      schemaVersion: '1',
-      sourceKind: 'file-activity',
-      sourceInstanceId: 'filesystem-main',
-      occurredAt: '2026-05-12T10:10:00.000Z',
-      payload: {
-        filePath: '/Users/example/Notes/phase4.md',
-        fileName: 'phase4.md',
-        fileType: 'markdown',
-        mimeType: 'text/markdown',
-        openedByApp: 'Cursor',
-        sizeBytes: 1200,
-        modifiedAt: '2026-05-12T10:09:00.000Z',
-        contentSummary: 'Phase 4 ledger architecture notes.',
-        fullContentRef: 'workspace-file:///Users/example/Notes/phase4.md',
+    example: JSON.stringify(
+      {
+        schemaVersion: '1',
+        sourceKind: 'file-activity',
+        sourceInstanceId: 'filesystem-main',
+        occurredAt: '2026-05-12T10:10:00.000Z',
+        payload: {
+          filePath: '/Users/example/Notes/phase4.md',
+          fileName: 'phase4.md',
+          fileType: 'markdown',
+          mimeType: 'text/markdown',
+          openedByApp: 'Cursor',
+          sizeBytes: 1200,
+          modifiedAt: '2026-05-12T10:09:00.000Z',
+          contentSummary: 'Phase 4 ledger architecture notes.',
+          fullContentRef: 'workspace-file:///Users/example/Notes/phase4.md',
+        },
       },
-    }),
+      null,
+      2,
+    ),
   },
   {
     sourceKind: 'screenshot',
     title: 'Screenshot',
     description: 'screen capture',
     fileName: 'screenshot.jsonl',
-    example: JSON.stringify({
-      schemaVersion: '1',
-      sourceKind: 'screenshot',
-      sourceInstanceId: 'desktop-main',
-      occurredAt: '2026-05-12T10:11:00.000Z',
-      payload: {
-        title: 'Architecture diagram',
-        appName: 'Preview',
-        windowTitle: 'phase4.png',
-        imagePath: '/tmp/phase4.png',
-        imageRetained: true,
-        imageSize: {
-          width: 1440,
-          height: 900,
+    example: JSON.stringify(
+      {
+        schemaVersion: '1',
+        sourceKind: 'screenshot',
+        sourceInstanceId: 'desktop-main',
+        occurredAt: '2026-05-12T10:11:00.000Z',
+        payload: {
+          title: 'Architecture diagram',
+          appName: 'Preview',
+          windowTitle: 'phase4.png',
+          imagePath: '/tmp/phase4.png',
+          imageRetained: true,
+          imageSize: {
+            width: 1440,
+            height: 900,
+          },
+          ocrSummary: 'Phase 4 ledgers and importer',
+          visionSummary: 'A diagram showing recorders writing ledgers into MirrorBrain.',
         },
-        ocrSummary: 'Phase 4 ledgers and importer',
-        visionSummary: 'A diagram showing recorders writing ledgers into MirrorBrain.',
       },
-    }),
+      null,
+      2,
+    ),
   },
   {
     sourceKind: 'audio-recording',
     title: 'Audio',
     description: 'audio recording',
     fileName: 'audio-recording.jsonl',
-    example: JSON.stringify({
-      schemaVersion: '1',
-      sourceKind: 'audio-recording',
-      sourceInstanceId: 'recording-main',
-      occurredAt: '2026-05-12T10:11:30.000Z',
-      payload: {
-        title: 'Design discussion recording',
-        appName: 'Voice Memos',
-        audioPath: '/tmp/phase4.m4a',
-        audioRetained: true,
-        durationMs: 420000,
-        transcriptSummary: 'A recorded discussion about adding source names.',
-        transcriptText: 'Optional transcript text.',
-        redactionStatus: 'none',
+    example: JSON.stringify(
+      {
+        schemaVersion: '1',
+        sourceKind: 'audio-recording',
+        sourceInstanceId: 'recording-main',
+        occurredAt: '2026-05-12T10:11:30.000Z',
+        payload: {
+          title: 'Design discussion recording',
+          appName: 'Voice Memos',
+          audioPath: '/tmp/phase4.m4a',
+          audioRetained: true,
+          durationMs: 420000,
+          transcriptSummary: 'A recorded discussion about adding source names.',
+          transcriptText: 'Optional transcript text.',
+          redactionStatus: 'none',
+        },
       },
-    }),
+      null,
+      2,
+    ),
   },
   {
     sourceKind: 'shell',
     title: 'Shell',
     description: 'terminal history',
     fileName: 'shell.jsonl',
-    example: JSON.stringify({
-      schemaVersion: '1',
-      sourceKind: 'shell',
-      sourceInstanceId: 'shell-main',
-      occurredAt: '2026-05-12T10:12:00.000Z',
-      payload: {
-        sessionId: 'shell-session-1',
-        commandIndex: 7,
-        command: 'pnpm test',
-        cwd: '/Users/example/Workspace/mirrorbrain',
-        exitCode: 0,
-        shellType: 'zsh',
-        terminalApp: 'Terminal',
-        redactionStatus: 'none',
+    example: JSON.stringify(
+      {
+        schemaVersion: '1',
+        sourceKind: 'shell',
+        sourceInstanceId: 'shell-main',
+        occurredAt: '2026-05-12T10:12:00.000Z',
+        payload: {
+          sessionId: 'shell-session-1',
+          commandIndex: 7,
+          command: 'pnpm test',
+          cwd: '/Users/example/Workspace/mirrorbrain',
+          exitCode: 0,
+          shellType: 'zsh',
+          terminalApp: 'Terminal',
+          redactionStatus: 'none',
+        },
       },
-    }),
+      null,
+      2,
+    ),
   },
   {
     sourceKind: 'agent',
     title: 'Agent',
     description: 'Sessions',
     fileName: 'agent.jsonl',
-    example: JSON.stringify({
-      schemaVersion: '1',
-      sourceKind: 'agent',
-      sourceInstanceId: 'agent-main',
-      occurredAt: '2026-05-12T10:13:00.000Z',
-      payload: {
-        transcriptPath: '/Users/example/.codex/sessions/session.jsonl',
-        sessionId: 'codex-1',
-        agentIdentity: 'Codex',
-        userTask: 'Implement Phase 4 importer',
-        messageRange: {
-          start: 3,
-          end: 42,
+    example: JSON.stringify(
+      {
+        schemaVersion: '1',
+        sourceKind: 'agent',
+        sourceInstanceId: 'agent-main',
+        occurredAt: '2026-05-12T10:13:00.000Z',
+        payload: {
+          transcriptPath: '/Users/example/.codex/sessions/session.jsonl',
+          sessionId: 'codex-1',
+          agentIdentity: 'Codex',
+          userTask: 'Implement Phase 4 importer',
+          messageRange: {
+            start: 3,
+            end: 42,
+          },
+          toolCallSummary: 'Read files, edited importer, ran tests.',
+          finalResultSummary: 'Importer implemented and verified.',
+          redactionStatus: 'none',
+          updatedAt: '2026-05-12T10:13:30.000Z',
         },
-        toolCallSummary: 'Read files, edited importer, ran tests.',
-        finalResultSummary: 'Importer implemented and verified.',
-        redactionStatus: 'none',
-        updatedAt: '2026-05-12T10:13:30.000Z',
       },
-    }),
+      null,
+      2,
+    ),
   },
 ] as const
 
@@ -590,7 +614,9 @@ export default function SourceManagementPanel({
                 </div>
               )}
 
-              {selectedTab === 'Ledger Format' && <LedgerFormatPanel />}
+              {selectedTab === 'Ledger Format' && (
+                <LedgerFormatPanel sourceKind={selectedSource.sourceKind} />
+              )}
 
               {selectedTab === 'Settings' && (
                 <div className="min-h-0 overflow-y-auto text-sm">
@@ -695,6 +721,8 @@ function JsonlCodeBlock({
   code: string
   label: string
 }) {
+  const lines = code.split('\n')
+
   return (
     <pre
       aria-label={label}
@@ -702,7 +730,7 @@ function JsonlCodeBlock({
       className="language-jsonl overflow-x-auto rounded-sm border border-hairline bg-canvas-parchment p-3 font-mono text-xs leading-relaxed"
     >
       <code>
-        {code.split('\n').map((line, lineIndex) => (
+        {lines.map((line, lineIndex) => (
           <span key={`${label}-${lineIndex}`} className="block min-w-max">
             {tokenizeJsonlLine(line).map((token, tokenIndex) => (
               <span
@@ -712,6 +740,7 @@ function JsonlCodeBlock({
                 {token.text}
               </span>
             ))}
+            {lineIndex < lines.length - 1 ? '\n' : null}
           </span>
         ))}
       </code>
@@ -719,7 +748,11 @@ function JsonlCodeBlock({
   )
 }
 
-function LedgerFormatPanel() {
+function LedgerFormatPanel({ sourceKind }: { sourceKind: SourceLedgerKind }) {
+  const format =
+    SOURCE_LEDGER_FORMATS.find((candidate) => candidate.sourceKind === sourceKind) ??
+    SOURCE_LEDGER_FORMATS[0]
+
   return (
     <div
       data-testid="ledger-format-panel"
@@ -732,31 +765,24 @@ function LedgerFormatPanel() {
           envelope fields below, with a source-specific payload.
         </p>
       </div>
-      <div className="grid gap-3 xl:grid-cols-2">
-        {SOURCE_LEDGER_FORMATS.map((format) => (
-          <article
-            key={format.sourceKind}
-            className="rounded-sm border border-hairline bg-canvas p-3"
-          >
-            <div className="mb-2 flex items-start justify-between gap-3">
-              <div>
-                <h5 className="font-semibold">{format.title}</h5>
-                <p className="text-xs text-inkMuted-80">{format.description}</p>
-              </div>
-              <span className="shrink-0 rounded-sm border border-hairline px-2 py-1 font-mono text-xs">
-                {format.sourceKind}
-              </span>
-            </div>
-            <p className="mb-2 font-mono text-xs text-inkMuted-80">
-              ledgers/YYYY-MM-DD/{format.fileName}
-            </p>
-            <JsonlCodeBlock
-              code={format.example}
-              label={`${format.sourceKind} ledger JSONL example`}
-            />
-          </article>
-        ))}
-      </div>
+      <article className="rounded-sm border border-hairline bg-canvas p-3">
+        <div className="mb-2 flex items-start justify-between gap-3">
+          <div>
+            <h5 className="font-semibold">{format.title}</h5>
+            <p className="text-xs text-inkMuted-80">{format.description}</p>
+          </div>
+          <span className="shrink-0 rounded-sm border border-hairline px-2 py-1 font-mono text-xs">
+            {format.sourceKind}
+          </span>
+        </div>
+        <p className="mb-2 font-mono text-xs text-inkMuted-80">
+          ledgers/YYYY-MM-DD/{format.fileName}
+        </p>
+        <JsonlCodeBlock
+          code={format.example}
+          label={`${format.sourceKind} ledger JSONL example`}
+        />
+      </article>
     </div>
   )
 }
