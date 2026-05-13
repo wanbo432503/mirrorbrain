@@ -10,7 +10,7 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 - starts background source-ledger import polling with the runtime source-ledger
   interval
 - starts the built-in source-ledger recorder supervisor for browser, file,
-  screenshot, audio-recording, shell, and agent-transcript source instances
+  screenshot, audio-recording, shell, and agent source instances
 - wires source-ledger import to checkpoint persistence, source audit
   persistence, source enablement checks, and QMD workspace memory ingestion
 - exposes an explicit shell-history sync operation when a shell history path is configured

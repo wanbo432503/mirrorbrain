@@ -122,7 +122,7 @@ function getEventSource(input: MemoryEvent): {
       sourceKind === 'screenshot' ||
       sourceKind === 'audio-recording' ||
       sourceKind === 'shell' ||
-      sourceKind === 'agent-transcript'
+      sourceKind === 'agent'
     )
   ) {
     return null;

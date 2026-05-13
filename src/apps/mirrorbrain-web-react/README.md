@@ -137,7 +137,7 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and an
 - **Features:**
   - Top-level Memory Sources tab that combines global memory events and source inspection
   - `All Sources` view that preserves the original Memory tab list and pagination layout with only `Import Sources` visible
-  - User-facing source labels for OpenClaw, Chrome, Files, Screenshot, Recording, and Shell while keeping internal source ids for API filters
+  - User-facing source labels for Agent, Chrome, Files, Screenshot, Recording, and Shell while keeping internal source ids for API filters
   - Source instance list backed by `/sources/status`
   - Source-history records backed by `/memory` source filters
   - Enable / disable source action backed by `/sources/config`

@@ -392,8 +392,8 @@ describe('mirrorbrain service', () => {
           },
           { sourceKind: 'shell', sourceInstanceId: 'shell-main', enabled: false },
           {
-            sourceKind: 'agent-transcript',
-            sourceInstanceId: 'openclaw-main',
+            sourceKind: 'agent',
+            sourceInstanceId: 'agent-main',
             enabled: true,
           },
         ],

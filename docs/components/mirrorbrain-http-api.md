@@ -437,7 +437,7 @@ Query parameters:
 
 | Name | Required | Description |
 | --- | --- | --- |
-| `sourceKind` | no | Source kind such as `browser`, `shell`, or `agent-transcript`. |
+| `sourceKind` | no | Source kind such as `browser`, `shell`, or `agent`. |
 | `sourceInstanceId` | no | Source instance id such as `chrome-main`. |
 
 Response:

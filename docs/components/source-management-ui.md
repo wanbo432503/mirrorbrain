@@ -30,7 +30,7 @@ This component is responsible for:
   list
 - showing source-specific imported memory records from `GET /memory` with
   source filters and pagination
-- presenting user-facing source labels such as `OpenClaw`, `Chrome`, `Files`,
+- presenting user-facing source labels such as `Agent`, `Chrome`, `Files`,
   `Screenshot`, `Shell`, and `Recording` instead of exposing internal
   `*-main` source instance ids as navigation names
 - enabling or disabling source instances through `PATCH /sources/config`
@@ -107,7 +107,7 @@ The API responses use `SourceLedgerImportResult`, `SourceInstanceSummary`, and
 - Individual source detail panels must also remain `min-height: 0` flex
   columns. The selected source header, tab row, active tab body, source-history
   summary, source-history list, and pagination footer are separate flex regions
-  so records for OpenClaw, Chrome, Files, Screenshot, Recording, and Shell stay
+  so records for Agent, Chrome, Files, Screenshot, Recording, and Shell stay
   inside the application viewport.
 
 ## Test Strategy

@@ -62,7 +62,7 @@ snapshot, see [Current Project Status](./docs/features/current-project-status.md
 - Sync authorized shell history files when configured, with best-effort command
   secret redaction before MirrorBrain persistence.
 - Import Phase 4 daily JSONL ledgers for browser, file activity, screenshot,
-  shell, and agent transcript source kinds through a unified source-ledger
+  shell, and agent source kinds through a unified source-ledger
   boundary.
 - Track source status, source audit events, and per-ledger checkpoints for
   operational visibility.
@@ -121,7 +121,7 @@ snapshot, see [Current Project Status](./docs/features/current-project-status.md
 
 - Document import is not implemented yet.
 - Full real source recorders for file activity, screenshot, richer shell
-  sessions, and agent transcript directories are not complete yet.
+  sessions, and agent session directories are not complete yet.
 - Durable authorization-scope management UI, source-instance allowlists, and
   revocation workflows are not complete yet.
 - Production deployment, multi-user auth, retention policy, and network

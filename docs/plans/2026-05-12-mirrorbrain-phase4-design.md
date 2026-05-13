@@ -82,7 +82,7 @@ Initial built-in source plugins:
 - `screenshot`
 - `audio-recording`
 - `shell`
-- `agent-transcript`
+- `agent`
 
 Each plugin declares:
 
@@ -118,7 +118,7 @@ Recorders own source acquisition:
 - browser page title, URL, and page content
 - file metadata and content summaries
 - shell command/session metadata
-- agent transcript metadata and summaries
+- agent session metadata and summaries
 - screenshot OCR/vision summaries
 - authorized audio recording transcript summaries and optional retained-audio
   references
@@ -149,14 +149,14 @@ ledgers/
     screenshot.jsonl
     audio-recording.jsonl
     shell.jsonl
-    agent-transcript.jsonl
+    agent.jsonl
   2026-05-13/
     browser.jsonl
     file-activity.jsonl
     screenshot.jsonl
     audio-recording.jsonl
     shell.jsonl
-    agent-transcript.jsonl
+    agent.jsonl
 ```
 
 Every line is one ledger entry. Ledger files are acquisition inputs, not
@@ -176,7 +176,7 @@ interface SourceLedgerEntry<TPayload> {
     | 'screenshot'
     | 'audio-recording'
     | 'shell'
-    | 'agent-transcript'
+    | 'agent'
   sourceInstanceId: string
   occurredAt: string
   capturedAt?: string
@@ -199,7 +199,7 @@ The deterministic ID inputs are source-specific. Examples:
 - audio recording: occurredAt, transcript summary hash, audio path/hash when
   retained, duration when available
 - shell: session ID, command timestamp/index, cwd, redacted command hash
-- agent transcript: transcript path, session ID, message range, updatedAt
+- agent session: transcript/session path, session ID, message range, updatedAt
 
 ## Browser Ledger
 
@@ -312,7 +312,7 @@ direct integration with a specific agent runtime as the only source of truth.
 Supported source configuration should cover:
 
 - Claw transcript directories
-- Codex or coding-agent transcript directories
+- Codex or coding-agent session directories
 - exported `openclaw` conversation directories
 - generic transcript import directories
 
@@ -422,7 +422,7 @@ of separate `memory` and `sources` tabs. The left rail starts with
 pagination layout without an extra subtab. The action row keeps only
 `Import Sources`, with import feedback displayed to the left of that button.
 Selecting an individual source keeps the source-specific management surface,
-but the navigation labels should use product-facing names such as OpenClaw,
+but the navigation labels should use product-facing names such as Agent,
 Chrome, Files, Screenshot, Recording, and Shell instead of internal `*-main`
 source instance ids.
 
@@ -454,7 +454,7 @@ Settings supports:
 - full-context toggle where relevant
 - screenshot image retention toggle
 - shell capture options
-- agent transcript directory
+- agent session directory
 - audio recording source configuration when an authorized recording recorder is
   added later
 - future delete/exclude governance entry points
@@ -481,7 +481,7 @@ interface MemoryEventContentV2 {
     | 'file-activity'
     | 'audio-recording'
     | 'shell-command'
-    | 'agent-transcript'
+    | 'agent-session'
     | 'screenshot'
   bodyRef?: {
     kind: 'workspace-file' | 'qmd-document' | 'external-ref'

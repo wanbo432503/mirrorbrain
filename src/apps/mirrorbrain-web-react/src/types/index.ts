@@ -12,7 +12,7 @@ export type SourceLedgerKind =
   | 'screenshot'
   | 'audio-recording'
   | 'shell'
-  | 'agent-transcript';
+  | 'agent';
 
 export interface SourceLedgerImportCheckpoint {
   ledgerPath: string;

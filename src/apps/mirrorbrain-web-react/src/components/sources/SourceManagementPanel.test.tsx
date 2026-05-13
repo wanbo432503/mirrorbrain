@@ -158,10 +158,10 @@ describe('SourceManagementPanel', () => {
   it('keeps each selected source detail panel inside the flex viewport', async () => {
     const sourceSummaries = [
       {
-        sourceKind: 'agent-transcript' as const,
-        sourceInstanceId: 'openclaw-main',
-        displayName: 'OpenClaw',
-        displayDescription: 'agent transcript',
+        sourceKind: 'agent' as const,
+        sourceInstanceId: 'agent-main',
+        displayName: 'Agent',
+        displayDescription: 'Sessions',
       },
       {
         sourceKind: 'browser' as const,

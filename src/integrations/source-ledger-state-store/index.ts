@@ -132,7 +132,7 @@ function getSourceKindFromLedgerPath(
     sourceKind === 'screenshot' ||
     sourceKind === 'audio-recording' ||
     sourceKind === 'shell' ||
-    sourceKind === 'agent-transcript'
+    sourceKind === 'agent'
   )
     ? sourceKind
     : null;

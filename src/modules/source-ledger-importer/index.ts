@@ -8,7 +8,7 @@ export type SourceLedgerKind =
   | 'screenshot'
   | 'audio-recording'
   | 'shell'
-  | 'agent-transcript';
+  | 'agent';
 
 export type SourceAuditEventType =
   | 'entry-imported'
@@ -106,7 +106,7 @@ interface ShellLedgerPayload {
   redactionStatus?: string;
 }
 
-interface AgentTranscriptLedgerPayload {
+interface AgentSessionLedgerPayload {
   transcriptPath: string;
   sessionId: string;
   agentIdentity: string;
@@ -205,7 +205,7 @@ function isSourceKind(value: unknown): value is SourceLedgerKind {
     value === 'screenshot' ||
     value === 'audio-recording' ||
     value === 'shell' ||
-    value === 'agent-transcript'
+    value === 'agent'
   );
 }
 
@@ -466,9 +466,9 @@ function parseShellLedgerPayload(payload: unknown): ShellLedgerPayload {
   };
 }
 
-function parseAgentTranscriptLedgerPayload(
+function parseAgentSessionLedgerPayload(
   payload: unknown,
-): AgentTranscriptLedgerPayload {
+): AgentSessionLedgerPayload {
   if (!isRecord(payload)) {
     throw new Error('payload must be an object.');
   }
@@ -825,15 +825,15 @@ function normalizeShellLedgerEntry(input: {
   };
 }
 
-function normalizeAgentTranscriptLedgerEntry(input: {
+function normalizeAgentSessionLedgerEntry(input: {
   authorizationScopeId: string;
   entry: SourceLedgerEntry;
   ledgerPath: string;
   lineNumber: number;
 }): MemoryEvent {
-  const payload = parseAgentTranscriptLedgerPayload(input.entry.payload);
+  const payload = parseAgentSessionLedgerPayload(input.entry.payload);
   const identifiers = createMemoryEventId({
-    sourceKind: 'agent-transcript',
+    sourceKind: 'agent',
     sourceInstanceId: input.entry.sourceInstanceId,
     identity: {
       transcriptPath: payload.transcriptPath,
@@ -845,14 +845,14 @@ function normalizeAgentTranscriptLedgerEntry(input: {
 
   return {
     id: identifiers.id,
-    sourceType: 'agent-transcript',
+    sourceType: 'agent',
     sourceRef: identifiers.sourceRef,
     timestamp: input.entry.occurredAt,
     authorizationScopeId: input.authorizationScopeId,
     content: {
       title: payload.userTask,
       summary: summarizeText(payload.finalResultSummary),
-      contentKind: 'agent-transcript',
+      contentKind: 'agent-session',
       bodyRef: {
         kind: 'workspace-file',
         uri: payload.transcriptPath,
@@ -867,7 +867,7 @@ function normalizeAgentTranscriptLedgerEntry(input: {
       sourceSpecific: payload,
     },
     captureMetadata: {
-      upstreamSource: 'source-ledger:agent-transcript',
+      upstreamSource: 'source-ledger:agent',
       checkpoint: `${input.ledgerPath}:${input.lineNumber}`,
     },
   };
@@ -890,8 +890,8 @@ function normalizeLedgerEntry(input: {
       return normalizeAudioRecordingLedgerEntry(input);
     case 'shell':
       return normalizeShellLedgerEntry(input);
-    case 'agent-transcript':
-      return normalizeAgentTranscriptLedgerEntry(input);
+    case 'agent':
+      return normalizeAgentSessionLedgerEntry(input);
   }
 }
 

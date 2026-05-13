@@ -198,8 +198,8 @@ const DEFAULT_SUPERVISED_SOURCE_INSTANCES: SupervisedSourceInstance[] = [
   },
   { sourceKind: 'shell', sourceInstanceId: 'shell-main', enabled: true },
   {
-    sourceKind: 'agent-transcript',
-    sourceInstanceId: 'openclaw-main',
+    sourceKind: 'agent',
+    sourceInstanceId: 'agent-main',
     enabled: true,
   },
 ];

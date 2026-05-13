@@ -131,14 +131,14 @@ Knowledge Article Draft generation.
 Phase 5 should use the following source priority when scoring evidence:
 
 ```text
-browser > file-activity > agent-transcript > shell > screenshot
+browser > file-activity > agent > shell > screenshot
 ```
 
 The MVP optimization effort should focus first on:
 
 - `browser`
 - `file-activity`
-- `agent-transcript`
+- `agent`
 
 `shell` and `screenshot` can provide weak auxiliary signals, but they should
 not dominate clustering. They should not pull otherwise unrelated events into a
@@ -308,7 +308,7 @@ The embedding text should combine the fields most useful for semantic grouping:
 - file content summary
 - URL and document terms
 - extracted entities and tags
-- agent transcript intent and result summary
+- agent session intent and result summary
 
 Vectorization should preserve non-vector metadata for later ranking and
 explanation:
@@ -337,7 +337,7 @@ the design should keep the clustering stage abstract enough to evaluate both.
 Initial clustering should still respect Phase 5 constraints:
 
 - operate inside the selected analysis window
-- use browser, file activity, and agent transcript as the main sources
+- use browser, file activity, and agent sessions as the main sources
 - treat shell and screenshot as weak auxiliary sources
 - preserve source, time, tag, and provenance metadata
 - reject noise points instead of forcing every event into a cluster
@@ -723,10 +723,10 @@ should not force public API expansion.
 Phase 5 is on track when:
 
 - 24-hour analysis is the default candidate generation path.
-- Candidate generation prioritizes browser, file activity, and agent
-  transcript evidence.
+- Candidate generation prioritizes browser, file activity, and agent session
+  evidence.
 - Source weighting follows
-  `browser > file-activity > agent-transcript > shell > screenshot`.
+  `browser > file-activity > agent > shell > screenshot`.
 - Low-quality MemoryEvents are filtered before vectorization.
 - Long records can be segmented while preserving parent event, source, time,
   tag, and provenance metadata.
@@ -765,7 +765,7 @@ Phase 5 is on track when:
   deployments.
 - Whether the first implementation should use HDBSCAN, BERTopic, or an
   adapter that can compare both against the same fixtures.
-- How long-record segmentation should split agent transcripts and long browser
+- How long-record segmentation should split agent sessions and long browser
   pages without losing local context.
 - The prompt and schema for LLM mainline naming, including unsupported-claim
   prevention.

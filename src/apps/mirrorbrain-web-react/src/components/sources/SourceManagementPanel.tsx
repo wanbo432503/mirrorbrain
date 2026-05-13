@@ -27,9 +27,9 @@ const DETAIL_TABS: SourceDetailTab[] = ['Sources', 'Settings']
 const SOURCE_HISTORY_PAGE_SIZE = 10
 
 const SOURCE_DISPLAY_BY_KEY: Record<string, { name: string; description: string }> = {
-  'agent-transcript:openclaw-main': {
-    name: 'OpenClaw',
-    description: 'agent transcript',
+  'agent:agent-main': {
+    name: 'Agent',
+    description: 'Sessions',
   },
   'browser:chrome-main': {
     name: 'Chrome',
@@ -72,8 +72,8 @@ function formatSourceKindLabel(sourceKind: SourceLedgerKind): string {
       return 'audio recording'
     case 'shell':
       return 'terminal'
-    case 'agent-transcript':
-      return 'agent transcript'
+    case 'agent':
+      return 'Sessions'
   }
 }
 
