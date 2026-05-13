@@ -522,9 +522,10 @@ An analysis run:
 ```text
 selected analysis window
 -> MemoryEvents in window
--> source filtering
--> hybrid relation scoring
--> WorkSession candidates
+-> local/noise filtering
+-> repeated-event deduplication
+-> project/topic matching or fallback classification
+-> topic-scoped WorkSession candidates
 -> preview Project / Topic / Knowledge tree
 -> user review/edit/publish
 ```
@@ -536,7 +537,10 @@ candidates.
 Hybrid scoring should only operate inside the selected window. This avoids
 global over-clustering. Strong signals include workspace path, file path, shell
 cwd, agent session, screenshot app/window context, browser URL/domain, repeated
-entities, and summary similarity.
+entities, and summary similarity. The first usable implementation must at
+least filter local browser noise, deduplicate repeated pages, and split a
+single project into multiple topic-scoped candidates when the window contains
+multiple knowledge-worthy topics.
 
 In the Web UI, Work Sessions is the primary candidate-generation and review
 entrypoint. The older daily `CandidateMemory -> ReviewedMemory` flow remains a
