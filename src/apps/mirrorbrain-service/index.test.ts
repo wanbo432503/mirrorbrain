@@ -567,6 +567,22 @@ describe('mirrorbrain service', () => {
           checkpoint: 'ledgers/2026-05-12/shell.jsonl:1',
         },
       },
+      {
+        id: 'browser-2',
+        sourceType: 'browser',
+        sourceRef: 'browser:default:2',
+        timestamp: '2026-05-12T10:45:00.000Z',
+        authorizationScopeId: 'scope-source-ledger',
+        content: {
+          title: 'Review source ledger status',
+          summary: 'Reviewed source ledger import status.',
+          entities: [{ kind: 'project', label: 'mirrorbrain' }],
+        },
+        captureMetadata: {
+          upstreamSource: 'source-ledger:browser',
+          checkpoint: 'ledgers/2026-05-12/browser.jsonl:2',
+        },
+      },
     ];
     const service = createMirrorBrainService(
       {
@@ -595,7 +611,7 @@ describe('mirrorbrain service', () => {
     expect(result.candidates).toHaveLength(1);
     expect(result.candidates[0]).toMatchObject({
       projectHint: 'mirrorbrain',
-      memoryEventIds: ['browser-1', 'shell-1'],
+      memoryEventIds: ['browser-1', 'shell-1', 'browser-2'],
       reviewState: 'pending',
     });
   });

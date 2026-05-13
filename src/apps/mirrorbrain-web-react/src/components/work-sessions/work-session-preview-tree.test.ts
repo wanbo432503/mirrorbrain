@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
 import type { WorkSessionCandidate } from '../../types'
-import { buildWorkSessionPreviewTree } from './work-session-preview-tree'
+import {
+  buildWorkSessionPreviewTree,
+  generateWorkSessionPreviewKnowledge,
+} from './work-session-preview-tree'
 
 describe('buildWorkSessionPreviewTree', () => {
   it('groups pending work-session candidates into project, topic, and one generated preview knowledge node per topic', () => {
@@ -47,32 +50,14 @@ describe('buildWorkSessionPreviewTree', () => {
               topicName: 'Memory Sources UI',
               sourceTypes: ['browser'],
               memoryEventCount: 1,
-              knowledge: {
-                candidateId: 'work-session-candidate:memory-ui',
-                title: 'Memory source UI',
-                summary: 'Adjusted source labels and ledger formats.',
-                body: '## Systematic knowledge\n\nAdjusted source labels and ledger formats.',
-                knowledgeType: 'systematic-knowledge',
-                sourceTypes: ['browser'],
-                memoryEventCount: 1,
-                candidate: candidates[1],
-              },
+              candidate: candidates[1],
             },
             {
               topicKey: 'source-ledger',
               topicName: 'Source ledger',
               sourceTypes: ['browser', 'shell'],
               memoryEventCount: 2,
-              knowledge: {
-                candidateId: 'work-session-candidate:source-ledger',
-                title: 'Source ledger architecture',
-                summary: 'Imported ledgers and tested source status.',
-                body: '## Systematic knowledge\n\nImported ledgers and tested source status.',
-                knowledgeType: 'systematic-knowledge',
-                sourceTypes: ['browser', 'shell'],
-                memoryEventCount: 2,
-                candidate: candidates[0],
-              },
+              candidate: candidates[0],
             },
           ],
         },
@@ -120,18 +105,44 @@ describe('buildWorkSessionPreviewTree', () => {
     expect(tree.projects[0].topics).toEqual([
       expect.objectContaining({
         topicName: 'agent skills for',
-        knowledge: expect.objectContaining({
-          candidateId: 'work-session-candidate:agent-skills',
-          knowledgeType: 'systematic-knowledge',
-        }),
+        candidate: expect.objectContaining({ id: 'work-session-candidate:agent-skills' }),
       }),
       expect.objectContaining({
         topicName: 'ai agents evolution',
-        knowledge: expect.objectContaining({
-          candidateId: 'work-session-candidate:ai-agents-evolution',
-          knowledgeType: 'systematic-knowledge',
+        candidate: expect.objectContaining({
+          id: 'work-session-candidate:ai-agents-evolution',
         }),
       }),
     ])
+  })
+
+  it('generates preview knowledge only when a topic is explicitly generated', () => {
+    const candidate: WorkSessionCandidate = {
+      id: 'work-session-candidate:source-ledger',
+      projectHint: 'mirrorbrain',
+      title: 'Source ledger',
+      summary: 'Imported ledgers, handled bad lines, and tested source status.',
+      memoryEventIds: ['browser-1', 'shell-1', 'browser-2'],
+      sourceTypes: ['browser', 'shell'],
+      timeRange: {
+        startAt: '2026-05-12T10:00:00.000Z',
+        endAt: '2026-05-12T10:30:00.000Z',
+      },
+      relationHints: ['Source ledger'],
+      reviewState: 'pending',
+    }
+    const topic = buildWorkSessionPreviewTree([candidate]).projects[0].topics[0]
+
+    expect('knowledge' in topic).toBe(false)
+    expect(generateWorkSessionPreviewKnowledge(topic)).toEqual({
+      candidateId: 'work-session-candidate:source-ledger',
+      title: 'Source ledger',
+      summary: 'Imported ledgers, handled bad lines, and tested source status.',
+      body: '## Systematic knowledge\n\nImported ledgers, handled bad lines, and tested source status.',
+      knowledgeType: 'systematic-knowledge',
+      sourceTypes: ['browser', 'shell'],
+      memoryEventCount: 3,
+      candidate,
+    })
   })
 })

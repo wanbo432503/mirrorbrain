@@ -10,6 +10,9 @@ and lets the user publish useful preview knowledge into the durable Published
 tree. Preview and Published intentionally share the same three-level mental
 model, but they have different lifecycles: Preview is regenerated from the
 selected analysis window, while Published is durable historical knowledge.
+Preview knowledge is no longer generated automatically. A topic appears first,
+then the user explicitly clicks `Generate` to create the preview knowledge body,
+and only generated knowledge can be published.
 
 ## Responsibility Boundary
 
@@ -28,6 +31,8 @@ The component owns:
 - Rendering Preview as Project -> Topic -> one generated Knowledge item per
   topic, where the project is task-level and must not simply mirror source
   hosts such as `arxiv.org`.
+- Rendering ungenerated Preview topics with an explicit `Generate` action
+  instead of silently showing a knowledge artifact.
 - Rendering Published as Project -> Topic -> many historical Knowledge Articles
   per topic.
 - Letting the user confirm a project name before keeping a candidate.
@@ -74,13 +79,14 @@ Output:
 2. The user chooses an analysis window.
 3. The browser API client posts the selected preset to
    `/work-sessions/analyze`.
-4. The panel derives a Preview Project -> Topic -> Knowledge tree. Source-like
+4. The panel derives a Preview Project -> Topic tree. Source-like
    hints such as browser hostnames are treated as source evidence, not as final
    project names.
-5. The user can edit the proposed project name and inspect the generated
-   preview knowledge plus provenance evidence.
-6. The user publishes a preview knowledge item.
-7. The panel records the reviewed work session, generates a Knowledge Article
+5. The user can edit the proposed project name and inspect the topic evidence.
+6. The user clicks `Generate` for a topic, creating one preview knowledge item
+   for that topic.
+7. The user publishes a generated preview knowledge item.
+8. The panel records the reviewed work session, generates a Knowledge Article
    Draft, publishes it, refreshes the Published tree, and removes or marks the
    preview item.
 
@@ -107,6 +113,8 @@ The tests verify:
   assignment.
 - The panel renders Preview and Published tree modes with Project -> Topic ->
   Knowledge hierarchy.
+- Preview topics do not expose `Publish` until the user explicitly generates
+  preview knowledge.
 - The panel publishes preview knowledge through review, draft generation, and
   article publication API calls.
 - The app routes the Review surface to the work-session review panel and no

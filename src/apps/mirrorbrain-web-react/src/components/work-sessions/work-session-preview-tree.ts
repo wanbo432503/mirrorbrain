@@ -21,7 +21,7 @@ export interface WorkSessionPreviewTopicNode {
   topicName: string
   sourceTypes: string[]
   memoryEventCount: number
-  knowledge: WorkSessionPreviewKnowledgeNode
+  candidate: WorkSessionCandidate
 }
 
 export interface WorkSessionPreviewProjectNode {
@@ -133,7 +133,10 @@ function buildKnowledgeBody(
   return `## ${headingByType[knowledgeType]}\n\n${candidate.summary}`
 }
 
-function buildKnowledgeNode(candidate: WorkSessionCandidate): WorkSessionPreviewKnowledgeNode {
+export function generateWorkSessionPreviewKnowledge(
+  topic: WorkSessionPreviewTopicNode,
+): WorkSessionPreviewKnowledgeNode {
+  const { candidate } = topic
   const knowledgeType = deriveKnowledgeType(candidate)
 
   return {
@@ -187,7 +190,7 @@ export function buildWorkSessionPreviewTree(
         topicName,
         sourceTypes: candidate.sourceTypes,
         memoryEventCount: candidate.memoryEventIds.length,
-        knowledge: buildKnowledgeNode(candidate),
+        candidate,
       }
       project.topics.push(topic)
     }

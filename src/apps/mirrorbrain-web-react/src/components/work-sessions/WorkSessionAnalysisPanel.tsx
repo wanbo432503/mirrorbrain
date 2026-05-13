@@ -10,6 +10,7 @@ import type {
 } from '../../types'
 import {
   buildWorkSessionPreviewTree,
+  generateWorkSessionPreviewKnowledge,
   type WorkSessionPreviewKnowledgeNode,
   type WorkSessionPreviewProjectNode,
   type WorkSessionPreviewTopicNode,
@@ -47,6 +48,8 @@ export default function WorkSessionAnalysisPanel({
   const [projectNames, setProjectNames] = useState<Record<string, string>>({})
   const [reviewingCandidateId, setReviewingCandidateId] = useState<string | null>(null)
   const [publishingCandidateId, setPublishingCandidateId] = useState<string | null>(null)
+  const [generatedKnowledgeByCandidateId, setGeneratedKnowledgeByCandidateId] =
+    useState<Record<string, WorkSessionPreviewKnowledgeNode>>({})
   const [reviewResults, setReviewResults] = useState<
     Record<string, WorkSessionReviewResult>
   >({})
@@ -54,16 +57,16 @@ export default function WorkSessionAnalysisPanel({
     () => buildWorkSessionPreviewTree(analysis?.candidates ?? []),
     [analysis],
   )
-  const previewKnowledgeItems = useMemo(
+  const previewTopicItems = useMemo(
     () =>
       previewTree.projects.flatMap((project) =>
         project.topics.map((topic) => ({
           project,
           topic,
-          knowledge: topic.knowledge,
+          knowledge: generatedKnowledgeByCandidateId[topic.candidate.id],
         })),
       ),
-    [previewTree],
+    [generatedKnowledgeByCandidateId, previewTree],
   )
 
   useEffect(() => {
@@ -99,6 +102,7 @@ export default function WorkSessionAnalysisPanel({
       const result = await api.analyzeWorkSessions(preset)
       setAnalysis(result)
       setProjectNames({})
+      setGeneratedKnowledgeByCandidateId({})
       setReviewResults({})
     } catch (caughtError) {
       setError(
@@ -215,6 +219,13 @@ export default function WorkSessionAnalysisPanel({
     }
   }
 
+  const generatePreviewKnowledge = (topic: WorkSessionPreviewTopicNode) => {
+    setGeneratedKnowledgeByCandidateId((current) => ({
+      ...current,
+      [topic.candidate.id]: generateWorkSessionPreviewKnowledge(topic),
+    }))
+  }
+
   const renderPreviewTree = () => {
     if (previewTree.projects.length === 0) {
       return (
@@ -232,15 +243,24 @@ export default function WorkSessionAnalysisPanel({
             {project.topics.map((topic) => (
               <div key={topic.topicKey} className="ml-3 grid gap-xs border-l border-slate-200 pl-3">
                 <div className="text-sm font-medium text-ink">{topic.topicName}</div>
-                <button
-                  type="button"
-                  className="min-w-0 rounded border border-slate-200 bg-canvas px-3 py-2 text-left text-sm text-ink transition-colors hover:border-primary"
-                >
-                  <span className="block break-words font-medium">{topic.knowledge.title}</span>
-                  <span className="mt-1 block text-xs text-inkMuted">
-                    1 preview knowledge · {topic.knowledge.knowledgeType}
+                {generatedKnowledgeByCandidateId[topic.candidate.id] ? (
+                  <button
+                    type="button"
+                    className="min-w-0 rounded border border-slate-200 bg-canvas px-3 py-2 text-left text-sm text-ink transition-colors hover:border-primary"
+                  >
+                    <span className="block break-words font-medium">
+                      {generatedKnowledgeByCandidateId[topic.candidate.id].title}
+                    </span>
+                    <span className="mt-1 block text-xs text-inkMuted">
+                      generated knowledge ·{' '}
+                      {generatedKnowledgeByCandidateId[topic.candidate.id].knowledgeType}
+                    </span>
+                  </button>
+                ) : (
+                  <span className="rounded border border-dashed border-slate-200 px-3 py-2 text-xs text-inkMuted">
+                    Knowledge not generated
                   </span>
-                </button>
+                )}
               </div>
             ))}
           </div>
@@ -382,27 +402,33 @@ export default function WorkSessionAnalysisPanel({
             </div>
           )}
 
-          {analysis && previewKnowledgeItems.length > 0 && (
+          {analysis && previewTopicItems.length > 0 && (
             <div className="grid gap-sm">
-              {previewKnowledgeItems.map(({ project, topic, knowledge }) => (
+              {previewTopicItems.map(({ project, topic, knowledge }) => (
                 <article
-                  key={knowledge.candidateId}
+                  key={topic.candidate.id}
                   className="min-w-0 rounded border border-slate-200 bg-canvas px-4 py-3"
                 >
                 <div className="flex flex-wrap items-start justify-between gap-sm">
                   <div className="min-w-0 flex-1">
                     <h3 className="break-words font-heading text-base font-semibold text-ink">
-                      {knowledge.title}
+                      {topic.topicName}
                     </h3>
                     <p className="mt-1 break-words text-sm text-inkMuted">
-                      {knowledge.summary}
+                      {topic.candidate.summary}
                     </p>
-                    <div className="mt-3 whitespace-pre-wrap break-words rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm leading-6 text-ink">
-                      {knowledge.body}
-                    </div>
+                    {knowledge ? (
+                      <div className="mt-3 whitespace-pre-wrap break-words rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm leading-6 text-ink">
+                        {knowledge.body}
+                      </div>
+                    ) : (
+                      <div className="mt-3 rounded border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-sm text-inkMuted">
+                        Knowledge has not been generated for this topic.
+                      </div>
+                    )}
                   </div>
                   <span className="rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700">
-                    {knowledge.candidate.reviewState}
+                    {topic.candidate.reviewState}
                   </span>
                 </div>
 
@@ -418,14 +444,14 @@ export default function WorkSessionAnalysisPanel({
                   <div>
                     <dt className="text-xs uppercase text-inkMuted-80">Sources</dt>
                     <dd className="font-medium text-ink">
-                      {knowledge.sourceTypes.join(', ')}
+                      {topic.sourceTypes.join(', ')}
                     </dd>
                   </div>
                   <div>
                     <dt className="text-xs uppercase text-inkMuted-80">Provenance</dt>
                     <dd className="font-medium text-ink">
-                      {knowledge.memoryEventCount}{' '}
-                      {knowledge.memoryEventCount === 1
+                      {topic.memoryEventCount}{' '}
+                      {topic.memoryEventCount === 1
                         ? 'memory event'
                         : 'memory events'}
                     </dd>
@@ -436,13 +462,13 @@ export default function WorkSessionAnalysisPanel({
                   <label className="grid gap-1 text-sm text-inkMuted">
                     <span>Project name</span>
                     <input
-                      aria-label={`Project name for ${knowledge.title}`}
+                      aria-label={`Project name for ${topic.topicName}`}
                       className="h-9 w-56 rounded border border-slate-300 px-3 text-sm text-ink focus:border-primary focus:outline-none"
-                      value={projectNames[knowledge.candidateId] ?? project.projectName}
+                      value={projectNames[topic.candidate.id] ?? project.projectName}
                       onChange={(event) =>
                         setProjectNames((current) => ({
                           ...current,
-                          [knowledge.candidateId]: event.target.value,
+                          [topic.candidate.id]: event.target.value,
                         }))
                       }
                     />
@@ -450,35 +476,46 @@ export default function WorkSessionAnalysisPanel({
 
                   <button
                     type="button"
-                    className="h-9 rounded border border-primary bg-primary px-3 text-sm font-medium text-white disabled:cursor-wait disabled:opacity-60"
-                    disabled={reviewingCandidateId !== null || publishingCandidateId !== null}
-                    onClick={() =>
-                      void reviewCandidate(knowledge.candidate, 'keep', project.projectName)
-                    }
+                    aria-label={`Generate knowledge for ${topic.topicName}`}
+                    className="h-9 rounded border border-primary bg-primary px-3 text-sm font-medium text-white disabled:opacity-60"
+                    disabled={knowledge !== undefined}
+                    onClick={() => generatePreviewKnowledge(topic)}
                   >
-                    {reviewingCandidateId === knowledge.candidateId ? 'Saving' : 'Keep as project'}
+                    {knowledge === undefined ? 'Generate' : 'Generated'}
                   </button>
                   <button
                     type="button"
                     className="h-9 rounded border border-primary bg-primary px-3 text-sm font-medium text-white disabled:cursor-wait disabled:opacity-60"
                     disabled={reviewingCandidateId !== null || publishingCandidateId !== null}
-                    onClick={() => void publishPreviewKnowledge(project, topic, knowledge)}
+                    onClick={() =>
+                      void reviewCandidate(topic.candidate, 'keep', project.projectName)
+                    }
                   >
-                    {publishingCandidateId === knowledge.candidateId ? 'Publishing' : 'Publish'}
+                    {reviewingCandidateId === topic.candidate.id ? 'Saving' : 'Keep as project'}
                   </button>
+                  {knowledge && (
+                    <button
+                      type="button"
+                      className="h-9 rounded border border-primary bg-primary px-3 text-sm font-medium text-white disabled:cursor-wait disabled:opacity-60"
+                      disabled={reviewingCandidateId !== null || publishingCandidateId !== null}
+                      onClick={() => void publishPreviewKnowledge(project, topic, knowledge)}
+                    >
+                      {publishingCandidateId === knowledge.candidateId ? 'Publishing' : 'Publish'}
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="h-9 rounded border border-slate-300 px-3 text-sm font-medium text-ink transition-colors hover:border-red-400 hover:text-red-700 disabled:cursor-wait disabled:opacity-60"
                     disabled={reviewingCandidateId !== null || publishingCandidateId !== null}
-                    onClick={() => void reviewCandidate(knowledge.candidate, 'discard')}
+                    onClick={() => void reviewCandidate(topic.candidate, 'discard')}
                   >
                     Discard
                   </button>
 
-                  {reviewResults[knowledge.candidateId] && (
+                  {reviewResults[topic.candidate.id] && (
                     <span className="text-sm font-medium text-green-700">
-                      {reviewResults[knowledge.candidateId].reviewedWorkSession.projectId
-                        ? `Reviewed into project: ${reviewResults[knowledge.candidateId].reviewedWorkSession.projectId}`
+                      {reviewResults[topic.candidate.id].reviewedWorkSession.projectId
+                        ? `Reviewed into project: ${reviewResults[topic.candidate.id].reviewedWorkSession.projectId}`
                         : 'Discarded work session'}
                     </span>
                   )}

@@ -86,11 +86,35 @@ describe('work-session analysis', () => {
           project: 'mirrorbrain',
         }),
         memoryEvent({
+          id: 'browser-1b',
+          timestamp: '2026-05-12T10:20:00.000Z',
+          sourceType: 'browser',
+          title: 'Review source sync docs',
+          summary: 'Reviewed source sync validation notes.',
+          project: 'mirrorbrain',
+        }),
+        memoryEvent({
           id: 'browser-2',
           timestamp: '2026-05-12T11:00:00.000Z',
           sourceType: 'browser',
           title: 'Other product',
           summary: 'Read unrelated planning notes.',
+          project: 'other-product',
+        }),
+        memoryEvent({
+          id: 'browser-3',
+          timestamp: '2026-05-12T11:10:00.000Z',
+          sourceType: 'browser',
+          title: 'Other product roadmap',
+          summary: 'Read additional roadmap notes.',
+          project: 'other-product',
+        }),
+        memoryEvent({
+          id: 'browser-4',
+          timestamp: '2026-05-12T11:20:00.000Z',
+          sourceType: 'browser',
+          title: 'Other product review',
+          summary: 'Read review notes for the other product.',
           project: 'other-product',
         }),
         memoryEvent({
@@ -107,17 +131,17 @@ describe('work-session analysis', () => {
     expect(result.candidates).toHaveLength(2);
     expect(result.candidates[0]).toMatchObject({
       projectHint: 'mirrorbrain',
-      memoryEventIds: ['browser-1', 'shell-1'],
+      memoryEventIds: ['browser-1', 'shell-1', 'browser-1b'],
       sourceTypes: ['browser', 'shell'],
       reviewState: 'pending',
       timeRange: {
         startAt: '2026-05-12T10:00:00.000Z',
-        endAt: '2026-05-12T10:15:00.000Z',
+        endAt: '2026-05-12T10:20:00.000Z',
       },
     });
     expect(result.candidates[1]).toMatchObject({
       projectHint: 'other-product',
-      memoryEventIds: ['browser-2'],
+      memoryEventIds: ['browser-2', 'browser-3', 'browser-4'],
     });
     expect(result.excludedMemoryEventIds).toEqual(['old-1']);
   });
@@ -171,6 +195,16 @@ describe('work-session analysis', () => {
           topic: 'Source ledger',
         }),
         memoryEvent({
+          id: 'source-ledger-page-2',
+          timestamp: '2026-05-12T10:20:00.000Z',
+          sourceType: 'browser',
+          title: 'Source ledger bad-line policy',
+          summary: 'Reviewed source-ledger bad-line handling.',
+          project: 'mirrorbrain',
+          topic: 'Source ledger',
+          url: 'https://docs.example.com/source-ledger-bad-lines',
+        }),
+        memoryEvent({
           id: 'memory-sources-page-1',
           timestamp: '2026-05-12T11:00:00.000Z',
           sourceType: 'browser',
@@ -179,6 +213,26 @@ describe('work-session analysis', () => {
           project: 'mirrorbrain',
           topic: 'Memory Sources UI',
           url: 'https://docs.example.com/memory-sources-ui',
+        }),
+        memoryEvent({
+          id: 'memory-sources-page-2',
+          timestamp: '2026-05-12T11:10:00.000Z',
+          sourceType: 'browser',
+          title: 'Memory Sources ledger format',
+          summary: 'Reviewed source-specific ledger format rendering.',
+          project: 'mirrorbrain',
+          topic: 'Memory Sources UI',
+          url: 'https://docs.example.com/memory-sources-ledger-format',
+        }),
+        memoryEvent({
+          id: 'memory-sources-page-3',
+          timestamp: '2026-05-12T11:20:00.000Z',
+          sourceType: 'browser',
+          title: 'Memory Sources settings',
+          summary: 'Reviewed source settings behavior.',
+          project: 'mirrorbrain',
+          topic: 'Memory Sources UI',
+          url: 'https://docs.example.com/memory-sources-settings',
         }),
       ],
     });
@@ -190,16 +244,30 @@ describe('work-session analysis', () => {
     ]);
     expect(result.candidates[0]).toMatchObject({
       projectHint: 'mirrorbrain',
-      memoryEventIds: ['memory-sources-page-1'],
-      relationHints: ['Memory Sources UI', 'Memory Sources layout'],
+      memoryEventIds: [
+        'memory-sources-page-1',
+        'memory-sources-page-2',
+        'memory-sources-page-3',
+      ],
+      relationHints: [
+        'Memory Sources UI',
+        'Memory Sources layout',
+        'Memory Sources ledger format',
+        'Memory Sources settings',
+      ],
     });
     expect(result.candidates[1]).toMatchObject({
       projectHint: 'mirrorbrain',
-      memoryEventIds: ['source-ledger-page-1', 'source-ledger-shell-1'],
+      memoryEventIds: [
+        'source-ledger-page-1',
+        'source-ledger-shell-1',
+        'source-ledger-page-2',
+      ],
       relationHints: [
         'Source ledger',
         'Source ledger architecture',
         'Run source ledger tests',
+        'Source ledger bad-line policy',
       ],
     });
     expect(result.candidates[1].summary).toContain(
@@ -239,14 +307,87 @@ describe('work-session analysis', () => {
           summary: 'Compared clustering rules for candidate generation.',
           url: 'https://docs.example.com/mirrorbrain/candidate-clustering',
         }),
+        memoryEvent({
+          id: 'browser-doc-3',
+          timestamp: '2026-05-12T10:30:00.000Z',
+          sourceType: 'browser',
+          title: 'MirrorBrain work-session publish flow',
+          summary: 'Reviewed manual generate and publish behavior.',
+          url: 'https://docs.example.com/mirrorbrain/work-session-publish',
+        }),
       ],
     });
 
     expect(result.candidates).toHaveLength(1);
     expect(result.candidates[0]).toMatchObject({
-      projectHint: 'docs.example.com',
-      title: 'mirrorbrain work session',
-      memoryEventIds: ['browser-doc-1', 'browser-doc-2'],
+      projectHint: 'MirrorBrain',
+      title: 'Work-session review flow',
+      memoryEventIds: ['browser-doc-1', 'browser-doc-2', 'browser-doc-3'],
     });
+  });
+
+  it('filters low-value update pages and only emits abstract topics with at least three memory events', () => {
+    const result = analyzeWorkSessionCandidates({
+      analysisWindow: {
+        preset: 'last-6-hours',
+        startAt: '2026-05-12T06:00:00.000Z',
+        endAt: '2026-05-12T12:00:00.000Z',
+      },
+      generatedAt: '2026-05-12T12:00:00.000Z',
+      memoryEvents: [
+        memoryEvent({
+          id: 'adblock-update',
+          timestamp: '2026-05-12T09:00:00.000Z',
+          sourceType: 'browser',
+          title: '您的 AdBlock 已更新！',
+          summary: '您的 AdBlock 已更新！',
+          url: 'https://getadblock.com/zh_CN/update/latest/',
+        }),
+        memoryEvent({
+          id: 'cluster-cloud',
+          timestamp: '2026-05-12T10:00:00.000Z',
+          sourceType: 'browser',
+          title: '8个超级经典的聚类算法 腾讯云开发者社区 腾讯云',
+          summary: '阅读聚类算法的经典方法和适用场景。',
+          url: 'https://cloud.tencent.com/developer/article/2430459',
+        }),
+        memoryEvent({
+          id: 'cluster-zhihu',
+          timestamp: '2026-05-12T10:10:00.000Z',
+          sourceType: 'browser',
+          title: '常用聚类算法 知乎 常用聚类算法',
+          summary: '阅读常见聚类算法的区别。',
+          url: 'https://zhuanlan.zhihu.com/p/104355127',
+        }),
+        memoryEvent({
+          id: 'cluster-chatgpt',
+          timestamp: '2026-05-12T10:20:00.000Z',
+          sourceType: 'browser',
+          title: '聚类算法与任务发现',
+          summary: '讨论如何用聚类算法发现任务主题。',
+          url: 'https://chatgpt.com/c/clustering-task-discovery',
+        }),
+        memoryEvent({
+          id: 'one-off-page',
+          timestamp: '2026-05-12T11:00:00.000Z',
+          sourceType: 'browser',
+          title: 'Unrelated single page',
+          summary: 'A one-off page should not become a topic.',
+          url: 'https://example.com/single-page',
+        }),
+      ],
+    });
+
+    expect(result.candidates).toHaveLength(1);
+    expect(result.candidates[0]).toMatchObject({
+      projectHint: '聚类算法研究',
+      title: '聚类算法方法与应用',
+      memoryEventIds: ['cluster-cloud', 'cluster-zhihu', 'cluster-chatgpt'],
+      sourceTypes: ['browser'],
+    });
+    expect(result.excludedMemoryEventIds).toEqual([
+      'adblock-update',
+      'one-off-page',
+    ]);
   });
 });

@@ -31,6 +31,8 @@ interface AnalyzeWorkSessionCandidatesInput {
   memoryEvents: MemoryEvent[];
 }
 
+const MIN_TOPIC_MEMORY_EVENT_COUNT = 3;
+
 function isInWindow(event: MemoryEvent, window: MemoryTimeRange): boolean {
   return event.timestamp >= window.startAt && event.timestamp <= window.endAt;
 }
@@ -81,6 +83,10 @@ function getSummary(event: MemoryEvent): string {
     : '';
 }
 
+function getSearchableText(event: MemoryEvent): string {
+  return `${getTitle(event)} ${getSummary(event)} ${getUrl(event) ?? ''}`.toLowerCase();
+}
+
 function getSourceSpecificValue(event: MemoryEvent, key: string): unknown {
   const sourceSpecific = event.content.sourceSpecific;
 
@@ -115,6 +121,20 @@ function getUrl(event: MemoryEvent): string | undefined {
 }
 
 function inferProjectHint(event: MemoryEvent): string {
+  const text = getSearchableText(event);
+
+  if (text.includes('聚类')) {
+    return '聚类算法研究';
+  }
+
+  if (/\bmirrorbrain\b/u.test(text) && /\bwork-session\b/u.test(text)) {
+    return 'MirrorBrain';
+  }
+
+  if (/\b(ai|artificial intelligence)\b/u.test(text) && /\bagents?\b/u.test(text)) {
+    return 'AI agents research';
+  }
+
   const rawUrl = getUrl(event);
 
   if (rawUrl !== undefined) {
@@ -133,6 +153,20 @@ function inferProjectHint(event: MemoryEvent): string {
 }
 
 function inferTopicHint(event: MemoryEvent): string | undefined {
+  const text = getSearchableText(event);
+
+  if (text.includes('聚类')) {
+    return '聚类算法方法与应用';
+  }
+
+  if (/\bmirrorbrain\b/u.test(text) && /\bwork-session\b/u.test(text)) {
+    return 'Work-session review flow';
+  }
+
+  if (/\b(ai|artificial intelligence)\b/u.test(text) && /\bagents?\b/u.test(text)) {
+    return 'AI agent research papers';
+  }
+
   const tokens = `${getTitle(event)} ${getSummary(event)}`
     .toLowerCase()
     .match(/[\p{L}\p{N}]+/gu)
@@ -167,6 +201,19 @@ function isLocalBrowserPageMemoryEvent(event: MemoryEvent): boolean {
   } catch {
     return false;
   }
+}
+
+function isLowValueMemoryEvent(event: MemoryEvent): boolean {
+  if (!event.sourceType.includes('browser')) {
+    return false;
+  }
+
+  const text = getSearchableText(event);
+
+  return (
+    (text.includes('adblock') && (text.includes('update') || text.includes('更新'))) ||
+    text.includes('getadblock.com')
+  );
 }
 
 function canonicalizeUrl(rawUrl: string): string {
@@ -262,7 +309,7 @@ export function analyzeWorkSessionCandidates(
   const seenDeduplicationKeys = new Set<string>();
 
   for (const event of windowEvents) {
-    if (isLocalBrowserPageMemoryEvent(event)) {
+    if (isLocalBrowserPageMemoryEvent(event) || isLowValueMemoryEvent(event)) {
       excludedMemoryEventIds.push(event.id);
       continue;
     }
@@ -302,10 +349,19 @@ export function analyzeWorkSessionCandidates(
     }
   }
 
+  const publishableClusters = [...eventsByCluster.entries()].filter(([, cluster]) => {
+    if (cluster.memoryEvents.length >= MIN_TOPIC_MEMORY_EVENT_COUNT) {
+      return true;
+    }
+
+    excludedMemoryEventIds.push(...cluster.memoryEvents.map((event) => event.id));
+    return false;
+  });
+
   return {
     analysisWindow: input.analysisWindow,
     generatedAt: input.generatedAt,
-    candidates: [...eventsByCluster.entries()]
+    candidates: publishableClusters
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([, cluster]) =>
         createCandidate({

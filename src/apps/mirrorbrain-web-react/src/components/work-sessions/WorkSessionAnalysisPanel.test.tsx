@@ -75,14 +75,15 @@ describe('WorkSessionAnalysisPanel', () => {
     await waitFor(() => {
       expect(api.analyzeWorkSessions).toHaveBeenCalledWith('last-6-hours')
     })
-    expect(await screen.findAllByText('mirrorbrain work session')).toHaveLength(2)
+    expect(await screen.findAllByText('Phase 4 design')).toHaveLength(3)
     expect(screen.getAllByText('mirrorbrain').length).toBeGreaterThan(0)
     expect(screen.getAllByText('browser, shell').length).toBeGreaterThan(0)
     expect(screen.getByText('2 memory events')).not.toBeNull()
     expect(screen.getByText('1 excluded')).not.toBeNull()
+    expect(screen.queryByRole('button', { name: 'Publish' })).toBeNull()
 
-    await user.clear(screen.getByLabelText('Project name for mirrorbrain work session'))
-    await user.type(screen.getByLabelText('Project name for mirrorbrain work session'), 'MirrorBrain')
+    await user.clear(screen.getByLabelText('Project name for Phase 4 design'))
+    await user.type(screen.getByLabelText('Project name for Phase 4 design'), 'MirrorBrain')
     await user.click(screen.getByRole('button', { name: 'Keep as project' }))
 
     expect(api.reviewWorkSessionCandidate).toHaveBeenCalledWith(
@@ -179,7 +180,10 @@ describe('WorkSessionAnalysisPanel', () => {
     expect(within(treeRail).getByRole('tab', { name: 'Published' })).not.toBeNull()
     expect(within(treeRail).getByText('mirrorbrain')).not.toBeNull()
     expect(within(treeRail).getByText('Source ledger')).not.toBeNull()
-    expect(within(treeRail).getByText('Source ledger architecture')).not.toBeNull()
+    expect(within(treeRail).getByText('Knowledge not generated')).not.toBeNull()
+    expect(
+      screen.getByRole('button', { name: 'Generate knowledge for Source ledger' }),
+    ).not.toBeNull()
 
     await user.click(within(treeRail).getByRole('tab', { name: 'Published' }))
 
@@ -315,6 +319,13 @@ describe('WorkSessionAnalysisPanel', () => {
     render(<WorkSessionAnalysisPanel api={api} />)
 
     await user.click(screen.getByRole('button', { name: 'Last 6h' }))
+    expect(screen.queryByRole('button', { name: 'Publish' })).toBeNull()
+
+    await user.click(
+      await screen.findByRole('button', {
+        name: 'Generate knowledge for Source ledger',
+      }),
+    )
     await user.click(await screen.findByRole('button', { name: 'Publish' }))
 
     expect(api.reviewWorkSessionCandidate).toHaveBeenCalledWith(candidate, {
