@@ -2,28 +2,33 @@
 
 [English README](./README.md)
 
-MirrorBrain / 镜像大脑 是 `openclaw` 的记忆与能力层。它帮助
-`openclaw` 记住经过授权的 PC 工作活动，把经过审核的工作内容转化为可持续
-积累的知识，并从可重复工作流中提炼可复用的 Agent Skill。
+MirrorBrain / 镜像大脑 是一个 local-first 的全局个人记忆系统，用于记录、
+导入、审核和组织经过授权的 PC 工作活动。它帮助用户恢复过去发生过什么，
+把重要工作过程沉淀为可持续积累的知识，并从可重复工作流中提炼可审核的
+skills。
 
 ## 项目背景
 
-现代工作上下文分散在浏览器页面、命令行记录、本地文档和 AI 对话里。没有
-专门的记忆层时，这些上下文很难被系统化回顾，也很难被 Agent 安全、准确地
-复用。
+现代工作上下文分散在浏览器页面、本地文件、命令行记录、截图和 Agent 对话
+里。没有专门的个人记忆系统时，这些上下文很难被系统化回顾，也很难被安全、
+准确地复用。
 
-MirrorBrain 被设计为面向 `openclaw` 的 local-first、API-first 子系统。它
-不是通用笔记应用，而是把授权工作活动转化为三类边界清晰的产物：
+MirrorBrain 不是通用笔记应用，也不再主要描述为 `openclaw` 的插件。它的
+核心角色是把授权的个人工作活动转化为三类边界清晰、带来源归因的产物：
 
 - `memory`：带来源归因的活动记录、召回视图、候选记忆、已审核记忆和检索
-  叙事。
-- `knowledge`：由已审核记忆生成的人类可读知识产物，包括面向主题的
-  current-best knowledge 和版本历史。
+  叙事，以及 Phase 4 的 work-session candidates。
+- `knowledge`：由已审核工作过程生成的人类可读知识产物，按
+  Project -> Topic -> Knowledge Article 组织，并保留版本历史。
 - `skill`：由可重复工作流证据生成的 draft 或 approved Agent Skill，并在
   执行前保留明确确认边界。
 
-Phase 1 已经证明了本地垂直切片。当前方向是 Phase 2 的 `openclaw` 集成，
-随后继续提升记忆检索质量和面向主题的知识质量。
+Phase 1 已经证明了本地垂直切片，Phase 2 / Phase 3 已经形成浏览器与 shell
+记忆同步、review、topic knowledge、knowledge graph、skill draft、本地
+HTTP API 和 React 控制界面的可运行基线。Phase 4 将重心转向多来源个人记忆：
+内置 source recorder 写入 daily JSONL ledgers，importer 将 ledger 转为统一
+`MemoryEvent`，用户按时间窗口分析出 reviewed work sessions，再沉淀为面向
+Project / Topic 的 Knowledge Article。
 
 ## 产品理念
 
@@ -35,8 +40,9 @@ Phase 1 已经证明了本地垂直切片。当前方向是 Phase 2 的 `opencla
   要明确审核或批准。
 - provenance 必须贯穿全流程。从来源采集到 review、知识综合、技能草稿，
   都应该可追溯。
-- MirrorBrain 拥有自己的工作流。`openclaw` 通过显式能力接口消费 memory、
-  knowledge 和 skill，而不是依赖隐藏的宿主状态耦合。
+- MirrorBrain 拥有自己的个人记忆工作流。包括 `openclaw` 在内的宿主应用可
+  通过显式 API 消费 memory、knowledge 和 skill，但不定义或拥有
+  MirrorBrain 的内部生命周期。
 - skill 不是静默自动化。skill artifact 可以指导 Agent，但执行前必须保留
   确认边界，除非后续明确设计并文档化更窄的安全例外。
 
@@ -46,10 +52,15 @@ Phase 1 已经证明了本地垂直切片。当前方向是 Phase 2 的 `opencla
 
 - 从 ActivityWatch 和 `aw-watcher-web` 同步经过授权的浏览器活动。
 - 在显式配置后同步经过授权的 shell history 文件。
+- 通过统一 source-ledger 边界导入 Phase 4 daily JSONL ledgers，覆盖
+  browser、file activity、screenshot、shell 和 agent transcript 等来源类型。
+- 记录 source status、source audit events 和 per-ledger checkpoints，方便
+  查看导入与 recorder 状态。
 - 捕获浏览器页面正文，以提升 review 和 synthesis 质量。
 - 生成 daily candidate memories，供人工 review。
+- 按用户选择的时间窗口分析 work-session candidates，供人工审核。
 - 保存带来源引用和审核决策的 reviewed memories。
-- 通过本地 HTTP API 和面向 `openclaw` 的 helper 查询记忆。
+- 通过本地 HTTP API 和可选宿主适配器查询记忆。
 - 生成 browser theme narrative 和 shell problem narrative，支持“我之前
   做过什么？”、“这个问题之前怎么解决？”等召回型问题。
 
@@ -57,6 +68,8 @@ Phase 1 已经证明了本地垂直切片。当前方向是 Phase 2 的 `opencla
 
 - 从 reviewed memories 生成 knowledge draft。
 - 产出面向主题的 current-best knowledge artifact。
+- 从 reviewed work sessions 生成 Phase 4 Knowledge Article Draft。
+- 按 Project -> Topic -> Knowledge Article 组织持久知识。
 - 从 reviewed memory 到生成知识保留 provenance。
 - 维护 topic history 和 knowledge graph 视图。
 - 支持质量检查和面向 review 的 regeneration 流程。
@@ -71,15 +84,18 @@ Phase 1 已经证明了本地垂直切片。当前方向是 Phase 2 的 `opencla
 ### 操作界面
 
 - Fastify HTTP service，提供 OpenAPI JSON 和 Swagger UI。
-- React Web UI，用于本地控制、review、知识浏览和 skill draft 检查。
+- React Web UI，用于本地控制、Memory Sources、review、work-session
+  analysis、知识浏览和 skill draft 检查。
 - 本地 workspace artifacts，用于可检查记录和回退读取。
 - 基于 QMD 的本地索引与检索能力，索引数据保存在同一个
   `mirrorbrain-workspace` 下。
+- 可选宿主集成接口，供其他应用消费 MirrorBrain 能力。
 
 ### 当前非目标
 
 - 尚未实现文档导入。
-- `openclaw` conversation capture 不是当前优先级。
+- file activity、screenshot、更完整 shell session 和 agent transcript
+  directory 的真实 recorder 尚未全部完成。
 - 生产部署、多用户鉴权、保留策略和网络安全加固不属于当前 local-first 基线。
 - 除 draft generation 和 safety metadata 之外，尚未实现自主 skill execution。
 
@@ -157,19 +173,24 @@ http://127.0.0.1:3007/docs
 
 在 Web UI 中：
 
-1. 打开 `Memory` tab，执行 browser sync。
-2. 如果配置了 `MIRRORBRAIN_SHELL_HISTORY_PATH`，执行 shell sync。
-3. 打开 `Review` tab，创建 daily candidates。
-4. keep 一个 candidate，生成 reviewed memory。
-5. 打开 `Knowledge` tab，生成或 approve 一个 knowledge draft。
-6. 打开 `Skill` tab，从 reviewed memory 生成 skill draft。
+1. 打开 `Memory Sources`，选择 `All-Main Sources`，点击 `Import Sources`。
+2. 确认导入的 memory events 出现在分页 memory list 中。
+3. 进入单个 source detail 页面，查看 source status、recent memory 或 audit
+   events。
+4. 需要整理近期工作时，运行 work-session analysis window。
+5. keep reviewed work 或 memory candidates，生成持久 review inputs。
+6. 打开 `Knowledge`，生成或 approve knowledge draft / article。
+7. 打开 `Skill`，从 reviewed evidence 生成 skill draft。
 
 预期结果：
 
 - memory events 带来源归因展示。
 - daily candidates 展示 summary、source refs 和 review guidance。
+- source audit/status 视图能展示导入和 recorder 状态。
+- work-session candidates 保留支持它们的 memory evidence。
 - keep 后的 candidate 变成 reviewed memory。
 - knowledge draft 保留 reviewed-memory provenance。
+- 使用 Phase 4 流程时，knowledge articles 按 project 和 topic 组织。
 - approved topic knowledge 出现在 topic 和 graph 视图中。
 - skill draft 保留 workflow evidence refs 和 confirmation metadata。
 
@@ -183,7 +204,7 @@ http://127.0.0.1:3007/docs
 - [MirrorBrain HTTP API](./docs/components/mirrorbrain-http-api.md)
 - [MirrorBrain service](./docs/components/mirrorbrain-service.md)
 - [MirrorBrain HTTP server](./docs/components/mirrorbrain-http-server.md)
-- [OpenClaw plugin API](./docs/components/openclaw-plugin-api.md)
+- [OpenClaw plugin API](./docs/components/openclaw-plugin-api.md) 可选宿主适配器
 - [QMD workspace store](./docs/components/qmd-workspace-store.md)
 - [Source directory audit](./docs/components/source-directory-audit.md)
 - [ActivityWatch browser source](./docs/components/activitywatch-browser-source.md)
