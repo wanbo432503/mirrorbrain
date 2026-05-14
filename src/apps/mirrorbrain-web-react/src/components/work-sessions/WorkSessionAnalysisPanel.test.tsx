@@ -75,10 +75,8 @@ describe('WorkSessionAnalysisPanel', () => {
     await waitFor(() => {
       expect(api.analyzeWorkSessions).toHaveBeenCalledWith('last-6-hours')
     })
-    expect(await screen.findAllByText('Phase 4 design')).toHaveLength(3)
+    expect(await screen.findAllByText('Phase 4 design')).toHaveLength(2)
     expect(screen.getAllByText('mirrorbrain').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('browser, shell').length).toBeGreaterThan(0)
-    expect(screen.getByText('2 memory events')).not.toBeNull()
     expect(screen.getByText('1 excluded')).not.toBeNull()
     expect(screen.queryByRole('button', { name: 'Publish' })).toBeNull()
 
@@ -220,13 +218,23 @@ describe('WorkSessionAnalysisPanel', () => {
       reviewedAt: '2026-05-12T12:05:00.000Z',
       reviewedBy: 'mirrorbrain-web',
     }
+    const expectedPreviewBody = [
+      '## Systematic knowledge',
+      '',
+      candidate.summary,
+      '',
+      '## References',
+      '',
+      '- [1] Source ledger (browser; memory event: browser-1)',
+      '- [2] Run tests (shell; memory event: shell-1)',
+    ].join('\n')
     const draft = {
       id: 'knowledge-article-draft:source-ledger',
       draftState: 'draft' as const,
       projectId: 'project:mirrorbrain',
       title: candidate.title,
       summary: candidate.summary,
-      body: `## Systematic knowledge\n\n${candidate.summary}`,
+      body: expectedPreviewBody,
       topicProposal: { kind: 'new-topic' as const, name: 'Source ledger' },
       articleOperationProposal: { kind: 'create-new-article' as const },
       sourceReviewedWorkSessionIds: [reviewedWorkSession.id],
@@ -326,22 +334,17 @@ describe('WorkSessionAnalysisPanel', () => {
         name: 'Generate knowledge for Source ledger',
       }),
     )
-    const knowledgeBody = await screen.findByText((content) =>
-      content.includes('## Systematic knowledge'),
-    )
-    const associatedHeading = await screen.findByText('Associated memory events')
-    expect(
-      Boolean(
-        knowledgeBody.compareDocumentPosition(associatedHeading) &
-          Node.DOCUMENT_POSITION_FOLLOWING,
-      ),
-    ).toBe(true)
-    const associatedList = screen.getByRole('list', {
-      name: 'Associated memory events',
-    })
-    expect(associatedList).not.toBeNull()
-    expect(within(associatedList).getByText('Source ledger')).not.toBeNull()
-    expect(within(associatedList).getByText('Run tests')).not.toBeNull()
+    const knowledgeBody = await screen.findByTestId('preview-knowledge-body')
+    expect(knowledgeBody.className).toContain('overflow-y-auto')
+    expect(knowledgeBody.textContent).toContain('## Systematic knowledge')
+    expect(knowledgeBody.textContent).toContain('## References')
+    expect(knowledgeBody.textContent).toContain('Source ledger')
+    expect(knowledgeBody.textContent).toContain('Run tests')
+    expect(screen.queryByText('Associated memory events')).toBeNull()
+    expect(screen.queryByText('Project')).toBeNull()
+    expect(screen.queryByText('Topic')).toBeNull()
+    expect(screen.queryByText('Sources')).toBeNull()
+    expect(screen.queryByText('Provenance')).toBeNull()
     await user.click(await screen.findByRole('button', { name: 'Publish' }))
 
     expect(api.reviewWorkSessionCandidate).toHaveBeenCalledWith(candidate, {
@@ -358,7 +361,7 @@ describe('WorkSessionAnalysisPanel', () => {
       reviewedWorkSessionIds: [reviewedWorkSession.id],
       title: candidate.title,
       summary: candidate.summary,
-      body: `## Systematic knowledge\n\n${candidate.summary}`,
+      body: expectedPreviewBody,
       topicProposal: { kind: 'new-topic', name: 'Source ledger' },
       articleOperationProposal: { kind: 'create-new-article' },
     })

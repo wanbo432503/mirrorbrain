@@ -25,10 +25,12 @@ The component owns:
 - Calling Knowledge Article draft and publish APIs when the user publishes a
   preview knowledge item.
 - Loading the Published Project -> Topic -> Knowledge tree from the API.
-- Rendering the returned analysis window, excluded event count, generated
-  knowledge content, source types, and provenance event counts.
-- Rendering the memory events associated with a generated preview knowledge item
-  directly below the generated knowledge body as a compact item list.
+- Rendering the returned analysis window, excluded event count, and generated
+  knowledge content.
+- Rendering generated preview knowledge as a complete scrollable article body.
+  Supporting memory-event labels, source types, and provenance ids are folded
+  into the article's References section instead of being shown in a separate
+  metadata block.
 - Rendering `Preview` and `Published` tree modes in the left-side navigation.
 - Rendering Preview as Project -> Topic -> one generated Knowledge item per
   topic, where the project is task-level and must not simply mirror source
@@ -84,9 +86,11 @@ Output:
 4. The panel derives a Preview Project -> Topic tree. Source-like
    hints such as browser hostnames are treated as source evidence, not as final
    project names.
-5. The user can edit the proposed project name and inspect the topic evidence.
+5. The user can edit the proposed project name and inspect the topic evidence
+   through the generated article references.
 6. The user clicks `Generate` for a topic, creating one preview knowledge item
-   for that topic.
+   for that topic. The generated body includes a References section built from
+   the supporting memory events.
 7. The user publishes a generated preview knowledge item.
 8. The panel records the reviewed work session, generates a Knowledge Article
    Draft, publishes it, refreshes the Published tree, and removes or marks the
@@ -117,8 +121,9 @@ The tests verify:
   Knowledge hierarchy.
 - Preview topics do not expose `Publish` until the user explicitly generates
   preview knowledge.
-- Generated preview knowledge renders associated memory events below the
-  knowledge body, not above it.
+- Generated preview knowledge renders as a complete scrollable article body
+  with references inside the article, without a separate associated-memory or
+  provenance metadata block.
 - The panel publishes preview knowledge through review, draft generation, and
   article publication API calls.
 - The app routes the Review surface to the work-session review panel and no

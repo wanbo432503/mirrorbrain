@@ -129,8 +129,24 @@ function buildKnowledgeBody(
     workflow: 'Workflow',
     news: 'News brief',
   }
+  const referenceLabels =
+    candidate.relationHints.length > 0 ? candidate.relationHints : candidate.memoryEventIds
+  const references = candidate.memoryEventIds
+    .map((memoryEventId, index) => {
+      const label = referenceLabels[index] ?? memoryEventId
+      const sourceType = candidate.sourceTypes[index] ?? candidate.sourceTypes[0] ?? 'memory'
 
-  return `## ${headingByType[knowledgeType]}\n\n${candidate.summary}`
+      return `- [${index + 1}] ${label} (${sourceType}; memory event: ${memoryEventId})`
+    })
+    .join('\n')
+
+  return [
+    `## ${headingByType[knowledgeType]}`,
+    candidate.summary,
+    references.length > 0 ? `## References\n\n${references}` : '',
+  ]
+    .filter((section) => section.length > 0)
+    .join('\n\n')
 }
 
 export function generateWorkSessionPreviewKnowledge(
