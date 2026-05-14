@@ -60,9 +60,12 @@ The component owns:
   clicking one knowledge article displays that single article in the right
   panel. The first project, first topic, and first article are selected by
   default when the tree loads.
-- Rendering a revision request box below the selected Published article. The
-  box sends the user's instruction to the service, where LLM revision creates a
-  new version in the same article lineage while preserving source provenance.
+- Rendering a compact one-line revision request control fixed to the bottom of
+  the selected Published article panel. The article body scrolls independently,
+  so the request input and send button stay visible while reading long
+  knowledge. The control sends the user's instruction to the service, where LLM
+  revision creates a new version in the same article lineage while preserving
+  source provenance.
 - Displaying request errors without mutating candidate state.
 
 The component does not own:

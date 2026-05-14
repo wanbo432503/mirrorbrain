@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import type { MirrorBrainWebAppApi } from '../../api/client'
-import TextArea from '../forms/TextArea'
 import { KnowledgeMarkdownRenderer } from '../artifacts/KnowledgeMarkdownRenderer'
 import type {
   AnalysisWindowPreset,
@@ -539,7 +538,7 @@ export default function WorkSessionAnalysisPanel({
     return (
       <article
         data-testid="published-knowledge-panel"
-        className="flex min-h-0 flex-col rounded border border-slate-200 bg-canvas"
+        className="flex h-full min-h-0 flex-col rounded border border-slate-200 bg-canvas"
       >
         <div className="flex flex-wrap items-start justify-between gap-sm border-b border-slate-200 px-4 py-3">
           <div className="min-w-0">
@@ -567,34 +566,31 @@ export default function WorkSessionAnalysisPanel({
               <KnowledgeMarkdownRenderer body={article.body} knowledgeId={article.id} />
             </div>
             <form
-              className="grid gap-sm border-t border-slate-200 px-4 py-3"
+              className="flex shrink-0 items-center gap-2 border-t border-slate-200 bg-canvas px-3 py-2"
               onSubmit={(event) => {
                 event.preventDefault()
                 void revisePublishedKnowledge(article)
               }}
             >
-              <TextArea
+              <input
                 id="published-knowledge-revision-instruction"
-                label="Revision Request"
+                aria-label="Revision Request"
                 value={revisionInstruction}
-                rows={3}
                 onChange={(event) => setRevisionInstruction(event.target.value)}
                 placeholder="Tell MirrorBrain how this knowledge article should change..."
-                helpText="Your request will revise this published article as a new version."
+                className="h-9 min-w-0 flex-1 rounded border border-slate-300 bg-canvas px-3 font-body text-sm text-ink outline-none transition-colors placeholder:text-inkMuted-48 focus:border-primary focus:ring-2 focus:ring-primary-focus focus:ring-offset-1"
               />
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  className="h-9 rounded border border-primary bg-primary px-4 text-sm font-medium text-white disabled:cursor-wait disabled:opacity-60"
-                  disabled={
-                    revisionInstruction.trim().length === 0 ||
-                    revisingArticleId !== null ||
-                    deletingArticleId !== null
-                  }
-                >
-                  {revisingArticleId === article.articleId ? 'Revising' : 'Send Revision'}
-                </button>
-              </div>
+              <button
+                type="submit"
+                className="h-9 shrink-0 rounded border border-primary bg-primary px-4 text-sm font-medium text-white disabled:cursor-wait disabled:opacity-60"
+                disabled={
+                  revisionInstruction.trim().length === 0 ||
+                  revisingArticleId !== null ||
+                  deletingArticleId !== null
+                }
+              >
+                {revisingArticleId === article.articleId ? 'Revising' : 'Send'}
+              </button>
             </form>
           </>
         ) : (
@@ -674,7 +670,13 @@ export default function WorkSessionAnalysisPanel({
           {isPreviewMode ? renderPreviewTree() : renderPublishedTree()}
         </aside>
 
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div
+          className={
+            isPreviewMode
+              ? 'min-h-0 flex-1 overflow-y-auto'
+              : 'min-h-0 flex-1 overflow-hidden'
+          }
+        >
           {isPreviewMode && !analysis && (
             <div className="rounded border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-inkMuted">
               Select an analysis window to generate pending work-session candidates.

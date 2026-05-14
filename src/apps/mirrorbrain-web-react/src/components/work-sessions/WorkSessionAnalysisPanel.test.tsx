@@ -664,7 +664,7 @@ describe('WorkSessionAnalysisPanel', () => {
 
     expect(await screen.findByText('Original body.')).not.toBeNull()
     await user.type(screen.getByLabelText('Revision Request'), 'Make the conclusion sharper.')
-    await user.click(screen.getByRole('button', { name: 'Send Revision' }))
+    await user.click(screen.getByRole('button', { name: 'Send' }))
 
     expect(api.reviseKnowledgeArticle).toHaveBeenCalledWith({
       projectId: publishedArticle.projectId,
@@ -675,7 +675,7 @@ describe('WorkSessionAnalysisPanel', () => {
     })
     expect(await screen.findByText('Revised published knowledge.')).not.toBeNull()
     expect(screen.getByTestId('published-knowledge-panel').textContent).toContain('Revised body.')
-    expect((screen.getByLabelText('Revision Request') as HTMLTextAreaElement).value).toBe('')
+    expect((screen.getByLabelText('Revision Request') as HTMLInputElement).value).toBe('')
   })
 
   it('discards a preview work-session candidate and removes it from preview', async () => {
