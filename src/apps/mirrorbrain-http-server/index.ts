@@ -519,26 +519,24 @@ const resourceConfigurationSchema = {
 const openAICompatibleResourceConfigUpdateSchema = {
   type: 'object',
   properties: {
-    enabled: { type: 'boolean' },
     providerName: { type: 'string' },
     baseUrl: { type: 'string' },
     model: { type: 'string' },
     apiKey: { type: 'string' },
     updatedBy: { type: 'string' },
   },
-  required: ['enabled', 'providerName', 'baseUrl', 'model', 'updatedBy'],
+  required: ['providerName', 'baseUrl', 'model', 'updatedBy'],
 } as const;
 
 const tavilySearchResourceConfigUpdateSchema = {
   type: 'object',
   properties: {
-    enabled: { type: 'boolean' },
     baseUrl: { type: 'string' },
     apiKey: { type: 'string' },
     maxResults: { type: 'number' },
     updatedBy: { type: 'string' },
   },
-  required: ['enabled', 'baseUrl', 'maxResults', 'updatedBy'],
+  required: ['baseUrl', 'maxResults', 'updatedBy'],
 } as const;
 
 const resourceConfigurationUpdateSchema = {

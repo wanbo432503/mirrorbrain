@@ -16,7 +16,7 @@ function createResourceConfiguration(): ResourceConfiguration {
     llm: {
       enabled: false,
       providerName: 'OpenAI-compatible chat',
-      baseUrl: 'https://api.openai.com/v1',
+      baseUrl: '',
       model: '',
       apiKeyConfigured: true,
     },
@@ -30,9 +30,9 @@ function createResourceConfiguration(): ResourceConfiguration {
     search: {
       enabled: false,
       providerName: 'tavily',
-      baseUrl: 'https://api.tavily.com',
+      baseUrl: '',
       apiKeyConfigured: false,
-      maxResults: 5,
+      maxResults: 0,
     },
   }
 }
@@ -65,7 +65,10 @@ function createApi(config = createResourceConfiguration()): MirrorBrainWebAppApi
       ...config,
       llm: update.llm
         ? {
-            enabled: update.llm.enabled,
+            enabled:
+              update.llm.baseUrl.length > 0 &&
+              update.llm.model.length > 0 &&
+              Boolean(update.llm.apiKey),
             providerName: update.llm.providerName,
             baseUrl: update.llm.baseUrl,
             model: update.llm.model,
@@ -76,7 +79,7 @@ function createApi(config = createResourceConfiguration()): MirrorBrainWebAppApi
         : config.llm,
       search: update.search
         ? {
-            enabled: update.search.enabled,
+            enabled: update.search.baseUrl.length > 0 && Boolean(update.search.apiKey),
             providerName: 'tavily',
             baseUrl: update.search.baseUrl,
             apiKeyConfigured: Boolean(update.search.apiKey),
@@ -97,6 +100,9 @@ describe('ConfigurePanel', () => {
 
     expect(await screen.findByRole('heading', { name: 'LLM' })).not.toBeNull()
     expect(screen.getByDisplayValue('OpenAI-compatible chat')).not.toBeNull()
+    expect(screen.getAllByText('MIRRORBRAIN_LLM_API_BASE').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('MIRRORBRAIN_EMBEDDING_MODEL').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('MIRRORBRAIN_TAVILY_API_KEY').length).toBeGreaterThan(0)
     expect(screen.getByPlaceholderText('Configured. Leave blank to keep current key.')).not.toBeNull()
     expect(screen.queryByDisplayValue('existing-llm-key')).toBeNull()
     expect(api.getResourceConfiguration).toHaveBeenCalledOnce()
@@ -116,9 +122,8 @@ describe('ConfigurePanel', () => {
     await waitFor(() => {
       expect(api.updateResourceConfiguration).toHaveBeenCalledWith({
         llm: {
-          enabled: false,
           providerName: 'OpenAI-compatible chat',
-          baseUrl: 'https://api.openai.com/v1',
+          baseUrl: '',
           model: 'gpt-example',
           apiKey: 'new-key',
           updatedBy: 'mirrorbrain-web',

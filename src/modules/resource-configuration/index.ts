@@ -27,12 +27,12 @@ export interface ResourceConfiguration {
 }
 
 export interface StoredOpenAICompatibleResourceConfig
-  extends Omit<OpenAICompatibleResourceConfig, 'apiKeyConfigured'> {
+  extends Omit<OpenAICompatibleResourceConfig, 'apiKeyConfigured' | 'enabled'> {
   apiKey?: string;
 }
 
 export interface StoredTavilySearchResourceConfig
-  extends Omit<TavilySearchResourceConfig, 'apiKeyConfigured'> {
+  extends Omit<TavilySearchResourceConfig, 'apiKeyConfigured' | 'enabled'> {
   apiKey?: string;
 }
 
@@ -43,7 +43,6 @@ export interface StoredResourceConfiguration {
 }
 
 export interface OpenAICompatibleResourceConfigUpdate {
-  enabled: boolean;
   providerName: string;
   baseUrl: string;
   model: string;
@@ -52,7 +51,6 @@ export interface OpenAICompatibleResourceConfigUpdate {
 }
 
 export interface TavilySearchResourceConfigUpdate {
-  enabled: boolean;
   baseUrl: string;
   apiKey?: string;
   maxResults: number;
@@ -67,22 +65,19 @@ export interface ResourceConfigurationUpdate {
 
 export const DEFAULT_STORED_RESOURCE_CONFIGURATION: StoredResourceConfiguration = {
   llm: {
-    enabled: false,
     providerName: 'OpenAI-compatible chat',
-    baseUrl: 'https://api.openai.com/v1',
+    baseUrl: '',
     model: '',
   },
   embedding: {
-    enabled: false,
     providerName: 'OpenAI-compatible embeddings',
-    baseUrl: 'https://api.openai.com/v1',
+    baseUrl: '',
     model: '',
   },
   search: {
-    enabled: false,
     providerName: 'tavily',
-    baseUrl: 'https://api.tavily.com',
-    maxResults: 5,
+    baseUrl: '',
+    maxResults: 0,
   },
 };
 
@@ -103,7 +98,10 @@ function redactOpenAICompatibleConfig(
   config: StoredOpenAICompatibleResourceConfig,
 ): OpenAICompatibleResourceConfig {
   return {
-    enabled: config.enabled,
+    enabled:
+      normalizeText(config.baseUrl).length > 0 &&
+      normalizeText(config.model).length > 0 &&
+      hasApiKey(config.apiKey),
     providerName: config.providerName,
     baseUrl: config.baseUrl,
     model: config.model,
@@ -117,7 +115,9 @@ function redactSearchConfig(
   config: StoredTavilySearchResourceConfig,
 ): TavilySearchResourceConfig {
   return {
-    enabled: config.enabled,
+    enabled:
+      normalizeText(config.baseUrl).length > 0 &&
+      hasApiKey(config.apiKey),
     providerName: 'tavily',
     baseUrl: config.baseUrl,
     apiKeyConfigured: hasApiKey(config.apiKey),
@@ -161,7 +161,6 @@ function mergeOpenAICompatibleResourceConfig(
   updatedAt: string,
 ): StoredOpenAICompatibleResourceConfig {
   return {
-    enabled: update.enabled,
     providerName: normalizeText(update.providerName),
     baseUrl: normalizeText(update.baseUrl),
     model: normalizeText(update.model),
@@ -177,7 +176,6 @@ function mergeSearchResourceConfig(
   updatedAt: string,
 ): StoredTavilySearchResourceConfig {
   return {
-    enabled: update.enabled,
     providerName: 'tavily',
     baseUrl: normalizeText(update.baseUrl),
     apiKey: normalizeOptionalApiKey(update.apiKey) ?? current.apiKey,

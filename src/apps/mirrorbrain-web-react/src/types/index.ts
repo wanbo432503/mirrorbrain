@@ -119,7 +119,6 @@ export interface ResourceConfiguration {
 }
 
 export interface OpenAICompatibleResourceConfigUpdate {
-  enabled: boolean;
   providerName: string;
   baseUrl: string;
   model: string;
@@ -128,7 +127,6 @@ export interface OpenAICompatibleResourceConfigUpdate {
 }
 
 export interface TavilySearchResourceConfigUpdate {
-  enabled: boolean;
   baseUrl: string;
   apiKey?: string;
   maxResults: number;

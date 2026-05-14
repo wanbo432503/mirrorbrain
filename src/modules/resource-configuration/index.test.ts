@@ -21,8 +21,9 @@ describe('resource configuration', () => {
     });
 
     expect(view.llm).toMatchObject({
+      enabled: false,
       apiKeyConfigured: true,
-      baseUrl: 'https://api.openai.com/v1',
+      baseUrl: '',
     });
     expect(view.search).toMatchObject({
       apiKeyConfigured: true,
@@ -42,14 +43,12 @@ describe('resource configuration', () => {
       },
       {
         embedding: {
-          enabled: true,
           providerName: ' Local embeddings ',
           baseUrl: ' https://embeddings.example.com/v1 ',
           model: ' text-embedding-test ',
           updatedBy: ' mirrorbrain-web ',
         },
         search: {
-          enabled: true,
           baseUrl: ' https://api.tavily.com ',
           maxResults: 8.9,
           updatedBy: 'mirrorbrain-web',
@@ -59,7 +58,6 @@ describe('resource configuration', () => {
     );
 
     expect(updated.embedding).toEqual({
-      enabled: true,
       providerName: 'Local embeddings',
       baseUrl: 'https://embeddings.example.com/v1',
       model: 'text-embedding-test',
@@ -68,7 +66,6 @@ describe('resource configuration', () => {
       updatedBy: 'mirrorbrain-web',
     });
     expect(updated.search).toMatchObject({
-      enabled: true,
       baseUrl: 'https://api.tavily.com',
       maxResults: 8,
     });

@@ -129,23 +129,23 @@ describe('createMirrorBrainBrowserApi', () => {
             llm: {
               enabled: false,
               providerName: 'OpenAI-compatible chat',
-              baseUrl: 'https://api.openai.com/v1',
+              baseUrl: '',
               model: '',
               apiKeyConfigured: false,
             },
             embedding: {
               enabled: false,
               providerName: 'OpenAI-compatible embeddings',
-              baseUrl: 'https://api.openai.com/v1',
+              baseUrl: '',
               model: '',
               apiKeyConfigured: false,
             },
             search: {
               enabled: false,
               providerName: 'tavily',
-              baseUrl: 'https://api.tavily.com',
+              baseUrl: '',
               apiKeyConfigured: false,
-              maxResults: 5,
+              maxResults: 0,
             },
           },
         }),
@@ -166,16 +166,16 @@ describe('createMirrorBrainBrowserApi', () => {
             embedding: {
               enabled: false,
               providerName: 'OpenAI-compatible embeddings',
-              baseUrl: 'https://api.openai.com/v1',
+              baseUrl: '',
               model: '',
               apiKeyConfigured: false,
             },
             search: {
               enabled: false,
               providerName: 'tavily',
-              baseUrl: 'https://api.tavily.com',
+              baseUrl: '',
               apiKeyConfigured: false,
-              maxResults: 5,
+              maxResults: 0,
             },
           },
         }),
@@ -214,13 +214,12 @@ describe('createMirrorBrainBrowserApi', () => {
     await expect(api.getResourceConfiguration()).resolves.toMatchObject({
       search: {
         providerName: 'tavily',
-        maxResults: 5,
+        maxResults: 0,
       },
     });
     await expect(
       api.updateResourceConfiguration({
         llm: {
-          enabled: true,
           providerName: 'OpenAI-compatible chat',
           baseUrl: 'https://llm.example.com/v1',
           model: 'gpt-example',
@@ -265,7 +264,6 @@ describe('createMirrorBrainBrowserApi', () => {
         method: 'PATCH',
         body: JSON.stringify({
           llm: {
-            enabled: true,
             providerName: 'OpenAI-compatible chat',
             baseUrl: 'https://llm.example.com/v1',
             model: 'gpt-example',

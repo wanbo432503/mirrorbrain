@@ -12,7 +12,6 @@ import {
 import Button from '../common/Button'
 import Card from '../common/Card'
 import LoadingSpinner from '../common/LoadingSpinner'
-import Checkbox from '../forms/Checkbox'
 import Input from '../forms/Input'
 
 interface ConfigurePanelProps {
@@ -25,7 +24,6 @@ type ResourceFeedback = {
 }
 
 interface OpenAICompatibleFormState {
-  enabled: boolean
   providerName: string
   baseUrl: string
   model: string
@@ -33,34 +31,52 @@ interface OpenAICompatibleFormState {
 }
 
 interface TavilySearchFormState {
-  enabled: boolean
   baseUrl: string
   apiKey: string
   maxResults: number
 }
+
+const ENV_REFERENCE = [
+  'MIRRORBRAIN_HTTP_HOST',
+  'MIRRORBRAIN_HTTP_PORT',
+  'MIRRORBRAIN_WORKSPACE_DIR',
+  'MIRRORBRAIN_ACTIVITYWATCH_BASE_URL',
+  'MIRRORBRAIN_BROWSER_BUCKET_ID',
+  'MIRRORBRAIN_SYNC_INTERVAL_MS',
+  'MIRRORBRAIN_INITIAL_BACKFILL_HOURS',
+  'MIRRORBRAIN_LLM_API_BASE',
+  'MIRRORBRAIN_LLM_API_KEY',
+  'MIRRORBRAIN_LLM_MODEL',
+  'MIRRORBRAIN_EMBEDDING_API_BASE',
+  'MIRRORBRAIN_EMBEDDING_API_KEY',
+  'MIRRORBRAIN_EMBEDDING_MODEL',
+  'MIRRORBRAIN_TAVILY_API_BASE',
+  'MIRRORBRAIN_TAVILY_API_KEY',
+  'MIRRORBRAIN_TAVILY_MAX_RESULTS',
+] as const
 
 function createDefaultConfig(): ResourceConfiguration {
   return {
     llm: {
       enabled: false,
       providerName: 'OpenAI-compatible chat',
-      baseUrl: 'https://api.openai.com/v1',
+      baseUrl: '',
       model: '',
       apiKeyConfigured: false,
     },
     embedding: {
       enabled: false,
       providerName: 'OpenAI-compatible embeddings',
-      baseUrl: 'https://api.openai.com/v1',
+      baseUrl: '',
       model: '',
       apiKeyConfigured: false,
     },
     search: {
       enabled: false,
       providerName: 'tavily',
-      baseUrl: 'https://api.tavily.com',
+      baseUrl: '',
       apiKeyConfigured: false,
-      maxResults: 5,
+      maxResults: 0,
     },
   }
 }
@@ -69,7 +85,6 @@ function createOpenAIFormState(
   config: OpenAICompatibleResourceConfig,
 ): OpenAICompatibleFormState {
   return {
-    enabled: config.enabled,
     providerName: config.providerName,
     baseUrl: config.baseUrl,
     model: config.model,
@@ -79,7 +94,6 @@ function createOpenAIFormState(
 
 function createSearchFormState(config: TavilySearchResourceConfig): TavilySearchFormState {
   return {
-    enabled: config.enabled,
     baseUrl: config.baseUrl,
     apiKey: '',
     maxResults: config.maxResults,
@@ -155,7 +169,6 @@ export default function ConfigurePanel({
     try {
       const nextConfig = await api.updateResourceConfiguration({
         [resource]: {
-          enabled: form.enabled,
           providerName: form.providerName,
           baseUrl: form.baseUrl,
           model: form.model,
@@ -188,7 +201,6 @@ export default function ConfigurePanel({
     try {
       const nextConfig = await api.updateResourceConfiguration({
         search: {
-          enabled: searchForm.enabled,
           baseUrl: searchForm.baseUrl,
           apiKey: searchForm.apiKey.trim().length > 0 ? searchForm.apiKey : undefined,
           maxResults: searchForm.maxResults,
@@ -230,32 +242,54 @@ export default function ConfigurePanel({
           <p className="font-body text-sm text-inkMuted-48">Loading configuration...</p>
         </Card>
       ) : (
-        <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-3">
-          <OpenAICompatibleResourceCard
-            title="LLM"
-            subtitle="OpenAI compatible chat"
-            config={config.llm}
-            form={llmForm}
-            saving={savingResource === 'llm'}
-            onFormChange={setLlmForm}
-            onSave={() => saveOpenAICompatibleResource('llm', llmForm)}
-          />
-          <OpenAICompatibleResourceCard
-            title="Embedding"
-            subtitle="OpenAI compatible vectors"
-            config={config.embedding}
-            form={embeddingForm}
-            saving={savingResource === 'embedding'}
-            onFormChange={setEmbeddingForm}
-            onSave={() => saveOpenAICompatibleResource('embedding', embeddingForm)}
-          />
-          <SearchResourceCard
-            config={config.search}
-            form={searchForm}
-            saving={savingResource === 'search'}
-            onFormChange={setSearchForm}
-            onSave={saveSearchResource}
-          />
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
+          <div className="grid gap-4 xl:grid-cols-3">
+            <OpenAICompatibleResourceCard
+              title="LLM"
+              subtitle="OpenAI compatible chat"
+              envBaseUrl="MIRRORBRAIN_LLM_API_BASE"
+              envApiKey="MIRRORBRAIN_LLM_API_KEY"
+              envModel="MIRRORBRAIN_LLM_MODEL"
+              config={config.llm}
+              form={llmForm}
+              saving={savingResource === 'llm'}
+              onFormChange={setLlmForm}
+              onSave={() => saveOpenAICompatibleResource('llm', llmForm)}
+            />
+            <OpenAICompatibleResourceCard
+              title="Embedding"
+              subtitle="OpenAI compatible vectors"
+              envBaseUrl="MIRRORBRAIN_EMBEDDING_API_BASE"
+              envApiKey="MIRRORBRAIN_EMBEDDING_API_KEY"
+              envModel="MIRRORBRAIN_EMBEDDING_MODEL"
+              config={config.embedding}
+              form={embeddingForm}
+              saving={savingResource === 'embedding'}
+              onFormChange={setEmbeddingForm}
+              onSave={() => saveOpenAICompatibleResource('embedding', embeddingForm)}
+            />
+            <SearchResourceCard
+              config={config.search}
+              form={searchForm}
+              saving={savingResource === 'search'}
+              onFormChange={setSearchForm}
+              onSave={saveSearchResource}
+            />
+          </div>
+
+          <Card>
+            <h2 className="font-heading text-lg font-semibold text-ink">Environment Reference</h2>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              {ENV_REFERENCE.map((name) => (
+                <code
+                  key={name}
+                  className="rounded-md border border-hairline bg-surfacePearl px-3 py-2 font-mono text-xs text-ink"
+                >
+                  {name}
+                </code>
+              ))}
+            </div>
+          </Card>
         </div>
       )}
     </div>
@@ -268,6 +302,9 @@ function OpenAICompatibleResourceCard({
   config,
   form,
   saving,
+  envBaseUrl,
+  envApiKey,
+  envModel,
   onFormChange,
   onSave,
 }: {
@@ -276,6 +313,9 @@ function OpenAICompatibleResourceCard({
   config: OpenAICompatibleResourceConfig
   form: OpenAICompatibleFormState
   saving: boolean
+  envBaseUrl: string
+  envApiKey: string
+  envModel: string
   onFormChange: (form: OpenAICompatibleFormState) => void
   onSave: () => void
 }) {
@@ -284,17 +324,11 @@ function OpenAICompatibleResourceCard({
       <ResourceHeader
         title={title}
         subtitle={subtitle}
-        enabled={form.enabled}
+        enabled={config.enabled}
         apiKeyConfigured={config.apiKeyConfigured}
       />
 
       <div className="space-y-4">
-        <Checkbox
-          id={`${title.toLowerCase()}-enabled`}
-          checked={form.enabled}
-          onChange={(event) => onFormChange({ ...form, enabled: event.target.checked })}
-          label="Enabled"
-        />
         <Input
           id={`${title.toLowerCase()}-provider`}
           label="Provider Name"
@@ -304,12 +338,14 @@ function OpenAICompatibleResourceCard({
         <Input
           id={`${title.toLowerCase()}-base-url`}
           label="API Base URL"
+          helpText={envBaseUrl}
           value={form.baseUrl}
           onChange={(event) => onFormChange({ ...form, baseUrl: event.target.value })}
         />
         <Input
           id={`${title.toLowerCase()}-model`}
           label="Model"
+          helpText={envModel}
           value={form.model}
           onChange={(event) => onFormChange({ ...form, model: event.target.value })}
         />
@@ -317,6 +353,7 @@ function OpenAICompatibleResourceCard({
           id={`${title.toLowerCase()}-api-key`}
           label="API Key"
           type="password"
+          helpText={envApiKey}
           value={form.apiKey}
           placeholder={keyPlaceholder(config.apiKeyConfigured)}
           onChange={(event) => onFormChange({ ...form, apiKey: event.target.value })}
@@ -348,20 +385,15 @@ function SearchResourceCard({
       <ResourceHeader
         title="Search"
         subtitle="Tavily"
-        enabled={form.enabled}
+        enabled={config.enabled}
         apiKeyConfigured={config.apiKeyConfigured}
       />
 
       <div className="space-y-4">
-        <Checkbox
-          id="search-enabled"
-          checked={form.enabled}
-          onChange={(event) => onFormChange({ ...form, enabled: event.target.checked })}
-          label="Enabled"
-        />
         <Input
           id="search-base-url"
           label="API Base URL"
+          helpText="MIRRORBRAIN_TAVILY_API_BASE"
           value={form.baseUrl}
           onChange={(event) => onFormChange({ ...form, baseUrl: event.target.value })}
         />
@@ -370,7 +402,8 @@ function SearchResourceCard({
           label="Max Results"
           type="number"
           min={1}
-          value={form.maxResults}
+          helpText="MIRRORBRAIN_TAVILY_MAX_RESULTS"
+          value={form.maxResults === 0 ? '' : form.maxResults}
           onChange={(event) =>
             onFormChange({ ...form, maxResults: Number(event.target.value) })
           }
@@ -379,6 +412,7 @@ function SearchResourceCard({
           id="search-api-key"
           label="API Key"
           type="password"
+          helpText="MIRRORBRAIN_TAVILY_API_KEY"
           value={form.apiKey}
           placeholder={keyPlaceholder(config.apiKeyConfigured)}
           onChange={(event) => onFormChange({ ...form, apiKey: event.target.value })}

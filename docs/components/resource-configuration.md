@@ -13,11 +13,13 @@ memory, synthesize knowledge, or execute skills by itself.
 
 This component is responsible for:
 
-- persisting provider resource settings under MirrorBrain workspace state
+- persisting provider resource settings to the project `.env` file
 - exposing `GET /resources/config` and `PATCH /resources/config`
 - redacting provider API keys from every read response
 - preserving existing API keys when a PATCH omits a replacement key
 - giving the standalone React UI a top-level `configure` tab after `skill`
+- presenting the resource variable names from `.env.example` directly beside
+  the editable controls
 
 This component is not responsible for:
 
@@ -25,8 +27,8 @@ This component is not responsible for:
 - weakening memory-source authorization scopes
 - silently promoting memory into knowledge or skills
 - executing Tavily searches or LLM calls from the configuration UI
-- replacing existing environment-based runtime configuration until a migration
-  plan explicitly does so
+- owning non-resource runtime configuration such as workspace path,
+  ActivityWatch, host, port, or sync interval values
 
 ## Key Interfaces
 
@@ -53,25 +55,29 @@ Frontend:
 
 1. The user opens the `configure` tab.
 2. The React app calls `GET /resources/config`.
-3. The service reads `<workspaceDir>/mirrorbrain/state/resource-configuration.json`
-   or returns disabled defaults.
+3. The service reads the project `.env` file or returns empty resource defaults.
 4. The API response includes `apiKeyConfigured` booleans but never raw API keys.
 5. The user updates one resource card and clicks save.
 6. The UI sends a resource-scoped `PATCH /resources/config` request.
-7. The service merges that update with existing stored configuration. Blank or
+7. The service merges that update with existing `.env` content. Blank or
    omitted API keys leave the previously stored key intact.
-8. The updated configuration is persisted and returned in redacted form.
+8. The updated `.env` file is persisted and the resource configuration is
+   returned in redacted form.
 
 ## Data Structures
 
-The stored form keeps secrets inside the local MirrorBrain workspace state file:
+The stored form maps directly to resource variables in `.env`:
 
-```ts
-interface StoredResourceConfiguration {
-  llm: StoredOpenAICompatibleResourceConfig
-  embedding: StoredOpenAICompatibleResourceConfig
-  search: StoredTavilySearchResourceConfig
-}
+```text
+MIRRORBRAIN_LLM_API_BASE=
+MIRRORBRAIN_LLM_API_KEY=
+MIRRORBRAIN_LLM_MODEL=
+MIRRORBRAIN_EMBEDDING_API_BASE=
+MIRRORBRAIN_EMBEDDING_API_KEY=
+MIRRORBRAIN_EMBEDDING_MODEL=
+MIRRORBRAIN_TAVILY_API_BASE=
+MIRRORBRAIN_TAVILY_API_KEY=
+MIRRORBRAIN_TAVILY_MAX_RESULTS=
 ```
 
 The public API form replaces each secret with:
@@ -82,15 +88,18 @@ apiKeyConfigured: boolean
 
 ## Failure Modes And Operational Constraints
 
-- Missing configuration files resolve to disabled defaults.
-- Invalid or unreadable JSON fails the request rather than silently replacing
-  configuration.
+- Missing `.env` files resolve to empty disabled resource defaults.
+- Existing unrelated `.env` entries, comments, and non-resource runtime values
+  are preserved when resource variables are updated.
 - API keys are local secrets and are not returned to agent clients or the web
   UI after save.
-- This component only stores resource settings. Runtime consumers still need
-  explicit integration work before they should read these settings.
+- This component only stores resource settings. The current LLM caller already
+  reads `MIRRORBRAIN_LLM_*` environment variables; embedding and Tavily values
+  are reserved for future runtime consumers.
 - Search configuration is currently Tavily-specific because Tavily is the
   planned first search provider.
+- Non-resource variables from `.env.example` are shown in the configure tab as
+  reference names, but this component does not edit them.
 
 ## Test Strategy
 

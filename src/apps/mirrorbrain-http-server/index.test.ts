@@ -285,23 +285,23 @@ describe('mirrorbrain http server', () => {
       llm: {
         enabled: false,
         providerName: 'OpenAI-compatible chat',
-        baseUrl: 'https://api.openai.com/v1',
+        baseUrl: '',
         model: '',
         apiKeyConfigured: false,
       },
       embedding: {
         enabled: false,
         providerName: 'OpenAI-compatible embeddings',
-        baseUrl: 'https://api.openai.com/v1',
+        baseUrl: '',
         model: '',
         apiKeyConfigured: false,
       },
       search: {
         enabled: false,
         providerName: 'tavily' as const,
-        baseUrl: 'https://api.tavily.com',
+        baseUrl: '',
         apiKeyConfigured: false,
-        maxResults: 5,
+        maxResults: 0,
       },
     }));
     const updateResourceConfiguration = vi.fn(async () => ({
@@ -317,16 +317,16 @@ describe('mirrorbrain http server', () => {
       embedding: {
         enabled: false,
         providerName: 'OpenAI-compatible embeddings',
-        baseUrl: 'https://api.openai.com/v1',
+        baseUrl: '',
         model: '',
         apiKeyConfigured: false,
       },
       search: {
         enabled: false,
         providerName: 'tavily' as const,
-        baseUrl: 'https://api.tavily.com',
+        baseUrl: '',
         apiKeyConfigured: false,
-        maxResults: 5,
+        maxResults: 0,
       },
     }));
     const service = {
@@ -387,7 +387,6 @@ describe('mirrorbrain http server', () => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         llm: {
-          enabled: true,
           providerName: 'OpenAI-compatible chat',
           baseUrl: 'https://llm.example.com/v1',
           model: 'gpt-example',
@@ -455,7 +454,7 @@ describe('mirrorbrain http server', () => {
         },
         search: {
           providerName: 'tavily',
-          maxResults: 5,
+          maxResults: 0,
         },
       },
     });
@@ -481,7 +480,6 @@ describe('mirrorbrain http server', () => {
     });
     expect(updateResourceConfiguration).toHaveBeenCalledWith({
       llm: {
-        enabled: true,
         providerName: 'OpenAI-compatible chat',
         baseUrl: 'https://llm.example.com/v1',
         model: 'gpt-example',

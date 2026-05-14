@@ -2055,23 +2055,20 @@ describe('mirrorbrain service', () => {
     const resourceStore = {
       readResourceConfiguration: vi.fn(async () => ({
         llm: {
-          enabled: false,
           providerName: 'OpenAI-compatible chat',
-          baseUrl: 'https://api.openai.com/v1',
+          baseUrl: '',
           model: '',
           apiKey: 'existing-llm-key',
         },
         embedding: {
-          enabled: false,
           providerName: 'OpenAI-compatible embeddings',
-          baseUrl: 'https://api.openai.com/v1',
+          baseUrl: '',
           model: '',
         },
         search: {
-          enabled: false,
           providerName: 'tavily' as const,
-          baseUrl: 'https://api.tavily.com',
-          maxResults: 5,
+          baseUrl: '',
+          maxResults: 0,
         },
       })),
       writeResourceConfiguration: vi.fn(async () => undefined),
@@ -2117,7 +2114,6 @@ describe('mirrorbrain service', () => {
     await expect(
       api.updateResourceConfiguration({
         llm: {
-          enabled: true,
           providerName: 'OpenAI-compatible chat',
           baseUrl: 'https://llm.example.com/v1',
           model: 'gpt-example',

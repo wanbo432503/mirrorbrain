@@ -20,7 +20,14 @@ describe('start mirrorbrain dev runtime', () => {
     expect(envExample).toContain('MIRRORBRAIN_LLM_API_BASE=');
     expect(envExample).toContain('MIRRORBRAIN_LLM_API_KEY=');
     expect(envExample).toContain('MIRRORBRAIN_LLM_MODEL=');
+    expect(envExample).toContain('MIRRORBRAIN_EMBEDDING_API_BASE=');
+    expect(envExample).toContain('MIRRORBRAIN_EMBEDDING_API_KEY=');
+    expect(envExample).toContain('MIRRORBRAIN_EMBEDDING_MODEL=');
+    expect(envExample).toContain('MIRRORBRAIN_TAVILY_API_BASE=');
+    expect(envExample).toContain('MIRRORBRAIN_TAVILY_API_KEY=');
+    expect(envExample).toContain('MIRRORBRAIN_TAVILY_MAX_RESULTS=');
     expect(envExample).toContain('MIRRORBRAIN_BROWSER_BUCKET_ID=');
+    expect(envExample).not.toContain('replace-with-your-llm-api-key');
     expect(envExample).not.toContain('MIRRORBRAIN_OPENVIKING_BASE_URL=');
   });
 
