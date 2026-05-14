@@ -244,22 +244,14 @@ Active non-goals for the current focus:
 
 ## Working Mode
 
-Codex must use a TDD-first workflow for all feature work, bug fixes, and refactors.
+Codex should choose an efficient implementation workflow based on the risk and
+scope of the change. Tests remain required for meaningful behavior changes, bug
+fixes, and refactors, but tests do not need to be written before production code
+unless the user explicitly requests a TDD workflow or the change is risky enough
+that a test-first approach is clearly the safest path.
 
-### TDD Rule
-
-No production code may be added or changed before a failing test exists for the target behavior.
-
-Required sequence:
-
-1. Add or update the smallest possible test that captures the desired behavior.
-2. Run that test and confirm it fails for the expected reason.
-3. Implement the minimum code required to make the test pass.
-4. Re-run the targeted test and confirm it passes.
-5. Re-run the relevant broader test suite for the affected area.
-6. Refactor only while keeping tests green.
-
-If a task cannot reasonably use TDD, Codex must state why before implementation and choose the closest test-first alternative.
+For small documentation, copy, configuration, or low-risk UI adjustments, Codex
+may implement directly and then run the appropriate verification.
 
 ## Documentation Rule
 
@@ -398,8 +390,6 @@ Codex must not create the commit until those checks are green unless the user ex
 
 For every meaningful change, Codex should verify all of the following:
 
-- tests were written first
-- failing test was observed before implementation
 - production code is minimal for the requirement
 - relevant docs were added or updated
 - impacted `docs/` pages and `README.md` files were checked and updated when behavior or setup changed
