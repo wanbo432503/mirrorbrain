@@ -145,6 +145,7 @@ export interface WorkSessionEvidenceItem {
   sourceType: string;
   title: string;
   url?: string;
+  filePath?: string;
   summary?: string;
   excerpt: string;
 }

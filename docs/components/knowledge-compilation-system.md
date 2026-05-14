@@ -105,13 +105,19 @@ Markdown renderer with wiki-link support:
 - Hover preview cards appear on mouse enter
 - Click triggers navigation callback `onWikiLinkClick`
 - Supports GFM features (tables, strikethrough, task lists)
+- Supports inline and block math through remark-math and KaTeX
+- Renders normal HTTP(S), mail, and local `file://` Markdown links as standard
+  anchors rather than wiki-link navigation targets
 
 Dependencies:
 - react-markdown@9.1.0
 - remark-gfm@4.0.1
+- remark-math@6.0.0
+- rehype-katex@7.0.1
+- katex@0.16.46
 - remark-wiki-link@2.0.1
 
-Tests: 11 tests passing
+Tests: 12 tests passing
 
 ### KnowledgeDetailModal Integration
 

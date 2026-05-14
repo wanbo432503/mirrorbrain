@@ -72,4 +72,38 @@ describe('knowledge article preview synthesis', () => {
     expect(preview.body).toContain('K-Means、DBSCAN');
     expect(analyzeWithLLM).toHaveBeenCalledTimes(1);
   });
+
+  it('formats fallback sources as markdown links for URLs and local file paths', async () => {
+    const preview = await generateKnowledgeArticlePreview({
+      candidate: {
+        ...candidate,
+        evidenceItems: [
+          {
+            memoryEventId: 'browser-kmeans',
+            sourceType: 'browser',
+            title: 'K-Means 聚类',
+            url: 'https://example.com/kmeans?token=secret#section',
+            excerpt: 'K-Means evidence.',
+          },
+          {
+            memoryEventId: 'file-notes',
+            sourceType: 'file-activity',
+            title: '聚类笔记.md',
+            filePath: '/Users/wanbo/Notes/聚类笔记.md',
+            excerpt: 'Local file evidence.',
+          },
+        ],
+      },
+      generatedAt: '2026-05-14T02:00:00.000Z',
+    });
+
+    expect(preview.body).toContain(
+      '- [S1] [K-Means 聚类](https://example.com/kmeans#section): K-Means evidence.',
+    );
+    expect(preview.body).toContain(
+      '- [S2] [聚类笔记.md](file:///Users/wanbo/Notes/%E8%81%9A%E7%B1%BB%E7%AC%94%E8%AE%B0.md): Local file evidence.',
+    );
+    expect(preview.body).not.toContain('https://example.com/kmeans?token=secret');
+    expect(preview.body).not.toContain('/Users/wanbo/Notes/聚类笔记.md');
+  });
 });

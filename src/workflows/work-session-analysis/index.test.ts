@@ -12,6 +12,7 @@ function memoryEvent(input: {
   project?: string;
   topic?: string;
   url?: string;
+  filePath?: string;
   pageContent?: string;
 }): MemoryEvent {
   const entities: Array<{ kind: string; label: string; ref?: string }> = [];
@@ -51,6 +52,7 @@ function memoryEvent(input: {
       entities,
       sourceSpecific: {
         ...(input.url !== undefined ? { url: input.url } : {}),
+        ...(input.filePath !== undefined ? { filePath: input.filePath } : {}),
         ...(input.pageContent !== undefined ? { pageContent: input.pageContent } : {}),
       },
     },
@@ -400,6 +402,57 @@ describe('work-session analysis', () => {
         excerpt: 'Searched local notes for clustering workflows.',
       },
     ]);
+  });
+
+  it('preserves local file paths on evidence items without treating them as URLs', () => {
+    const result = analyzeWorkSessionCandidates({
+      analysisWindow: {
+        preset: 'last-6-hours',
+        startAt: '2026-05-12T06:00:00.000Z',
+        endAt: '2026-05-12T12:00:00.000Z',
+      },
+      generatedAt: '2026-05-12T12:00:00.000Z',
+      memoryEvents: [
+        memoryEvent({
+          id: 'cluster-file-1',
+          timestamp: '2026-05-12T10:00:00.000Z',
+          sourceType: 'file-activity',
+          title: '聚类笔记.md',
+          summary: '整理 K-Means 和 DBSCAN 的适用条件。',
+          project: '聚类算法研究',
+          topic: '聚类算法方法与应用',
+          filePath: '/Users/wanbo/Notes/聚类笔记.md',
+        }),
+        memoryEvent({
+          id: 'cluster-file-2',
+          timestamp: '2026-05-12T10:10:00.000Z',
+          sourceType: 'file-activity',
+          title: '算法对比.md',
+          summary: '比较密度、划分和层次聚类。',
+          project: '聚类算法研究',
+          topic: '聚类算法方法与应用',
+          filePath: '/Users/wanbo/Notes/算法对比.md',
+        }),
+        memoryEvent({
+          id: 'cluster-browser',
+          timestamp: '2026-05-12T10:20:00.000Z',
+          sourceType: 'browser',
+          title: '聚类算法总览',
+          summary: '阅读聚类算法总览。',
+          project: '聚类算法研究',
+          topic: '聚类算法方法与应用',
+          url: 'https://example.com/clustering-overview',
+        }),
+      ],
+    });
+
+    expect(result.candidates[0].evidenceItems?.[0]).toMatchObject({
+      memoryEventId: 'cluster-file-1',
+      sourceType: 'file-activity',
+      title: '聚类笔记.md',
+      filePath: '/Users/wanbo/Notes/聚类笔记.md',
+    });
+    expect(result.candidates[0].evidenceItems?.[0]).not.toHaveProperty('url');
   });
 
   it('filters low-value update pages and only emits abstract topics with at least three memory events', () => {

@@ -476,4 +476,67 @@ describe('knowledge-generation-llm', () => {
     expect(prompt).not.toContain('登录iframe');
     expect(prompt).not.toContain('隐私政策');
   });
+
+  it('instructs source markdown links and formats degraded provenance as links', async () => {
+    const prompt = buildKnowledgeSynthesisPrompt({
+      noteType: 'insight-report',
+      reviewedMemories: [
+        reviewedMemory({
+          candidateSourceRefs: [
+            {
+              id: 'event:file-notes',
+              sourceType: 'file-activity',
+              timestamp: '2026-04-21T09:00:00.000Z',
+              title: '聚类笔记.md',
+              filePath: '/Users/wanbo/Notes/聚类笔记.md',
+              contribution: 'primary',
+            },
+          ],
+        }),
+      ],
+      retrievedContent: [
+        {
+          content: 'K-Means and DBSCAN comparison.',
+          source: 'captured-page-text',
+          url: 'https://example.com/clustering?token=secret',
+          title: 'Clustering guide',
+        },
+      ],
+    });
+
+    expect(prompt).toContain('Markdown link');
+    expect(prompt).toContain('[Clustering guide](https://example.com/clustering)');
+    expect(prompt).not.toContain('token=secret');
+
+    const artifact = await generateKnowledgeFromReviewedMemories(
+      [
+        reviewedMemory({
+          candidateSourceRefs: [
+            {
+              id: 'event:file-notes',
+              sourceType: 'file-activity',
+              timestamp: '2026-04-21T09:00:00.000Z',
+              title: '聚类笔记.md',
+              filePath: '/Users/wanbo/Notes/聚类笔记.md',
+              contribution: 'primary',
+            },
+          ],
+        }),
+      ],
+      {
+        now: () => '2026-04-21T12:00:00.000Z',
+        retrievePageContent: async () => ({
+          content: 'Local file evidence.',
+          source: 'captured-page-text',
+          filePath: '/Users/wanbo/Notes/聚类笔记.md',
+          title: '聚类笔记.md',
+        }),
+      },
+    );
+
+    expect(artifact.body).toContain(
+      '[聚类笔记.md](file:///Users/wanbo/Notes/%E8%81%9A%E7%B1%BB%E7%AC%94%E8%AE%B0.md)',
+    );
+    expect(artifact.body).not.toContain('/Users/wanbo/Notes/聚类笔记.md');
+  });
 });

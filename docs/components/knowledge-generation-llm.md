@@ -47,6 +47,10 @@ The synthesis prompt tells the model:
 - discard navigation chrome, login forms, legal text, repeated boilerplate, iframes, counters, and account/session tokens
 - treat login pages and mailbox shells as weak evidence instead of pretending to know email body content
 - cite sources with labels such as `[S1]`
+- render any URL or local file path in the final `来源` section as a Markdown
+  link, for example `[source title](https://example.com/page)` or
+  `[file title](file:///absolute/path)`, without exposing raw bare URLs or raw
+  bare paths as visible text
 - return markdown with a complete Chinese H1 title plus `核心结论`, `背景与证据`, `可复用知识`, `后续行动 / 待确认`, and `来源`
 - never use random short codes, hashes, ids, URL fragments, or broken English as the knowledge title
 
@@ -58,6 +62,9 @@ The synthesis prompt tells the model:
 - If the model returns no usable Chinese H1 title, the module keeps generation moving by deriving a Chinese fallback title from reviewed memory title, summary, or theme.
 - Mailbox/login-shell pages are marked as weak evidence; boilerplate from those pages must not appear in the draft body.
 - Source URLs in prompts and provenance are stripped of query strings so session ids are not copied into generated knowledge.
+- Degraded fallback provenance also uses Markdown links for URL and local-file
+  evidence, preserving readable labels while keeping raw paths out of visible
+  article text.
 - Missing approval draft ids are handled in the service layer and reported as request errors.
 
 ## Test Strategy

@@ -17,6 +17,7 @@ export interface ContentRetrievalResult {
   content: string;
   source: 'captured-page-text' | 'artifact' | 'live-fetch' | 'unavailable';
   url?: string;
+  filePath?: string;
   title?: string;
 }
 
@@ -105,6 +106,35 @@ function safeUrl(value: string | undefined): string | undefined {
   } catch {
     return value.split('?')[0]?.split('&sid=')[0];
   }
+}
+
+function escapeMarkdownLabel(value: string): string {
+  return value.replace(/[[\]\\]/gu, '\\$&');
+}
+
+function filePathToUri(path: string): string {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `file://${normalizedPath.split('/').map(encodeURIComponent).join('/')}`;
+}
+
+function formatMarkdownSourceLink(input: {
+  title?: string;
+  id?: string;
+  url?: string;
+  filePath?: string;
+}): string {
+  const label = escapeMarkdownLabel(input.title ?? input.id ?? input.url ?? input.filePath ?? 'Source');
+  const url = safeUrl(input.url);
+
+  if (url !== undefined) {
+    return `[${label}](${url})`;
+  }
+
+  if (input.filePath !== undefined && input.filePath.length > 0) {
+    return `[${label}](${filePathToUri(input.filePath)})`;
+  }
+
+  return label;
 }
 
 function toKnowledgeTitle(value: string): string {
@@ -433,6 +463,8 @@ function formatPromptSources(
       return [
         `### S${index + 1}: ${item.title ?? safeUrl(item.url) ?? 'Untitled source'}`,
         `URL: ${safeUrl(item.url) ?? 'unknown'}`,
+        `File path: ${item.filePath ?? 'unknown'}`,
+        `Markdown source link: ${formatMarkdownSourceLink(item)}`,
         `Source kind: ${item.source}`,
         evidenceWarning.trim(),
         'Clean excerpt:',
@@ -471,6 +503,7 @@ export function buildKnowledgeSynthesisPrompt(
     '- Use source excerpts only when they contain substantive task evidence.',
     '- Evidence from login pages, mailbox shells, or pages that only show authentication UI is weak; say what remains unverified instead of pretending to know the email body.',
     '- Preserve provenance using source labels like [S1], [S2].',
+    '- In the final "## 来源" section, every URL or local file path must be rendered as a Markdown link: [source title](https://example.com/page) or [file title](file:///absolute/path). Do not expose raw bare URLs or raw bare paths as visible text.',
     '- Never include secrets, session ids, raw query tokens, or login URLs with sensitive parameters.',
     '',
     'Output format: markdown only, primarily Chinese. The first line must be a complete Chinese H1 title that describes the topic. Do not use ids, hashes, URL fragments, random short codes, or broken English as the title. Use these sections:',
@@ -566,16 +599,12 @@ function formatSources(
   const sourceLines = reviewedMemories.flatMap((memory) =>
     (memory.candidateSourceRefs ?? [])
       .filter((source) => !isSearchUtilitySource(source))
-      .map((source) => {
-        const title = source.title ?? source.id;
-        const url = source.url ? ` (${safeUrl(source.url)})` : '';
-        return `- ${title}${url}`;
-      }),
+      .map((source) => `- ${formatMarkdownSourceLink(source)}`),
   );
   const retrievedLines = retrievedContent
-    .filter((item) => item.url !== undefined)
+    .filter((item) => item.url !== undefined || item.filePath !== undefined)
     .filter((item) => !isSearchUtilitySource(item))
-    .map((item) => `- ${item.title ?? item.url} (${safeUrl(item.url)})`);
+    .map((item) => `- ${formatMarkdownSourceLink(item)}`);
 
   return Array.from(new Set([...sourceLines, ...retrievedLines])).join('\n');
 }

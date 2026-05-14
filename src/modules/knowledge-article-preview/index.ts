@@ -94,6 +94,7 @@ function createReviewedMemory(
       timestamp: candidate.timeRange.startAt,
       title: item.title,
       url: item.url,
+      filePath: item.filePath,
       contribution: 'primary',
     })),
     reviewDate: candidate.timeRange.endAt.slice(0, 10),
@@ -107,15 +108,52 @@ function createRetrievedContent(candidate: WorkSessionCandidate): ContentRetriev
     content: item.excerpt,
     source: 'captured-page-text',
     url: item.url,
+    filePath: item.filePath,
     title: item.title,
   }));
+}
+
+function escapeMarkdownLabel(value: string): string {
+  return value.replace(/[[\]\\]/gu, '\\$&');
+}
+
+function safeUrl(value: string): string {
+  try {
+    const parsed = new URL(value);
+    parsed.search = '';
+    return parsed.toString();
+  } catch {
+    return value.split('?')[0] ?? value;
+  }
+}
+
+function filePathToUri(path: string): string {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `file://${normalizedPath.split('/').map(encodeURIComponent).join('/')}`;
+}
+
+function formatSourceLink(item: {
+  title: string;
+  url?: string;
+  filePath?: string;
+}): string {
+  const label = escapeMarkdownLabel(item.title);
+
+  if (item.url !== undefined) {
+    return `[${label}](${safeUrl(item.url)})`;
+  }
+
+  if (item.filePath !== undefined) {
+    return `[${label}](${filePathToUri(item.filePath)})`;
+  }
+
+  return label;
 }
 
 function buildFallbackBody(candidate: WorkSessionCandidate): string {
   const evidence = (candidate.evidenceItems ?? [])
     .map((item, index) => {
-      const url = item.url !== undefined ? ` (${item.url})` : '';
-      return `- [S${index + 1}] ${item.title}${url}: ${item.excerpt}`;
+      return `- [S${index + 1}] ${formatSourceLink(item)}: ${item.excerpt}`;
     })
     .join('\n');
 

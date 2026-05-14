@@ -31,6 +31,7 @@ export interface WorkSessionEvidenceItem {
   sourceType: string;
   title: string;
   url?: string;
+  filePath?: string;
   summary?: string;
   excerpt: string;
 }
@@ -135,6 +136,27 @@ function getUrl(event: MemoryEvent): string | undefined {
   return urlEntity?.ref ?? urlEntity?.label;
 }
 
+function getFilePath(event: MemoryEvent): string | undefined {
+  const sourceSpecificPath =
+    getSourceSpecificValue(event, 'filePath') ??
+    getSourceSpecificValue(event, 'path') ??
+    getSourceSpecificValue(event, 'fullContentRef');
+
+  if (typeof sourceSpecificPath === 'string' && sourceSpecificPath.length > 0) {
+    return sourceSpecificPath;
+  }
+
+  if (typeof event.content.filePath === 'string' && event.content.filePath.length > 0) {
+    return event.content.filePath;
+  }
+
+  if (typeof event.content.path === 'string' && event.content.path.length > 0) {
+    return event.content.path;
+  }
+
+  return undefined;
+}
+
 function getPageContent(event: MemoryEvent): string | undefined {
   const pageContent = getSourceSpecificValue(event, 'pageContent');
 
@@ -173,6 +195,7 @@ function createEvidenceItem(event: MemoryEvent): WorkSessionEvidenceItem {
   const title = getTitle(event);
   const summary = getSummary(event);
   const url = getUrl(event);
+  const filePath = getFilePath(event);
   const pageContent = getPageContent(event);
   const primaryText =
     pageContent !== undefined && !isSparsePageContent({ pageContent, title, url })
@@ -184,6 +207,7 @@ function createEvidenceItem(event: MemoryEvent): WorkSessionEvidenceItem {
     sourceType: event.sourceType,
     title,
     ...(url !== undefined ? { url } : {}),
+    ...(url === undefined && filePath !== undefined ? { filePath } : {}),
     ...(summary.length > 0 ? { summary } : {}),
     excerpt: truncateText(primaryText, MAX_EVIDENCE_EXCERPT_LENGTH),
   };

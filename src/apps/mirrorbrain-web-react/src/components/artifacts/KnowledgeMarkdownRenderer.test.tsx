@@ -99,6 +99,22 @@ describe('KnowledgeMarkdownRenderer', () => {
 
       const link = screen.getByText('documentation');
       expect(link.tagName).toBe('A');
+      expect(link.getAttribute('href')).toBe('https://example.com');
+    });
+
+    it('renders inline and block math formulas', () => {
+      const body = [
+        'Inline distance $d(x, c)=\\|x-c\\|^2$ in text.',
+        '',
+        '$$',
+        'E = mc^2',
+        '$$',
+      ].join('\n');
+
+      render(<KnowledgeMarkdownRenderer body={body} />);
+
+      expect(document.querySelector('.katex')).not.toBeNull();
+      expect(document.querySelector('.katex-display')).not.toBeNull();
     });
   });
 

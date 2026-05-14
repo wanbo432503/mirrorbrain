@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
 import remarkWikiLink from 'remark-wiki-link';
+import 'katex/dist/katex.min.css';
 import { WikiLinkHoverCard } from './WikiLinkHoverCard';
 
 interface KnowledgeMarkdownRendererProps {
@@ -61,8 +64,7 @@ export function KnowledgeMarkdownRenderer({
     },
   };
 
-  // Custom wiki-link component
-  const WikiLinkComponent = ({
+  const LinkComponent = ({
     href,
     children,
   }: {
@@ -70,6 +72,21 @@ export function KnowledgeMarkdownRenderer({
     children?: React.ReactNode;
   }): React.ReactElement => {
     const targetId = href || '';
+    const isExternalOrFileLink =
+      href !== undefined && /^(https?:|file:|mailto:)/iu.test(href);
+
+    if (isExternalOrFileLink) {
+      return (
+        <a
+          href={href}
+          className="text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary"
+          target={href.startsWith('http') ? '_blank' : undefined}
+          rel={href.startsWith('http') ? 'noreferrer' : undefined}
+        >
+          {children}
+        </a>
+      );
+    }
 
     const handleClick = (event: React.MouseEvent): void => {
       event.preventDefault();
@@ -117,6 +134,7 @@ export function KnowledgeMarkdownRenderer({
       <ReactMarkdown
         remarkPlugins={[
           remarkGfm,
+          remarkMath,
           [
             remarkWikiLink,
             {
@@ -124,8 +142,9 @@ export function KnowledgeMarkdownRenderer({
             },
           ],
         ]}
+        rehypePlugins={[rehypeKatex]}
         components={{
-          a: WikiLinkComponent,
+          a: LinkComponent,
         }}
       >
         {body}

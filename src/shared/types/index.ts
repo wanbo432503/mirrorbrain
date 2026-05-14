@@ -122,6 +122,7 @@ export interface CandidateMemory {
     timestamp: string;
     title?: string;
     url?: string;
+    filePath?: string;
     role?: CandidateSourceRole;
     contribution?: 'primary' | 'supporting';
   }>;
@@ -131,6 +132,7 @@ export interface CandidateMemory {
     timestamp: string;
     title?: string;
     url?: string;
+    filePath?: string;
     role?: CandidateSourceRole;
   }>;
   title: string;
@@ -159,6 +161,7 @@ export interface ReviewedMemory {
     timestamp: string;
     title?: string;
     url?: string;
+    filePath?: string;
     role?: CandidateSourceRole;
     contribution?: 'primary' | 'supporting';
   }>;

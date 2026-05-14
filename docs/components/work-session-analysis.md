@@ -27,6 +27,9 @@ The workflow owns:
   emitted as a reviewable work-session candidate.
 - Preserving source event identifiers, source types, timestamps, and relation
   hints on each candidate.
+- Preserving local file paths on evidence items when authorized file activity
+  events provide them, so later knowledge generation can render file provenance
+  as Markdown links without treating paths as browser URLs.
 - Marking generated candidates as pending review.
 
 The workflow does not own:
@@ -59,6 +62,7 @@ Output:
   - `sourceTypes`: source categories represented in the candidate.
   - `timeRange`: first and last event timestamp inside the candidate.
   - `relationHints`: lightweight source titles for later review and linking.
+  - `evidenceItems`: source excerpts with optional `url` or `filePath`.
   - `reviewState`: initialized to `pending`.
 
 ## Data Flow
@@ -114,5 +118,6 @@ The current tests verify that:
 - Topic clusters with fewer than three memory events are excluded and reported.
 - Source event ids, source types, timestamps, and pending review state are
   preserved.
+- Local file paths are preserved on evidence items for file-activity sources.
 - Events outside the selected window, local browser noise, and duplicates are
   excluded and reported.

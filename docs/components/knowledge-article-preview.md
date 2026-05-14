@@ -16,6 +16,8 @@ The module owns:
   prompt.
 - Passing candidate evidence excerpts to the configured LLM through the
   knowledge-generation LLM prompt builder.
+- Formatting preview fallback sources as Markdown links when evidence carries
+  a URL or local file path, using readable source titles as labels.
 - Returning a typed `KnowledgeArticlePreview` with title, summary, body,
   knowledge type, source types, and memory-event count.
 - Returning an explicit fallback article when LLM synthesis is unavailable.
@@ -57,7 +59,8 @@ Output:
 2. The preview module maps the candidate to a temporary reviewed-memory shape.
 3. Candidate `evidenceItems` become retrieved source-content entries for the
    synthesis prompt. Browser evidence can include captured page-content
-   excerpts from the upstream work-session analysis pipeline.
+   excerpts from the upstream work-session analysis pipeline, and file evidence
+   can include a local `filePath` for rendered provenance links.
 4. `buildKnowledgeSynthesisPrompt` produces the topic-oriented knowledge prompt.
 5. The configured LLM returns Markdown for a human-readable article.
 6. The module strips outer Markdown fences, derives a title from the first H1
@@ -72,12 +75,17 @@ Output:
   publishes it.
 - If candidate evidence excerpts are missing, the fallback and LLM prompt still
   preserve memory-event ids, but article quality will be limited.
+- Fallback `来源` entries must use Markdown links for URLs and local file paths,
+  and must strip URL query strings before display to avoid copying session or
+  tracking tokens into visible knowledge.
 
 ## Test Strategy
 
 - Unit tests verify that candidate evidence excerpts are included in the LLM
   prompt and that the preview metadata is derived from the candidate and LLM
   response.
+- Unit tests verify that URL and local-file fallback sources are rendered with
+  Markdown link syntax instead of visible raw URLs or paths.
 - Service tests verify that `createMirrorBrainService` wires the configured LLM
   into preview generation.
 - HTTP and frontend tests verify the `/knowledge-articles/preview` route and
