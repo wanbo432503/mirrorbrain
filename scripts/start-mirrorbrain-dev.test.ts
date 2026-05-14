@@ -20,7 +20,14 @@ describe('start mirrorbrain dev runtime', () => {
     expect(envExample).toContain('MIRRORBRAIN_LLM_API_BASE=');
     expect(envExample).toContain('MIRRORBRAIN_LLM_API_KEY=');
     expect(envExample).toContain('MIRRORBRAIN_LLM_MODEL=');
+    expect(envExample).toContain('MIRRORBRAIN_EMBEDDING_API_BASE=');
+    expect(envExample).toContain('MIRRORBRAIN_EMBEDDING_API_KEY=');
+    expect(envExample).toContain('MIRRORBRAIN_EMBEDDING_MODEL=');
+    expect(envExample).toContain('MIRRORBRAIN_TAVILY_API_BASE=');
+    expect(envExample).toContain('MIRRORBRAIN_TAVILY_API_KEY=');
+    expect(envExample).toContain('MIRRORBRAIN_TAVILY_MAX_RESULTS=');
     expect(envExample).toContain('MIRRORBRAIN_BROWSER_BUCKET_ID=');
+    expect(envExample).not.toContain('replace-with-your-llm-api-key');
     expect(envExample).not.toContain('MIRRORBRAIN_OPENVIKING_BASE_URL=');
   });
 
@@ -236,6 +243,52 @@ describe('start mirrorbrain dev runtime', () => {
       service: runtimeService,
       syncBrowserMemory: runtimeService.syncBrowserMemory,
       syncShellMemory: runtimeService.syncShellMemory,
+      getResourceConfiguration: vi.fn(async () => ({
+        llm: {
+          enabled: false,
+          providerName: 'OpenAI-compatible chat',
+          baseUrl: 'https://api.openai.com/v1',
+          model: '',
+          apiKeyConfigured: false,
+        },
+        embedding: {
+          enabled: false,
+          providerName: 'OpenAI-compatible embeddings',
+          baseUrl: 'https://api.openai.com/v1',
+          model: '',
+          apiKeyConfigured: false,
+        },
+        search: {
+          enabled: false,
+          providerName: 'tavily' as const,
+          baseUrl: 'https://api.tavily.com',
+          apiKeyConfigured: false,
+          maxResults: 5,
+        },
+      })),
+      updateResourceConfiguration: vi.fn(async () => ({
+        llm: {
+          enabled: false,
+          providerName: 'OpenAI-compatible chat',
+          baseUrl: 'https://api.openai.com/v1',
+          model: '',
+          apiKeyConfigured: false,
+        },
+        embedding: {
+          enabled: false,
+          providerName: 'OpenAI-compatible embeddings',
+          baseUrl: 'https://api.openai.com/v1',
+          model: '',
+          apiKeyConfigured: false,
+        },
+        search: {
+          enabled: false,
+          providerName: 'tavily' as const,
+          baseUrl: 'https://api.tavily.com',
+          apiKeyConfigured: false,
+          maxResults: 5,
+        },
+      })),
       listMemoryEvents: vi.fn(async () => ({
         items: [],
         pagination: {
@@ -482,6 +535,52 @@ describe('start mirrorbrain dev runtime', () => {
           service: runtimeService,
           syncBrowserMemory: runtimeService.syncBrowserMemory,
           syncShellMemory: runtimeService.syncShellMemory,
+          getResourceConfiguration: vi.fn(async () => ({
+            llm: {
+              enabled: false,
+              providerName: 'OpenAI-compatible chat',
+              baseUrl: 'https://api.openai.com/v1',
+              model: '',
+              apiKeyConfigured: false,
+            },
+            embedding: {
+              enabled: false,
+              providerName: 'OpenAI-compatible embeddings',
+              baseUrl: 'https://api.openai.com/v1',
+              model: '',
+              apiKeyConfigured: false,
+            },
+            search: {
+              enabled: false,
+              providerName: 'tavily' as const,
+              baseUrl: 'https://api.tavily.com',
+              apiKeyConfigured: false,
+              maxResults: 5,
+            },
+          })),
+          updateResourceConfiguration: vi.fn(async () => ({
+            llm: {
+              enabled: false,
+              providerName: 'OpenAI-compatible chat',
+              baseUrl: 'https://api.openai.com/v1',
+              model: '',
+              apiKeyConfigured: false,
+            },
+            embedding: {
+              enabled: false,
+              providerName: 'OpenAI-compatible embeddings',
+              baseUrl: 'https://api.openai.com/v1',
+              model: '',
+              apiKeyConfigured: false,
+            },
+            search: {
+              enabled: false,
+              providerName: 'tavily' as const,
+              baseUrl: 'https://api.tavily.com',
+              apiKeyConfigured: false,
+              maxResults: 5,
+            },
+          })),
           listMemoryEvents: vi.fn(async () => ({
             items: [],
             pagination: { total: 0, page: 1, pageSize: 10, totalPages: 1 },
@@ -649,6 +748,52 @@ describe('start mirrorbrain dev runtime', () => {
       service: runtimeService,
       syncBrowserMemory: runtimeService.syncBrowserMemory,
       syncShellMemory: runtimeService.syncShellMemory,
+      getResourceConfiguration: vi.fn(async () => ({
+        llm: {
+          enabled: false,
+          providerName: 'OpenAI-compatible chat',
+          baseUrl: 'https://api.openai.com/v1',
+          model: '',
+          apiKeyConfigured: false,
+        },
+        embedding: {
+          enabled: false,
+          providerName: 'OpenAI-compatible embeddings',
+          baseUrl: 'https://api.openai.com/v1',
+          model: '',
+          apiKeyConfigured: false,
+        },
+        search: {
+          enabled: false,
+          providerName: 'tavily' as const,
+          baseUrl: 'https://api.tavily.com',
+          apiKeyConfigured: false,
+          maxResults: 5,
+        },
+      })),
+      updateResourceConfiguration: vi.fn(async () => ({
+        llm: {
+          enabled: false,
+          providerName: 'OpenAI-compatible chat',
+          baseUrl: 'https://api.openai.com/v1',
+          model: '',
+          apiKeyConfigured: false,
+        },
+        embedding: {
+          enabled: false,
+          providerName: 'OpenAI-compatible embeddings',
+          baseUrl: 'https://api.openai.com/v1',
+          model: '',
+          apiKeyConfigured: false,
+        },
+        search: {
+          enabled: false,
+          providerName: 'tavily' as const,
+          baseUrl: 'https://api.tavily.com',
+          apiKeyConfigured: false,
+          maxResults: 5,
+        },
+      })),
       listMemoryEvents: vi.fn(async () => ({
         items: [],
         pagination: { total: 0, page: 1, pageSize: 10, totalPages: 1 },
@@ -764,6 +909,52 @@ describe('start mirrorbrain dev runtime', () => {
           service: runtimeService,
           syncBrowserMemory: runtimeService.syncBrowserMemory,
           syncShellMemory: runtimeService.syncShellMemory,
+          getResourceConfiguration: vi.fn(async () => ({
+            llm: {
+              enabled: false,
+              providerName: 'OpenAI-compatible chat',
+              baseUrl: 'https://api.openai.com/v1',
+              model: '',
+              apiKeyConfigured: false,
+            },
+            embedding: {
+              enabled: false,
+              providerName: 'OpenAI-compatible embeddings',
+              baseUrl: 'https://api.openai.com/v1',
+              model: '',
+              apiKeyConfigured: false,
+            },
+            search: {
+              enabled: false,
+              providerName: 'tavily' as const,
+              baseUrl: 'https://api.tavily.com',
+              apiKeyConfigured: false,
+              maxResults: 5,
+            },
+          })),
+          updateResourceConfiguration: vi.fn(async () => ({
+            llm: {
+              enabled: false,
+              providerName: 'OpenAI-compatible chat',
+              baseUrl: 'https://api.openai.com/v1',
+              model: '',
+              apiKeyConfigured: false,
+            },
+            embedding: {
+              enabled: false,
+              providerName: 'OpenAI-compatible embeddings',
+              baseUrl: 'https://api.openai.com/v1',
+              model: '',
+              apiKeyConfigured: false,
+            },
+            search: {
+              enabled: false,
+              providerName: 'tavily' as const,
+              baseUrl: 'https://api.tavily.com',
+              apiKeyConfigured: false,
+              maxResults: 5,
+            },
+          })),
           listMemoryEvents: vi.fn(async () => ({
             items: [],
             pagination: { total: 0, page: 1, pageSize: 10, totalPages: 1 },

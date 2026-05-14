@@ -1,17 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { SkillArtifact } from '../types/index';
 import { createMirrorBrainBrowserApi } from './client';
-
-const skillDraft: SkillArtifact = {
-  id: 'skill-draft:reviewed:candidate:browser:vitest',
-  approvalState: 'draft',
-  workflowEvidenceRefs: ['reviewed:candidate:browser:vitest'],
-  executionSafetyMetadata: {
-    requiresConfirmation: true,
-  },
-  updatedAt: '2026-04-21T12:00:00.000Z',
-};
 
 describe('createMirrorBrainBrowserApi', () => {
   it('throws server errors from daily candidate creation instead of returning undefined candidates', async () => {
@@ -132,6 +121,64 @@ describe('createMirrorBrainBrowserApi', () => {
             updatedBy: 'mirrorbrain-web',
           },
         }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          config: {
+            llm: {
+              enabled: false,
+              providerName: 'OpenAI-compatible chat',
+              baseUrl: '',
+              model: '',
+              apiKeyConfigured: false,
+            },
+            embedding: {
+              enabled: false,
+              providerName: 'OpenAI-compatible embeddings',
+              baseUrl: '',
+              model: '',
+              apiKeyConfigured: false,
+            },
+            search: {
+              enabled: false,
+              providerName: 'tavily',
+              baseUrl: '',
+              apiKeyConfigured: false,
+              maxResults: 0,
+            },
+          },
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          config: {
+            llm: {
+              enabled: true,
+              providerName: 'OpenAI-compatible chat',
+              baseUrl: 'https://llm.example.com/v1',
+              model: 'gpt-example',
+              apiKeyConfigured: true,
+              updatedAt: '2026-05-14T10:00:00.000Z',
+              updatedBy: 'mirrorbrain-web',
+            },
+            embedding: {
+              enabled: false,
+              providerName: 'OpenAI-compatible embeddings',
+              baseUrl: '',
+              model: '',
+              apiKeyConfigured: false,
+            },
+            search: {
+              enabled: false,
+              providerName: 'tavily',
+              baseUrl: '',
+              apiKeyConfigured: false,
+              maxResults: 0,
+            },
+          },
+        }),
       }) as unknown as typeof fetch;
     vi.stubGlobal('fetch', fetchMock);
 
@@ -164,6 +211,27 @@ describe('createMirrorBrainBrowserApi', () => {
       enabled: false,
       updatedBy: 'mirrorbrain-web',
     });
+    await expect(api.getResourceConfiguration()).resolves.toMatchObject({
+      search: {
+        providerName: 'tavily',
+        maxResults: 0,
+      },
+    });
+    await expect(
+      api.updateResourceConfiguration({
+        llm: {
+          providerName: 'OpenAI-compatible chat',
+          baseUrl: 'https://llm.example.com/v1',
+          model: 'gpt-example',
+          apiKey: 'new-key',
+          updatedBy: 'mirrorbrain-web',
+        },
+      }),
+    ).resolves.toMatchObject({
+      llm: {
+        apiKeyConfigured: true,
+      },
+    });
 
     expect(fetchMock).toHaveBeenNthCalledWith(1, 'http://localhost:3000/sources/status');
     expect(fetchMock).toHaveBeenNthCalledWith(
@@ -185,6 +253,23 @@ describe('createMirrorBrainBrowserApi', () => {
           sourceInstanceId: 'chrome-main',
           enabled: false,
           updatedBy: 'mirrorbrain-web',
+        }),
+      }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(5, 'http://localhost:3000/resources/config');
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      6,
+      'http://localhost:3000/resources/config',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({
+          llm: {
+            providerName: 'OpenAI-compatible chat',
+            baseUrl: 'https://llm.example.com/v1',
+            model: 'gpt-example',
+            apiKey: 'new-key',
+            updatedBy: 'mirrorbrain-web',
+          },
         }),
       }),
     );

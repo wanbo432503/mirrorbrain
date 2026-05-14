@@ -281,6 +281,54 @@ describe('mirrorbrain http server', () => {
       updatedAt: '2026-05-12T11:00:00.000Z',
       updatedBy: 'mirrorbrain-web',
     }));
+    const getResourceConfiguration = vi.fn(async () => ({
+      llm: {
+        enabled: false,
+        providerName: 'OpenAI-compatible chat',
+        baseUrl: '',
+        model: '',
+        apiKeyConfigured: false,
+      },
+      embedding: {
+        enabled: false,
+        providerName: 'OpenAI-compatible embeddings',
+        baseUrl: '',
+        model: '',
+        apiKeyConfigured: false,
+      },
+      search: {
+        enabled: false,
+        providerName: 'tavily' as const,
+        baseUrl: '',
+        apiKeyConfigured: false,
+        maxResults: 0,
+      },
+    }));
+    const updateResourceConfiguration = vi.fn(async () => ({
+      llm: {
+        enabled: true,
+        providerName: 'OpenAI-compatible chat',
+        baseUrl: 'https://llm.example.com/v1',
+        model: 'gpt-example',
+        apiKeyConfigured: true,
+        updatedAt: '2026-05-14T10:00:00.000Z',
+        updatedBy: 'mirrorbrain-web',
+      },
+      embedding: {
+        enabled: false,
+        providerName: 'OpenAI-compatible embeddings',
+        baseUrl: '',
+        model: '',
+        apiKeyConfigured: false,
+      },
+      search: {
+        enabled: false,
+        providerName: 'tavily' as const,
+        baseUrl: '',
+        apiKeyConfigured: false,
+        maxResults: 0,
+      },
+    }));
     const service = {
       service: {
         status: 'running' as const,
@@ -303,6 +351,8 @@ describe('mirrorbrain http server', () => {
       listSourceAuditEvents,
       listSourceInstanceSummaries,
       updateSourceInstanceConfig,
+      getResourceConfiguration,
+      updateResourceConfiguration,
     };
 
     const server = await startMirrorBrainHttpServer({
@@ -330,6 +380,22 @@ describe('mirrorbrain http server', () => {
       }),
     });
     const configBody = await configResponse.json();
+    const resourceConfigResponse = await fetch(`${server.origin}/resources/config`);
+    const resourceConfigBody = await resourceConfigResponse.json();
+    const resourceUpdateResponse = await fetch(`${server.origin}/resources/config`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        llm: {
+          providerName: 'OpenAI-compatible chat',
+          baseUrl: 'https://llm.example.com/v1',
+          model: 'gpt-example',
+          apiKey: 'new-key',
+          updatedBy: 'mirrorbrain-web',
+        },
+      }),
+    });
+    const resourceUpdateBody = await resourceUpdateResponse.json();
 
     expect(importResponse.status).toBe(202);
     expect(importBody).toEqual({
@@ -380,6 +446,28 @@ describe('mirrorbrain http server', () => {
         updatedBy: 'mirrorbrain-web',
       },
     });
+    expect(resourceConfigResponse.status).toBe(200);
+    expect(resourceConfigBody).toMatchObject({
+      config: {
+        llm: {
+          apiKeyConfigured: false,
+        },
+        search: {
+          providerName: 'tavily',
+          maxResults: 0,
+        },
+      },
+    });
+    expect(resourceUpdateResponse.status).toBe(200);
+    expect(resourceUpdateBody).toMatchObject({
+      config: {
+        llm: {
+          enabled: true,
+          apiKeyConfigured: true,
+          updatedBy: 'mirrorbrain-web',
+        },
+      },
+    });
     expect(updateSourceInstanceConfig).toHaveBeenCalledWith({
       sourceKind: 'browser',
       sourceInstanceId: 'chrome-main',
@@ -389,6 +477,15 @@ describe('mirrorbrain http server', () => {
     expect(listSourceAuditEvents).toHaveBeenCalledWith({
       sourceKind: 'browser',
       sourceInstanceId: undefined,
+    });
+    expect(updateResourceConfiguration).toHaveBeenCalledWith({
+      llm: {
+        providerName: 'OpenAI-compatible chat',
+        baseUrl: 'https://llm.example.com/v1',
+        model: 'gpt-example',
+        apiKey: 'new-key',
+        updatedBy: 'mirrorbrain-web',
+      },
     });
   });
 

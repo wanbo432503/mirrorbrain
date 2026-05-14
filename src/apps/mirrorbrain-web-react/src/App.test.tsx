@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
 
@@ -130,6 +130,37 @@ describe('App', () => {
                 skippedCount: 0,
               },
             ],
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      }
+
+      if (url.endsWith('/resources/config')) {
+        return new Response(
+          JSON.stringify({
+            config: {
+              llm: {
+                enabled: false,
+                providerName: 'OpenAI-compatible chat',
+                baseUrl: '',
+                model: '',
+                apiKeyConfigured: false,
+              },
+              embedding: {
+                enabled: false,
+                providerName: 'OpenAI-compatible embeddings',
+                baseUrl: '',
+                model: '',
+                apiKeyConfigured: false,
+              },
+              search: {
+                enabled: false,
+                providerName: 'tavily',
+                baseUrl: '',
+                apiKeyConfigured: false,
+                maxResults: 0,
+              },
+            },
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } }
         )
@@ -269,6 +300,32 @@ describe('App', () => {
     expect(document.getElementById('published-panel')?.textContent).toContain(
       'No published knowledge articles yet.',
     )
+  })
+
+  it('adds a top-level Configure tab after Skill for provider resources', async () => {
+    const user = userEvent.setup()
+    const fetchMock = stubInitialAppFetch()
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls.map((call) => String(call[0]))
+      ).toContain(`${window.location.origin}/memory?page=1&pageSize=10`)
+    })
+
+    const tabs = screen.getAllByRole('tab').map((tab) => tab.textContent?.trim())
+    expect(tabs).toEqual(['memory sources', 'preview', 'published', 'skill', 'configure'])
+
+    await user.click(screen.getByRole('tab', { name: /^configure$/i }))
+
+    expect(await screen.findByRole('heading', { name: 'LLM' })).not.toBeNull()
+    expect(screen.getByRole('heading', { name: 'Embedding' })).not.toBeNull()
+    expect(screen.getByRole('heading', { name: 'Search' })).not.toBeNull()
+    expect(document.getElementById('configure-panel')).not.toBeNull()
+    expect(
+      fetchMock.mock.calls.map((call) => String(call[0]))
+    ).toContain(`${window.location.origin}/resources/config`)
   })
 
   it('creates a continuous flex height chain for tab panels', async () => {

@@ -24,6 +24,8 @@ import type {
   PublishKnowledgeArticleDraftResult,
   ReviseKnowledgeArticleRequest,
   ReviseKnowledgeArticleResult,
+  ResourceConfiguration,
+  ResourceConfigurationUpdate,
 } from '../types/index';
 
 export interface PaginatedMemoryEvents {
@@ -61,6 +63,10 @@ export interface MirrorBrainWebAppApi {
     enabled: boolean;
     updatedBy: string;
   }): Promise<SourceInstanceConfig>;
+  getResourceConfiguration(): Promise<ResourceConfiguration>;
+  updateResourceConfiguration(
+    update: ResourceConfigurationUpdate
+  ): Promise<ResourceConfiguration>;
   analyzeWorkSessions(preset: AnalysisWindowPreset): Promise<WorkSessionAnalysisResult>;
   reviewWorkSessionCandidate(
     candidate: WorkSessionCandidate,
@@ -235,6 +241,22 @@ export function createMirrorBrainBrowserApi(
         body: JSON.stringify(config),
       });
       const body = await readJson<{ config: SourceInstanceConfig }>(response);
+      return body.config;
+    },
+
+    async getResourceConfiguration() {
+      const response = await fetch(`${baseUrl}/resources/config`);
+      const body = await readJson<{ config: ResourceConfiguration }>(response);
+      return body.config;
+    },
+
+    async updateResourceConfiguration(update) {
+      const response = await fetch(`${baseUrl}/resources/config`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(update),
+      });
+      const body = await readJson<{ config: ResourceConfiguration }>(response);
       return body.config;
     },
 
