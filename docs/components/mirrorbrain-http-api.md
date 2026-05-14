@@ -752,6 +752,8 @@ Response:
 Lists the durable Published Project -> Topic -> Knowledge Article tree. The
 tree groups all published article lineages under their saved project and topic,
 and each article node includes its current-best version plus version history.
+Projects or topics created by review actions are omitted until they contain at
+least one published Knowledge Article.
 
 Response:
 

@@ -16,6 +16,8 @@ The store owns:
   stable `articleId`.
 - Returning the current-best published article for a project/topic pair,
   optionally narrowed to one stable `articleId`.
+- Returning the Published Project -> Topic -> Knowledge Article tree, excluding
+  projects or topics that do not yet contain any published article lineage.
 
 The store does not own:
 
@@ -47,6 +49,9 @@ The store does not own:
    article-specific reads using `articleId`.
 4. Current-best retrieval filters history for the version marked
    `isCurrentBest`.
+5. Published tree listing filters out empty reviewed-project assignments so a
+   kept work session is not presented as published knowledge until an article is
+   actually published.
 
 ## Failure Modes And Constraints
 
@@ -55,10 +60,14 @@ The store does not own:
 - File writes use URL-encoded ids as filenames.
 - Callers must save a new current-best article and any superseded prior version
   together when publishing updates.
+- Saved projects can exist before any Knowledge Article is published. They are
+  intentionally omitted from `listKnowledgeArticleTree()` until at least one
+  topic contains a published article lineage.
 
 ## Test Strategy
 
 Unit tests live in `src/integrations/knowledge-article-store/index.test.ts`.
 
 The tests verify draft persistence, topic listing, current-best lookup, separate
-article histories within one topic, and newest-first article history.
+article histories within one topic, newest-first article history, and omission
+of kept-only reviewed projects from the Published tree.

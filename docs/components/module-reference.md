@@ -432,7 +432,8 @@ Responsibilities:
 - Return current-best articles and newest-first article history, optionally
   scoped to one stable `articleId`.
 - Return the Published Project -> Topic -> Knowledge Article tree with
-  current-best article versions and full article history.
+  current-best article versions and full article history, excluding projects or
+  topics that have no published article lineage.
 
 Inputs:
 

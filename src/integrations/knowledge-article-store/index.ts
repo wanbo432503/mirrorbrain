@@ -233,9 +233,8 @@ export function createFileKnowledgeArticleStore(
       return {
         projects: projects
           .sort((left, right) => compareByNameOrTitle(left.name, right.name))
-          .map((project) => ({
-            project,
-            topics: (topicsByProjectId.get(project.id) ?? [])
+          .map((project) => {
+            const topicsWithArticles = (topicsByProjectId.get(project.id) ?? [])
               .sort((left, right) => compareByNameOrTitle(left.name, right.name))
               .map((topic) => {
                 const articleLineages = articlesByTopicId.get(topic.id) ?? new Map();
@@ -260,8 +259,15 @@ export function createFileKnowledgeArticleStore(
                     compareByNameOrTitle(left.title, right.title),
                   ),
                 };
-              }),
-          })),
+              })
+              .filter((topicNode) => topicNode.articles.length > 0);
+
+            return {
+              project,
+              topics: topicsWithArticles,
+            };
+          })
+          .filter((projectNode) => projectNode.topics.length > 0),
       };
     },
     listArticleHistory: async (filter) => {

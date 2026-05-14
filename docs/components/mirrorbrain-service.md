@@ -82,7 +82,8 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 16. Publish Knowledge Article Drafts under a project/topic, saving current-best versions and any superseded prior version for the same stable `articleId`.
 17. List Knowledge Article history for a project/topic pair.
 18. List the Published Knowledge Article tree by grouping saved projects,
-    topics, article lineages, current-best versions, and history.
+    topics, article lineages, current-best versions, and history, while omitting
+    reviewed-project assignments that do not yet have published articles.
 19. List raw imported memory when review-oriented workflows need event-level
     records, preferring the QMD workspace read path and falling back to
     workspace-cached memory-event files when storage reads fail.
@@ -135,7 +136,10 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
   when operational state exists for only one source
 - unit tests verify manual Phase 4 work-session analysis builds pending candidates from explicit 6h, 24h, or 7d analysis windows
 - unit tests verify explicit work-session review can create a confirmed project and reviewed session
-- unit tests verify persisted reviewed work-session ids can generate Knowledge Article Drafts, unpersisted ids are rejected, published article versions preserve stable article lineages, and the Published tree groups saved projects/topics/articles
+- unit tests verify persisted reviewed work-session ids can generate Knowledge
+  Article Drafts, unpersisted ids are rejected, published article versions
+  preserve stable article lineages, kept-only reviewed projects stay out of the
+  Published tree, and the Published tree groups saved projects/topics/articles
 - unit tests verify the service forwards retrieval calls to the plugin API with
   the configured QMD workspace directory and retrieval input
 - unit tests verify review-oriented flows still use raw memory event listing where needed

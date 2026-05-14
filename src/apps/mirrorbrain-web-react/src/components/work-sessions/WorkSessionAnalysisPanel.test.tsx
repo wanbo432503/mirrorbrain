@@ -64,6 +64,8 @@ describe('WorkSessionAnalysisPanel', () => {
           updatedAt: '2026-05-12T12:05:00.000Z',
         },
       })),
+      generateKnowledgeArticleDraft: vi.fn(),
+      publishKnowledgeArticleDraft: vi.fn(),
       listKnowledgeArticleTree: vi.fn(async () => ({ projects: [] })),
     } as unknown as MirrorBrainWebAppApi
     const user = userEvent.setup()
@@ -79,6 +81,9 @@ describe('WorkSessionAnalysisPanel', () => {
     expect(screen.getAllByText('mirrorbrain').length).toBeGreaterThan(0)
     expect(screen.getByText('1 excluded')).not.toBeNull()
     expect(screen.queryByRole('button', { name: 'Publish' })).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: 'Generate knowledge for Phase 4 design' }))
+    expect(await screen.findByRole('button', { name: 'Publish' })).not.toBeNull()
 
     await user.clear(screen.getByLabelText('Project name for Phase 4 design'))
     await user.type(screen.getByLabelText('Project name for Phase 4 design'), 'MirrorBrain')
@@ -99,6 +104,8 @@ describe('WorkSessionAnalysisPanel', () => {
         },
       },
     )
+    expect(api.generateKnowledgeArticleDraft).not.toHaveBeenCalled()
+    expect(api.publishKnowledgeArticleDraft).not.toHaveBeenCalled()
     expect(await screen.findByText('Reviewed into project: project:mirrorbrain')).not.toBeNull()
     expect(screen.queryByRole('button', { name: 'Keep as project' })).toBeNull()
     expect(screen.queryByText('Phase 4 design')).toBeNull()

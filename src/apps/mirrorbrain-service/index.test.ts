@@ -769,6 +769,53 @@ describe('mirrorbrain service', () => {
     await rm(workspaceDir, { recursive: true, force: true });
   });
 
+  it('keeps reviewed work-session project assignments out of the published knowledge tree until article publication', async () => {
+    const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-kept-project-'));
+    const candidate: WorkSessionCandidate = {
+      id: 'work-session-candidate:kept-only',
+      projectHint: 'mirrorbrain',
+      title: 'Kept project assignment',
+      summary: 'This work session is reviewed but not published as knowledge.',
+      memoryEventIds: ['browser-1'],
+      sourceTypes: ['browser'],
+      timeRange: {
+        startAt: '2026-05-12T10:00:00.000Z',
+        endAt: '2026-05-12T10:30:00.000Z',
+      },
+      relationHints: ['Project assignment only'],
+      reviewState: 'pending',
+    };
+    const service = createMirrorBrainService(
+      {
+        workspaceDir,
+        service: {
+          status: 'running',
+          syncBrowserMemory: vi.fn(),
+          syncShellMemory: vi.fn(),
+          stop: vi.fn(),
+        },
+      },
+      {
+        now: () => '2026-05-12T12:10:00.000Z',
+      },
+    );
+
+    await service.reviewWorkSessionCandidate(candidate, {
+      decision: 'keep',
+      reviewedBy: 'user',
+      projectAssignment: {
+        kind: 'confirmed-new-project',
+        name: 'MirrorBrain',
+      },
+    });
+
+    await expect(service.listKnowledgeArticleTree()).resolves.toEqual({
+      projects: [],
+    });
+
+    await rm(workspaceDir, { recursive: true, force: true });
+  });
+
   it('rejects Knowledge Article Draft generation from unpersisted reviewed work-session ids', async () => {
     const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-article-service-'));
     const service = createMirrorBrainService(
