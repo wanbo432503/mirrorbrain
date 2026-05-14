@@ -197,7 +197,20 @@ function summarizePageText(text: string): string {
     .slice(0, 280);
 }
 
-function shouldFetchBrowserPageContent(event: MemoryEvent, url: string): boolean {
+function normalizeSparsePageContent(value: string): string {
+  return value
+    .replace(/\s+/gu, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function shouldFetchBrowserPageContent(
+  event: MemoryEvent,
+  input: {
+    title: string;
+    url: string;
+  },
+): boolean {
   const sourceSpecific = event.content.sourceSpecific;
   const pageContent =
     typeof sourceSpecific === 'object' &&
@@ -205,8 +218,18 @@ function shouldFetchBrowserPageContent(event: MemoryEvent, url: string): boolean
     typeof (sourceSpecific as { pageContent?: unknown }).pageContent === 'string'
       ? (sourceSpecific as { pageContent: string }).pageContent.trim()
       : '';
+  const normalizedPageContent = normalizeSparsePageContent(pageContent);
+  const normalizedTitle = normalizeSparsePageContent(input.title);
+  const normalizedUrl = normalizeSparsePageContent(input.url);
+  const sparsePlaceholders = new Set([
+    '',
+    normalizedTitle,
+    normalizedUrl,
+    normalizeSparsePageContent(`${input.title}\n\n${input.url}`),
+    normalizeSparsePageContent(`${input.title} ${input.url}`),
+  ]);
 
-  return pageContent.length === 0 || pageContent === url;
+  return sparsePlaceholders.has(normalizedPageContent);
 }
 
 async function enrichBrowserLedgerMemoryEvent(
@@ -230,7 +253,7 @@ async function enrichBrowserLedgerMemoryEvent(
     url === null ||
     !/^https?:\/\//iu.test(url) ||
     isSkippableBrowserPageUrl(url) ||
-    !shouldFetchBrowserPageContent(event, url)
+    !shouldFetchBrowserPageContent(event, { title, url })
   ) {
     return event;
   }

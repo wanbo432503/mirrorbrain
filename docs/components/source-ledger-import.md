@@ -15,10 +15,13 @@ schedule, while the MirrorBrain service local runtime supplies a one-minute
 interval so newly captured source-ledger records are imported promptly.
 
 The workflow keeps source acquisition behind the ledger boundary for activity
-records. For browser ledger entries whose `page_content` is empty or only
-duplicates the URL, it performs a best-effort readable page fetch before writing
-the resulting `MemoryEvent`, so downstream review and knowledge generation have
-substantive page text instead of URL-only placeholders.
+records. The ActivityWatch browser ledger bridge now tries to fetch readable
+page text before writing `browser.jsonl`; this importer also keeps a fallback
+for older or third-party browser ledger entries whose `page_content` is empty,
+title-only, URL-only, or a title-plus-URL placeholder. In those sparse cases it
+performs a best-effort readable page fetch before writing the resulting
+`MemoryEvent`, so downstream review and knowledge generation have substantive
+page text instead of URL-only placeholders.
 
 ## Responsibility Boundary
 
@@ -107,8 +110,8 @@ Outputs:
 - Scheduled import failures do not stop future polling ticks.
 - Browser page fetch failures are non-fatal and preserve the original imported
   event.
-- Browser enrichment only runs for sparse `page_content`, currently empty text
-  or text equal to the URL.
+- Browser enrichment only runs for sparse `page_content`, currently empty text,
+  title-only text, URL-only text, or title-plus-URL placeholders.
 - Checkpoints are currently line-number based. A later scanner can add
   file-size or mtime prefiltering without changing the workflow contract.
 - The workflow does not own authorization policy, but it can enforce the

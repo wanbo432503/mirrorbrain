@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { getMirrorBrainConfig } from '../../shared/config/index.js';
 import {
+  captureActivityWatchBrowserLedgerRecords,
   createActivityWatchBrowserMemorySourcePlugin,
   createInitialBrowserSyncPlan,
   createIncrementalBrowserSyncPlan,
@@ -164,6 +165,92 @@ describe('activitywatch browser source', () => {
         },
       ]),
     ).toBe('aw-watcher-web-chrome_wanbodeMacBook-Pro-2.local');
+  });
+
+  it('fetches readable page text before writing browser ledger records', async () => {
+    const config = getMirrorBrainConfig();
+    const fetchPageContent = vi.fn(async () => ({
+      url: 'https://docs.vllm.ai/projects/recipes/en/latest/Google/Gemma4.html#offline-inference-multimodal',
+      title: 'Gemma 4 Usage Guide - vLLM Recipes',
+      fetchedAt: '2026-05-13T02:54:03.182Z',
+      text: [
+        'Gemma 4 Usage Guide - vLLM Recipes',
+        '',
+        'This recipe explains offline multimodal inference with Gemma 4 in vLLM.',
+        '',
+        'It includes installation steps, model loading, and generation examples.',
+      ].join('\n'),
+    }));
+
+    const records = await captureActivityWatchBrowserLedgerRecords(
+      {
+        bucketId: 'aw-watcher-web-chrome',
+        config,
+        now: '2026-05-13T02:54:03.182Z',
+        scopeId: 'scope-browser',
+      },
+      {
+        checkpointStore: {
+          readCheckpoint: async () => null,
+          writeCheckpoint: async () => undefined,
+        },
+        fetchBrowserEvents: async () => [
+          {
+            id: '3239',
+            timestamp: '2026-05-13T02:53:09.461000+00:00',
+            data: {
+              title: 'Gemma 4 Usage Guide - vLLM Recipes',
+              url: 'https://docs.vllm.ai/projects/recipes/en/latest/Google/Gemma4.html#offline-inference-multimodal',
+            },
+          },
+        ],
+        fetchPageContent,
+      },
+    );
+
+    expect(fetchPageContent).toHaveBeenCalledWith({
+      url: 'https://docs.vllm.ai/projects/recipes/en/latest/Google/Gemma4.html#offline-inference-multimodal',
+      title: 'Gemma 4 Usage Guide - vLLM Recipes',
+      fetchedAt: '2026-05-13T02:54:03.182Z',
+    });
+    expect(records[0]?.payload).toMatchObject({
+      id: '3239',
+      title: 'Gemma 4 Usage Guide - vLLM Recipes',
+      url: 'https://docs.vllm.ai/projects/recipes/en/latest/Google/Gemma4.html#offline-inference-multimodal',
+      page_content: [
+        'Gemma 4 Usage Guide - vLLM Recipes',
+        '',
+        'This recipe explains offline multimodal inference with Gemma 4 in vLLM.',
+        '',
+        'It includes installation steps, model loading, and generation examples.',
+      ].join('\n'),
+    });
+  });
+
+  it('rejects unauthorized browser ledger capture before fetching events', async () => {
+    const fetchBrowserEvents = vi.fn(async () => []);
+
+    await expect(
+      captureActivityWatchBrowserLedgerRecords(
+        {
+          bucketId: 'aw-watcher-web-chrome',
+          config: getMirrorBrainConfig(),
+          now: '2026-05-13T02:54:03.182Z',
+          scopeId: 'scope-browser',
+        },
+        {
+          checkpointStore: {
+            readCheckpoint: async () => null,
+            writeCheckpoint: async () => undefined,
+          },
+          authorizeSourceSync: async () => false,
+          fetchBrowserEvents,
+        },
+      ),
+    ).rejects.toThrow(
+      'Memory source activitywatch-browser-ledger:aw-watcher-web-chrome is not authorized for scope scope-browser.',
+    );
+    expect(fetchBrowserEvents).not.toHaveBeenCalled();
   });
 
   it('filters local browser pages before they become memory events', () => {

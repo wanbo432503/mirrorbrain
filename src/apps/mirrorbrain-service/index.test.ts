@@ -1412,9 +1412,11 @@ describe('mirrorbrain service', () => {
           syncShellMemory: vi.fn(),
           stop: vi.fn(),
         },
+        browserBucketId: 'aw-watcher-web-chrome',
         workspaceDir,
       },
       {
+        captureBrowserLedgerRecords: vi.fn(async () => []),
         createSourceLedgerStateStore: vi.fn(() => stateStore),
         createMemoryEventWriter: vi.fn(() => ({
           writeMemoryEvent: async (record: {
@@ -1503,9 +1505,11 @@ describe('mirrorbrain service', () => {
           syncShellMemory: vi.fn(),
           stop: vi.fn(),
         },
+        browserBucketId: 'aw-watcher-web-chrome',
         workspaceDir,
       },
       {
+        captureBrowserLedgerRecords: vi.fn(async () => []),
         createSourceLedgerStateStore: vi.fn(() => stateStore),
         importSourceLedgers: vi.fn(async () => ({
           importedCount: 0,

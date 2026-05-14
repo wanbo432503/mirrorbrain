@@ -122,25 +122,25 @@ describe('source ledger import workflow', () => {
     ]);
   });
 
-  it('fetches readable page content for browser ledger entries before writing MemoryEvents', async () => {
+  it('fetches readable page content for browser ledger entries whose page_content only contains title and URL', async () => {
     const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-ledgers-'));
     const ledgerDir = join(workspaceDir, 'mirrorbrain', 'ledgers', '2026-05-12');
     await mkdir(ledgerDir, { recursive: true });
     await writeFile(
       join(ledgerDir, 'browser.jsonl'),
-      '{"schemaVersion":"1","sourceKind":"browser","sourceInstanceId":"chrome-main","occurredAt":"2026-05-12T10:00:00.000Z","payload":{"id":"page-1","title":"Sparse Page","url":"https://example.com/sparse","page_content":"https://example.com/sparse"}}',
+      '{"schemaVersion":"source-ledger.v1","sourceKind":"browser","sourceInstanceId":"chrome-main","occurredAt":"2026-05-12T10:00:00.000Z","payload":{"id":"page-1","title":"Gemma 4 Usage Guide - vLLM Recipes","url":"https://docs.vllm.ai/projects/recipes/en/latest/Google/Gemma4.html#offline-inference-multimodal","page_content":"Gemma 4 Usage Guide - vLLM Recipes\\n\\nhttps://docs.vllm.ai/projects/recipes/en/latest/Google/Gemma4.html#offline-inference-multimodal"}}',
     );
     const writtenEvents: MemoryEvent[] = [];
     const fetchBrowserPageContent = vi.fn(async () => ({
-      url: 'https://example.com/sparse',
-      title: 'Fetched Sparse Page',
+      url: 'https://docs.vllm.ai/projects/recipes/en/latest/Google/Gemma4.html#offline-inference-multimodal',
+      title: 'Gemma 4 Usage Guide - vLLM Recipes',
       fetchedAt: '2026-05-12T10:31:00.000Z',
       text: [
-        'Fetched Sparse Page',
+        'Gemma 4 Usage Guide - vLLM Recipes',
         '',
-        'This fetched page explains browser source import enrichment.',
+        'This recipe explains offline multimodal inference with Gemma 4 in vLLM.',
         '',
-        'It gives knowledge generation enough page substance to summarize.',
+        'It includes installation steps, model loading, and generation examples.',
       ].join('\n'),
     }));
 
@@ -162,23 +162,23 @@ describe('source ledger import workflow', () => {
     );
 
     expect(fetchBrowserPageContent).toHaveBeenCalledWith({
-      url: 'https://example.com/sparse',
-      title: 'Sparse Page',
+      url: 'https://docs.vllm.ai/projects/recipes/en/latest/Google/Gemma4.html#offline-inference-multimodal',
+      title: 'Gemma 4 Usage Guide - vLLM Recipes',
       fetchedAt: '2026-05-12T10:31:00.000Z',
     });
     expect(writtenEvents).toHaveLength(1);
     expect(writtenEvents[0].content).toMatchObject({
-      title: 'Fetched Sparse Page',
+      title: 'Gemma 4 Usage Guide - vLLM Recipes',
       summary:
-        'Fetched Sparse Page This fetched page explains browser source import enrichment. It gives knowledge generation enough page substance to summarize.',
+        'Gemma 4 Usage Guide - vLLM Recipes This recipe explains offline multimodal inference with Gemma 4 in vLLM. It includes installation steps, model loading, and generation examples.',
       sourceSpecific: {
-        url: 'https://example.com/sparse',
+        url: 'https://docs.vllm.ai/projects/recipes/en/latest/Google/Gemma4.html#offline-inference-multimodal',
         pageContent: [
-          'Fetched Sparse Page',
+          'Gemma 4 Usage Guide - vLLM Recipes',
           '',
-          'This fetched page explains browser source import enrichment.',
+          'This recipe explains offline multimodal inference with Gemma 4 in vLLM.',
           '',
-          'It gives knowledge generation enough page substance to summarize.',
+          'It includes installation steps, model loading, and generation examples.',
         ].join('\n'),
         pageContentSource: 'web-fetch',
         pageContentFetchedAt: '2026-05-12T10:31:00.000Z',

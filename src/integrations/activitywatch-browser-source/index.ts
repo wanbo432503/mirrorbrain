@@ -5,6 +5,10 @@ import {
 } from '../../modules/memory-capture/index.js';
 import type { CapturedSourceRecord } from '../source-ledger-recorders/index.js';
 import type { SyncCheckpoint, SyncCheckpointStore } from '../file-sync-checkpoint-store/index.js';
+import {
+  fetchBrowserPageContent,
+  isSkippableBrowserPageUrl,
+} from '../browser-page-content/index.js';
 import type { MemoryEvent } from '../../shared/types/index.js';
 import type { MirrorBrainConfig } from '../../shared/types/index.js';
 import type { MemorySourceSyncAuthorizationDependency } from '../../workflows/memory-source-sync/index.js';
@@ -74,6 +78,7 @@ interface CaptureActivityWatchBrowserLedgerRecordsDependencies {
   checkpointStore: SyncCheckpointStore;
   authorizeSourceSync?: MemorySourceSyncAuthorizationDependency;
   fetchBrowserEvents?: typeof fetchActivityWatchBrowserEvents;
+  fetchPageContent?: typeof fetchBrowserPageContent;
 }
 
 const BROWSER_DUPLICATE_WINDOW_MS = 2 * 60 * 1000;
@@ -340,10 +345,40 @@ async function assertBrowserLedgerCaptureAuthorized(input: {
   }
 }
 
-function toBrowserLedgerRecord(input: {
+async function resolveBrowserLedgerPageContent(input: {
   event: ActivityWatchBrowserEvent;
   capturedAt: string;
-}): CapturedSourceRecord {
+  fetchPageContent: typeof fetchBrowserPageContent;
+}): Promise<string> {
+  const fallback = buildBrowserLedgerPageContent(input.event);
+  const url = input.event.data.url.trim();
+
+  if (
+    !/^https?:\/\//iu.test(url) ||
+    isSkippableBrowserPageUrl(url)
+  ) {
+    return fallback;
+  }
+
+  try {
+    const page = await input.fetchPageContent({
+      url,
+      title: input.event.data.title,
+      fetchedAt: input.capturedAt,
+    });
+    const text = page.text.trim();
+
+    return text.length > 0 ? page.text : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+async function toBrowserLedgerRecord(input: {
+  event: ActivityWatchBrowserEvent;
+  capturedAt: string;
+  fetchPageContent: typeof fetchBrowserPageContent;
+}): Promise<CapturedSourceRecord> {
   return {
     occurredAt: input.event.timestamp,
     capturedAt: input.capturedAt,
@@ -351,7 +386,7 @@ function toBrowserLedgerRecord(input: {
       id: input.event.id,
       title: input.event.data.title,
       url: input.event.data.url,
-      page_content: buildBrowserLedgerPageContent(input.event),
+      page_content: await resolveBrowserLedgerPageContent(input),
     },
   };
 }
@@ -387,8 +422,9 @@ export async function captureActivityWatchBrowserLedgerRecords(
     end: plan.end,
   });
   const seenEventIds = new Set<string>();
-  const records = rawEvents
-    .filter((event) => {
+  const fetchPageContent = dependencies.fetchPageContent ?? fetchBrowserPageContent;
+  const records = await Promise.all(
+    rawEvents.filter((event) => {
       if (seenEventIds.has(event.id)) {
         return false;
       }
@@ -401,14 +437,10 @@ export async function captureActivityWatchBrowserLedgerRecords(
       toBrowserLedgerRecord({
         event,
         capturedAt: input.now,
+        fetchPageContent,
       }),
-    );
-
-  await assertBrowserLedgerCaptureAuthorized({
-    sourceKey,
-    scopeId: input.scopeId,
-    authorizeSourceSync: dependencies.authorizeSourceSync,
-  });
+    ),
+  );
 
   await dependencies.checkpointStore.writeCheckpoint({
     sourceKey,
