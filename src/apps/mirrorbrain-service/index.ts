@@ -1745,6 +1745,7 @@ export function createMirrorBrainService(
           ? [result.supersededArticle, result.article]
           : [result.article],
       );
+      await knowledgeArticleStore.deleteDraft(input.draft.id);
 
       return result;
     },

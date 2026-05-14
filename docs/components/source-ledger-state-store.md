@@ -40,6 +40,12 @@ All files live under `<workspaceDir>/mirrorbrain/`:
 File names are encoded from ledger paths or event ids. The JSON payload remains
 the authoritative record.
 
+`source-audit-events/` is intentionally retained even though it is not part of
+the knowledge tree. It answers operational questions such as why an import
+skipped lines, when a source was disabled, and whether a recorder is degraded.
+Removing it would make Source Management status explainability depend on raw
+ledgers or transient process logs.
+
 ## Key Interfaces
 
 - `createFileSourceLedgerStateStore(...)`

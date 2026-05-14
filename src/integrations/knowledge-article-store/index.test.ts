@@ -1,4 +1,4 @@
-import { access, mkdtemp, rm } from 'node:fs/promises';
+import { access, mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -102,6 +102,19 @@ describe('file knowledge article store', () => {
     await store.saveProject(project);
     await store.saveTopic(topic);
     await store.saveDraft(draft);
+    await expect(
+      access(
+        join(
+          workspaceDir,
+          'mirrorbrain',
+          'knowledge',
+          'project',
+          'preview_mirrorbrain',
+          'source-ledger',
+          'preview_knowledge-article-draft-source-ledger.json',
+        ),
+      ),
+    ).resolves.toBeUndefined();
     await store.saveArticles([versionOne, versionTwo, siblingArticle]);
 
     await expect(store.listDrafts()).resolves.toEqual([draft]);
@@ -152,6 +165,39 @@ describe('file knowledge article store', () => {
         },
       ],
     });
+    await expect(
+      readdir(join(workspaceDir, 'mirrorbrain', 'knowledge', 'project')),
+    ).resolves.toEqual(['mirrorbrain']);
+    await expect(
+      readdir(
+        join(
+          workspaceDir,
+          'mirrorbrain',
+          'knowledge',
+          'project',
+          'mirrorbrain',
+          'source-ledger',
+        ),
+      ),
+    ).resolves.toEqual([
+      '_topic.json',
+      'knowledge-article-article-project-mirrorbrain-topic-source-ledger-recorder-supervision-v1.json',
+      'knowledge-article-article-project-mirrorbrain-topic-source-ledger-source-ledger-architecture-v1.json',
+      'knowledge-article-article-project-mirrorbrain-topic-source-ledger-source-ledger-architecture-v2.json',
+      'preview_knowledge-article-draft-source-ledger.json',
+    ]);
+    await expect(
+      access(join(workspaceDir, 'mirrorbrain', 'projects')),
+    ).rejects.toThrow();
+    await expect(
+      access(join(workspaceDir, 'mirrorbrain', 'topics')),
+    ).rejects.toThrow();
+    await expect(
+      access(join(workspaceDir, 'mirrorbrain', 'knowledge-article-drafts')),
+    ).rejects.toThrow();
+    await expect(
+      access(join(workspaceDir, 'mirrorbrain', 'knowledge-articles')),
+    ).rejects.toThrow();
   });
 
   it('deletes one published article lineage without removing sibling articles', async () => {
@@ -218,8 +264,11 @@ describe('file knowledge article store', () => {
         join(
           workspaceDir,
           'mirrorbrain',
-          'knowledge-articles',
-          `${encodeURIComponent(versionOne.id)}.json`,
+          'knowledge',
+          'project',
+          'mirrorbrain',
+          'source-ledger',
+          'knowledge-article-source-ledger-v1.json',
         ),
       ),
     ).rejects.toThrow();
@@ -250,5 +299,56 @@ describe('file knowledge article store', () => {
         },
       ],
     });
+  });
+
+  it('removes preview knowledge files after a draft is published', async () => {
+    const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-article-preview-'));
+    tempDirs.push(workspaceDir);
+    const store = createFileKnowledgeArticleStore({ workspaceDir });
+    const project: Project = {
+      id: 'project:mirrorbrain',
+      name: 'MirrorBrain',
+      status: 'active',
+      createdAt: '2026-05-12T12:00:00.000Z',
+      updatedAt: '2026-05-12T12:00:00.000Z',
+    };
+    const draft: KnowledgeArticleDraft = {
+      id: 'knowledge-article-draft:source-ledger',
+      draftState: 'draft',
+      projectId: project.id,
+      title: 'Source ledger architecture',
+      summary: 'Draft source ledger article.',
+      body: 'Draft body.',
+      topicProposal: {
+        kind: 'new-topic',
+        name: 'Source ledger',
+      },
+      articleOperationProposal: {
+        kind: 'create-new-article',
+      },
+      sourceReviewedWorkSessionIds: ['reviewed-work-session:1'],
+      sourceMemoryEventIds: ['memory-1'],
+      provenanceRefs: [{ kind: 'memory-event', id: 'memory-1' }],
+      generatedAt: '2026-05-12T12:00:00.000Z',
+    };
+
+    await store.saveProject(project);
+    await store.saveDraft(draft);
+    await store.deleteDraft(draft.id);
+
+    await expect(store.listDrafts()).resolves.toEqual([]);
+    await expect(
+      access(
+        join(
+          workspaceDir,
+          'mirrorbrain',
+          'knowledge',
+          'project',
+          'preview_mirrorbrain',
+          'source-ledger',
+          'preview_knowledge-article-draft-source-ledger.json',
+        ),
+      ),
+    ).rejects.toThrow();
   });
 });

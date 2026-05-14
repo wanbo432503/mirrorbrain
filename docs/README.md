@@ -127,12 +127,16 @@ subdirectories:
 - `candidate-memories/`: generated review candidates.
 - `reviewed-memories/`: user review decisions.
 - `memory-narratives/`: offline browser and shell recall summaries.
-- `knowledge/`: knowledge drafts, topic candidates, and topic knowledge.
+- `knowledge/project/`: project -> topic -> knowledge tree. New projects and
+  draft knowledge files use the `preview_` prefix; published projects and
+  published knowledge files omit that prefix.
 - `skill-drafts/`: generated skill artifacts.
 - `state/sync-checkpoints/`: source-aware incremental sync checkpoints.
 - `state/source-ledger-checkpoints/`: Phase 4 per-ledger line checkpoints.
-- `source-audit-events/`: operational source audit events, separate from user
-  work evidence.
+- `source-audit-events/`: operational source audit events for Source Management
+  diagnostics and importer/recorder status. These records are separate from
+  user work evidence and are not used for memory retrieval, knowledge
+  generation, or skill evidence.
 - `cache/`: display-oriented memory event cache.
 - `deleted-artifacts/`: deletion tombstones for knowledge and skills.
 

@@ -660,6 +660,19 @@ pre-generation requirement.
 Published Knowledge Articles are durable, project-scoped, topic-organized, and
 atomic.
 
+Workspace persistence follows the product tree directly:
+
+```text
+mirrorbrain/knowledge/project/<project>/<topic>/<knowledge>.json
+```
+
+New projects that have reviewed work but no published knowledge use a
+`preview_` project-directory prefix. Draft knowledge files use a `preview_`
+filename prefix. Published projects and published knowledge files omit that
+prefix. The UI should use those prefixes as the durable lifecycle signal for
+Preview versus Published surfaces instead of scattering drafts, projects,
+topics, and articles across separate root-level directories.
+
 Each article has:
 
 - stable article ID
