@@ -6,12 +6,10 @@ playwright-report
 .claude
 .superpowers
 .mirrorbrain-web
-mirrorbrain
 .mirrorbrain
 findings.md
 progress.md
 task_plan.md
-AGENTS.md
 .omx
 
 # Ignore all dist directories (build outputs)

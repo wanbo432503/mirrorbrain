@@ -2,133 +2,102 @@
 
 [README 中文版](./README_CN.md)
 
-MirrorBrain / 镜像大脑 is a local-first global personal memory system for
-authorized PC work activity. It records, imports, reviews, and organizes work
-context across sources so a person can recover what happened, turn important
-sessions into durable knowledge, and distill repeatable workflows into
-reviewable skills.
+MirrorBrain / 镜像大脑 is a local-first personal memory system for authorized PC work activity. It helps a user turn scattered work traces into three explicit products:
 
-## Background
+- **Memory**: source-attributed records and recall views of what happened.
+- **Knowledge**: reviewed, human-readable knowledge articles organized by project and topic.
+- **Skill**: draft or approved Agent Skill artifacts distilled from repeatable workflow evidence.
 
-Modern work leaves useful context across browser pages, local files, shell
-commands, screenshots, and agent conversations. Without a dedicated personal
-memory system, that context is scattered, hard to review, and difficult to
-reuse safely.
+MirrorBrain is API-first and local-first. It runs as an independent local service with a React control UI, and host applications such as `openclaw` can consume its memory, knowledge, and skill capabilities through explicit APIs.
 
-MirrorBrain is not a generic note app and is no longer described primarily as
-an `openclaw` plugin. Its role is to convert authorized personal work activity
-into explicit, source-attributed memory products:
+## Current Status
 
-- `memory`: source-attributed activity records, recall views, candidate
-  memories, reviewed memories, work-session candidates, and retrieval
-  narratives.
-- `knowledge`: human-readable synthesized artifacts derived from reviewed work,
-  organized as Project -> Topic -> Knowledge Article with version history.
-- `skill`: draft or approved Agent Skill artifacts derived from repeatable
-  workflow evidence, with confirmation boundaries preserved before execution.
+The repository now contains a runnable local baseline with:
 
-Phase 1 proved the local vertical slice. The repository now has a runnable
-Phase 2 / Phase 3 baseline: browser and shell memory sync, review workflows,
-topic-oriented knowledge, knowledge graph views, skill draft flows, a local
-HTTP API, and a React control UI. Phase 4 changes the center of gravity to a
-multi-source personal memory system: built-in source recorders write daily
-JSONL ledgers, the importer converts those ledgers into unified `MemoryEvent`
-records, users analyze time windows into reviewed work sessions, and reviewed
-sessions feed project-scoped knowledge articles. For the current status
-snapshot, see [Current Project Status](./docs/features/current-project-status.md).
+- ActivityWatch browser memory sync.
+- Configured shell history sync with best-effort command redaction.
+- Phase 4 source-ledger import for daily JSONL records from browser, file activity, screenshot, audio recording, shell, and agent source kinds.
+- Source status and audit views.
+- Work-session analysis for user-selected time windows.
+- Preview and Published Project -> Topic -> Knowledge trees.
+- Knowledge Article draft, revision, publication, and history flows.
+- Topic knowledge, knowledge graph, and quality/lint workflows from earlier phases.
+- Skill draft generation from reviewed evidence.
+- Fastify HTTP API, OpenAPI docs, and a React local operator UI.
+- QMD-backed indexing and retrieval under the MirrorBrain workspace.
 
-## Philosophy
+For the detailed implementation snapshot, see [Current Project Status](./docs/features/current-project-status.md).
 
-- User authorization comes first. Capture must be opt-in, source-scoped,
-  attributable, and reviewable.
-- Memory, knowledge, and skill are separate lifecycle products. The code,
-  APIs, and docs should not blur their boundaries.
-- Review is a product boundary. Raw activity can become candidate memory, but
-  durable knowledge and reusable skills require explicit review or approval.
-- Provenance must survive transformations. Records should remain traceable from
-  source capture through review, knowledge synthesis, and skill drafting.
-- MirrorBrain owns the personal memory workflow. Host applications, including
-  `openclaw`, can consume memory, knowledge, and skill capabilities through
-  explicit APIs, but they do not define or own MirrorBrain's internal lifecycle.
-- Skills are not silent automation. Skill artifacts can guide agents, but
-  execution requires confirmation unless a narrower safe exception is explicitly
-  designed and documented.
+## Product Model
 
-## Feature Overview
+MirrorBrain keeps memory, knowledge, and skill separate throughout the lifecycle.
 
 ### Memory
 
-- Sync authorized browser activity from ActivityWatch and `aw-watcher-web`.
-- Sync authorized shell history files when configured, with best-effort command
-  secret redaction before MirrorBrain persistence.
-- Import Phase 4 daily JSONL ledgers for browser, file activity, screenshot,
-  shell, and agent source kinds through a unified source-ledger
-  boundary.
-- Track source status, source audit events, and per-ledger checkpoints for
-  operational visibility.
-- Keep browser activity capture and readable page text capture as separate
-  authorization decisions. The runtime service denies page text backfill by
-  default unless a page-content authorization dependency is explicitly wired.
-- Keep daily candidate memory generation as a compatibility review path.
-- Analyze user-selected time windows into work-session candidates as the
-  primary Phase 4 candidate-generation and review flow.
-- Store reviewed memories with source references and review decisions.
-- Query memory through the local HTTP API and optional host adapters.
-- Generate browser theme and shell problem narratives for recall-oriented
-  questions such as "what did I do before?" or "how did I solve this issue?".
+Memory is the recall layer. It contains authorized, source-attributed activity records and derived review views.
+
+Typical memory inputs include:
+
+- browser events from ActivityWatch / `aw-watcher-web`
+- shell history from an explicitly configured shell history path
+- Phase 4 source-ledger JSONL records
+- future document and host-agent sources once authorization and review boundaries are complete
+
+Memory is never treated as durable knowledge automatically. It stays attributable, inspectable, and reviewable.
 
 ### Knowledge
 
-- Generate knowledge drafts from reviewed memories in the compatibility flow.
-- Produce topic-oriented knowledge artifacts with current-best versions.
-- Generate Phase 4 Knowledge Article Drafts from reviewed work sessions.
-- Organize durable knowledge under Project -> Topic -> Knowledge Article.
-- Preserve provenance from reviewed memory into generated knowledge.
-- Maintain topic history and knowledge graph views.
-- Support quality checks and review-oriented regeneration flows.
+Knowledge is the reviewed synthesis layer. In the current Phase 4 flow, reviewed work sessions produce project-scoped knowledge article drafts, which can then be previewed, revised, and published.
+
+The durable reading model is:
+
+```text
+Project -> Topic -> Knowledge Article -> Revision History
+```
+
+Knowledge artifacts preserve provenance back to reviewed work and supporting memory evidence.
 
 ### Skill
 
-- Draft Agent Skills from reviewed workflow evidence.
-- Preserve workflow evidence references in every skill artifact.
-- Track approval state and execution safety metadata.
-- Keep confirmation requirements explicit before any future execution flow.
+Skill artifacts are reusable Agent Skill drafts generated from reviewed workflow evidence. They preserve evidence references and approval metadata. MirrorBrain does not silently execute skills; execution remains confirmation-bound unless a narrower safe exception is explicitly designed and documented.
 
-### Operator Surfaces
+## Main Local Workflow
 
-- Fastify HTTP service with OpenAPI JSON and Swagger UI.
-- React Web UI for local control, Memory Sources, work-session review,
-  preview/published Project -> Topic -> Knowledge trees, knowledge browsing,
-  and skill draft inspection.
-- Local workspace artifacts for inspectable records and fallback reads.
-- QMD-backed indexing and retrieval inside the same MirrorBrain workspace.
-- Shared API contract schemas for public knowledge and skill artifact DTOs.
-- Optional integration surfaces for host applications that want to consume
-  MirrorBrain capabilities.
+A typical local MirrorBrain flow is:
 
-### Safety And Contract Baselines
+```text
+Authorized sources
+  -> source sync / source-ledger import
+  -> normalized MemoryEvent records
+  -> work-session analysis
+  -> human review
+  -> preview knowledge tree
+  -> published Project -> Topic -> Knowledge Article
+```
 
-- Generic memory-source sync checks runtime authorization before upstream fetch
-  and again before persistence.
-- Shell memory stores redacted command content and redacted command-derived
-  identifiers; it does not modify the user's original shell history file.
-- Browser page text capture is URL-level, separately authorized, and best
-  effort. Browser event capture can proceed without page text capture.
-- HTTP response schemas for knowledge and skill artifacts live in
-  `src/shared/api-contracts/` so transport optionality does not silently drift
-  from domain types.
+In the UI this usually means:
 
-### Current Non-Goals
+1. Open **Memory Sources** and run source import or sync.
+2. Inspect imported memory events and source audit/status information.
+3. Open the review/work-session surface and analyze a 6-hour, 24-hour, or 7-day window.
+4. Review generated work-session candidates.
+5. Inspect the Preview Project -> Topic -> Knowledge tree.
+6. Publish useful reviewed knowledge into the durable Published tree.
+7. Optionally use the older Knowledge and Skill tabs for topic knowledge, graph, and skill draft workflows.
 
-- Document import is not implemented yet.
-- Full real source recorders for file activity, screenshot, richer shell
-  sessions, and agent session directories are not complete yet.
-- Durable authorization-scope management UI, source-instance allowlists, and
-  revocation workflows are not complete yet.
-- Production deployment, multi-user auth, retention policy, and network
-  hardening are outside the current local-first baseline.
-- Autonomous skill execution beyond draft generation and safety metadata is not
-  implemented.
+## Architecture At A Glance
+
+| Layer | Path | Responsibility |
+| --- | --- | --- |
+| Service facade | `src/apps/mirrorbrain-service` | Composes runtime dependencies and exposes high-level MirrorBrain operations. |
+| HTTP server | `src/apps/mirrorbrain-http-server` | Fastify API, OpenAPI docs, static UI serving, request/response validation. |
+| React UI | `src/apps/mirrorbrain-web-react` | Local control UI that consumes the HTTP API only. |
+| Domain modules | `src/modules` | Memory, knowledge, skill, authorization, graph, article, and review domain rules. |
+| Workflows | `src/workflows` | Multi-step sync, import, analysis, narrative, merge, lint, and skill-draft orchestration. |
+| Integrations | `src/integrations` | ActivityWatch, shell history, QMD workspace, source-ledger state, page content, and host adapters. |
+| Shared | `src/shared` | Types, API contracts, config, and cross-cutting utilities. |
+
+For the complete module catalog, see [Module Reference](./docs/components/module-reference.md).
 
 ## Quick Start
 
@@ -139,7 +108,7 @@ Install or prepare:
 - Node.js
 - `pnpm`
 - ActivityWatch running locally
-- `aw-watcher-web` installed in the target browser
+- `aw-watcher-web` installed in the browser you want to authorize
 
 Default local addresses:
 
@@ -151,7 +120,7 @@ Default local addresses:
 1. Install ActivityWatch from `https://activitywatch.net/`.
 2. Start ActivityWatch.
 3. Install `aw-watcher-web` in the browser you want to authorize.
-4. Confirm the ActivityWatch UI shows browser tab events.
+4. Confirm that the ActivityWatch UI shows browser tab events.
 
 ### 3. Configure MirrorBrain
 
@@ -173,14 +142,13 @@ MIRRORBRAIN_LLM_API_KEY=replace-with-your-llm-api-key
 MIRRORBRAIN_LLM_MODEL=replace-with-your-llm-model
 ```
 
-MirrorBrain reads `MIRRORBRAIN_LLM_*` directly for knowledge and title
-generation. Memory, knowledge, and skill artifacts are stored under
-`MIRRORBRAIN_WORKSPACE_DIR`; QMD keeps its derived SQLite/vector index under
-`<workspaceDir>/mirrorbrain/qmd/`.
+MirrorBrain stores memory, knowledge, and skill artifacts under `MIRRORBRAIN_WORKSPACE_DIR`. QMD stores its rebuildable SQLite/vector index under:
 
-The React UI is a nested app rather than a root `pnpm` workspace package today.
-Install its dependencies before running `pnpm dev`; the dev command invokes the
-nested Vite build watcher directly.
+```text
+<workspaceDir>/mirrorbrain/qmd/
+```
+
+`MIRRORBRAIN_LLM_*` is used by knowledge and title generation flows. Memory sync and basic local inspection can still run independently of knowledge generation quality.
 
 ### 4. Run MirrorBrain
 
@@ -188,10 +156,7 @@ nested Vite build watcher directly.
 pnpm dev
 ```
 
-The dev command validates local configuration, checks the QMD workspace and
-ActivityWatch readiness, starts the React build watcher, starts the local HTTP
-service, enables shell sync when configured, and prints the service address,
-process id, and log path.
+The dev command validates local configuration, checks QMD workspace readiness and ActivityWatch availability, starts the React build watcher, starts the HTTP service, enables configured sync/import loops, and prints the service address, process id, and log path.
 
 Open the local UI:
 
@@ -205,69 +170,52 @@ Open the API docs:
 http://127.0.0.1:3007/docs
 ```
 
-### 5. Verify The Local Flow
+Open the OpenAPI JSON:
+
+```text
+http://127.0.0.1:3007/openapi.json
+```
+
+## Verify The Local Flow
 
 In the Web UI:
 
-1. Open `Memory Sources`, select `All Sources`, and run `Import Sources`.
-2. Confirm imported memory events appear in the paginated memory list.
-3. Open a source detail page to inspect source status, recent memory, or audit
-   events.
-4. Run a work-session analysis window when you want to group recent activity
-   into reviewable sessions.
-5. Review the Preview Project -> Topic -> Knowledge tree and publish useful
-   knowledge into the durable Published tree.
-6. Open `Knowledge` when you need the older knowledge browsing or approval
-   surfaces.
-7. Open `Skill` and generate a skill draft from reviewed evidence.
+1. Open **Memory Sources**.
+2. Select **All Sources** and run **Import Sources**.
+3. Confirm imported memory events appear in the paginated memory list.
+4. Open a source detail page to inspect source status, recent memory, and audit events.
+5. Run a work-session analysis window.
+6. Review generated work-session candidates.
+7. Inspect the Preview Project -> Topic -> Knowledge tree.
+8. Publish useful knowledge into the durable Published tree.
+9. Open **Skill** and generate a skill draft from reviewed evidence when needed.
 
 Expected results:
 
-- Memory events show source attribution.
-- Daily candidates remain available for compatibility review flows.
+- Imported memory events keep source attribution.
 - Source audit/status views show import and recorder state.
-- Work-session candidates preserve their supporting memory evidence and appear
-  as preview knowledge tree items before publication.
-- Published preview knowledge becomes durable Project -> Topic -> Knowledge
-  Article content with provenance.
-- Knowledge drafts retain reviewed-work provenance.
-- Knowledge articles are organized by project and topic where Phase 4 flows are
-  used.
-- Approved topic knowledge appears in topic and graph views.
-- Skill drafts retain workflow evidence refs and confirmation metadata.
+- Work-session candidates preserve supporting memory evidence.
+- Preview knowledge can be published into durable Project -> Topic -> Knowledge Article content.
+- Knowledge articles preserve provenance and revision history.
+- Skill drafts preserve workflow evidence refs and confirmation metadata.
 
-## Architecture And API Documentation
+## API And Documentation
 
-Architecture details live in `docs/components/` instead of this README.
+Architecture and component details live in `docs/` rather than this README.
 
 Start with:
 
 - [Documentation index](./docs/README.md)
-- [Module reference](./docs/components/module-reference.md)
+- [Current Project Status](./docs/features/current-project-status.md)
+- [Module Reference](./docs/components/module-reference.md)
 - [MirrorBrain HTTP API](./docs/components/mirrorbrain-http-api.md)
-- [API contracts](./docs/components/api-contracts.md)
 - [MirrorBrain service](./docs/components/mirrorbrain-service.md)
 - [MirrorBrain HTTP server](./docs/components/mirrorbrain-http-server.md)
-- [Local runtime](./docs/components/local-runtime.md)
-- [Authorization scope policy](./docs/components/authorization-scope-policy.md)
-- [Memory source sync](./docs/components/memory-source-sync.md)
-- [Memory review storage](./docs/components/memory-review-storage.md)
-- [Browser memory sync](./docs/components/browser-memory-sync.md)
-- [Browser page content](./docs/components/browser-page-content.md)
-- [OpenClaw plugin API](./docs/components/openclaw-plugin-api.md) optional host adapter
+- [Work Session Analysis UI](./docs/components/work-session-analysis-ui.md)
+- [Knowledge Article](./docs/components/knowledge-article.md)
+- [Knowledge Article Revision](./docs/components/knowledge-article-revision.md)
 - [QMD workspace store](./docs/components/qmd-workspace-store.md)
-- [Source directory audit](./docs/components/source-directory-audit.md)
-- [ActivityWatch browser source](./docs/components/activitywatch-browser-source.md)
-- [Shell history source](./docs/components/shell-history-source.md)
-- [Memory review](./docs/components/memory-review.md)
-- [Knowledge generation LLM](./docs/components/knowledge-generation-llm.md)
-- [Knowledge lint](./docs/components/knowledge-lint.md)
-- [Knowledge compilation system](./docs/components/knowledge-compilation-system.md)
-- [Topic knowledge merge](./docs/components/topic-knowledge-merge.md)
-- [Topic knowledge read](./docs/components/topic-knowledge-read.md)
-- [Topic knowledge quality](./docs/components/topic-knowledge-quality.md)
-- [Skill draft builder](./docs/components/skill-draft-builder.md)
-- [Skill draft management](./docs/components/skill-draft-management.md)
+- [OpenClaw plugin API](./docs/components/openclaw-plugin-api.md)
 
 ## Common Commands
 
@@ -292,3 +240,19 @@ React UI checks:
 pnpm --dir src/apps/mirrorbrain-web-react exec vitest run
 pnpm --dir src/apps/mirrorbrain-web-react build
 ```
+
+## Current Non-Goals
+
+- Document ingestion is not implemented yet.
+- Full real source recorders for file activity, screenshot, richer shell sessions, and agent session directories are not complete yet.
+- Durable authorization-scope management UI, source-instance allowlists, and revocation workflows are not complete yet.
+- Production deployment, multi-user auth, retention policy, and network hardening are outside the current local-first baseline.
+- Autonomous skill execution beyond draft generation and safety metadata is not implemented.
+
+## Safety Principles
+
+- Capture is opt-in and source-scoped.
+- Source attribution must survive capture, review, knowledge synthesis, and skill drafting.
+- Review is a product boundary: raw memory does not automatically become durable knowledge or executable skill.
+- Sensitive data must not be silently promoted into durable artifacts.
+- Host applications can consume MirrorBrain capabilities through APIs, but MirrorBrain owns its capture, review, and synthesis workflows.
