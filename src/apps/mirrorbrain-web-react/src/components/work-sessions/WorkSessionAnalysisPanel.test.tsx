@@ -377,6 +377,7 @@ describe('WorkSessionAnalysisPanel', () => {
       draft,
       publishedBy: 'mirrorbrain-web',
       topicAssignment: { kind: 'confirmed-new-topic', name: 'Source ledger' },
+      autoResolvePublishDecision: true,
     })
 
     expect(await screen.findByText('Published preview knowledge.')).not.toBeNull()

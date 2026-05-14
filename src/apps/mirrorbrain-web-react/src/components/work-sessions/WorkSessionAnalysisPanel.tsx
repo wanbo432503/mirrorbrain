@@ -39,6 +39,13 @@ function formatVersionCount(count: number): string {
   return count === 1 ? '1 version' : `${count} versions`
 }
 
+function normalizeProjectName(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
+}
+
 function TreeChevron({ expanded }: { expanded: boolean }) {
   return (
     <span
@@ -259,15 +266,24 @@ export default function WorkSessionAnalysisPanel({
     try {
       const projectName = projectNames[candidate.id]?.trim() || project.projectName
       const topicName = topic.topicName
+      const existingProject = publishedTree.projects.find(
+        (projectNode) =>
+          normalizeProjectName(projectNode.project.name) === normalizeProjectName(projectName),
+      )?.project
       const reviewResult = await api.reviewWorkSessionCandidate(candidate, {
         decision: 'keep',
         reviewedBy: 'mirrorbrain-web',
         title: knowledge.title,
         summary: knowledge.summary,
-        projectAssignment: {
-          kind: 'confirmed-new-project',
-          name: projectName,
-        },
+        projectAssignment: existingProject
+          ? {
+              kind: 'existing-project',
+              projectId: existingProject.id,
+            }
+          : {
+              kind: 'confirmed-new-project',
+              name: projectName,
+            },
       })
       const draft = await api.generateKnowledgeArticleDraft({
         reviewedWorkSessionIds: [reviewResult.reviewedWorkSession.id],
@@ -290,6 +306,7 @@ export default function WorkSessionAnalysisPanel({
           kind: 'confirmed-new-topic',
           name: topicName,
         },
+        autoResolvePublishDecision: true,
       })
 
       setPublishedTree(await api.listKnowledgeArticleTree())

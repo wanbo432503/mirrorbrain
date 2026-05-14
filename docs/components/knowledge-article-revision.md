@@ -37,8 +37,7 @@ Output:
   - `summary`.
   - `body`.
 
-The LLM response must be valid JSON with those three string fields. The body is
-a full Markdown article, not a diff.
+The LLM response must contain JSON with those three string fields. The parser accepts strict JSON, fenced `json` blocks, and plain `json { ... }` prefixes so minor model formatting drift does not break the explicit revision flow. The body is a full Markdown article, not a diff.
 
 ## Data Flow
 
@@ -66,5 +65,5 @@ Unit tests live in
 The tests verify:
 
 - Prompt construction includes the instruction and article content.
-- Fenced JSON LLM responses parse into revised article content.
+- Fenced JSON and plain `json { ... }` LLM responses parse into revised article content.
 - Empty instructions are rejected without calling the LLM.

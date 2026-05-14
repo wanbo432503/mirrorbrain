@@ -370,6 +370,7 @@ export interface PublishKnowledgeArticleDraftRequest {
   draft: KnowledgeArticleDraft;
   publishedBy: string;
   topicAssignment: TopicAssignment;
+  autoResolvePublishDecision?: boolean;
 }
 
 export interface PublishKnowledgeArticleDraftResult {

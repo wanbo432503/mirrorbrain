@@ -18,6 +18,8 @@ The module owns:
 - Publishing drafts into durable project/topic article versions.
 - Marking prior current-best article versions as superseded when an update is
   published.
+- Attaching supporting evidence as a new version that preserves current-best
+  title, summary, and body while merging provenance.
 - Creating revision drafts from existing published articles so explicit
   user-requested LLM revisions can publish a new version in the same article
   lineage without losing provenance.
@@ -93,7 +95,8 @@ Revision draft output:
 1. Reviewed work sessions provide project-scoped, source-attributed synthesis
    input.
 2. A draft is created with a topic proposal and article operation proposal.
-3. The user can correct topic/article assignment before publishing.
+3. Preview publication can ask the publish-decision module to automatically
+   select an existing topic/article operation before durable publish.
 4. Publish resolves the final topic assignment.
 5. The module resolves a stable article lineage id.
 6. The module creates the next version for that article lineage and marks it as
@@ -115,6 +118,9 @@ Revision draft output:
 - Publishing does not create executable skills.
 - Revision drafts do not change source attribution. They only replace title,
   summary, and body before the normal versioned publish path runs.
+- `attach-as-supporting-evidence` requires a matching current-best article to
+  preserve; otherwise the draft content is published normally under the resolved
+  article id.
 
 ## Test Strategy
 
@@ -131,5 +137,6 @@ The tests verify:
   `articleId` and version streams.
 - Publishing an update creates a new current-best version and returns the prior
   version as superseded.
+- Attaching supporting evidence preserves article content and merges provenance.
 - Creating a revision draft preserves the existing article lineage and
   provenance refs.

@@ -264,6 +264,7 @@ describe('work-session analysis', () => {
       projectHint: 'mirrorbrain',
       memoryEventIds: [
         'source-ledger-page-1',
+        'source-ledger-page-duplicate',
         'source-ledger-shell-1',
         'source-ledger-page-2',
       ],
@@ -280,10 +281,7 @@ describe('work-session analysis', () => {
     expect(result.candidates[1].summary).toContain(
       'Ran Vitest for the source-ledger importer',
     );
-    expect(result.excludedMemoryEventIds).toEqual([
-      'local-browser-1',
-      'source-ledger-page-duplicate',
-    ]);
+    expect(result.excludedMemoryEventIds).toEqual(['local-browser-1']);
   });
 
   it('infers project and topic hints for source-ledger browser records without explicit entities', () => {
@@ -453,6 +451,79 @@ describe('work-session analysis', () => {
       filePath: '/Users/wanbo/Notes/聚类笔记.md',
     });
     expect(result.candidates[0].evidenceItems?.[0]).not.toHaveProperty('url');
+  });
+
+  it('uses repeated non-local page interactions as topic strength while filtering local and low-value pages', () => {
+    const result = analyzeWorkSessionCandidates({
+      analysisWindow: {
+        preset: 'last-6-hours',
+        startAt: '2026-05-12T06:00:00.000Z',
+        endAt: '2026-05-12T12:00:00.000Z',
+      },
+      generatedAt: '2026-05-12T12:00:00.000Z',
+      memoryEvents: [
+        memoryEvent({
+          id: 'local-ui',
+          timestamp: '2026-05-12T09:00:00.000Z',
+          sourceType: 'browser',
+          title: 'MirrorBrain - Personal Memory & Knowledge System',
+          summary: 'Local UI should not become knowledge evidence.',
+          url: 'http://127.0.0.1:3007/',
+        }),
+        memoryEvent({
+          id: 'google-search',
+          timestamp: '2026-05-12T09:10:00.000Z',
+          sourceType: 'browser',
+          title: 'llm-wiki karpathy - Google Search',
+          summary: 'Search result page.',
+          url: 'https://www.google.com/search?q=llm-wiki+karpathy',
+        }),
+        memoryEvent({
+          id: 'openrouter-activity',
+          timestamp: '2026-05-12T09:20:00.000Z',
+          sourceType: 'browser',
+          title: 'Activity | OpenRouter',
+          summary: 'Provider activity page.',
+          url: 'https://openrouter.ai/activity',
+        }),
+        memoryEvent({
+          id: 'llm-wiki-1',
+          timestamp: '2026-05-12T10:00:00.000Z',
+          sourceType: 'browser',
+          title: 'llm-wiki',
+          summary: 'Karpathy LLM wiki notes.',
+          url: 'https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f',
+        }),
+        memoryEvent({
+          id: 'llm-wiki-2',
+          timestamp: '2026-05-12T10:10:00.000Z',
+          sourceType: 'browser',
+          title: 'llm-wiki',
+          summary: 'Karpathy LLM wiki notes.',
+          url: 'https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f',
+        }),
+        memoryEvent({
+          id: 'openwiki-repo',
+          timestamp: '2026-05-12T10:20:00.000Z',
+          sourceType: 'browser',
+          title: 'OpenWiki/README.zh-CN.md at main · kdsz001/OpenWiki',
+          summary: 'OpenWiki is a knowledge system inspired by LLM wiki workflows.',
+          url: 'https://github.com/kdsz001/OpenWiki/blob/main/README.zh-CN.md',
+        }),
+      ],
+    });
+
+    expect(result.candidates).toHaveLength(1);
+    expect(result.candidates[0]).toMatchObject({
+      projectHint: 'Knowledge systems research',
+      title: 'LLM wiki and knowledge systems',
+      memoryEventIds: ['llm-wiki-1', 'llm-wiki-2', 'openwiki-repo'],
+    });
+    expect(result.excludedMemoryEventIds).toEqual([
+      'local-ui',
+      'google-search',
+      'openrouter-activity',
+    ]);
   });
 
   it('filters low-value update pages and only emits abstract topics with at least three memory events', () => {

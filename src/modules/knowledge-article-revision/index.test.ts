@@ -67,6 +67,28 @@ describe('knowledge-article-revision', () => {
     expect(analyzeWithLLM).toHaveBeenCalledWith(expect.stringContaining('Make the risks clearer.'));
   });
 
+  it('parses plain json-prefixed LLM responses into revised article content', async () => {
+    const analyzeWithLLM = vi.fn(async () =>
+      `json ${JSON.stringify({
+        title: 'Source ledger architecture refined',
+        summary: 'Refines source ledger handling.',
+        body: '# Source ledger architecture refined\n\nRefined body.',
+      })}`,
+    );
+
+    await expect(
+      reviseKnowledgeArticleContent({
+        article,
+        instruction: 'Refine the wording.',
+        analyzeWithLLM,
+      }),
+    ).resolves.toEqual({
+      title: 'Source ledger architecture refined',
+      summary: 'Refines source ledger handling.',
+      body: '# Source ledger architecture refined\n\nRefined body.',
+    });
+  });
+
   it('rejects empty revision instructions before calling the LLM', async () => {
     const analyzeWithLLM = vi.fn();
 

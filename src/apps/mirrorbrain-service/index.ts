@@ -112,6 +112,7 @@ import {
   type PublishKnowledgeArticleDraftResult,
   type TopicAssignment,
 } from '../../modules/knowledge-article/index.js';
+import { decideKnowledgeArticlePublishOperation } from '../../modules/knowledge-article-publish-decision/index.js';
 import {
   generateKnowledgeArticlePreview as generatePhase4KnowledgeArticlePreview,
   type GenerateKnowledgeArticlePreviewInput as GeneratePhase4KnowledgeArticlePreviewInput,
@@ -402,6 +403,7 @@ interface PublishKnowledgeArticleDraftServiceInput {
   draft: KnowledgeArticleDraft;
   publishedBy: string;
   topicAssignment: TopicAssignment;
+  autoResolvePublishDecision?: boolean;
 }
 
 interface ReviseKnowledgeArticleServiceInput {
@@ -1466,19 +1468,46 @@ export function createMirrorBrainService(
     publishKnowledgeArticleDraft: async (
       input: PublishKnowledgeArticleDraftServiceInput,
     ): Promise<PublishKnowledgeArticleDraftResult> => {
+      const projectTopics = await knowledgeArticleStore.listTopics(input.draft.projectId);
+      const projectArticles = (
+        await Promise.all(
+          projectTopics.map((topic) =>
+            knowledgeArticleStore.listArticleHistory({
+              projectId: input.draft.projectId,
+              topicId: topic.id,
+            }),
+          ),
+        )
+      ).flat();
+      const publishDecision = input.autoResolvePublishDecision === true
+        ? await decideKnowledgeArticlePublishOperation({
+            draft: input.draft,
+            topics: projectTopics,
+            articles: projectArticles,
+            analyzeWithLLM: analyzeKnowledge,
+          })
+        : {
+            topicProposal: input.draft.topicProposal,
+            topicAssignment: input.topicAssignment,
+            articleOperationProposal: input.draft.articleOperationProposal,
+          };
+      const resolvedDraft: KnowledgeArticleDraft = {
+        ...input.draft,
+        topicProposal: publishDecision.topicProposal,
+        articleOperationProposal: publishDecision.articleOperationProposal,
+      };
       const topicId =
-        input.topicAssignment.kind === 'existing-topic'
-          ? input.topicAssignment.topicId
-          : `topic:${input.draft.projectId.replace(/[^a-z0-9]+/giu, '-').toLowerCase().replace(/^-|-$/gu, '')}:${input.topicAssignment.name.toLowerCase().replace(/[^a-z0-9]+/gu, '-').replace(/^-|-$/gu, '')}`;
-      const existingArticles = await knowledgeArticleStore.listArticleHistory({
-        projectId: input.draft.projectId,
-        topicId,
-      });
+        publishDecision.topicAssignment.kind === 'existing-topic'
+          ? publishDecision.topicAssignment.topicId
+          : `topic:${input.draft.projectId.replace(/[^a-z0-9]+/giu, '-').toLowerCase().replace(/^-|-$/gu, '')}:${publishDecision.topicAssignment.name.toLowerCase().replace(/[^a-z0-9]+/gu, '-').replace(/^-|-$/gu, '')}`;
+      const existingArticles = projectArticles.filter(
+        (article) => article.topicId === topicId,
+      );
       const result = publishPhase4KnowledgeArticleDraft({
-        draft: input.draft,
+        draft: resolvedDraft,
         publishedAt: now(),
         publishedBy: input.publishedBy,
-        topicAssignment: input.topicAssignment,
+        topicAssignment: publishDecision.topicAssignment,
         existingArticles,
       });
 

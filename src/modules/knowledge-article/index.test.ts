@@ -312,6 +312,74 @@ describe('knowledge article model', () => {
     });
   });
 
+  it('attaches supporting evidence as a new version without replacing current-best content', () => {
+    const priorArticle: KnowledgeArticle = {
+      id: 'knowledge-article:article-project-mirrorbrain-topic-source-ledger-source-ledger-import-architecture:v1',
+      articleId:
+        'article:project-mirrorbrain:topic-source-ledger:source-ledger-import-architecture',
+      projectId: 'project:mirrorbrain',
+      topicId: 'topic:source-ledger',
+      title: 'Source ledger import architecture',
+      summary: 'Prior source ledger notes.',
+      body: 'Prior body.',
+      version: 1,
+      isCurrentBest: true,
+      supersedesArticleId: null,
+      sourceReviewedWorkSessionIds: ['reviewed-work-session:old'],
+      sourceMemoryEventIds: ['old-memory'],
+      provenanceRefs: [{ kind: 'memory-event', id: 'old-memory' }],
+      publishState: 'published',
+      publishedAt: '2026-05-11T12:20:00.000Z',
+      publishedBy: 'user',
+    };
+    const draft = createKnowledgeArticleDraft({
+      reviewedWorkSessions: [reviewedWorkSession],
+      generatedAt: '2026-05-12T12:10:00.000Z',
+      title: 'Source ledger side note',
+      summary: 'Supporting source ledger evidence.',
+      body: 'This body should not replace the durable article.',
+      topicProposal: {
+        kind: 'existing-topic',
+        topicId: 'topic:source-ledger',
+      },
+      articleOperationProposal: {
+        kind: 'attach-as-supporting-evidence',
+        articleId: priorArticle.articleId,
+      },
+    });
+
+    const result = publishKnowledgeArticleDraft({
+      draft,
+      publishedAt: '2026-05-12T12:20:00.000Z',
+      publishedBy: 'user',
+      topicAssignment: {
+        kind: 'existing-topic',
+        topicId: 'topic:source-ledger',
+      },
+      existingArticles: [priorArticle],
+    });
+
+    expect(result.article).toMatchObject({
+      articleId: priorArticle.articleId,
+      title: priorArticle.title,
+      summary: priorArticle.summary,
+      body: priorArticle.body,
+      version: 2,
+      supersedesArticleId: priorArticle.id,
+      sourceReviewedWorkSessionIds: [
+        'reviewed-work-session:old',
+        'reviewed-work-session:source-ledger',
+      ],
+      sourceMemoryEventIds: ['old-memory', 'browser-1', 'shell-1'],
+      provenanceRefs: [
+        { kind: 'memory-event', id: 'old-memory' },
+        { kind: 'reviewed-work-session', id: 'reviewed-work-session:source-ledger' },
+        { kind: 'memory-event', id: 'browser-1' },
+        { kind: 'memory-event', id: 'shell-1' },
+      ],
+    });
+  });
+
   it('creates a revision draft from an existing published article lineage', () => {
     const priorArticle: KnowledgeArticle = {
       id: 'knowledge-article:article-project-mirrorbrain-topic-source-ledger-source-ledger-import-architecture:v1',

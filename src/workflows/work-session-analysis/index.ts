@@ -42,7 +42,7 @@ interface AnalyzeWorkSessionCandidatesInput {
   memoryEvents: MemoryEvent[];
 }
 
-const MIN_TOPIC_MEMORY_EVENT_COUNT = 3;
+const MIN_TOPIC_INTERACTION_COUNT = 3;
 const MAX_EVIDENCE_EXCERPT_LENGTH = 900;
 
 function isInWindow(event: MemoryEvent, window: MemoryTimeRange): boolean {
@@ -228,6 +228,10 @@ function inferProjectHint(event: MemoryEvent): string {
     return 'AI agents research';
   }
 
+  if (inferResearchTopic(event) !== undefined) {
+    return 'Knowledge systems research';
+  }
+
   const rawUrl = getUrl(event);
 
   if (rawUrl !== undefined) {
@@ -245,6 +249,68 @@ function inferProjectHint(event: MemoryEvent): string {
   return 'unassigned';
 }
 
+function getHostname(event: MemoryEvent): string | undefined {
+  const rawUrl = getUrl(event);
+
+  if (rawUrl === undefined) {
+    return undefined;
+  }
+
+  try {
+    const hostname = new URL(rawUrl).hostname.toLowerCase();
+
+    return hostname.startsWith('www.') ? hostname.slice(4) : hostname;
+  } catch {
+    return undefined;
+  }
+}
+
+function getPathSegments(event: MemoryEvent): string[] {
+  const rawUrl = getUrl(event);
+
+  if (rawUrl === undefined) {
+    return [];
+  }
+
+  try {
+    return new URL(rawUrl).pathname
+      .split('/')
+      .map((segment) => segment.trim())
+      .filter((segment) => segment.length > 0);
+  } catch {
+    return [];
+  }
+}
+
+function inferRepositoryTopic(event: MemoryEvent): string | undefined {
+  const hostname = getHostname(event);
+  const segments = getPathSegments(event);
+
+  if ((hostname === 'github.com' || hostname === 'gitcode.com') && segments.length >= 2) {
+    return `${segments[0]} ${segments[1]}`;
+  }
+
+  return undefined;
+}
+
+function inferResearchTopic(event: MemoryEvent): string | undefined {
+  const text = getSearchableText(event);
+
+  if (text.includes('llm-wiki') || text.includes('llm wiki') || text.includes('openwiki')) {
+    return 'LLM wiki and knowledge systems';
+  }
+
+  if (text.includes('qmd') && (text.includes('docs') || text.includes('knowledge') || text.includes('search'))) {
+    return 'Local knowledge search systems';
+  }
+
+  if (text.includes('obsidian') && text.includes('agent')) {
+    return 'Agent knowledge workspace integrations';
+  }
+
+  return undefined;
+}
+
 function inferTopicHint(event: MemoryEvent): string | undefined {
   const text = getSearchableText(event);
 
@@ -260,11 +326,43 @@ function inferTopicHint(event: MemoryEvent): string | undefined {
     return 'AI agent research papers';
   }
 
+  const researchTopic = inferResearchTopic(event);
+  if (researchTopic !== undefined) {
+    return researchTopic;
+  }
+
+  const repositoryTopic = inferRepositoryTopic(event);
+  if (repositoryTopic !== undefined) {
+    return repositoryTopic;
+  }
+
   const tokens = `${getTitle(event)} ${getSummary(event)}`
     .toLowerCase()
     .match(/[\p{L}\p{N}]+/gu)
-    ?.filter((token) => token.length > 1)
-    .slice(0, 3);
+    ?.filter((token) => token.length > 2)
+    .filter(
+      (token) =>
+        ![
+          'the',
+          'and',
+          'for',
+          'with',
+          'from',
+          'into',
+          'your',
+          'github',
+          'gitcode',
+          'google',
+          'search',
+          'openrouter',
+          'activity',
+          'settings',
+          'youtube',
+          'com',
+          'www',
+        ].includes(token),
+    )
+    .slice(0, 2);
 
   return tokens !== undefined && tokens.length > 0 ? tokens.join(' ') : undefined;
 }
@@ -302,42 +400,23 @@ function isLowValueMemoryEvent(event: MemoryEvent): boolean {
   }
 
   const text = getSearchableText(event);
+  const title = getTitle(event).trim().toLowerCase();
+  const hostname = getHostname(event);
+  const rawUrl = getUrl(event) ?? '';
 
   return (
     (text.includes('adblock') && (text.includes('update') || text.includes('更新'))) ||
-    text.includes('getadblock.com')
+    text.includes('getadblock.com') ||
+    title === 'new tab' ||
+    title === '新标签页' ||
+    rawUrl.startsWith('chrome://newtab') ||
+    (hostname === 'google.com' && rawUrl.includes('/search?')) ||
+    (hostname === 'openrouter.ai' &&
+      (rawUrl.includes('/activity') || rawUrl.includes('/settings/credits'))) ||
+    (hostname === 'youtube.com' &&
+      (rawUrl === 'https://www.youtube.com/' || title === 'youtube' || title === 'youtube youtube')) ||
+    /\b(404|408|429|500|502|503|bad gateway|not found)\b/u.test(text)
   );
-}
-
-function canonicalizeUrl(rawUrl: string): string {
-  try {
-    const url = new URL(rawUrl);
-    url.hash = '';
-
-    return url.toString();
-  } catch {
-    return rawUrl.trim().toLowerCase();
-  }
-}
-
-function createDeduplicationKey(event: MemoryEvent): string {
-  const url = getUrl(event);
-
-  if (event.sourceType.includes('browser') && url !== undefined) {
-    return [
-      event.sourceType,
-      canonicalizeUrl(url),
-      getTitle(event).trim().toLowerCase(),
-      getSummary(event).trim().toLowerCase(),
-    ].join('|');
-  }
-
-  return [
-    event.sourceType,
-    event.sourceRef,
-    getTitle(event).trim().toLowerCase(),
-    getSummary(event).trim().toLowerCase(),
-  ].join('|');
 }
 
 function uniqueStrings(values: string[]): string[] {
@@ -400,7 +479,6 @@ export function analyzeWorkSessionCandidates(
     .filter((event) => !isInWindow(event, input.analysisWindow))
     .map((event) => event.id);
   const includedEvents: MemoryEvent[] = [];
-  const seenDeduplicationKeys = new Set<string>();
 
   for (const event of windowEvents) {
     if (isLocalBrowserPageMemoryEvent(event) || isLowValueMemoryEvent(event)) {
@@ -408,13 +486,6 @@ export function analyzeWorkSessionCandidates(
       continue;
     }
 
-    const deduplicationKey = createDeduplicationKey(event);
-    if (seenDeduplicationKeys.has(deduplicationKey)) {
-      excludedMemoryEventIds.push(event.id);
-      continue;
-    }
-
-    seenDeduplicationKeys.add(deduplicationKey);
     includedEvents.push(event);
   }
 
@@ -444,7 +515,7 @@ export function analyzeWorkSessionCandidates(
   }
 
   const publishableClusters = [...eventsByCluster.entries()].filter(([, cluster]) => {
-    if (cluster.memoryEvents.length >= MIN_TOPIC_MEMORY_EVENT_COUNT) {
+    if (cluster.memoryEvents.length >= MIN_TOPIC_INTERACTION_COUNT) {
       return true;
     }
 

@@ -13,11 +13,25 @@ export interface RevisedKnowledgeArticleContent {
 }
 
 function stripJsonFence(value: string): string {
-  return value
-    .trim()
-    .replace(/^```(?:json)?\s*/iu, '')
-    .replace(/\s*```$/u, '')
-    .trim();
+  const trimmed = value.trim();
+  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/iu);
+
+  if (fenced !== null) {
+    return fenced[1].trim();
+  }
+
+  if (/^json\s*[{[]/iu.test(trimmed)) {
+    return trimmed.replace(/^json\s*/iu, '').trim();
+  }
+
+  const objectStart = trimmed.indexOf('{');
+  const objectEnd = trimmed.lastIndexOf('}');
+
+  if (objectStart >= 0 && objectEnd > objectStart) {
+    return trimmed.slice(objectStart, objectEnd + 1).trim();
+  }
+
+  return trimmed;
 }
 
 function parseRevisionResponse(value: string): RevisedKnowledgeArticleContent {

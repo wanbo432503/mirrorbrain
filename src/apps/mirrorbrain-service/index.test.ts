@@ -833,6 +833,136 @@ describe('mirrorbrain service', () => {
     await rm(workspaceDir, { recursive: true, force: true });
   });
 
+  it('auto-resolves preview publication into an existing topic and article version', async () => {
+    const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-auto-publish-'));
+    const analyzeKnowledge = vi.fn(async () =>
+      JSON.stringify({
+        topic: {
+          kind: 'existing-topic',
+          topicId: 'topic:project-mirrorbrain:source-ledger',
+        },
+        articleOperation: {
+          kind: 'update-existing-article',
+          articleId:
+            'article:project-mirrorbrain:topic-project-mirrorbrain-source-ledger:source-ledger-architecture',
+        },
+        rationale: 'The draft updates the source ledger architecture article.',
+      }),
+    );
+    const service = createMirrorBrainService(
+      {
+        workspaceDir,
+        service: {
+          status: 'running',
+          syncBrowserMemory: vi.fn(),
+          syncShellMemory: vi.fn(),
+          stop: vi.fn(),
+        },
+      },
+      {
+        now: () => '2026-05-12T12:10:00.000Z',
+        analyzeKnowledge,
+      },
+    );
+    const firstCandidate: WorkSessionCandidate = {
+      id: 'work-session-candidate:source-ledger-first',
+      projectHint: 'mirrorbrain',
+      title: 'Source ledger architecture',
+      summary: 'Initial source ledger notes.',
+      memoryEventIds: ['browser-1'],
+      sourceTypes: ['browser'],
+      timeRange: {
+        startAt: '2026-05-12T10:00:00.000Z',
+        endAt: '2026-05-12T10:30:00.000Z',
+      },
+      relationHints: ['Source ledger'],
+      reviewState: 'pending',
+    };
+    const firstReview = await service.reviewWorkSessionCandidate(firstCandidate, {
+      decision: 'keep',
+      reviewedBy: 'user',
+      projectAssignment: {
+        kind: 'confirmed-new-project',
+        name: 'MirrorBrain',
+      },
+    });
+    const firstDraft = await service.generateKnowledgeArticleDraft({
+      reviewedWorkSessionIds: [firstReview.reviewedWorkSession.id],
+      title: 'Source ledger architecture',
+      summary: 'Initial source ledger notes.',
+      body: 'Initial body.',
+      topicProposal: {
+        kind: 'new-topic',
+        name: 'Source ledger',
+      },
+      articleOperationProposal: {
+        kind: 'create-new-article',
+      },
+    });
+    const firstPublished = await service.publishKnowledgeArticleDraft({
+      draft: firstDraft,
+      publishedBy: 'user',
+      topicAssignment: {
+        kind: 'confirmed-new-topic',
+        name: 'Source ledger',
+      },
+    });
+    const secondCandidate: WorkSessionCandidate = {
+      ...firstCandidate,
+      id: 'work-session-candidate:source-ledger-second',
+      summary: 'New source ledger checkpoint details.',
+      memoryEventIds: ['browser-2'],
+    };
+    const secondReview = await service.reviewWorkSessionCandidate(secondCandidate, {
+      decision: 'keep',
+      reviewedBy: 'user',
+      projectAssignment: {
+        kind: 'existing-project',
+        projectId: 'project:mirrorbrain',
+      },
+    });
+    const secondDraft = await service.generateKnowledgeArticleDraft({
+      reviewedWorkSessionIds: [secondReview.reviewedWorkSession.id],
+      title: 'Source ledger architecture',
+      summary: 'New source ledger checkpoint details.',
+      body: 'Updated body.',
+      topicProposal: {
+        kind: 'new-topic',
+        name: 'Source ledger',
+      },
+      articleOperationProposal: {
+        kind: 'create-new-article',
+      },
+    });
+
+    const updated = await service.publishKnowledgeArticleDraft({
+      draft: secondDraft,
+      publishedBy: 'mirrorbrain-web',
+      topicAssignment: {
+        kind: 'confirmed-new-topic',
+        name: 'Source ledger',
+      },
+      autoResolvePublishDecision: true,
+    });
+
+    expect(updated.article).toMatchObject({
+      articleId: firstPublished.article.articleId,
+      topicId: firstPublished.article.topicId,
+      version: 2,
+      supersedesArticleId: firstPublished.article.id,
+      body: 'Updated body.',
+    });
+    expect(updated.supersededArticle).toMatchObject({
+      id: firstPublished.article.id,
+      isCurrentBest: false,
+    });
+    expect(analyzeKnowledge).toHaveBeenCalledWith(
+      expect.stringContaining('deciding how to publish'),
+    );
+
+    await rm(workspaceDir, { recursive: true, force: true });
+  });
+
   it('publishes non-ASCII project knowledge without falling back to untitled workspace directories', async () => {
     const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-article-i18n-service-'));
     const candidate: WorkSessionCandidate = {

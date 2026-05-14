@@ -127,6 +127,24 @@ function uniqueValues(values: string[]): string[] {
   return Array.from(new Set(values));
 }
 
+function uniqueProvenanceRefs(
+  refs: KnowledgeArticleDraft['provenanceRefs'],
+): KnowledgeArticleDraft['provenanceRefs'] {
+  const seen = new Set<string>();
+  const uniqueRefs: KnowledgeArticleDraft['provenanceRefs'] = [];
+
+  for (const ref of refs) {
+    const key = `${ref.kind}:${ref.id}`;
+
+    if (!seen.has(key)) {
+      seen.add(key);
+      uniqueRefs.push(ref);
+    }
+  }
+
+  return uniqueRefs;
+}
+
 function getReviewedProjectId(reviewedWorkSessions: ReviewedWorkSession[]): string {
   if (
     reviewedWorkSessions.length === 0 ||
@@ -316,20 +334,41 @@ export function publishKnowledgeArticleDraft(
       (maxVersion, article) => Math.max(maxVersion, article.version),
       0,
     ) + 1;
+  const attachAsSupportingEvidence =
+    input.draft.articleOperationProposal.kind === 'attach-as-supporting-evidence' &&
+    currentBest !== undefined;
+  const sourceReviewedWorkSessionIds = attachAsSupportingEvidence
+    ? uniqueValues([
+        ...currentBest.sourceReviewedWorkSessionIds,
+        ...input.draft.sourceReviewedWorkSessionIds,
+      ])
+    : [...input.draft.sourceReviewedWorkSessionIds];
+  const sourceMemoryEventIds = attachAsSupportingEvidence
+    ? uniqueValues([
+        ...currentBest.sourceMemoryEventIds,
+        ...input.draft.sourceMemoryEventIds,
+      ])
+    : [...input.draft.sourceMemoryEventIds];
+  const provenanceRefs = attachAsSupportingEvidence
+    ? uniqueProvenanceRefs([
+        ...currentBest.provenanceRefs,
+        ...input.draft.provenanceRefs,
+      ])
+    : [...input.draft.provenanceRefs];
   const article: KnowledgeArticle = {
     id: `knowledge-article:${slugify(articleId)}:v${nextVersion}`,
     articleId,
     projectId: input.draft.projectId,
     topicId,
-    title: input.draft.title,
-    summary: input.draft.summary,
-    body: input.draft.body,
+    title: attachAsSupportingEvidence ? currentBest.title : input.draft.title,
+    summary: attachAsSupportingEvidence ? currentBest.summary : input.draft.summary,
+    body: attachAsSupportingEvidence ? currentBest.body : input.draft.body,
     version: nextVersion,
     isCurrentBest: true,
     supersedesArticleId: currentBest?.id ?? null,
-    sourceReviewedWorkSessionIds: [...input.draft.sourceReviewedWorkSessionIds],
-    sourceMemoryEventIds: [...input.draft.sourceMemoryEventIds],
-    provenanceRefs: [...input.draft.provenanceRefs],
+    sourceReviewedWorkSessionIds,
+    sourceMemoryEventIds,
+    provenanceRefs,
     publishState: 'published',
     publishedAt: input.publishedAt,
     publishedBy: input.publishedBy,
