@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
-import { access, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -760,6 +760,94 @@ describe('mirrorbrain service', () => {
                   history: [published.article],
                 },
               ],
+            },
+          ],
+        },
+      ],
+    });
+
+    await rm(workspaceDir, { recursive: true, force: true });
+  });
+
+  it('publishes non-ASCII project knowledge without falling back to untitled workspace directories', async () => {
+    const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-article-i18n-service-'));
+    const candidate: WorkSessionCandidate = {
+      id: 'work-session-candidate:clustering',
+      projectHint: '聚类算法',
+      title: '聚类算法方法与应用',
+      summary: 'Reviewed clustering algorithm material.',
+      memoryEventIds: ['browser-1'],
+      sourceTypes: ['browser'],
+      timeRange: {
+        startAt: '2026-05-12T10:00:00.000Z',
+        endAt: '2026-05-12T10:30:00.000Z',
+      },
+      relationHints: ['聚类算法'],
+      reviewState: 'pending',
+    };
+    const service = createMirrorBrainService(
+      {
+        workspaceDir,
+        service: {
+          status: 'running',
+          syncBrowserMemory: vi.fn(),
+          syncShellMemory: vi.fn(),
+          stop: vi.fn(),
+        },
+      },
+      {
+        now: () => '2026-05-12T12:10:00.000Z',
+      },
+    );
+    const review = await service.reviewWorkSessionCandidate(candidate, {
+      decision: 'keep',
+      reviewedBy: 'user',
+      projectAssignment: {
+        kind: 'confirmed-new-project',
+        name: '聚类算法',
+      },
+    });
+    const draft = await service.generateKnowledgeArticleDraft({
+      reviewedWorkSessionIds: [review.reviewedWorkSession.id],
+      title: '聚类算法方法与应用',
+      summary: '聚类算法知识。',
+      body: '聚类算法用于发现数据中的自然分组。',
+      topicProposal: {
+        kind: 'new-topic',
+        name: '聚类算法',
+      },
+      articleOperationProposal: {
+        kind: 'create-new-article',
+      },
+    });
+
+    await service.publishKnowledgeArticleDraft({
+      draft,
+      publishedBy: 'user',
+      topicAssignment: {
+        kind: 'confirmed-new-topic',
+        name: '聚类算法',
+      },
+    });
+
+    await expect(
+      readdir(join(workspaceDir, 'mirrorbrain', 'knowledge', 'project')),
+    ).resolves.toEqual(['聚类算法']);
+    await expect(
+      service.listKnowledgeArticleTree(),
+    ).resolves.toMatchObject({
+      projects: [
+        {
+          project: {
+            id: 'project:聚类算法',
+            name: '聚类算法',
+          },
+          topics: [
+            {
+              topic: {
+                id: 'topic:project-聚类算法:聚类算法',
+                name: '聚类算法',
+              },
             },
           ],
         },

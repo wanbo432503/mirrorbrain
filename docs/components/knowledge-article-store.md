@@ -96,8 +96,9 @@ The prefix controls lifecycle presentation:
 
 - Missing directories are treated as empty lists.
 - Corrupt JSON propagates as a read error.
-- File and directory names use readable slug segments. The JSON payload remains
-  authoritative for stable ids and display names.
+- File and directory names use readable Unicode slug segments, so project and
+  topic names such as `聚类算法` remain recognizable on disk. The JSON payload
+  remains authoritative for stable ids and display names.
 - Callers must save a new current-best article and any superseded prior version
   together when publishing updates.
 - Saved projects can exist before any Knowledge Article is published. They are

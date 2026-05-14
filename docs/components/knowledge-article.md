@@ -65,6 +65,8 @@ Publish output:
 - `KnowledgeArticle`.
   - `articleId`: stable logical article lineage id.
   - `id`: version-specific article id.
+  - ids use readable Unicode slug segments so non-English project, topic, and
+    article titles remain distinct instead of collapsing to `untitled`.
 - optional created `Topic`.
 - optional superseded prior article version.
 
@@ -101,6 +103,8 @@ The tests verify:
 - Drafts preserve reviewed work-session and memory-event provenance.
 - Discarded work sessions cannot generate drafts.
 - Publishing a first article creates a current-best version and confirmed topic.
+- Publishing non-ASCII project/topic/article names preserves readable durable
+  ids.
 - Publishing separate articles under the same topic preserves separate
   `articleId` and version streams.
 - Publishing an update creates a new current-best version and returns the prior

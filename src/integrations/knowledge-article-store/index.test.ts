@@ -351,4 +351,63 @@ describe('file knowledge article store', () => {
       ),
     ).rejects.toThrow();
   });
+
+  it('uses non-ASCII project and topic names in the knowledge tree directories', async () => {
+    const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-article-i18n-'));
+    tempDirs.push(workspaceDir);
+    const store = createFileKnowledgeArticleStore({ workspaceDir });
+    const project: Project = {
+      id: 'project:聚类算法',
+      name: '聚类算法',
+      status: 'active',
+      createdAt: '2026-05-12T12:00:00.000Z',
+      updatedAt: '2026-05-12T12:00:00.000Z',
+    };
+    const topic: Topic = {
+      id: 'topic:project-聚类算法:聚类算法',
+      projectId: project.id,
+      name: '聚类算法',
+      status: 'active',
+      createdAt: '2026-05-12T12:00:00.000Z',
+      updatedAt: '2026-05-12T12:00:00.000Z',
+    };
+    const article: KnowledgeArticle = {
+      id: 'knowledge-article:article-project-聚类算法-topic-project-聚类算法-聚类算法-聚类算法方法与应用:v1',
+      articleId:
+        'article:project-聚类算法:topic-project-聚类算法-聚类算法:聚类算法方法与应用',
+      projectId: project.id,
+      topicId: topic.id,
+      title: '聚类算法方法与应用',
+      summary: '聚类算法知识。',
+      body: '聚类算法用于发现数据中的自然分组。',
+      version: 1,
+      isCurrentBest: true,
+      supersedesArticleId: null,
+      sourceReviewedWorkSessionIds: ['reviewed-work-session:1'],
+      sourceMemoryEventIds: ['memory-1'],
+      provenanceRefs: [],
+      publishState: 'published',
+      publishedAt: '2026-05-12T12:00:00.000Z',
+      publishedBy: 'user',
+    };
+
+    await store.saveProject(project);
+    await store.saveTopic(topic);
+    await store.saveArticles([article]);
+
+    await expect(
+      readdir(join(workspaceDir, 'mirrorbrain', 'knowledge', 'project')),
+    ).resolves.toEqual(['聚类算法']);
+    await expect(
+      readdir(
+        join(
+          workspaceDir,
+          'mirrorbrain',
+          'knowledge',
+          'project',
+          '聚类算法',
+        ),
+      ),
+    ).resolves.toContain('聚类算法');
+  });
 });

@@ -67,6 +67,21 @@ describe('project work session review', () => {
     expect(result.reviewedWorkSession.projectId).toBe('project:mirrorbrain');
   });
 
+  it('creates distinct durable project ids for non-ASCII project names', () => {
+    const result = reviewWorkSessionCandidate(candidate, {
+      decision: 'keep',
+      reviewedAt: '2026-05-12T12:05:00.000Z',
+      reviewedBy: 'user',
+      projectAssignment: {
+        kind: 'confirmed-new-project',
+        name: '聚类算法',
+      },
+    });
+
+    expect(result.project?.id).toBe('project:聚类算法');
+    expect(result.reviewedWorkSession.projectId).toBe('project:聚类算法');
+  });
+
   it('rejects kept work sessions without explicit project assignment', () => {
     expect(() =>
       reviewWorkSessionCandidate(candidate, {

@@ -43,6 +43,8 @@ Output:
   - stores `projectId` for kept sessions or `null` for discarded sessions.
 - optional `Project`
   - emitted only when the user confirmed creation of a new project.
+  - uses readable Unicode slug ids, so non-English project names such as
+    `聚类算法` do not collapse to `project:`.
 
 ## Data Flow
 
@@ -72,5 +74,6 @@ The tests verify:
 
 - Kept sessions preserve source provenance under existing projects.
 - New projects are created only from confirmed project assignments.
+- Non-ASCII project names produce durable, distinct project ids.
 - Kept sessions without project assignment are rejected.
 - Discarded sessions do not create projects.

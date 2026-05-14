@@ -140,6 +140,47 @@ describe('knowledge article model', () => {
     });
   });
 
+  it('preserves non-ASCII project, topic, and article names in durable ids', () => {
+    const draft = createKnowledgeArticleDraft({
+      reviewedWorkSessions: [
+        {
+          ...reviewedWorkSession,
+          projectId: 'project:聚类算法',
+        },
+      ],
+      generatedAt: '2026-05-12T12:10:00.000Z',
+      title: '聚类算法方法与应用',
+      summary: '聚类算法知识。',
+      body: '聚类算法用于发现数据中的自然分组。',
+      topicProposal: {
+        kind: 'new-topic',
+        name: '聚类算法',
+      },
+      articleOperationProposal: {
+        kind: 'create-new-article',
+      },
+    });
+
+    const result = publishKnowledgeArticleDraft({
+      draft,
+      publishedAt: '2026-05-12T12:20:00.000Z',
+      publishedBy: 'user',
+      topicAssignment: {
+        kind: 'confirmed-new-topic',
+        name: '聚类算法',
+      },
+      existingArticles: [],
+    });
+
+    expect(result.topic?.id).toBe('topic:project-聚类算法:聚类算法');
+    expect(result.article.articleId).toBe(
+      'article:project-聚类算法:topic-project-聚类算法-聚类算法:聚类算法方法与应用',
+    );
+    expect(result.article.id).toBe(
+      'knowledge-article:article-project-聚类算法-topic-project-聚类算法-聚类算法-聚类算法方法与应用:v1',
+    );
+  });
+
   it('keeps separate article identities and version streams within the same topic', () => {
     const importDraft = createKnowledgeArticleDraft({
       reviewedWorkSessions: [reviewedWorkSession],

@@ -109,7 +109,7 @@ export interface PublishKnowledgeArticleDraftResult {
 function slugify(value: string): string {
   const slug = value
     .toLowerCase()
-    .replace(/[^a-z0-9]+/gu, '-')
+    .replace(/[^\p{L}\p{N}]+/gu, '-')
     .replace(/^-|-$/gu, '');
 
   return slug.length > 0 ? slug : 'untitled';
