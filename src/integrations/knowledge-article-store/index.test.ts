@@ -301,6 +301,177 @@ describe('file knowledge article store', () => {
     });
   });
 
+  it('deletes an empty topic and project directory when the last published article is removed', async () => {
+    const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-article-prune-'));
+    tempDirs.push(workspaceDir);
+    const store = createFileKnowledgeArticleStore({ workspaceDir });
+    const project: Project = {
+      id: 'project:mirrorbrain',
+      name: 'MirrorBrain',
+      status: 'active',
+      createdAt: '2026-05-12T12:00:00.000Z',
+      updatedAt: '2026-05-12T12:00:00.000Z',
+    };
+    const topic: Topic = {
+      id: 'topic:project-mirrorbrain:source-ledger',
+      projectId: project.id,
+      name: 'Source ledger',
+      status: 'active',
+      createdAt: '2026-05-12T12:00:00.000Z',
+      updatedAt: '2026-05-12T12:00:00.000Z',
+    };
+    const article: KnowledgeArticle = {
+      id: 'knowledge-article:source-ledger:v1',
+      articleId: 'article:project-mirrorbrain:topic-source-ledger:source-ledger',
+      projectId: project.id,
+      topicId: topic.id,
+      title: 'Source ledger',
+      summary: 'Version one.',
+      body: 'Version one body.',
+      version: 1,
+      isCurrentBest: true,
+      supersedesArticleId: null,
+      sourceReviewedWorkSessionIds: ['reviewed-work-session:1'],
+      sourceMemoryEventIds: ['memory-1'],
+      provenanceRefs: [],
+      publishState: 'published',
+      publishedAt: '2026-05-12T12:00:00.000Z',
+      publishedBy: 'user',
+    };
+
+    await store.saveProject(project);
+    await store.saveTopic(topic);
+    await store.saveArticles([article]);
+
+    await store.deleteArticleLineage(article.articleId);
+
+    await expect(store.listKnowledgeArticleTree()).resolves.toEqual({
+      projects: [],
+    });
+    await expect(
+      access(
+        join(
+          workspaceDir,
+          'mirrorbrain',
+          'knowledge',
+          'project',
+          'mirrorbrain',
+          'source-ledger',
+        ),
+      ),
+    ).rejects.toThrow();
+    await expect(
+      access(
+        join(
+          workspaceDir,
+          'mirrorbrain',
+          'knowledge',
+          'project',
+          'mirrorbrain',
+        ),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('keeps a project directory when deleting the last article in one of multiple topics', async () => {
+    const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-topic-prune-'));
+    tempDirs.push(workspaceDir);
+    const store = createFileKnowledgeArticleStore({ workspaceDir });
+    const project: Project = {
+      id: 'project:mirrorbrain',
+      name: 'MirrorBrain',
+      status: 'active',
+      createdAt: '2026-05-12T12:00:00.000Z',
+      updatedAt: '2026-05-12T12:00:00.000Z',
+    };
+    const sourceLedgerTopic: Topic = {
+      id: 'topic:project-mirrorbrain:source-ledger',
+      projectId: project.id,
+      name: 'Source ledger',
+      status: 'active',
+      createdAt: '2026-05-12T12:00:00.000Z',
+      updatedAt: '2026-05-12T12:00:00.000Z',
+    };
+    const recorderTopic: Topic = {
+      id: 'topic:project-mirrorbrain:recorder',
+      projectId: project.id,
+      name: 'Recorder',
+      status: 'active',
+      createdAt: '2026-05-12T12:00:00.000Z',
+      updatedAt: '2026-05-12T12:00:00.000Z',
+    };
+    const sourceLedgerArticle: KnowledgeArticle = {
+      id: 'knowledge-article:source-ledger:v1',
+      articleId: 'article:project-mirrorbrain:topic-source-ledger:source-ledger',
+      projectId: project.id,
+      topicId: sourceLedgerTopic.id,
+      title: 'Source ledger',
+      summary: 'Source ledger article.',
+      body: 'Source ledger body.',
+      version: 1,
+      isCurrentBest: true,
+      supersedesArticleId: null,
+      sourceReviewedWorkSessionIds: ['reviewed-work-session:1'],
+      sourceMemoryEventIds: ['memory-1'],
+      provenanceRefs: [],
+      publishState: 'published',
+      publishedAt: '2026-05-12T12:00:00.000Z',
+      publishedBy: 'user',
+    };
+    const recorderArticle: KnowledgeArticle = {
+      ...sourceLedgerArticle,
+      id: 'knowledge-article:recorder:v1',
+      articleId: 'article:project-mirrorbrain:topic-recorder:recorder',
+      topicId: recorderTopic.id,
+      title: 'Recorder',
+      summary: 'Recorder article.',
+      body: 'Recorder body.',
+    };
+
+    await store.saveProject(project);
+    await store.saveTopic(sourceLedgerTopic);
+    await store.saveTopic(recorderTopic);
+    await store.saveArticles([sourceLedgerArticle, recorderArticle]);
+
+    await store.deleteArticleLineage(sourceLedgerArticle.articleId);
+
+    await expect(
+      access(
+        join(
+          workspaceDir,
+          'mirrorbrain',
+          'knowledge',
+          'project',
+          'mirrorbrain',
+          'source-ledger',
+        ),
+      ),
+    ).rejects.toThrow();
+    await expect(
+      readdir(join(workspaceDir, 'mirrorbrain', 'knowledge', 'project', 'mirrorbrain')),
+    ).resolves.toContain('recorder');
+    await expect(store.listKnowledgeArticleTree()).resolves.toEqual({
+      projects: [
+        {
+          project,
+          topics: [
+            {
+              topic: recorderTopic,
+              articles: [
+                {
+                  articleId: recorderArticle.articleId,
+                  title: recorderArticle.title,
+                  currentBestArticle: recorderArticle,
+                  history: [recorderArticle],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+  });
+
   it('removes preview knowledge files after a draft is published', async () => {
     const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-article-preview-'));
     tempDirs.push(workspaceDir);

@@ -441,6 +441,33 @@ async function listPublishedArticleRecords(input: {
   return articles;
 }
 
+async function hasKnowledgeFiles(directory: string): Promise<boolean> {
+  const files = await listJsonFiles(directory);
+
+  return files.some((file) => {
+    const fileName = file.split('/').at(-1) ?? '';
+
+    return !fileName.startsWith('_');
+  });
+}
+
+async function pruneEmptyKnowledgeTree(paths: string[]): Promise<void> {
+  const topicDirs = Array.from(new Set(paths.map((path) => dirname(path))));
+  const projectDirs = Array.from(new Set(topicDirs.map((topicDir) => dirname(topicDir))));
+
+  for (const topicDir of topicDirs) {
+    if (!(await hasKnowledgeFiles(topicDir))) {
+      await rm(topicDir, { recursive: true, force: true });
+    }
+  }
+
+  for (const projectDir of projectDirs) {
+    if ((await listDirectories(projectDir)).length === 0) {
+      await rm(projectDir, { recursive: true, force: true });
+    }
+  }
+}
+
 function compareByNameOrTitle(left: string, right: string): number {
   return left.localeCompare(right);
 }
@@ -563,6 +590,7 @@ export function createFileKnowledgeArticleStore(
           rm(record.path, { force: true }),
         ),
       );
+      await pruneEmptyKnowledgeTree(matchingArticles.map((record) => record.path));
     },
     listDrafts: async () =>
       (await listDraftRecords({ workspaceDir: input.workspaceDir })).map(

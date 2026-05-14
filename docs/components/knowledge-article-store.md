@@ -19,7 +19,9 @@ The store owns:
   optionally narrowed to one stable `articleId`.
 - Returning the Published Project -> Topic -> Knowledge Article tree, excluding
   projects or topics that do not yet contain any published article lineage.
-- Deleting all published versions for one stable `articleId`.
+- Deleting all published versions for one stable `articleId`, then pruning the
+  topic directory if no knowledge files remain and pruning the project directory
+  if no topic directories remain.
 
 The store does not own:
 
@@ -61,7 +63,10 @@ The store does not own:
    kept work session is not presented as published knowledge until an article is
    actually published.
 8. Published article deletion removes every stored version for the selected
-   stable `articleId`; subsequent tree reads omit now-empty topics and projects.
+   stable `articleId`.
+9. If the deletion leaves a topic with only metadata, the topic directory is
+   removed. If that leaves the project with no topic directories, the project
+   directory is removed too.
 
 ## Storage Layout
 
@@ -105,6 +110,9 @@ The prefix controls lifecycle presentation:
   intentionally omitted from `listKnowledgeArticleTree()` until at least one
   topic contains a published article lineage.
 - Deleting a missing article lineage is idempotent.
+- Deleting the final published article in a topic cleans up empty topic and
+  project directories, but directories with sibling knowledge or preview files
+  are retained.
 
 ## Test Strategy
 
@@ -113,5 +121,5 @@ Unit tests live in `src/integrations/knowledge-article-store/index.test.ts`.
 The tests verify tree-shaped persistence, preview prefixes, topic listing,
 current-best lookup, separate article histories within one topic, newest-first
 article history, omission of kept-only reviewed projects from the Published
-tree, published-draft removal, and deletion of one article lineage without
-removing sibling articles.
+tree, published-draft removal, empty topic/project pruning, and deletion of one
+article lineage without removing sibling articles or sibling topics.
