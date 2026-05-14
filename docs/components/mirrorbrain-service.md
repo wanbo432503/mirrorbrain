@@ -17,7 +17,9 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 - exposes explicit Phase 4 source-ledger import for manual Import Sources
   operations, immediately scanning ledgers and best-effort refreshing the
   default ActivityWatch browser ledger before import
-- exposes source audit events and source instance summaries as operational state
+- exposes source audit events and source instance summaries as operational state,
+  keeping the default Agent, Audio, Browser, Files, Screenshot, and Shell
+  source instances visible even before each source has audit history
 - exposes manual Phase 4 work-session analysis windows for 6h, 24h, and 7d ranges
 - records explicit work-session review decisions and project assignments
 - generates and publishes Phase 4 Knowledge Article Drafts from persisted reviewed work-session ids
@@ -70,7 +72,10 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
     Phase 4 import workflow, skip disabled source instances before memory
     writes, persist imported memory events through the memory writer, and
     persist audit/checkpoint state through the source-ledger state store.
-12. List source audit events and source instance summaries from operational source state without mixing them into memory retrieval.
+12. List source audit events and source instance summaries from operational
+    source state without mixing them into memory retrieval. Source summaries are
+    merged with the default Phase 4 source catalog so sources with no imported
+    records still appear in the Memory Sources UI.
 13. Run manual 6h, 24h, or 7d work-session analysis by reading stored memory events and returning pending work-session candidates without marking them reviewed.
 14. Record explicit work-session review decisions, save confirmed new projects, and persist reviewed work sessions in the workspace.
 15. Generate Knowledge Article Drafts by loading persisted reviewed work-session ids, then persist the draft in the article store.
@@ -126,6 +131,8 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
   records before running the ledger importer
 - unit tests verify disabled source instances are skipped during source-ledger import before memory-event writes
 - unit tests verify source audit and source instance summary reads remain operational state separate from memory retrieval
+- unit tests verify source instance summary reads preserve default sources even
+  when operational state exists for only one source
 - unit tests verify manual Phase 4 work-session analysis builds pending candidates from explicit 6h, 24h, or 7d analysis windows
 - unit tests verify explicit work-session review can create a confirmed project and reviewed session
 - unit tests verify persisted reviewed work-session ids can generate Knowledge Article Drafts, unpersisted ids are rejected, published article versions preserve stable article lineages, and the Published tree groups saved projects/topics/articles
@@ -165,7 +172,10 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
   ledgers so the Memory tab can surface already imported workspace events even
   when the current scan finds no new lines
 - source enable/disable updates are persisted and audited; both recorder startup and source-ledger import enforce disabled source instances
-- source-ledger state derives source summaries from checkpoint and audit history; richer live recorder health reporting is still a later operational improvement
+- the file-backed source-ledger state store derives source summaries from
+  checkpoint and audit history, while the service facade merges those summaries
+  with the default Phase 4 source catalog for UI consumption; richer live
+  recorder health reporting is still a later operational improvement
 - the retrieval contract now accepts lightweight query and filter input, but still uses minimal result shaping rather than mature ranking
 - raw memory list endpoints can fall back to workspace-cached memory-event
   files when stored reads fail, so event history may appear before QMD search

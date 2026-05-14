@@ -204,6 +204,47 @@ const DEFAULT_SUPERVISED_SOURCE_INSTANCES: SupervisedSourceInstance[] = [
   },
 ];
 
+function getSourceInstanceSummaryKey(input: {
+  sourceKind: string;
+  sourceInstanceId: string;
+}): string {
+  return `${input.sourceKind}:${input.sourceInstanceId}`;
+}
+
+function createDefaultSourceInstanceSummary(
+  source: SupervisedSourceInstance,
+): SourceInstanceSummary {
+  return {
+    sourceKind: source.sourceKind,
+    sourceInstanceId: source.sourceInstanceId,
+    lifecycleStatus: source.enabled === false ? 'disabled' : 'enabled',
+    recorderStatus: source.enabled === false ? 'stopped' : 'unknown',
+    importedCount: 0,
+    skippedCount: 0,
+  };
+}
+
+function mergeDefaultSourceInstanceSummaries(
+  summaries: SourceInstanceSummary[],
+): SourceInstanceSummary[] {
+  const mergedByKey = new Map<string, SourceInstanceSummary>();
+
+  for (const source of DEFAULT_SUPERVISED_SOURCE_INSTANCES) {
+    const summary = createDefaultSourceInstanceSummary(source);
+    mergedByKey.set(getSourceInstanceSummaryKey(summary), summary);
+  }
+
+  for (const summary of summaries) {
+    mergedByKey.set(getSourceInstanceSummaryKey(summary), summary);
+  }
+
+  return [...mergedByKey.values()].sort((left, right) =>
+    getSourceInstanceSummaryKey(left).localeCompare(
+      getSourceInstanceSummaryKey(right),
+    ),
+  );
+}
+
 const SOURCE_LEDGER_RUNTIME_INTERVAL_MS = 60 * 1000;
 
 function resolveRuntimeWorkspaceDir(workspaceDir: string | undefined): string {
@@ -1613,8 +1654,10 @@ export function createMirrorBrainService(
 
       return updatedConfig;
     },
-    listSourceInstanceSummaries: (): Promise<SourceInstanceSummary[]> =>
-      sourceLedgerStateStore.listSourceInstanceSummaries(),
+    listSourceInstanceSummaries: async (): Promise<SourceInstanceSummary[]> =>
+      mergeDefaultSourceInstanceSummaries(
+        await sourceLedgerStateStore.listSourceInstanceSummaries(),
+      ),
     analyzeWorkSessions: async (
       input: AnalyzeWorkSessionsInput,
     ): Promise<WorkSessionAnalysisResult> => {

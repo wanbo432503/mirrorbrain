@@ -1315,12 +1315,14 @@ describe('mirrorbrain service', () => {
     await expect(api.listSourceAuditEvents({ sourceKind: 'browser' })).resolves.toEqual([
       auditEvent,
     ]);
-    await expect(api.listSourceInstanceSummaries()).resolves.toEqual([
-      expect.objectContaining({
-        sourceKind: 'browser',
-        sourceInstanceId: 'chrome-main',
-      }),
-    ]);
+    await expect(api.listSourceInstanceSummaries()).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          sourceKind: 'browser',
+          sourceInstanceId: 'chrome-main',
+        }),
+      ]),
+    );
 
     expect(importSourceLedgers).toHaveBeenCalledWith(
       {
@@ -1345,6 +1347,83 @@ describe('mirrorbrain service', () => {
     expect(stateStore.listSourceAuditEvents).toHaveBeenCalledWith({
       sourceKind: 'browser',
     });
+  });
+
+  it('keeps default source instances visible when only one source has state', async () => {
+    const stateStore = {
+      readCheckpoint: vi.fn(async () => null),
+      writeCheckpoint: vi.fn(async () => undefined),
+      writeSourceAuditEvent: vi.fn(async () => undefined),
+      listSourceAuditEvents: vi.fn(async () => []),
+      listSourceInstanceSummaries: vi.fn(async () => [
+        {
+          sourceKind: 'browser' as const,
+          sourceInstanceId: 'chrome-main',
+          lifecycleStatus: 'enabled' as const,
+          recorderStatus: 'unknown' as const,
+          importedCount: 13,
+          skippedCount: 0,
+        },
+      ]),
+      writeSourceInstanceConfig: vi.fn(async () => undefined),
+      listSourceInstanceConfigs: vi.fn(async () => []),
+    };
+    const api = createMirrorBrainService(
+      {
+        service: {
+          status: 'running' as const,
+          config: getMirrorBrainConfig(),
+          syncBrowserMemory: vi.fn(),
+          syncShellMemory: vi.fn(),
+          stop: vi.fn(),
+        },
+        workspaceDir: '/tmp/mirrorbrain-workspace',
+      },
+      {
+        createSourceLedgerStateStore: vi.fn(() => stateStore),
+        listKnowledge: vi.fn(async () => []),
+        listSkillDrafts: vi.fn(async () => []),
+      },
+    );
+
+    await expect(api.listSourceInstanceSummaries()).resolves.toMatchObject([
+      {
+        sourceKind: 'agent',
+        sourceInstanceId: 'agent-main',
+        lifecycleStatus: 'enabled',
+        importedCount: 0,
+      },
+      {
+        sourceKind: 'audio-recording',
+        sourceInstanceId: 'recording-main',
+        lifecycleStatus: 'enabled',
+        importedCount: 0,
+      },
+      {
+        sourceKind: 'browser',
+        sourceInstanceId: 'chrome-main',
+        lifecycleStatus: 'enabled',
+        importedCount: 13,
+      },
+      {
+        sourceKind: 'file-activity',
+        sourceInstanceId: 'filesystem-main',
+        lifecycleStatus: 'enabled',
+        importedCount: 0,
+      },
+      {
+        sourceKind: 'screenshot',
+        sourceInstanceId: 'desktop-main',
+        lifecycleStatus: 'enabled',
+        importedCount: 0,
+      },
+      {
+        sourceKind: 'shell',
+        sourceInstanceId: 'shell-main',
+        lifecycleStatus: 'enabled',
+        importedCount: 0,
+      },
+    ]);
   });
 
   it('refreshes the memory event cache after importing source ledgers', async () => {

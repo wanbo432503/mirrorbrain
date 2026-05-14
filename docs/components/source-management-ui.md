@@ -16,7 +16,9 @@ artifacts.
 
 This component is responsible for:
 
-- exposing source status summaries from `GET /sources/status`
+- exposing source status summaries from `GET /sources/status`, which the
+  service returns as the full default source catalog plus any operational state
+  overrides
 - embedding the original memory-tab list and pagination layout under
   `All Sources`, with only the `Import Sources` action visible
 - preserving a flex-based right panel layout for `All Sources`, where the
@@ -95,8 +97,9 @@ The API responses use `SourceLedgerImportResult`, `SourceInstanceSummary`, and
 
 ## Failure Modes And Operational Constraints
 
-- Empty source state renders an empty operational view instead of inventing
-  source records.
+- Empty source history still shows the default source catalog. Individual
+  sources with no imported records render zero-count summaries and an empty
+  source-history list instead of disappearing from navigation.
 - Source enablement is persisted and audited. Recorder status remains read-only
   until recorder supervision reports real runtime state.
 - The `Audio` source represents authorized audio-recording ledger imports.
@@ -133,10 +136,10 @@ corepack pnpm vitest run \
   src/App.test.tsx
 ```
 
-The tests cover source API client calls, source status rendering inside the
-`Sources` subtab, source history pagination, the read-only JSONL ledger format
-reference, removal of the single-source overview/audit/import controls, manual
-global import feedback, the `All Sources` global memory view, user-facing
-source labels including Screenshot and Audio, flex right-panel scroll
-boundaries for both global and individual source detail views, and the
-top-level `memory sources` tab integration.
+The tests cover source API client calls, default source-catalog visibility,
+source status rendering inside the `Sources` subtab, source history pagination,
+the read-only JSONL ledger format reference, removal of the single-source
+overview/audit/import controls, manual global import feedback, the `All Sources`
+global memory view, user-facing source labels including Screenshot and Audio,
+flex right-panel scroll boundaries for both global and individual source detail
+views, and the top-level `memory sources` tab integration.
