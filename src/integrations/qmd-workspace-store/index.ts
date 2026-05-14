@@ -3,7 +3,6 @@ import { join, resolve } from 'node:path';
 
 import type {
   CandidateMemory,
-  KnowledgeArtifact,
   MemoryEvent,
   MemoryNarrative,
   ReviewedMemory,
@@ -257,36 +256,6 @@ function toBrowserPageContentMarkdown(artifact: {
   ].join('\n');
 }
 
-function toKnowledgeMarkdown(artifact: KnowledgeArtifact): string {
-  return [
-    `# ${artifact.id}`,
-    '',
-    `- artifactType: ${artifact.artifactType}`,
-    `- draftState: ${artifact.draftState}`,
-    `- topicKey: ${artifact.topicKey ?? ''}`,
-    `- title: ${artifact.title}`,
-    `- summary: ${artifact.summary}`,
-    `- version: ${String(artifact.version)}`,
-    `- isCurrentBest: ${String(artifact.isCurrentBest)}`,
-    `- supersedesKnowledgeId: ${artifact.supersedesKnowledgeId ?? ''}`,
-    `- updatedAt: ${artifact.updatedAt ?? ''}`,
-    `- reviewedAt: ${artifact.reviewedAt ?? ''}`,
-    `- recencyLabel: ${artifact.recencyLabel}`,
-    '',
-    '## Body',
-    artifact.body ?? '',
-    '',
-    '## Source Reviewed Memories',
-    ...artifact.sourceReviewedMemoryIds.map((id) => `- ${id}`),
-    '',
-    '## Derived Knowledge Artifacts',
-    ...(artifact.derivedFromKnowledgeIds ?? []).map((id) => `- ${id}`),
-    '',
-    '## Provenance Refs',
-    ...(artifact.provenanceRefs ?? []).map((ref) => `- ${ref.kind}:${ref.id}`),
-  ].join('\n');
-}
-
 function toSkillMarkdown(artifact: SkillArtifact): string {
   return [
     `# ${artifact.id}`,
@@ -448,17 +417,6 @@ export function ingestBrowserPageContentToQmdWorkspace(
     directory: getQmdWorkspacePaths(input.workspaceDir).browserPageContentDir,
     id: input.artifact.id,
     markdown: toBrowserPageContentMarkdown(input.artifact),
-  });
-}
-
-export function ingestKnowledgeArtifactToQmdWorkspace(
-  input: QmdWorkspaceStoreInput & { artifact: KnowledgeArtifact },
-): Promise<QmdWorkspaceResourceWriteResult> {
-  return writeMarkdown({
-    workspaceDir: input.workspaceDir,
-    directory: getQmdWorkspacePaths(input.workspaceDir).knowledgeDir,
-    id: input.artifact.id,
-    markdown: toKnowledgeMarkdown(input.artifact),
   });
 }
 
@@ -826,131 +784,6 @@ function isCandidateMemory(value: unknown): value is CandidateMemory {
   );
 }
 
-function parseKnowledgeArtifact(markdown: string): KnowledgeArtifact {
-  const lines = markdown.split('\n');
-  const getSectionLines = (
-    sectionTitle: string,
-    endMarkers: string[] = [],
-  ): string[] => {
-    const sectionIndex = lines.findIndex((line) => line.trim() === sectionTitle);
-
-    if (sectionIndex === -1) {
-      return [];
-    }
-
-    const nextSectionIndex =
-      endMarkers.length > 0
-        ? lines.findIndex(
-            (line, index) => index > sectionIndex && endMarkers.includes(line.trim()),
-          )
-        : lines.findIndex((line, index) => index > sectionIndex && line.startsWith('## '));
-
-    return lines.slice(
-      sectionIndex + 1,
-      nextSectionIndex === -1 ? undefined : nextSectionIndex,
-    );
-  };
-  const id = lines[0]?.replace(/^#\s+/, '').trim() ?? '';
-  const artifactType = (lines
-    .find((line) => line.startsWith('- artifactType: '))
-    ?.replace('- artifactType: ', '')
-    .trim() ?? 'daily-review-draft') as KnowledgeArtifact['artifactType'];
-  const draftState = (lines
-    .find((line) => line.startsWith('- draftState: '))
-    ?.replace('- draftState: ', '')
-    .trim() ?? 'draft') as KnowledgeArtifact['draftState'];
-  const topicKey =
-    lines
-      .find((line) => line.startsWith('- topicKey: '))
-      ?.replace('- topicKey: ', '')
-      .trim() ?? '';
-  const title =
-    lines
-      .find((line) => line.startsWith('- title: '))
-      ?.replace('- title: ', '')
-      .trim() ?? id;
-  const summary =
-    lines
-      .find((line) => line.startsWith('- summary: '))
-      ?.replace('- summary: ', '')
-      .trim() ?? '';
-  const version = Number(
-    lines
-      .find((line) => line.startsWith('- version: '))
-      ?.replace('- version: ', '')
-      .trim() ?? '1',
-  );
-  const isCurrentBest =
-    (lines
-      .find((line) => line.startsWith('- isCurrentBest: '))
-      ?.replace('- isCurrentBest: ', '')
-      .trim() ?? 'false') === 'true';
-  const supersedesKnowledgeId =
-    lines
-      .find((line) => line.startsWith('- supersedesKnowledgeId: '))
-      ?.replace('- supersedesKnowledgeId: ', '')
-      .trim() ?? '';
-  const updatedAt =
-    lines
-      .find((line) => line.startsWith('- updatedAt: '))
-      ?.replace('- updatedAt: ', '')
-      .trim() ?? '';
-  const reviewedAt =
-    lines
-      .find((line) => line.startsWith('- reviewedAt: '))
-      ?.replace('- reviewedAt: ', '')
-      .trim() ?? '';
-  const recencyLabel =
-    lines
-      .find((line) => line.startsWith('- recencyLabel: '))
-      ?.replace('- recencyLabel: ', '')
-      .trim() ?? '';
-  const sourceReviewedMemoryIds = getSectionLines('## Source Reviewed Memories')
-    .filter((line) => line.startsWith('- '))
-    .map((line) => line.replace(/^- /, '').trim());
-  const derivedFromKnowledgeIds = getSectionLines('## Derived Knowledge Artifacts')
-    .filter((line) => line.startsWith('- '))
-    .map((line) => line.replace(/^- /, '').trim())
-    .filter((line) => line.length > 0);
-  const body = getSectionLines('## Body', [
-    '## Source Reviewed Memories',
-    '## Derived Knowledge Artifacts',
-    '## Provenance Refs',
-  ]).join('\n').trim();
-  const provenanceRefs = getSectionLines('## Provenance Refs')
-    .filter((line) => line.startsWith('- '))
-    .map((line) => line.replace(/^- /, '').trim())
-    .filter((line) => line.length > 0)
-    .map((line) => {
-      const [kind, ...idParts] = line.split(':');
-
-      return {
-        kind: (kind?.trim() ?? 'reviewed-memory') as 'reviewed-memory' | 'knowledge-artifact',
-        id: idParts.join(':').trim(),
-      };
-    });
-
-  return {
-    artifactType,
-    id,
-    draftState,
-    topicKey: topicKey.length > 0 ? topicKey : null,
-    title,
-    summary,
-    body,
-    sourceReviewedMemoryIds,
-    derivedFromKnowledgeIds,
-    version: Number.isFinite(version) ? version : 1,
-    isCurrentBest,
-    supersedesKnowledgeId:
-      supersedesKnowledgeId.length > 0 ? supersedesKnowledgeId : null,
-    updatedAt: updatedAt.length > 0 ? updatedAt : undefined,
-    reviewedAt: reviewedAt.length > 0 ? reviewedAt : null,
-    recencyLabel,
-    provenanceRefs,
-  };
-}
-
 function parseSkillArtifact(markdown: string): SkillArtifact {
   const lines = markdown.split('\n');
   const id = lines[0]?.replace(/^#\s+/, '').trim() ?? '';
@@ -982,33 +815,6 @@ function parseSkillArtifact(markdown: string): SkillArtifact {
       requiresConfirmation,
     },
   };
-}
-
-export async function listMirrorBrainKnowledgeArtifactsFromQmdWorkspace(
-  input: QmdWorkspaceStoreInput,
-): Promise<KnowledgeArtifact[]> {
-  const directory = getQmdWorkspacePaths(input.workspaceDir).knowledgeDir;
-  let files: string[];
-
-  try {
-    files = await readdir(directory);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return [];
-    }
-
-    throw error;
-  }
-
-  const items = await Promise.all(
-    files
-      .filter((file) => file.endsWith('.md'))
-      .map(async (file) => parseKnowledgeArtifact(
-        await readFile(join(directory, file), 'utf8'),
-      )),
-  );
-
-  return deduplicateById(items);
 }
 
 export async function listMirrorBrainSkillArtifactsFromQmdWorkspace(

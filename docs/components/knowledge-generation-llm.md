@@ -10,7 +10,7 @@ The knowledge generation LLM module provides source-content retrieval helpers an
 - Provides content classification and theme extraction helpers for knowledge article synthesis flows.
 - Builds LLM prompts for synthesis callers without owning publication or review state.
 - Exposes `analyzeKnowledgeWithConfiguredLLM(prompt)` for callers that need the configured OpenAI-compatible model.
-- Does not create legacy `KnowledgeArtifact` drafts, publish artifacts, approve drafts, clear UI state, or execute skills.
+- Does not create old daily-review knowledge drafts, publish artifacts, approve drafts, clear UI state, or execute skills.
 
 ## Key Interfaces
 

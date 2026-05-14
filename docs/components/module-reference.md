@@ -58,7 +58,6 @@ Inputs:
 Outputs:
 
 - `BrowserMemorySyncResult`, `ShellMemorySyncResult`, paginated memory events,
-  `MemoryQueryResult`, `CandidateMemory`, `ReviewedMemory`, `KnowledgeArtifact`,
   `SkillArtifact`, topic summaries, and `KnowledgeGraphSnapshot`.
 
 Dependencies:
@@ -476,7 +475,6 @@ Inputs:
 
 Outputs:
 
-- `MemoryQueryResult`, `KnowledgeArtifact[]`, and `SkillArtifact[]`.
 
 Dependencies:
 
@@ -799,7 +797,6 @@ Responsibilities:
 - Build LLM synthesis prompts with provenance context.
 - Clean noisy source content and search/login utility pages.
 - Resolve stable Chinese-friendly knowledge titles.
-- Generate `KnowledgeArtifact` drafts with body, topic key, provenance refs,
   tags, timestamps, and degraded fallback behavior when necessary.
 
 Inputs:
@@ -809,7 +806,6 @@ Inputs:
 
 Outputs:
 
-- Draft `KnowledgeArtifact` objects and content retrieval metadata.
 
 Dependencies:
 
@@ -872,7 +868,6 @@ Responsibilities:
 
 Inputs:
 
-- `KnowledgeArtifact[]` with tags.
 
 Outputs:
 
@@ -902,7 +897,6 @@ Responsibilities:
 
 Inputs:
 
-- `KnowledgeArtifact[]` and graph options for similarity threshold/top-K.
 
 Outputs:
 

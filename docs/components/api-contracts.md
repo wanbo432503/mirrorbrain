@@ -13,23 +13,23 @@ This component owns shared runtime schemas for MirrorBrain HTTP transport DTOs. 
 
 ## Key Interfaces
 
-- `knowledgeArtifactDtoSchema`
 - `skillArtifactDtoSchema`
+
+Knowledge Article preview, draft, publish, tree, and revision contracts are currently defined at their route boundaries and should stay aligned with the Phase 4 `KnowledgeArticle*` domain types.
 
 ## Data Flow
 
-1. Domain services return internal `KnowledgeArtifact` and `SkillArtifact` values.
-2. HTTP routes reference the shared DTO schemas for response serialization.
+1. Domain services return internal values such as `SkillArtifact`, `KnowledgeArticleDraft`, and published Knowledge Article trees.
+2. HTTP routes reference shared DTO schemas where this component owns the public shape.
 3. Contract tests send example service values through the HTTP server and verify the serialized shape.
 4. Frontend and agent clients can later import or generate types from the same contract source.
 
 ## Test Strategy
 
-- unit tests in [src/shared/api-contracts/index.test.ts](/Users/wanbo/Workspace/mirrorbrain/src/shared/api-contracts/index.test.ts) verify the schema required fields match the domain required fields
-- HTTP contract coverage in [src/apps/mirrorbrain-http-server/index.test.ts](/Users/wanbo/Workspace/mirrorbrain/src/apps/mirrorbrain-http-server/index.test.ts) verifies minimal valid knowledge artifacts serialize through `/knowledge` while preserving optional enrichment fields such as `tags`, `relatedKnowledgeIds`, and `compilationMetadata`
-- HTTP contract coverage also verifies `/skills` preserves optional skill review timestamps such as `updatedAt` and `reviewedAt`
+- HTTP contract coverage in `src/apps/mirrorbrain-http-server/index.test.ts` verifies route serialization.
+- Skill contract coverage verifies `/skills` preserves optional skill review timestamps such as `updatedAt` and `reviewedAt`.
+- Phase 4 Knowledge Article routes are covered through `/knowledge-articles/*` tests.
 
 ## Known Risks Or Limitations
 
-- only the knowledge and skill artifact response schemas have moved into this shared contract layer so far
 - the schema is still handwritten JSON Schema; later work should expand this module to cover all public DTOs and use it as the source for frontend/client types

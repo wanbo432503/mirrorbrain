@@ -2,7 +2,6 @@ import { createContext, useContext, useReducer, Dispatch, ReactNode } from 'reac
 import type {
   MemoryEvent,
   CandidateMemory,
-  KnowledgeArtifact,
   SkillArtifact,
   BrowserSyncSummary,
   ReviewedMemory,
@@ -12,10 +11,7 @@ import type { PaginatedMemoryEvents } from '../api/client'
 type ServiceStatus = 'running' | 'stopped' | 'unknown'
 
 interface MirrorBrainState {
-  // Service status
   serviceStatus: ServiceStatus
-
-  // Memory events
   memoryEvents: MemoryEvent[]
   memoryPagination?: {
     total: number
@@ -24,31 +20,13 @@ interface MirrorBrainState {
     totalPages: number
   }
   hasLoadedMemoryEvents: boolean
-
-  // Review workflow
   reviewWindowDate: string | null
   reviewWindowEventCount: number
   candidateMemories: CandidateMemory[]
   selectedCandidateId: string | null
   reviewedMemories: ReviewedMemory[]
-
-  // Knowledge artifacts
-  knowledgeDraft: KnowledgeArtifact | null
-  knowledgeArtifacts: KnowledgeArtifact[]
-  knowledgeTopics: Array<{
-    topicKey: string
-    title: string
-    summary: string
-    currentBestKnowledgeId: string
-    updatedAt?: string
-    recencyLabel: string
-  }>
-
-  // Skill artifacts
   skillDraft: SkillArtifact | null
   skillArtifacts: SkillArtifact[]
-
-  // Sync state
   lastSyncSummary: BrowserSyncSummary | null
 }
 
@@ -57,9 +35,6 @@ type MirrorBrainAction =
   | { type: 'LOAD_MEMORY_EVENTS'; payload: PaginatedMemoryEvents }
   | { type: 'SYNC_BROWSER'; payload: BrowserSyncSummary }
   | { type: 'SYNC_SHELL'; payload: BrowserSyncSummary }
-  | { type: 'LOAD_KNOWLEDGE'; payload: KnowledgeArtifact[] }
-  | { type: 'LOAD_KNOWLEDGE_TOPICS'; payload: MirrorBrainState['knowledgeTopics'] }
-  | { type: 'SET_KNOWLEDGE_DRAFT'; payload: KnowledgeArtifact | null }
   | { type: 'LOAD_SKILLS'; payload: SkillArtifact[] }
   | { type: 'SET_SKILL_DRAFT'; payload: SkillArtifact | null }
   | { type: 'SET_CANDIDATES'; payload: CandidateMemory[] }
@@ -80,9 +55,6 @@ const initialState: MirrorBrainState = {
   candidateMemories: [],
   selectedCandidateId: null,
   reviewedMemories: [],
-  knowledgeDraft: null,
-  knowledgeArtifacts: [],
-  knowledgeTopics: [],
   skillDraft: null,
   skillArtifacts: [],
   lastSyncSummary: null,
@@ -107,20 +79,10 @@ function mirrorBrainReducer(state: MirrorBrainState, action: MirrorBrainAction):
         ...state,
         lastSyncSummary: action.payload,
         hasLoadedMemoryEvents: true,
-        // Merge imported events if present
         memoryEvents: action.payload.importedEvents
           ? [...action.payload.importedEvents, ...state.memoryEvents]
           : state.memoryEvents,
       }
-
-    case 'LOAD_KNOWLEDGE':
-      return { ...state, knowledgeArtifacts: action.payload }
-
-    case 'LOAD_KNOWLEDGE_TOPICS':
-      return { ...state, knowledgeTopics: action.payload }
-
-    case 'SET_KNOWLEDGE_DRAFT':
-      return { ...state, knowledgeDraft: action.payload }
 
     case 'LOAD_SKILLS':
       return { ...state, skillArtifacts: action.payload }

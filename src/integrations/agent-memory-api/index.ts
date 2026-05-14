@@ -1,5 +1,4 @@
 import type {
-  KnowledgeArtifact,
   MemoryEvent,
   MemoryNarrative,
   MemoryQueryInput as MemoryRetrievalQueryInput,
@@ -8,7 +7,6 @@ import type {
   SkillArtifact,
 } from '../../shared/types/index.js';
 import {
-  listMirrorBrainKnowledgeArtifactsFromQmdWorkspace,
   listMirrorBrainMemoryEventsFromQmdWorkspace,
   listMirrorBrainMemoryNarrativesFromQmdWorkspace,
   listMirrorBrainSkillArtifactsFromQmdWorkspace,
@@ -28,11 +26,6 @@ interface ListMemoryEventsInput {
   query?: string;
 }
 
-interface ListKnowledgeInput {
-  baseUrl?: string;
-  workspaceDir?: string;
-}
-
 interface ListSkillDraftsInput {
   baseUrl?: string;
   workspaceDir?: string;
@@ -41,9 +34,6 @@ interface ListSkillDraftsInput {
 interface AgentMemoryApiDependencies {
   listMemoryEvents?: (input: ListMemoryEventsInput) => Promise<MemoryEvent[]>;
   listMemoryNarratives?: (input: ListMemoryEventsInput) => Promise<MemoryNarrative[]>;
-  listKnowledgeArtifacts?: (
-    input: ListKnowledgeInput,
-  ) => Promise<KnowledgeArtifact[]>;
   listSkillArtifacts?: (input: ListSkillDraftsInput) => Promise<SkillArtifact[]>;
 }
 
@@ -846,23 +836,6 @@ export async function queryMemory(
         }) => item,
       ),
   };
-}
-
-export async function listKnowledge(
-  input: ListKnowledgeInput,
-  dependencies: AgentMemoryApiDependencies = {},
-): Promise<KnowledgeArtifact[]> {
-  if (dependencies.listKnowledgeArtifacts !== undefined) {
-    return dependencies.listKnowledgeArtifacts(input);
-  }
-
-  if (input.workspaceDir !== undefined) {
-    return listMirrorBrainKnowledgeArtifactsFromQmdWorkspace({
-      workspaceDir: input.workspaceDir,
-    });
-  }
-
-  return [];
 }
 
 export async function listSkillDrafts(

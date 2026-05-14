@@ -1,4 +1,4 @@
-import type { ReviewedMemory, KnowledgeArtifact } from '../../shared/types/index.js';
+import type { ReviewedMemory } from '../../shared/types/index.js';
 import type { DiscoveryResult } from './discovery-stage.js';
 import { extractTags } from './tag-extraction.js';
 

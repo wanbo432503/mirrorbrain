@@ -67,7 +67,7 @@ queries before falling back to raw-event shaping.
 35. If the caller already narrowed `sourceTypes` to `shell`, solve-oriented queries do not need to repeat shell-specific wording to trigger shell problem-solving narratives.
 36. Shell solve narratives can also recognize obvious install or environment-setup commands and describe them as a `prepared dependencies ...` phase in the raw fallback path.
 37. Problem-solving query detection now also recognizes common `fix`, `debug`, and `troubleshoot` wording in both English and Chinese, not only `solve`.
-38. For knowledge and skill retrieval, the agent memory API returns parsed `KnowledgeArtifact` and `SkillArtifact` objects.
+38. For skill retrieval, the agent memory API returns parsed `SkillArtifact` objects; knowledge retrieval should use the Phase 4 Knowledge Article API surfaces.
 39. The example tool wrapper shows how an agent-client-side `query_memory` tool can forward retrieval input and then turn ordered results into a lightweight chat answer.
 
 ## Test Strategy

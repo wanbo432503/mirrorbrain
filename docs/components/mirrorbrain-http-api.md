@@ -62,7 +62,6 @@ and deployment hardening.
 
 The canonical domain TypeScript definitions live in `src/shared/types/index.ts`.
 Runtime HTTP DTO schemas are moving into `src/shared/api-contracts/`; in the
-current slice, `KnowledgeArtifact` and `SkillArtifact` response serialization
 use that shared contract.
 
 ### Source Category
@@ -141,7 +140,6 @@ Required response fields:
 Additional fields may be present when the artifact has enough review, topic, or
 publication metadata:
 
-- `artifactType?: 'daily-review-draft' | 'topic-merge-candidate' | 'topic-knowledge'`
 - `topicKey?: string | null`
 - `title`
 - `summary`
@@ -1113,9 +1111,7 @@ Request:
 ```json
 {
   "artifact": {
-    "id": "knowledge-draft:reviewed:candidate:2026-05-11:docs",
     "draftState": "draft",
-    "artifactType": "daily-review-draft",
     "topicKey": "docs",
     "title": "Work on Docs",
     "summary": "A draft from reviewed memory.",
@@ -1144,7 +1140,6 @@ Response:
 ```json
 {
   "artifact": {
-    "id": "knowledge-draft:reviewed:candidate:2026-05-11:docs",
     "draftState": "draft",
     "sourceReviewedMemoryIds": ["reviewed:candidate:2026-05-11:docs"]
   }
@@ -1160,7 +1155,6 @@ Response status: `204`
 Constraints:
 
 - Valid ids currently start with one of:
-  - `knowledge-draft:`
   - `topic-knowledge:`
   - `topic-merge-candidate:`
 - Ids containing path traversal characters are rejected.
@@ -1176,7 +1170,6 @@ Request:
 ```json
 {
   "existingDraft": {
-    "id": "knowledge-draft:reviewed:candidate:2026-05-11:docs",
     "draftState": "draft",
     "sourceReviewedMemoryIds": ["reviewed:candidate:2026-05-11:docs"]
   },
@@ -1191,7 +1184,6 @@ Response:
 ```json
 {
   "artifact": {
-    "id": "knowledge-draft:reviewed:candidate:2026-05-11:docs",
     "draftState": "draft",
     "sourceReviewedMemoryIds": ["reviewed:candidate:2026-05-11:docs"]
   }

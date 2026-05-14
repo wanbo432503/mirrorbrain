@@ -18,8 +18,8 @@ The component is responsible for:
   changes
 - serving QMD-backed retrieval for memory read paths through QMD's unified
   structured search, with direct lexical fallback when needed
-- mapping QMD search hits back into MirrorBrain memory, knowledge, and skill
-  DTOs with provenance preserved
+- mapping QMD search hits back into MirrorBrain memory and skill DTOs with
+  provenance preserved
 
 The component is not responsible for:
 
@@ -41,7 +41,6 @@ Implemented interfaces:
 - `ingestReviewedMemoryToQmdWorkspace(...)`
 - `ingestMemoryNarrativeToQmdWorkspace(...)`
 - `ingestBrowserPageContentToQmdWorkspace(...)`
-- `ingestKnowledgeArtifactToQmdWorkspace(...)`
 - `ingestSkillArtifactToQmdWorkspace(...)`
 - `listMirrorBrainMemoryEventsFromQmdWorkspace(...)`
 - `listMirrorBrainMemoryEventsFromQmdFiles(...)`
@@ -50,7 +49,6 @@ Implemented interfaces:
 - `listMirrorBrainMemoryNarrativesFromQmdWorkspace(...)`
 - `listMirrorBrainCandidateMemoriesFromQmdWorkspace(...)`
 - `listMirrorBrainReviewedMemoriesFromQmdWorkspace(...)`
-- `listMirrorBrainKnowledgeArtifactsFromQmdWorkspace(...)`
 - `listMirrorBrainSkillArtifactsFromQmdWorkspace(...)`
 
 The adapter should use QMD as a Node library, not as a required long-running

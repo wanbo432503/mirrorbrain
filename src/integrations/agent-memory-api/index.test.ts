@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  listKnowledge,
   listSkillDrafts,
   queryMemory,
 } from './index.js';
@@ -2076,31 +2075,6 @@ describe('agent memory api', () => {
         },
       ],
     });
-  });
-
-  it('returns knowledge drafts from QMD', async () => {
-    await expect(
-      listKnowledge(
-        {
-          baseUrl: 'http://127.0.0.1:1933',
-        },
-        {
-          listKnowledgeArtifacts: async () => [
-            {
-              id: 'knowledge-draft:reviewed:candidate:browser:aw-event-1',
-              draftState: 'draft',
-              sourceReviewedMemoryIds: ['reviewed:candidate:browser:aw-event-1'],
-            },
-          ],
-        },
-      ),
-    ).resolves.toEqual([
-      {
-        id: 'knowledge-draft:reviewed:candidate:browser:aw-event-1',
-        draftState: 'draft',
-        sourceReviewedMemoryIds: ['reviewed:candidate:browser:aw-event-1'],
-      },
-    ]);
   });
 
   it('returns skill drafts from QMD', async () => {

@@ -115,17 +115,21 @@ Suggested fields:
 - `annotations`
 - `reviewedAt`
 
-### KnowledgeArtifact
+### KnowledgeArticle
 
-Represents a synthesized knowledge note produced from reviewed input.
+Represents a synthesized, topic-oriented knowledge article produced from reviewed work-session input.
 
 Suggested fields:
 
 - `id`
+- `projectId`
+- `topicId`
+- `articleId`
 - `title`
+- `summary`
 - `body`
-- `sourceReviewedMemoryIds`
-- `draftState`
+- `supportingReviewedWorkSessionIds`
+- `publicationState`
 - `publishedAt`
 
 ### SkillArtifact
@@ -166,8 +170,8 @@ Suggested fields:
 Until a stricter interface is chosen, design the API boundary around explicit capability-oriented APIs such as:
 
 - `queryMemory(...)`
-- `listKnowledge(...)`
-- `getKnowledgeArtifact(...)`
+- `listKnowledgeArticleTree(...)`
+- `getKnowledgeArticleHistory(...)`
 - `listSkillDrafts(...)`
 - `approveSkillDraft(...)`
 - `recordReviewDecision(...)`
@@ -190,7 +194,7 @@ The first implementation slice should prove this sequence:
 5. persistence of `MemoryEvent` into MirrorBrain-owned workspace artifacts
 6. candidate generation into `CandidateMemory`
 7. explicit review transition into `ReviewedMemory`
-8. daily review generation into `KnowledgeArtifact` draft state
+8. reviewed work-session synthesis into `KnowledgeArticleDraft`
 9. workflow evidence conversion into `SkillArtifact` draft state
 10. retrieval through agent-facing query APIs and the standalone MVP surface
 

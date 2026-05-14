@@ -208,22 +208,17 @@ Core API methods include:
 5. `createDailyCandidates()` - Create candidates
 6. `suggestCandidateReviews()` - AI suggestions
 7. `reviewCandidateMemory()` - Keep/Discard candidate
-8. `listKnowledge()` - Knowledge artifacts
-9. `listKnowledgeTopics()` - Knowledge topics
-10. `generateKnowledge()` - Generate knowledge and immediately expose the generated draft in shared artifact state
-11. `saveKnowledgeArtifact()` - Save edited knowledge draft; follow-up save failures must not hide a draft that generation already returned
-12. `listSkills()` - Skill artifacts
-13. `generateSkill()` - Generate skill
-14. `saveSkillArtifact()` - Save skill draft
-15. `listReviewedMemories()` - Reviewed memories
-16. `listSourceAuditEvents()` - List operational source audit records
-17. `listSourceStatuses()` - List source instance status summaries
-18. `analyzeWorkSessions()` - Run Phase 4 manual work-session analysis
-19. `reviewWorkSessionCandidate()` - Keep or discard a work-session candidate with explicit project assignment
-20. `generateKnowledgeArticlePreview()` - Generate an LLM-backed, non-durable Preview-tab knowledge article from a work-session candidate
-21. `generateKnowledgeArticleDraft()` - Create a persisted Knowledge Article draft after explicit work-session review
-22. `publishKnowledgeArticleDraft()` - Publish a reviewed draft into the durable Project -> Topic -> Knowledge tree
-23. `deleteKnowledgeArticle()` - Delete a published Project -> Topic -> Knowledge Article lineage
+8. `listSkills()` - Skill artifacts
+9. `generateSkill()` - Generate skill
+10. `saveSkillArtifact()` - Save skill draft
+11. `listSourceAuditEvents()` - List operational source audit records
+12. `listSourceStatuses()` - List source instance status summaries
+13. `analyzeWorkSessions()` - Run Phase 4 manual work-session analysis
+14. `reviewWorkSessionCandidate()` - Keep or discard a work-session candidate with explicit project assignment
+15. `generateKnowledgeArticlePreview()` - Generate an LLM-backed, non-durable Preview-tab knowledge article from a work-session candidate
+16. `generateKnowledgeArticleDraft()` - Create a persisted Knowledge Article draft after explicit work-session review
+17. `publishKnowledgeArticleDraft()` - Publish a reviewed draft into the durable Project -> Topic -> Knowledge tree
+18. `deleteKnowledgeArticle()` - Delete a published Project -> Topic -> Knowledge Article lineage
 
 **API Logic Preservation:** 95% identical to original vanilla TypeScript implementation.
 

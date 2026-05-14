@@ -485,36 +485,6 @@ export interface CandidateReviewSuggestion {
   supportingReasons?: string[];
 }
 
-export interface KnowledgeArtifact {
-  id: string;
-  draftState: 'draft' | 'published';
-  artifactType?: 'daily-review-draft' | 'topic-merge-candidate' | 'topic-knowledge';
-  topicKey?: string | null;
-  title?: string;
-  summary?: string;
-  body?: string;
-  sourceReviewedMemoryIds: string[];
-  derivedFromKnowledgeIds?: string[];
-  version?: number;
-  isCurrentBest?: boolean;
-  supersedesKnowledgeId?: string | null;
-  updatedAt?: string;
-  reviewedAt?: string | null;
-  recencyLabel?: string;
-  provenanceRefs?: Array<{
-    kind: 'reviewed-memory' | 'knowledge-artifact';
-    id: string;
-  }>;
-  tags?: string[];
-  relatedKnowledgeIds?: string[];
-  compilationMetadata?: {
-    discoveryInsights: string[];
-    generationMethod: 'two-stage-compilation' | 'legacy';
-    discoveryStageCompletedAt?: string;
-    executeStageCompletedAt?: string;
-  };
-}
-
 export interface SkillArtifact {
   id: string;
   approvalState: 'draft' | 'approved';
