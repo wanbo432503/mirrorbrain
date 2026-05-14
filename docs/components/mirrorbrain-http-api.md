@@ -789,6 +789,19 @@ Response:
 }
 ```
 
+### `DELETE /knowledge-articles/:articleId`
+
+Deletes one durable Published Knowledge Article lineage. The `articleId` is the
+stable article lineage id from `GET /knowledge-articles/tree`; deleting it
+removes all stored versions for that article and leaves source memory events and
+reviewed work sessions untouched.
+
+Response:
+
+```http
+204 No Content
+```
+
 ### `GET /candidate-memories`
 
 Lists candidate memories for a review date.

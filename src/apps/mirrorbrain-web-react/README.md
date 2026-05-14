@@ -236,6 +236,7 @@ Core API methods include:
 17. `listSourceStatuses()` - List source instance status summaries
 18. `analyzeWorkSessions()` - Run Phase 4 manual work-session analysis
 19. `reviewWorkSessionCandidate()` - Keep or discard a work-session candidate with explicit project assignment
+20. `deleteKnowledgeArticle()` - Delete a published Project -> Topic -> Knowledge Article lineage
 
 **API Logic Preservation:** 95% identical to original vanilla TypeScript implementation.
 
@@ -268,6 +269,8 @@ pnpm dev
    - Click an analysis window
    - Confirm or edit the project name on a candidate
    - Click "Keep as project" or "Discard"
+   - In Published, click "Delete" on a knowledge article to remove that
+     published article lineage
 
 4. **Knowledge / Skill Tabs:**
    - Click the "Knowledge" tab to browse approved knowledge in List mode or switch to Graph mode

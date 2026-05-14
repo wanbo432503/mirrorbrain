@@ -508,6 +508,12 @@ function validateKnowledgeArtifactId(artifactId: string): void {
   }
 }
 
+function validateKnowledgeArticleId(articleId: string): void {
+  if (!articleId.startsWith('article:') || isUnsafeArtifactId(articleId)) {
+    throw new ValidationError(`Invalid Knowledge Article ID format: ${articleId}`);
+  }
+}
+
 function validateSkillArtifactId(artifactId: string): void {
   if (!artifactId.startsWith('skill-draft:') || isUnsafeArtifactId(artifactId)) {
     throw new ValidationError(`Invalid skill artifact ID format: ${artifactId}`);
@@ -1751,6 +1757,10 @@ export function createMirrorBrainService(
     ): Promise<KnowledgeArticle[]> =>
       knowledgeArticleStore.listArticleHistory(filter),
     listKnowledgeArticleTree: () => knowledgeArticleStore.listKnowledgeArticleTree(),
+    deleteKnowledgeArticle: async (articleId: string): Promise<void> => {
+      validateKnowledgeArticleId(articleId);
+      await knowledgeArticleStore.deleteArticleLineage(articleId);
+    },
     listMemoryEvents: async (
       input?: { page?: number; pageSize?: number } & MemoryEventSourceFilter,
     ) => {

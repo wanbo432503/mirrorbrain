@@ -423,6 +423,7 @@ describe('start mirrorbrain dev runtime', () => {
       })),
       listKnowledgeArticleHistory: vi.fn(async () => []),
       listKnowledgeArticleTree: vi.fn(async () => ({ projects: [] })),
+      deleteKnowledgeArticle: vi.fn(async () => undefined),
     }));
     const prepareWebAssets = vi.fn(async () => ({
       outputDir: '/tmp/mirrorbrain-web',
@@ -644,6 +645,7 @@ describe('start mirrorbrain dev runtime', () => {
           })),
           listKnowledgeArticleHistory: vi.fn(async () => []),
           listKnowledgeArticleTree: vi.fn(async () => ({ projects: [] })),
+          deleteKnowledgeArticle: vi.fn(async () => undefined),
         })),
         startMirrorBrainHttpServer: vi.fn(async () => ({
           origin: 'http://127.0.0.1:3007',
@@ -937,6 +939,7 @@ describe('start mirrorbrain dev runtime', () => {
           })),
           listKnowledgeArticleHistory: vi.fn(async () => []),
           listKnowledgeArticleTree: vi.fn(async () => ({ projects: [] })),
+          deleteKnowledgeArticle: vi.fn(async () => undefined),
         })),
         startMirrorBrainHttpServer: vi.fn(async () => ({
           origin: 'http://127.0.0.1:3007',

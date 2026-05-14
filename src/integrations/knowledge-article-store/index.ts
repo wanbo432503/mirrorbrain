@@ -1,4 +1,4 @@
-import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
 import type { Project } from '../../modules/project-work-session/index.js';
@@ -13,6 +13,7 @@ export interface KnowledgeArticleStore {
   saveTopic(topic: Topic): Promise<void>;
   saveDraft(draft: Phase4KnowledgeArticleDraft): Promise<void>;
   saveArticles(articles: Phase4KnowledgeArticle[]): Promise<void>;
+  deleteArticleLineage(articleId: string): Promise<void>;
   listDrafts(): Promise<Phase4KnowledgeArticleDraft[]>;
   listTopics(projectId?: string): Promise<Topic[]>;
   listKnowledgeArticleTree(): Promise<KnowledgeArticleTree>;
@@ -178,6 +179,26 @@ export function createFileKnowledgeArticleStore(
             directory: 'knowledge-articles',
             artifact: article,
           }),
+        ),
+      );
+    },
+    deleteArticleLineage: async (articleId) => {
+      const articles = await listArtifacts<Phase4KnowledgeArticle>({
+        workspaceDir: input.workspaceDir,
+        directory: 'knowledge-articles',
+      });
+      const matchingArticles = articles.filter((article) => article.articleId === articleId);
+
+      await Promise.all(
+        matchingArticles.map((article) =>
+          rm(
+            getArtifactPath({
+              workspaceDir: input.workspaceDir,
+              directory: 'knowledge-articles',
+              id: article.id,
+            }),
+            { force: true },
+          ),
         ),
       );
     },

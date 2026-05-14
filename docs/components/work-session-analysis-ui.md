@@ -25,6 +25,8 @@ The component owns:
 - Calling Knowledge Article draft and publish APIs when the user publishes a
   preview knowledge item.
 - Loading the Published Project -> Topic -> Knowledge tree from the API.
+- Deleting published Knowledge Article lineages from the Published panel and
+  refreshing the Published tree after deletion.
 - Rendering the returned analysis window, excluded event count, and generated
   knowledge content.
 - Rendering generated preview knowledge as a complete scrollable article body.
@@ -70,6 +72,8 @@ Input:
   - `publishKnowledgeArticleDraft(request)` calls
     `POST /knowledge-articles/publish`.
   - `listKnowledgeArticleTree()` calls `GET /knowledge-articles/tree`.
+  - `deleteKnowledgeArticle(articleId)` calls
+    `DELETE /knowledge-articles/:articleId`.
 
 Output:
 
@@ -79,6 +83,7 @@ Output:
 - A published Project -> Topic -> Knowledge tree for durable articles.
 - Explicit keep/discard review requests sent to the service.
 - Explicit publish requests sent to the service.
+- Explicit delete requests for published Knowledge Article lineages.
 - Local loading and error state.
 
 ## Data Flow
@@ -105,6 +110,8 @@ Output:
    Draft, publishes it, refreshes the Published tree, and removes or marks the
    preview item. After publication, the panel switches to Published so the user
    can see the durable article in its Project -> Topic -> Knowledge location.
+11. In Published, the user can delete one Knowledge Article. The panel deletes
+    that article lineage through the API and refreshes the Published tree.
 
 ## Failure Modes And Constraints
 
@@ -120,6 +127,8 @@ Output:
 - `Publish` moves the preview candidate out of the Preview queue and refreshes
   Published. It should not leave the same knowledge visible in both tree modes.
 - `Discard` removes the preview candidate after the discard review succeeds.
+- Published deletion applies to the selected Knowledge Article lineage. It does
+  not delete source memory events or preview candidates.
 
 ## Test Strategy
 
@@ -145,5 +154,7 @@ The tests verify:
   published article body in the Published panel.
 - Keeping and discarding candidates remove them from the Preview queue and show
   explicit status feedback.
+- Published Knowledge Article deletion calls the dedicated article delete API,
+  refreshes the Published tree, and shows explicit status feedback.
 - The app routes the Review surface to the work-session review panel and no
   longer exposes Work Sessions as a separate primary route.

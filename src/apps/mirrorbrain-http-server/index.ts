@@ -72,6 +72,7 @@ interface MirrorBrainHttpService {
     articleId?: string;
   }): Promise<unknown[]>;
   listKnowledgeArticleTree?(): Promise<unknown>;
+  deleteKnowledgeArticle?(articleId: string): Promise<void>;
   listMemoryEvents(input?: {
     page?: number;
     pageSize?: number;
@@ -1495,6 +1496,37 @@ export async function startMirrorBrainHttpServer(
       }
 
       return input.service.listKnowledgeArticleTree();
+    },
+  );
+
+  app.delete<{ Params: { articleId: string } }>(
+    '/knowledge-articles/:articleId',
+    {
+      schema: {
+        summary: 'Delete a published Phase 4 Knowledge Article lineage',
+        response: {
+          204: { type: 'null' },
+          501: {
+            type: 'object',
+            properties: {
+              message: { type: 'string' },
+            },
+            required: ['message'],
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      if (input.service.deleteKnowledgeArticle === undefined) {
+        reply.code(501);
+        return {
+          message: 'Knowledge Article deletion is not available.',
+        };
+      }
+
+      await input.service.deleteKnowledgeArticle(request.params.articleId);
+      reply.code(204);
+      return null;
     },
   );
 

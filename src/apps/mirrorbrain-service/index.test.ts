@@ -816,6 +816,75 @@ describe('mirrorbrain service', () => {
     await rm(workspaceDir, { recursive: true, force: true });
   });
 
+  it('deletes a published Knowledge Article lineage from the Published tree', async () => {
+    const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-delete-article-'));
+    const candidate: WorkSessionCandidate = {
+      id: 'work-session-candidate:source-ledger-delete',
+      projectHint: 'mirrorbrain',
+      title: 'Source ledger deletion',
+      summary: 'Publish then delete a knowledge article.',
+      memoryEventIds: ['browser-1'],
+      sourceTypes: ['browser'],
+      timeRange: {
+        startAt: '2026-05-12T10:00:00.000Z',
+        endAt: '2026-05-12T10:30:00.000Z',
+      },
+      relationHints: ['Source ledger'],
+      reviewState: 'pending',
+    };
+    const service = createMirrorBrainService(
+      {
+        workspaceDir,
+        service: {
+          status: 'running',
+          syncBrowserMemory: vi.fn(),
+          syncShellMemory: vi.fn(),
+          stop: vi.fn(),
+        },
+      },
+      {
+        now: () => '2026-05-12T12:10:00.000Z',
+      },
+    );
+    const review = await service.reviewWorkSessionCandidate(candidate, {
+      decision: 'keep',
+      reviewedBy: 'user',
+      projectAssignment: {
+        kind: 'confirmed-new-project',
+        name: 'MirrorBrain',
+      },
+    });
+    const draft = await service.generateKnowledgeArticleDraft({
+      reviewedWorkSessionIds: [review.reviewedWorkSession.id],
+      title: 'Source ledger architecture',
+      summary: 'How source ledgers feed memory.',
+      body: 'Source ledgers are the acquisition boundary.',
+      topicProposal: {
+        kind: 'new-topic',
+        name: 'Source ledger',
+      },
+      articleOperationProposal: {
+        kind: 'create-new-article',
+      },
+    });
+    const published = await service.publishKnowledgeArticleDraft({
+      draft,
+      publishedBy: 'user',
+      topicAssignment: {
+        kind: 'confirmed-new-topic',
+        name: 'Source ledger',
+      },
+    });
+
+    await service.deleteKnowledgeArticle(published.article.articleId);
+
+    await expect(service.listKnowledgeArticleTree()).resolves.toEqual({
+      projects: [],
+    });
+
+    await rm(workspaceDir, { recursive: true, force: true });
+  });
+
   it('rejects Knowledge Article Draft generation from unpersisted reviewed work-session ids', async () => {
     const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-article-service-'));
     const service = createMirrorBrainService(

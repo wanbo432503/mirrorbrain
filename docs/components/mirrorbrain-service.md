@@ -84,12 +84,14 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 18. List the Published Knowledge Article tree by grouping saved projects,
     topics, article lineages, current-best versions, and history, while omitting
     reviewed-project assignments that do not yet have published articles.
-19. List raw imported memory when review-oriented workflows need event-level
+19. Delete a published Knowledge Article lineage by stable `articleId`, removing
+    all versions of that article from the Published tree.
+20. List raw imported memory when review-oriented workflows need event-level
     records, preferring the QMD workspace read path and falling back to
     workspace-cached memory-event files when storage reads fail.
-20. Forward `openclaw` memory retrieval calls through the configured workspace
+21. Forward `openclaw` memory retrieval calls through the configured workspace
     directory and return shaped retrieval results.
-21. Before daily candidate generation or refresh, run Phase 4 source-ledger import so the workspace raw-event cache reflects newly recorded daily JSONL ledgers.
+22. Before daily candidate generation or refresh, run Phase 4 source-ledger import so the workspace raw-event cache reflects newly recorded daily JSONL ledgers.
 13. If candidates already exist for a review date and the sync imports no new browser events, return the existing candidates without rebuilding them.
 14. If candidates already exist for a review date and source-ledger import adds new memory events, rebuild the daily candidates from current raw workspace memory history so late-day activity is included.
 15. Before rebuilding daily candidates, exclude memory events and browser URLs that are already linked through reviewed memories to published knowledge so previously synthesized work is not clustered again.
@@ -139,7 +141,8 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
 - unit tests verify persisted reviewed work-session ids can generate Knowledge
   Article Drafts, unpersisted ids are rejected, published article versions
   preserve stable article lineages, kept-only reviewed projects stay out of the
-  Published tree, and the Published tree groups saved projects/topics/articles
+  Published tree, published Knowledge Article deletion removes a lineage from
+  the Published tree, and the Published tree groups saved projects/topics/articles
 - unit tests verify the service forwards retrieval calls to the plugin API with
   the configured QMD workspace directory and retrieval input
 - unit tests verify review-oriented flows still use raw memory event listing where needed

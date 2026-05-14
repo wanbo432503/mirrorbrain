@@ -736,6 +736,7 @@ describe('mirrorbrain http server', () => {
       publishKnowledgeArticleDraft: vi.fn(async () => ({ article })),
       listKnowledgeArticleHistory: vi.fn(async () => [article]),
       listKnowledgeArticleTree: vi.fn(async () => knowledgeArticleTree),
+      deleteKnowledgeArticle: vi.fn(async () => undefined),
     };
     const server = await startMirrorBrainHttpServer({ service, port: 0 });
     servers.push(server);
@@ -772,6 +773,12 @@ describe('mirrorbrain http server', () => {
     const historyBody = await historyResponse.json();
     const treeResponse = await fetch(`${server.origin}/knowledge-articles/tree`);
     const treeBody = await treeResponse.json();
+    const deleteResponse = await fetch(
+      `${server.origin}/knowledge-articles/${encodeURIComponent(article.articleId)}`,
+      {
+        method: 'DELETE',
+      },
+    );
 
     expect(draftResponse.status).toBe(201);
     expect(service.generateKnowledgeArticleDraft).toHaveBeenCalledWith({
@@ -789,6 +796,8 @@ describe('mirrorbrain http server', () => {
     expect(historyBody).toEqual({ items: [article] });
     expect(treeResponse.status).toBe(200);
     expect(treeBody).toEqual(knowledgeArticleTree);
+    expect(deleteResponse.status).toBe(204);
+    expect(service.deleteKnowledgeArticle).toHaveBeenCalledWith(article.articleId);
   });
 
   it('rejects Knowledge Article Draft requests that send caller-supplied reviewed sessions', async () => {

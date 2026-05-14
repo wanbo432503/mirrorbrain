@@ -398,6 +398,91 @@ describe('WorkSessionAnalysisPanel', () => {
     expect(within(treeRail).queryByText('Source ledger architecture')).toBeNull()
   })
 
+  it('deletes published knowledge from the Published panel and refreshes the tree', async () => {
+    const publishedArticle = {
+      id: 'knowledge-article:source-ledger:v1',
+      articleId: 'article:project-mirrorbrain:topic-source-ledger:source-ledger',
+      projectId: 'project:mirrorbrain',
+      topicId: 'topic:project-mirrorbrain:source-ledger',
+      title: 'Source ledger architecture',
+      summary: 'How source ledgers feed memory.',
+      body: 'Source ledgers are the acquisition boundary.',
+      version: 1,
+      isCurrentBest: true,
+      supersedesArticleId: null,
+      sourceReviewedWorkSessionIds: ['reviewed-work-session:source-ledger'],
+      sourceMemoryEventIds: ['browser-1'],
+      provenanceRefs: [],
+      publishState: 'published' as const,
+      publishedAt: '2026-05-12T12:20:00.000Z',
+      publishedBy: 'mirrorbrain-web',
+    }
+    const publishedTree = {
+      projects: [
+        {
+          project: {
+            id: 'project:mirrorbrain',
+            name: 'MirrorBrain',
+            status: 'active' as const,
+            createdAt: '2026-05-12T12:00:00.000Z',
+            updatedAt: '2026-05-12T12:00:00.000Z',
+          },
+          topics: [
+            {
+              topic: {
+                id: 'topic:project-mirrorbrain:source-ledger',
+                projectId: 'project:mirrorbrain',
+                name: 'Source ledger',
+                status: 'active' as const,
+                createdAt: '2026-05-12T12:20:00.000Z',
+                updatedAt: '2026-05-12T12:20:00.000Z',
+              },
+              articles: [
+                {
+                  articleId: publishedArticle.articleId,
+                  title: publishedArticle.title,
+                  currentBestArticle: publishedArticle,
+                  history: [publishedArticle],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+    const api = {
+      analyzeWorkSessions: vi.fn(),
+      reviewWorkSessionCandidate: vi.fn(),
+      generateKnowledgeArticleDraft: vi.fn(),
+      publishKnowledgeArticleDraft: vi.fn(),
+      deleteKnowledgeArticle: vi.fn(async () => undefined),
+      listKnowledgeArticleTree: vi
+        .fn()
+        .mockResolvedValueOnce(publishedTree)
+        .mockResolvedValueOnce({ projects: [] }),
+    } as unknown as MirrorBrainWebAppApi
+    const user = userEvent.setup()
+
+    render(<WorkSessionAnalysisPanel api={api} />)
+
+    const treeRail = await screen.findByTestId('work-session-tree-rail')
+    await user.click(within(treeRail).getByRole('tab', { name: 'Published' }))
+    expect(screen.getByTestId('published-knowledge-panel').textContent).toContain(
+      'Source ledger architecture',
+    )
+
+    await user.click(
+      screen.getByRole('button', { name: 'Delete published knowledge Source ledger architecture' }),
+    )
+
+    expect(api.deleteKnowledgeArticle).toHaveBeenCalledWith(publishedArticle.articleId)
+    expect(await screen.findByText('Deleted published knowledge.')).not.toBeNull()
+    expect(screen.getByTestId('published-knowledge-panel').textContent).toContain(
+      'No published knowledge articles yet.',
+    )
+    expect(within(treeRail).queryByText('Source ledger architecture')).toBeNull()
+  })
+
   it('discards a preview work-session candidate and removes it from preview', async () => {
     const candidate = {
       id: 'work-session-candidate:discard-me',

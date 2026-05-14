@@ -48,6 +48,7 @@ export default function WorkSessionAnalysisPanel({
   const [projectNames, setProjectNames] = useState<Record<string, string>>({})
   const [reviewingCandidateId, setReviewingCandidateId] = useState<string | null>(null)
   const [publishingCandidateId, setPublishingCandidateId] = useState<string | null>(null)
+  const [deletingArticleId, setDeletingArticleId] = useState<string | null>(null)
   const [generatedKnowledgeByCandidateId, setGeneratedKnowledgeByCandidateId] =
     useState<Record<string, WorkSessionPreviewKnowledgeNode>>({})
   const [reviewResults, setReviewResults] = useState<
@@ -276,6 +277,26 @@ export default function WorkSessionAnalysisPanel({
     }))
   }
 
+  const deletePublishedKnowledge = async (articleId: string) => {
+    setDeletingArticleId(articleId)
+    setError(null)
+    setActionFeedback(null)
+
+    try {
+      await api.deleteKnowledgeArticle(articleId)
+      setPublishedTree(await api.listKnowledgeArticleTree())
+      setActionFeedback('Deleted published knowledge.')
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : 'Failed to delete published knowledge.',
+      )
+    } finally {
+      setDeletingArticleId(null)
+    }
+  }
+
   const renderPreviewTree = () => {
     if (previewTree.projects.length === 0) {
       return (
@@ -377,12 +398,25 @@ export default function WorkSessionAnalysisPanel({
             key={article?.id ?? articleNode.articleId}
             className="min-w-0 rounded border border-slate-200 bg-canvas px-4 py-3"
           >
-            <h3 className="break-words font-heading text-base font-semibold text-ink">
-              {articleNode.title}
-            </h3>
-            <p className="mt-1 text-sm text-inkMuted">
-              {projectNode.project.name} / {topicNode.topic.name}
-            </p>
+            <div className="flex flex-wrap items-start justify-between gap-sm">
+              <div className="min-w-0">
+                <h3 className="break-words font-heading text-base font-semibold text-ink">
+                  {articleNode.title}
+                </h3>
+                <p className="mt-1 text-sm text-inkMuted">
+                  {projectNode.project.name} / {topicNode.topic.name}
+                </p>
+              </div>
+              <button
+                type="button"
+                aria-label={`Delete published knowledge ${articleNode.title}`}
+                className="h-8 rounded border border-red-200 px-3 text-sm font-medium text-red-700 transition-colors hover:border-red-400 hover:bg-red-50 disabled:cursor-wait disabled:opacity-60"
+                disabled={deletingArticleId !== null}
+                onClick={() => void deletePublishedKnowledge(articleNode.articleId)}
+              >
+                {deletingArticleId === articleNode.articleId ? 'Deleting' : 'Delete'}
+              </button>
+            </div>
             {article ? (
               <div className="mt-3 max-h-[52vh] overflow-y-auto whitespace-pre-wrap break-words rounded border border-slate-200 bg-slate-50 px-3 py-3 text-sm leading-6 text-ink">
                 {article.body}

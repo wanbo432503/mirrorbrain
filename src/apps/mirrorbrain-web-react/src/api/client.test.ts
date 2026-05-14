@@ -143,6 +143,27 @@ describe('createMirrorBrainBrowserApi', () => {
     );
   });
 
+  it('sends delete requests for published Knowledge Article lineages', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 204,
+      json: async () => ({}),
+      text: async () => '',
+    })) as unknown as typeof fetch;
+    vi.stubGlobal('fetch', fetchMock);
+    const articleId = 'article:project-mirrorbrain:topic-source-ledger:source-ledger';
+    const api = createMirrorBrainBrowserApi('http://localhost:3000');
+
+    await api.deleteKnowledgeArticle(articleId);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `http://localhost:3000/knowledge-articles/${encodeURIComponent(articleId)}`,
+      expect.objectContaining({
+        method: 'DELETE',
+      }),
+    );
+  });
+
   it('calls Phase 4 source management endpoints', async () => {
     const fetchMock = vi
       .fn()

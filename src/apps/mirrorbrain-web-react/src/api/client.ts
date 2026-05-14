@@ -82,6 +82,7 @@ export interface MirrorBrainWebAppApi {
   publishKnowledgeArticleDraft(
     request: PublishKnowledgeArticleDraftRequest
   ): Promise<PublishKnowledgeArticleDraftResult>;
+  deleteKnowledgeArticle(articleId: string): Promise<void>;
   createDailyCandidates(
     reviewDate: string,
     reviewTimeZone?: string
@@ -287,6 +288,30 @@ export function createMirrorBrainBrowserApi(
         body: JSON.stringify(request),
       });
       return readJson<PublishKnowledgeArticleDraftResult>(response);
+    },
+
+    async deleteKnowledgeArticle(articleId: string) {
+      const response = await fetch(
+        `${baseUrl}/knowledge-articles/${encodeURIComponent(articleId)}`,
+        {
+          method: 'DELETE',
+        },
+      );
+
+      if (!response.ok) {
+        let errorMessage = 'Failed to delete Knowledge Article';
+
+        try {
+          const body = await response.json();
+          if (body.message || body.error) {
+            errorMessage = body.message || body.error;
+          }
+        } catch {
+          errorMessage += `: ${response.statusText}`;
+        }
+
+        throw new Error(errorMessage);
+      }
     },
 
     async createDailyCandidates(reviewDate: string, reviewTimeZone?: string) {

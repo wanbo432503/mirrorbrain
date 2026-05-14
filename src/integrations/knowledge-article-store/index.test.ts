@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises';
+import { access, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -145,6 +145,104 @@ describe('file knowledge article store', () => {
                   title: versionTwo.title,
                   currentBestArticle: versionTwo,
                   history: [versionTwo, versionOne],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  it('deletes one published article lineage without removing sibling articles', async () => {
+    const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-article-delete-'));
+    tempDirs.push(workspaceDir);
+    const store = createFileKnowledgeArticleStore({ workspaceDir });
+    const project: Project = {
+      id: 'project:mirrorbrain',
+      name: 'MirrorBrain',
+      status: 'active',
+      createdAt: '2026-05-12T12:00:00.000Z',
+      updatedAt: '2026-05-12T12:00:00.000Z',
+    };
+    const topic: Topic = {
+      id: 'topic:project-mirrorbrain:source-ledger',
+      projectId: 'project:mirrorbrain',
+      name: 'Source ledger',
+      status: 'active',
+      createdAt: '2026-05-12T12:00:00.000Z',
+      updatedAt: '2026-05-12T12:00:00.000Z',
+    };
+    const versionOne: KnowledgeArticle = {
+      id: 'knowledge-article:source-ledger:v1',
+      articleId: 'article:project-mirrorbrain:topic-source-ledger:source-ledger',
+      projectId: project.id,
+      topicId: topic.id,
+      title: 'Source ledger',
+      summary: 'Version one.',
+      body: 'Version one body.',
+      version: 1,
+      isCurrentBest: false,
+      supersedesArticleId: null,
+      sourceReviewedWorkSessionIds: ['reviewed-work-session:1'],
+      sourceMemoryEventIds: ['memory-1'],
+      provenanceRefs: [],
+      publishState: 'published',
+      publishedAt: '2026-05-12T12:00:00.000Z',
+      publishedBy: 'user',
+    };
+    const versionTwo: KnowledgeArticle = {
+      ...versionOne,
+      id: 'knowledge-article:source-ledger:v2',
+      version: 2,
+      isCurrentBest: true,
+      supersedesArticleId: versionOne.id,
+      publishedAt: '2026-05-12T13:00:00.000Z',
+    };
+    const siblingArticle: KnowledgeArticle = {
+      ...versionOne,
+      id: 'knowledge-article:recorder:v1',
+      articleId: 'article:project-mirrorbrain:topic-source-ledger:recorder',
+      title: 'Recorder supervision',
+      isCurrentBest: true,
+    };
+
+    await store.saveProject(project);
+    await store.saveTopic(topic);
+    await store.saveArticles([versionOne, versionTwo, siblingArticle]);
+
+    await store.deleteArticleLineage(versionOne.articleId);
+
+    await expect(
+      access(
+        join(
+          workspaceDir,
+          'mirrorbrain',
+          'knowledge-articles',
+          `${encodeURIComponent(versionOne.id)}.json`,
+        ),
+      ),
+    ).rejects.toThrow();
+    await expect(
+      store.listArticleHistory({
+        projectId: project.id,
+        topicId: topic.id,
+        articleId: versionOne.articleId,
+      }),
+    ).resolves.toEqual([]);
+    await expect(store.listKnowledgeArticleTree()).resolves.toEqual({
+      projects: [
+        {
+          project,
+          topics: [
+            {
+              topic,
+              articles: [
+                {
+                  articleId: siblingArticle.articleId,
+                  title: siblingArticle.title,
+                  currentBestArticle: siblingArticle,
+                  history: [siblingArticle],
                 },
               ],
             },
