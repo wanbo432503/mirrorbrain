@@ -268,7 +268,8 @@ pnpm dev
 3. **Published Tab:**
    - Click "Published" tab
    - Click "Delete" on a knowledge article to remove that
-     published article lineage
+     published article lineage; the client only treats `204 No Content` as a
+     successful delete
 
 4. **Knowledge / Skill Tabs:**
    - Click the "Knowledge" tab to browse approved knowledge in List mode or switch to Graph mode

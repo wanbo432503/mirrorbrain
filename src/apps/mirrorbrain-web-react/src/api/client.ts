@@ -135,6 +135,38 @@ export function createMirrorBrainBrowserApi(
     return body;
   };
 
+  const ensureNoContent = async (
+    response: Response,
+    defaultErrorMessage: string,
+  ): Promise<void> => {
+    if (response.status === 204) {
+      return;
+    }
+
+    if (response.ok) {
+      throw new Error(
+        `${defaultErrorMessage}: expected 204, received ${response.status}`,
+      );
+    }
+
+    let errorMessage = defaultErrorMessage;
+
+    try {
+      const body = (await response.json()) as {
+        message?: string;
+        error?: string;
+      };
+
+      if (body.message || body.error) {
+        errorMessage = body.message || body.error;
+      }
+    } catch {
+      errorMessage += `: ${response.statusText}`;
+    }
+
+    throw new Error(errorMessage);
+  };
+
   return {
     async getHealth() {
       const response = await fetch(`${baseUrl}/health`);
@@ -298,20 +330,7 @@ export function createMirrorBrainBrowserApi(
         },
       );
 
-      if (!response.ok) {
-        let errorMessage = 'Failed to delete Knowledge Article';
-
-        try {
-          const body = await response.json();
-          if (body.message || body.error) {
-            errorMessage = body.message || body.error;
-          }
-        } catch {
-          errorMessage += `: ${response.statusText}`;
-        }
-
-        throw new Error(errorMessage);
-      }
+      await ensureNoContent(response, 'Failed to delete Knowledge Article');
     },
 
     async createDailyCandidates(reviewDate: string, reviewTimeZone?: string) {

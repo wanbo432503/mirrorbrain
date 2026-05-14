@@ -800,6 +800,57 @@ describe('mirrorbrain http server', () => {
     expect(service.deleteKnowledgeArticle).toHaveBeenCalledWith(article.articleId);
   });
 
+  it('routes long encoded Knowledge Article IDs to deletion before the static UI fallback', async () => {
+    const staticDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-http-static-'));
+    writeFileSync(
+      join(staticDir, 'index.html'),
+      '<!doctype html><html><body><h1>MirrorBrain UI</h1></body></html>',
+    );
+
+    const articleId =
+      'article:project-atomgit-gitcode-全球开发者的开源社区:topic-project-atomgit-gitcode-全球开发者的开源社区-atomgit-gitcode-全球开发者的开源社区:atomgit-gitcode-全球开发者的开源社区';
+    const service = {
+      service: {
+        status: 'running' as const,
+        config: getMirrorBrainConfig(),
+        stop: vi.fn(),
+      },
+      syncBrowserMemory: vi.fn(),
+      syncShellMemory: vi.fn(),
+      listMemoryEvents: vi.fn(async () => []),
+      queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
+      listKnowledge: vi.fn(async () => []),
+      listSkillDrafts: vi.fn(async () => []),
+      createDailyCandidateMemories: vi.fn(),
+      suggestCandidateReviews: vi.fn(),
+      reviewCandidateMemory: vi.fn(),
+      undoCandidateReview: vi.fn(),
+      deleteCandidateMemory: vi.fn(),
+      generateKnowledgeFromReviewedMemories: vi.fn(),
+      generateSkillDraftFromReviewedMemories: vi.fn(),
+      publishKnowledge: vi.fn(),
+      publishSkillDraft: vi.fn(),
+      deleteKnowledgeArticle: vi.fn(async () => undefined),
+    };
+    const server = await startMirrorBrainHttpServer({
+      service,
+      port: 0,
+      staticDir,
+    });
+    servers.push(server);
+
+    const deleteResponse = await fetch(
+      `${server.origin}/knowledge-articles/${encodeURIComponent(articleId)}`,
+      {
+        method: 'DELETE',
+      },
+    );
+
+    expect(deleteResponse.status).toBe(204);
+    expect(await deleteResponse.text()).toBe('');
+    expect(service.deleteKnowledgeArticle).toHaveBeenCalledWith(articleId);
+  });
+
   it('rejects Knowledge Article Draft requests that send caller-supplied reviewed sessions', async () => {
     const generateKnowledgeArticleDraft = vi.fn();
     const service = {

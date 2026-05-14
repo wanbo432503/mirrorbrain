@@ -671,7 +671,11 @@ export async function startMirrorBrainHttpServer(
   const config = input.service.service.config ?? getMirrorBrainConfig();
   const host = input.host ?? config.service.host;
   const port = input.port ?? config.service.port;
-  const app = Fastify();
+  const app = Fastify({
+    routerOptions: {
+      maxParamLength: 2048,
+    },
+  });
 
   await app.register(fastifySwagger, {
     openapi: {
@@ -697,8 +701,15 @@ export async function startMirrorBrainHttpServer(
       serve: true,
     });
 
-    // Fallback to index.html for SPA routing
+    // Fallback to index.html for SPA routing.
     app.setNotFoundHandler((request, reply) => {
+      if (request.method !== 'GET' && request.method !== 'HEAD') {
+        reply.code(404);
+        return {
+          message: 'Route not found.',
+        };
+      }
+
       reply.type('text/html; charset=utf-8');
       return readFile(join(input.staticDir!, 'index.html'), 'utf8');
     });

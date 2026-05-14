@@ -802,6 +802,14 @@ Response:
 204 No Content
 ```
 
+Notes:
+
+- `articleId` must be URL-encoded by clients because it contains structured
+  separators and may include Unicode project/topic titles.
+- A successful delete is only represented by `204 No Content`; clients should
+  treat any other status, including a `200` HTML response from a misrouted
+  static UI fallback, as a failed delete.
+
 ### `GET /candidate-memories`
 
 Lists candidate memories for a review date.

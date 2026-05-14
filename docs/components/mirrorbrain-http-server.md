@@ -112,6 +112,11 @@ Those concerns remain in the service, workflow, module, and integration layers.
 - Knowledge Article draft, publish, history, delete, and tree endpoints depend
   on a service object that implements Phase 4 article methods; otherwise they
   return `501`
+- structured route ids such as Knowledge Article lineage ids can be long and
+  Unicode-bearing; the HTTP router is configured to accept those ids before
+  static UI fallback routing is considered
+- static UI fallback only serves `index.html` for browser navigation requests;
+  missing non-GET routes return `404` instead of a successful HTML shell
 - sync responses can include a recent `importedEvents` preview so standalone clients can surface newly imported memory immediately without returning the full imported event batch
 - knowledge approval depends on a persisted draft id; missing ids return a request error rather than a partially shaped success payload
 
@@ -124,6 +129,8 @@ Those concerns remain in the service, workflow, module, and integration layers.
 - unit-style coverage for explicit work-session review endpoint routing and serialization
 - unit-style coverage for Knowledge Article draft, publish, history, delete,
   and tree endpoint routing
+- regression coverage verifies long encoded Knowledge Article ids still reach
+  `DELETE /knowledge-articles/:articleId` when static UI serving is enabled
 - broader integration coverage through the wrapped service contract tests
 - API client coverage verifies failed knowledge approval responses are surfaced as errors before UI state reads topic metadata
 - `tsc --noEmit` after TypeScript changes

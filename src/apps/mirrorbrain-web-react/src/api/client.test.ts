@@ -164,6 +164,25 @@ describe('createMirrorBrainBrowserApi', () => {
     );
   });
 
+  it('rejects published Knowledge Article delete responses that are not no content', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      json: async () => {
+        throw new Error('HTML is not JSON');
+      },
+      text: async () => '<!doctype html><html><body>MirrorBrain UI</body></html>',
+    })) as unknown as typeof fetch;
+    vi.stubGlobal('fetch', fetchMock);
+    const articleId = 'article:project-mirrorbrain:topic-source-ledger:source-ledger';
+    const api = createMirrorBrainBrowserApi('http://localhost:3000');
+
+    await expect(api.deleteKnowledgeArticle(articleId)).rejects.toThrow(
+      'Failed to delete Knowledge Article: expected 204, received 200',
+    );
+  });
+
   it('calls Phase 4 source management endpoints', async () => {
     const fetchMock = vi
       .fn()
