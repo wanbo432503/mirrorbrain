@@ -136,7 +136,17 @@ export interface WorkSessionCandidate {
   sourceTypes: string[];
   timeRange: MemoryTimeRange;
   relationHints: string[];
+  evidenceItems?: WorkSessionEvidenceItem[];
   reviewState: 'pending';
+}
+
+export interface WorkSessionEvidenceItem {
+  memoryEventId: string;
+  sourceType: string;
+  title: string;
+  url?: string;
+  summary?: string;
+  excerpt: string;
 }
 
 export type WorkSessionProjectAssignment =

@@ -12,6 +12,7 @@ function memoryEvent(input: {
   project?: string;
   topic?: string;
   url?: string;
+  pageContent?: string;
 }): MemoryEvent {
   const entities: Array<{ kind: string; label: string; ref?: string }> = [];
 
@@ -50,6 +51,7 @@ function memoryEvent(input: {
       entities,
       sourceSpecific: {
         ...(input.url !== undefined ? { url: input.url } : {}),
+        ...(input.pageContent !== undefined ? { pageContent: input.pageContent } : {}),
       },
     },
     captureMetadata: {
@@ -324,6 +326,80 @@ describe('work-session analysis', () => {
       title: 'Work-session review flow',
       memoryEventIds: ['browser-doc-1', 'browser-doc-2', 'browser-doc-3'],
     });
+  });
+
+  it('attaches source evidence excerpts from browser page content to candidates', () => {
+    const result = analyzeWorkSessionCandidates({
+      analysisWindow: {
+        preset: 'last-6-hours',
+        startAt: '2026-05-12T06:00:00.000Z',
+        endAt: '2026-05-12T12:00:00.000Z',
+      },
+      generatedAt: '2026-05-12T12:00:00.000Z',
+      memoryEvents: [
+        memoryEvent({
+          id: 'cluster-overview',
+          timestamp: '2026-05-12T10:00:00.000Z',
+          sourceType: 'browser',
+          title: '聚类算法总览',
+          summary: '阅读聚类算法总览。',
+          project: '聚类算法研究',
+          topic: '聚类算法方法与应用',
+          url: 'https://example.com/clustering-overview',
+          pageContent:
+            '聚类算法将样本按照相似性划分为多个组。K-Means 适合球状簇和大规模数值数据，层次聚类适合观察不同粒度的树状关系。',
+        }),
+        memoryEvent({
+          id: 'cluster-density',
+          timestamp: '2026-05-12T10:10:00.000Z',
+          sourceType: 'browser',
+          title: 'DBSCAN 密度聚类',
+          summary: '阅读 DBSCAN。',
+          project: '聚类算法研究',
+          topic: '聚类算法方法与应用',
+          url: 'https://example.com/dbscan',
+          pageContent:
+            'DBSCAN 通过密度可达关系形成簇，能够识别噪声点，适合非凸形状数据，但参数 eps 和 minPts 会显著影响结果。',
+        }),
+        memoryEvent({
+          id: 'cluster-shell',
+          timestamp: '2026-05-12T10:20:00.000Z',
+          sourceType: 'shell',
+          title: 'Run clustering notes search',
+          summary: 'Searched local notes for clustering workflows.',
+          project: '聚类算法研究',
+          topic: '聚类算法方法与应用',
+        }),
+      ],
+    });
+
+    expect(result.candidates[0].evidenceItems).toEqual([
+      {
+        memoryEventId: 'cluster-overview',
+        sourceType: 'browser',
+        title: '聚类算法总览',
+        url: 'https://example.com/clustering-overview',
+        summary: '阅读聚类算法总览。',
+        excerpt:
+          '聚类算法将样本按照相似性划分为多个组。K-Means 适合球状簇和大规模数值数据，层次聚类适合观察不同粒度的树状关系。',
+      },
+      {
+        memoryEventId: 'cluster-density',
+        sourceType: 'browser',
+        title: 'DBSCAN 密度聚类',
+        url: 'https://example.com/dbscan',
+        summary: '阅读 DBSCAN。',
+        excerpt:
+          'DBSCAN 通过密度可达关系形成簇，能够识别噪声点，适合非凸形状数据，但参数 eps 和 minPts 会显著影响结果。',
+      },
+      {
+        memoryEventId: 'cluster-shell',
+        sourceType: 'shell',
+        title: 'Run clustering notes search',
+        summary: 'Searched local notes for clustering workflows.',
+        excerpt: 'Searched local notes for clustering workflows.',
+      },
+    ]);
   });
 
   it('filters low-value update pages and only emits abstract topics with at least three memory events', () => {

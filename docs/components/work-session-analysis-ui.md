@@ -32,9 +32,9 @@ The component owns:
 - Rendering the returned analysis window, excluded event count, and generated
   knowledge content.
 - Rendering generated preview knowledge as a complete scrollable article body.
-  Supporting memory-event labels, source types, and provenance ids are folded
-  into the article's References section instead of being shown in a separate
-  metadata block.
+  Supporting memory-event labels, source types, provenance ids, and evidence
+  excerpts are folded into the article body and References section instead of
+  being shown in a separate metadata block.
 - Rendering either the top-level Preview view or the top-level Published view
   through the explicit component `mode` prop, without nested Preview/Published
   subtabs.
@@ -103,8 +103,9 @@ Output:
 5. The user can edit the proposed project name and inspect the topic evidence
    through the generated article references.
 6. The user clicks `Generate` for a topic, creating one preview knowledge item
-   for that topic. The generated body includes a References section built from
-   the supporting memory events.
+   for that topic. The generated body uses the candidate's evidence excerpts,
+   including browser `pageContent` excerpts when available, and includes a
+   References section built from the supporting memory events.
 7. The user can discard the candidate. This records a discard review and removes
    the candidate from Preview.
 8. The user publishes a generated preview knowledge item.
@@ -154,8 +155,8 @@ The tests verify:
 - Preview topics do not expose `Publish` until the user explicitly generates
   preview knowledge.
 - Generated preview knowledge renders as a complete scrollable article body
-  with references inside the article, without a separate associated-memory or
-  provenance metadata block.
+  with evidence excerpts and references inside the article, without a separate
+  associated-memory or provenance metadata block.
 - The panel publishes preview knowledge through review, draft generation, and
   article publication API calls, using the edited project name in the publish
   review payload.

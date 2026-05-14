@@ -15,6 +15,7 @@ export interface WorkSessionCandidate {
   sourceTypes: string[];
   timeRange: MemoryTimeRange;
   relationHints: string[];
+  evidenceItems?: WorkSessionEvidenceItem[];
   reviewState: 'pending';
 }
 
@@ -25,6 +26,15 @@ export interface WorkSessionAnalysisResult {
   excludedMemoryEventIds: string[];
 }
 
+export interface WorkSessionEvidenceItem {
+  memoryEventId: string;
+  sourceType: string;
+  title: string;
+  url?: string;
+  summary?: string;
+  excerpt: string;
+}
+
 interface AnalyzeWorkSessionCandidatesInput {
   analysisWindow: WorkSessionAnalysisWindow;
   generatedAt: string;
@@ -32,6 +42,7 @@ interface AnalyzeWorkSessionCandidatesInput {
 }
 
 const MIN_TOPIC_MEMORY_EVENT_COUNT = 3;
+const MAX_EVIDENCE_EXCERPT_LENGTH = 900;
 
 function isInWindow(event: MemoryEvent, window: MemoryTimeRange): boolean {
   return event.timestamp >= window.startAt && event.timestamp <= window.endAt;
@@ -83,6 +94,10 @@ function getSummary(event: MemoryEvent): string {
     : '';
 }
 
+function normalizeText(value: string): string {
+  return value.replace(/\s+/gu, ' ').trim();
+}
+
 function getSearchableText(event: MemoryEvent): string {
   return `${getTitle(event)} ${getSummary(event)} ${getUrl(event) ?? ''}`.toLowerCase();
 }
@@ -118,6 +133,60 @@ function getUrl(event: MemoryEvent): string | undefined {
   ));
 
   return urlEntity?.ref ?? urlEntity?.label;
+}
+
+function getPageContent(event: MemoryEvent): string | undefined {
+  const pageContent = getSourceSpecificValue(event, 'pageContent');
+
+  return typeof pageContent === 'string' && pageContent.trim().length > 0
+    ? pageContent
+    : undefined;
+}
+
+function isSparsePageContent(input: {
+  pageContent: string;
+  title: string;
+  url?: string;
+}): boolean {
+  const normalizedPageContent = normalizeText(input.pageContent).toLowerCase();
+  const normalizedTitle = normalizeText(input.title).toLowerCase();
+  const normalizedUrl =
+    input.url !== undefined ? normalizeText(input.url).toLowerCase() : '';
+
+  return (
+    normalizedPageContent.length === 0 ||
+    normalizedPageContent === normalizedTitle ||
+    normalizedPageContent === normalizedUrl ||
+    normalizedPageContent === `${normalizedTitle} ${normalizedUrl}`.trim()
+  );
+}
+
+function truncateText(value: string, maxLength: number): string {
+  const normalized = normalizeText(value);
+
+  return normalized.length > maxLength
+    ? `${normalized.slice(0, maxLength - 3).trim()}...`
+    : normalized;
+}
+
+function createEvidenceItem(event: MemoryEvent): WorkSessionEvidenceItem {
+  const title = getTitle(event);
+  const summary = getSummary(event);
+  const url = getUrl(event);
+  const pageContent = getPageContent(event);
+  const primaryText =
+    pageContent !== undefined && !isSparsePageContent({ pageContent, title, url })
+      ? pageContent
+      : summary || title;
+
+  return {
+    memoryEventId: event.id,
+    sourceType: event.sourceType,
+    title,
+    ...(url !== undefined ? { url } : {}),
+    ...(summary.length > 0 ? { summary } : {}),
+    excerpt: truncateText(primaryText, MAX_EVIDENCE_EXCERPT_LENGTH),
+  };
 }
 
 function inferProjectHint(event: MemoryEvent): string {
@@ -292,6 +361,7 @@ function createCandidate(input: {
       ...(input.topicHint !== undefined ? [input.topicHint] : []),
       ...uniqueTitles,
     ]),
+    evidenceItems: sortedEvents.map(createEvidenceItem),
     reviewState: 'pending',
   };
 }

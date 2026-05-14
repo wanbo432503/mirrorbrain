@@ -470,6 +470,16 @@ describe('mirrorbrain http server', () => {
             endAt: '2026-05-12T10:30:00.000Z',
           },
           relationHints: ['Phase 4 design', 'Run tests'],
+          evidenceItems: [
+            {
+              memoryEventId: 'browser-1',
+              sourceType: 'browser',
+              title: 'Phase 4 design',
+              url: 'https://docs.example.com/phase4',
+              summary: 'Imported source ledgers.',
+              excerpt: 'Phase 4 source ledgers preserve browser page content.',
+            },
+          ],
           reviewState: 'pending' as const,
         },
       ],
@@ -537,6 +547,16 @@ describe('mirrorbrain http server', () => {
               endAt: '2026-05-12T10:30:00.000Z',
             },
             relationHints: ['Phase 4 design', 'Run tests'],
+            evidenceItems: [
+              {
+                memoryEventId: 'browser-1',
+                sourceType: 'browser',
+                title: 'Phase 4 design',
+                url: 'https://docs.example.com/phase4',
+                summary: 'Imported source ledgers.',
+                excerpt: 'Phase 4 source ledgers preserve browser page content.',
+              },
+            ],
             reviewState: 'pending',
           },
         ],

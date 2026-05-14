@@ -571,6 +571,19 @@ const sourceInstanceConfigSchema = {
   ],
 } as const;
 
+const workSessionEvidenceItemSchema = {
+  type: 'object',
+  properties: {
+    memoryEventId: { type: 'string' },
+    sourceType: { type: 'string' },
+    title: { type: 'string' },
+    url: { type: 'string' },
+    summary: { type: 'string' },
+    excerpt: { type: 'string' },
+  },
+  required: ['memoryEventId', 'sourceType', 'title', 'excerpt'],
+} as const;
+
 const workSessionCandidateSchema = {
   type: 'object',
   properties: {
@@ -590,6 +603,10 @@ const workSessionCandidateSchema = {
     relationHints: {
       type: 'array',
       items: { type: 'string' },
+    },
+    evidenceItems: {
+      type: 'array',
+      items: workSessionEvidenceItemSchema,
     },
     reviewState: { type: 'string', enum: ['pending'] },
   },

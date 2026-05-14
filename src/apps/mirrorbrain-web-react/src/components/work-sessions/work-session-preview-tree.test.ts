@@ -129,6 +129,32 @@ describe('buildWorkSessionPreviewTree', () => {
         endAt: '2026-05-12T10:30:00.000Z',
       },
       relationHints: ['Source ledger'],
+      evidenceItems: [
+        {
+          memoryEventId: 'browser-1',
+          sourceType: 'browser',
+          title: 'Source ledger design',
+          url: 'https://docs.example.com/source-ledger',
+          summary: 'Read source-ledger architecture.',
+          excerpt:
+            'Source ledgers are the acquisition boundary. They preserve source-specific payloads, provenance, and bad-line handling before memory import.',
+        },
+        {
+          memoryEventId: 'shell-1',
+          sourceType: 'shell',
+          title: 'Run source ledger tests',
+          summary: 'Ran Vitest for source-ledger importer.',
+          excerpt: 'Ran Vitest for source-ledger importer.',
+        },
+        {
+          memoryEventId: 'browser-2',
+          sourceType: 'browser',
+          title: 'Source ledger status UI',
+          summary: 'Reviewed status UI behavior.',
+          excerpt:
+            'The source status UI separates operational import state from durable memory retrieval.',
+        },
+      ],
       reviewState: 'pending',
     }
     const topic = buildWorkSessionPreviewTree([candidate]).projects[0].topics[0]
@@ -143,11 +169,17 @@ describe('buildWorkSessionPreviewTree', () => {
         '',
         'Imported ledgers, handled bad lines, and tested source status.',
         '',
+        '## Supporting evidence synthesis',
+        '',
+        '- Source ledger design: Source ledgers are the acquisition boundary. They preserve source-specific payloads, provenance, and bad-line handling before memory import.',
+        '- Run source ledger tests: Ran Vitest for source-ledger importer.',
+        '- Source ledger status UI: The source status UI separates operational import state from durable memory retrieval.',
+        '',
         '## References',
         '',
-        '- [1] Source ledger (browser; memory event: browser-1)',
-        '- [2] shell-1 (shell; memory event: shell-1)',
-        '- [3] browser-2 (browser; memory event: browser-2)',
+        '- [1] Source ledger design (browser; memory event: browser-1; https://docs.example.com/source-ledger)',
+        '- [2] Run source ledger tests (shell; memory event: shell-1)',
+        '- [3] Source ledger status UI (browser; memory event: browser-2)',
       ].join('\n'),
       knowledgeType: 'systematic-knowledge',
       sourceTypes: ['browser', 'shell'],

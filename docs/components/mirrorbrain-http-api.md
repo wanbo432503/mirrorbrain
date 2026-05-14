@@ -570,6 +570,16 @@ Response `201`:
           "endAt": "2026-05-12T10:30:00.000Z"
         },
         "relationHints": ["Phase 4 design", "Run tests"],
+        "evidenceItems": [
+          {
+            "memoryEventId": "browser-1",
+            "sourceType": "browser",
+            "title": "Phase 4 design",
+            "url": "https://docs.example.com/phase4",
+            "summary": "Imported source ledgers.",
+            "excerpt": "Phase 4 source ledgers preserve browser page content."
+          }
+        ],
         "reviewState": "pending"
       }
     ],
@@ -581,6 +591,10 @@ Response `201`:
 Notes:
 
 - Analysis reads already imported `MemoryEvent` records.
+- Browser candidates include `evidenceItems` extracted from source memory
+  events. When `content.sourceSpecific.pageContent` contains meaningful page
+  text, the excerpt is taken from that content; otherwise the candidate falls
+  back to the event summary/title.
 - Analysis candidates are review inputs, not reviewed work sessions.
 - The endpoint returns `501` when the service implementation does not expose
   work-session analysis.

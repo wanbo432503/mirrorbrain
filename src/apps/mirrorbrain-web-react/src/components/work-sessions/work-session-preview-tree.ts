@@ -129,20 +129,31 @@ function buildKnowledgeBody(
     workflow: 'Workflow',
     news: 'News brief',
   }
+  const evidenceItems = candidate.evidenceItems ?? []
+  const evidenceSynthesis = evidenceItems
+    .filter((item) => item.excerpt.trim().length > 0)
+    .map((item) => `- ${item.title}: ${item.excerpt}`)
+    .join('\n')
   const referenceLabels =
     candidate.relationHints.length > 0 ? candidate.relationHints : candidate.memoryEventIds
   const references = candidate.memoryEventIds
     .map((memoryEventId, index) => {
-      const label = referenceLabels[index] ?? memoryEventId
-      const sourceType = candidate.sourceTypes[index] ?? candidate.sourceTypes[0] ?? 'memory'
+      const evidenceItem = evidenceItems.find((item) => item.memoryEventId === memoryEventId)
+      const label = evidenceItem?.title ?? referenceLabels[index] ?? memoryEventId
+      const sourceType =
+        evidenceItem?.sourceType ?? candidate.sourceTypes[index] ?? candidate.sourceTypes[0] ?? 'memory'
+      const urlSuffix = evidenceItem?.url !== undefined ? `; ${evidenceItem.url}` : ''
 
-      return `- [${index + 1}] ${label} (${sourceType}; memory event: ${memoryEventId})`
+      return `- [${index + 1}] ${label} (${sourceType}; memory event: ${memoryEventId}${urlSuffix})`
     })
     .join('\n')
 
   return [
     `## ${headingByType[knowledgeType]}`,
     candidate.summary,
+    evidenceSynthesis.length > 0
+      ? `## Supporting evidence synthesis\n\n${evidenceSynthesis}`
+      : '',
     references.length > 0 ? `## References\n\n${references}` : '',
   ]
     .filter((section) => section.length > 0)
