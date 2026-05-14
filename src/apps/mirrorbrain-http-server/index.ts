@@ -8,7 +8,6 @@ import fastifyStatic from '@fastify/static';
 
 import { getMirrorBrainConfig } from '../../shared/config/index.js';
 import {
-  knowledgeArtifactDtoSchema,
   skillArtifactDtoSchema,
 } from '../../shared/api-contracts/index.js';
 import { ValidationError } from '../mirrorbrain-service/errors.js';
@@ -30,14 +29,12 @@ import type {
 import type {
   CandidateMemory,
   CandidateReviewSuggestion,
-  KnowledgeArtifact,
   MemoryQueryInput,
   MemoryQueryResult,
   MemoryEvent,
   ReviewedMemory,
   SkillArtifact,
 } from '../../shared/types/index.js';
-import type { KnowledgeGraphSnapshot } from '../../modules/knowledge-graph/index.js';
 
 interface MirrorBrainHttpService {
   service: {
@@ -82,25 +79,9 @@ interface MirrorBrainHttpService {
     sourceInstanceId?: string;
   }): Promise<MemoryEvent[] | PaginatedMemoryEvents>;
   queryMemory?(input: MemoryQueryInput): Promise<MemoryQueryResult>;
-  listKnowledge(): Promise<KnowledgeArtifact[]>;
-  listKnowledgeTopics?(): Promise<
-    Array<{
-      topicKey: string;
-      title: string;
-      summary: string;
-      currentBestKnowledgeId: string;
-      updatedAt?: string;
-      recencyLabel: string;
-    }>
-  >;
-  getKnowledgeTopic?(topicKey: string): Promise<KnowledgeArtifact | null>;
-  listKnowledgeHistory?(topicKey: string): Promise<KnowledgeArtifact[]>;
-  getKnowledgeGraph?(): Promise<KnowledgeGraphSnapshot>;
   listCandidateMemoriesByDate?(reviewDate: string): Promise<CandidateMemory[]>;
   listSkillDrafts(): Promise<SkillArtifact[]>;
-  publishKnowledge?(artifact: KnowledgeArtifact): Promise<unknown>;
   publishSkillDraft?(artifact: SkillArtifact): Promise<unknown>;
-  deleteKnowledgeArtifact?(artifactId: string): Promise<void>;
   deleteSkillArtifact?(artifactId: string): Promise<void>;
   createDailyCandidateMemories(
     reviewDate: string,
@@ -118,17 +99,6 @@ interface MirrorBrainHttpService {
   ): Promise<ReviewedMemory>;
   undoCandidateReview(reviewedMemoryId: string): Promise<void>;
   deleteCandidateMemory(candidateMemoryId: string): Promise<void>;
-  generateKnowledgeFromReviewedMemories(
-    reviewedMemories: ReviewedMemory[],
-  ): Promise<KnowledgeArtifact>;
-  regenerateKnowledgeDraft?(
-    existingDraft: KnowledgeArtifact,
-    reviewedMemories: ReviewedMemory[],
-  ): Promise<KnowledgeArtifact>;
-  approveKnowledgeDraft?(draftId: string, draftSnapshot?: KnowledgeArtifact): Promise<{
-    publishedArtifact: KnowledgeArtifact;
-    assignedTopic: { topicKey: string; title: string };
-  }>;
   generateSkillDraftFromReviewedMemories(
     reviewedMemories: ReviewedMemory[],
   ): Promise<SkillArtifact>;
@@ -362,91 +332,6 @@ const candidateReviewSuggestionSchema = {
     'priorityScore',
     'rationale',
   ],
-} as const;
-
-const knowledgeArtifactSchema = knowledgeArtifactDtoSchema;
-
-const knowledgeTopicSummarySchema = {
-  type: 'object',
-  properties: {
-    topicKey: { type: 'string' },
-    title: { type: 'string' },
-    summary: { type: 'string' },
-    currentBestKnowledgeId: { type: 'string' },
-    updatedAt: { type: 'string' },
-    recencyLabel: { type: 'string' },
-  },
-  required: [
-    'topicKey',
-    'title',
-    'summary',
-    'currentBestKnowledgeId',
-    'recencyLabel',
-  ],
-} as const;
-
-const knowledgeGraphNodeSchema = {
-  type: 'object',
-  properties: {
-    id: { type: 'string' },
-    type: { type: 'string', enum: ['topic', 'knowledge-artifact'] },
-    label: { type: 'string' },
-    topicKey: { type: 'string' },
-    properties: {
-      type: 'object',
-      additionalProperties: true,
-    },
-  },
-  required: ['id', 'type', 'label', 'topicKey', 'properties'],
-} as const;
-
-const knowledgeGraphEdgeSchema = {
-  type: 'object',
-  properties: {
-    id: { type: 'string' },
-    type: { type: 'string', enum: ['CONTAINS', 'REFERENCES', 'SIMILAR'] },
-    source: { type: 'string' },
-    target: { type: 'string' },
-    label: { type: 'string' },
-    properties: {
-      type: 'object',
-      additionalProperties: true,
-    },
-  },
-  required: ['id', 'type', 'source', 'target', 'label', 'properties'],
-} as const;
-
-const knowledgeGraphStatsSchema = {
-  type: 'object',
-  properties: {
-    topics: { type: 'number' },
-    knowledgeArtifacts: { type: 'number' },
-    wikilinkReferences: { type: 'number' },
-    similarityRelations: { type: 'number' },
-  },
-  required: [
-    'topics',
-    'knowledgeArtifacts',
-    'wikilinkReferences',
-    'similarityRelations',
-  ],
-} as const;
-
-const knowledgeGraphSnapshotSchema = {
-  type: 'object',
-  properties: {
-    generatedAt: { type: 'string' },
-    stats: knowledgeGraphStatsSchema,
-    nodes: {
-      type: 'array',
-      items: knowledgeGraphNodeSchema,
-    },
-    edges: {
-      type: 'array',
-      items: knowledgeGraphEdgeSchema,
-    },
-  },
-  required: ['generatedAt', 'stats', 'nodes', 'edges'],
 } as const;
 
 const skillArtifactSchema = skillArtifactDtoSchema;
@@ -862,127 +747,6 @@ export async function startMirrorBrainHttpServer(
   );
 
   app.get(
-    '/knowledge',
-    {
-      schema: {
-        summary: 'List knowledge artifacts',
-        response: {
-          200: createItemsResponseSchema(knowledgeArtifactSchema),
-        },
-      },
-    },
-    async () => ({
-      items: await input.service.listKnowledge(),
-    }),
-  );
-
-  app.get(
-    '/knowledge/topics',
-    {
-      schema: {
-        summary: 'List current-best topic knowledge summaries',
-        response: {
-          200: createItemsResponseSchema(knowledgeTopicSummarySchema),
-        },
-      },
-    },
-    async () => ({
-      items: input.service.listKnowledgeTopics
-        ? await input.service.listKnowledgeTopics()
-        : [],
-    }),
-  );
-
-  app.get<{
-    Params: {
-      topicKey: string;
-    };
-  }>(
-    '/knowledge/topics/:topicKey',
-    {
-      schema: {
-        summary: 'Get current-best topic knowledge by topic key',
-        response: {
-          200: createArtifactResponseSchema('topic', knowledgeArtifactSchema),
-          404: {
-            type: 'object',
-            properties: {
-              message: { type: 'string' },
-            },
-            required: ['message'],
-          },
-        },
-      },
-    },
-    async (request, reply) => {
-      const topic = input.service.getKnowledgeTopic
-        ? await input.service.getKnowledgeTopic(request.params.topicKey)
-        : null;
-
-      if (topic === null) {
-        reply.code(404);
-        return {
-          message: `Knowledge topic ${request.params.topicKey} was not found.`,
-        };
-      }
-
-      return {
-        topic,
-      };
-    },
-  );
-
-  app.get<{
-    Params: {
-      topicKey: string;
-    };
-  }>(
-    '/knowledge/topics/:topicKey/history',
-    {
-      schema: {
-        summary: 'List topic knowledge history by topic key',
-        response: {
-          200: createItemsResponseSchema(knowledgeArtifactSchema),
-        },
-      },
-    },
-    async (request) => ({
-      items: input.service.listKnowledgeHistory
-        ? await input.service.listKnowledgeHistory(request.params.topicKey)
-        : [],
-    }),
-  );
-
-  app.get(
-    '/knowledge/graph',
-    {
-      schema: {
-        summary: 'Get knowledge graph snapshot with wikilink references and similarity relations',
-        response: {
-          200: createArtifactResponseSchema('graph', knowledgeGraphSnapshotSchema),
-        },
-      },
-    },
-    async () => {
-      const graph = input.service.getKnowledgeGraph
-        ? await input.service.getKnowledgeGraph()
-        : {
-            generatedAt: new Date().toISOString(),
-            stats: {
-              topics: 0,
-              knowledgeArtifacts: 0,
-              wikilinkReferences: 0,
-              similarityRelations: 0,
-            },
-            nodes: [],
-            edges: [],
-          };
-
-      return { graph };
-    },
-  );
-
-  app.get(
     '/skills',
     {
       schema: {
@@ -995,36 +759,6 @@ export async function startMirrorBrainHttpServer(
     async () => ({
       items: await input.service.listSkillDrafts(),
     }),
-  );
-
-  app.post<{ Body: { artifact: KnowledgeArtifact } }>(
-    '/knowledge',
-    {
-      schema: {
-        summary: 'Save an edited knowledge artifact',
-        body: {
-          type: 'object',
-          properties: {
-            artifact: knowledgeArtifactSchema,
-          },
-          required: ['artifact'],
-        },
-        response: {
-          201: createArtifactResponseSchema('artifact', knowledgeArtifactSchema),
-        },
-      },
-    },
-    async (request, reply) => {
-      reply.code(201);
-
-      if (input.service.publishKnowledge) {
-        await input.service.publishKnowledge(request.body.artifact);
-      }
-
-      return {
-        artifact: request.body.artifact,
-      };
-    },
   );
 
   app.post<{ Body: { artifact: SkillArtifact } }>(
@@ -1054,34 +788,6 @@ export async function startMirrorBrainHttpServer(
       return {
         artifact: request.body.artifact,
       };
-    },
-  );
-
-  app.delete<{
-    Params: {
-      artifactId: string;
-    };
-  }>(
-    '/knowledge/:artifactId',
-    {
-      schema: {
-        summary: 'Delete a persisted knowledge artifact',
-        response: {
-          204: { type: 'null' },
-        },
-      },
-    },
-    async (request, reply) => {
-      if (input.service.deleteKnowledgeArtifact === undefined) {
-        reply.code(501);
-        return {
-          message: 'Knowledge deletion is not available.',
-        };
-      }
-
-      await input.service.deleteKnowledgeArtifact(request.params.artifactId);
-      reply.code(204);
-      return null;
     },
   );
 
@@ -1967,132 +1673,6 @@ export async function startMirrorBrainHttpServer(
         };
       }
     }
-  );
-
-  app.post<{ Body: { reviewedMemories: ReviewedMemory[] } }>(
-    '/knowledge/generate',
-    {
-      schema: {
-        summary: 'Generate a knowledge artifact from reviewed memories',
-        body: {
-          type: 'object',
-          properties: {
-            reviewedMemories: {
-              type: 'array',
-              items: reviewedMemorySchema,
-            },
-          },
-          required: ['reviewedMemories'],
-        },
-        response: {
-          201: createArtifactResponseSchema('artifact', knowledgeArtifactSchema),
-        },
-      },
-    },
-    async (request, reply) => {
-      reply.code(201);
-      return {
-        artifact: await input.service.generateKnowledgeFromReviewedMemories(
-          request.body.reviewedMemories,
-        ),
-      };
-    },
-  );
-
-  app.post<{
-    Body: {
-      existingDraft: KnowledgeArtifact;
-      reviewedMemories: ReviewedMemory[];
-    };
-  }>(
-    '/knowledge/regenerate',
-    {
-      schema: {
-        summary: 'Regenerate a knowledge draft with existing context',
-        body: {
-          type: 'object',
-          properties: {
-            existingDraft: knowledgeArtifactSchema,
-            reviewedMemories: {
-              type: 'array',
-              items: reviewedMemorySchema,
-            },
-          },
-          required: ['existingDraft', 'reviewedMemories'],
-        },
-        response: {
-          201: createArtifactResponseSchema('artifact', knowledgeArtifactSchema),
-        },
-      },
-    },
-    async (request, reply) => {
-      if (input.service.regenerateKnowledgeDraft === undefined) {
-        reply.code(501);
-        return {
-          message: 'Knowledge regeneration is not available.',
-        };
-      }
-
-      reply.code(201);
-      return {
-        artifact: await input.service.regenerateKnowledgeDraft(
-          request.body.existingDraft,
-          request.body.reviewedMemories,
-        ),
-      };
-    },
-  );
-
-  app.post<{ Body: { draftId: string; draft?: KnowledgeArtifact } }>(
-    '/knowledge/approve',
-    {
-      schema: {
-        summary: 'Approve a knowledge draft and publish it',
-        body: {
-          type: 'object',
-          properties: {
-            draftId: { type: 'string' },
-            draft: knowledgeArtifactSchema,
-          },
-          required: ['draftId'],
-        },
-        response: {
-          201: {
-            type: 'object',
-            properties: {
-              publishedArtifact: knowledgeArtifactSchema,
-              assignedTopic: {
-                type: 'object',
-                properties: {
-                  topicKey: { type: 'string' },
-                  title: { type: 'string' },
-                },
-                required: ['topicKey', 'title'],
-              },
-            },
-            required: ['publishedArtifact', 'assignedTopic'],
-          },
-        },
-      },
-    },
-    async (request, reply) => {
-      if (input.service.approveKnowledgeDraft === undefined) {
-        reply.code(501);
-        return {
-          message: 'Knowledge approval is not available.',
-        };
-      }
-
-      reply.code(201);
-      const result = await input.service.approveKnowledgeDraft(
-        request.body.draftId,
-        request.body.draft,
-      );
-      return {
-        publishedArtifact: result.publishedArtifact,
-        assignedTopic: result.assignedTopic,
-      };
-    },
   );
 
   app.post<{ Body: { reviewedMemories: ReviewedMemory[] } }>(

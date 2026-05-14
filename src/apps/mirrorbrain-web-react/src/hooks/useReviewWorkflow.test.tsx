@@ -104,8 +104,6 @@ describe('useReviewWorkflow', () => {
     const api: MirrorBrainWebAppApi = {
       getHealth: vi.fn(),
       listMemory: vi.fn(),
-      listKnowledge: vi.fn(),
-      listKnowledgeTopics: vi.fn(),
       listSkills: vi.fn(),
       importSourceLedgers: vi.fn(),
       syncShell: vi.fn(),
@@ -113,7 +111,6 @@ describe('useReviewWorkflow', () => {
       suggestCandidateReviews: vi.fn(async () => []),
       reviewCandidateMemory: vi.fn(),
       undoCandidateReview: vi.fn(),
-      generateKnowledge: vi.fn(),
       generateSkill: vi.fn(),
     } as unknown as MirrorBrainWebAppApi
 
@@ -158,8 +155,6 @@ describe('useReviewWorkflow', () => {
     const api: MirrorBrainWebAppApi = {
       getHealth: vi.fn(),
       listMemory: vi.fn(),
-      listKnowledge: vi.fn(),
-      listKnowledgeTopics: vi.fn(),
       listSkills: vi.fn(),
       listCandidateMemoriesByDate: vi.fn(async () => [staleCandidate]),
       importSourceLedgers: vi.fn(),
@@ -168,7 +163,6 @@ describe('useReviewWorkflow', () => {
       suggestCandidateReviews: vi.fn(async () => []),
       reviewCandidateMemory: vi.fn(),
       undoCandidateReview: vi.fn(),
-      generateKnowledge: vi.fn(),
       generateSkill: vi.fn(),
     } as unknown as MirrorBrainWebAppApi
 
@@ -190,8 +184,6 @@ describe('useReviewWorkflow', () => {
     const api: MirrorBrainWebAppApi = {
       getHealth: vi.fn(),
       listMemory: vi.fn(),
-      listKnowledge: vi.fn(),
-      listKnowledgeTopics: vi.fn(),
       listSkills: vi.fn(),
       importSourceLedgers: vi.fn(),
       syncShell: vi.fn(),
@@ -199,7 +191,6 @@ describe('useReviewWorkflow', () => {
       suggestCandidateReviews: vi.fn(),
       reviewCandidateMemory: vi.fn(async () => reviewedMemory),
       undoCandidateReview: vi.fn(),
-      generateKnowledge: vi.fn(),
       generateSkill: vi.fn(),
     } as unknown as MirrorBrainWebAppApi
 

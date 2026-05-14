@@ -1526,7 +1526,6 @@ describe('mirrorbrain service', () => {
         items: [],
       }),
     );
-    const listKnowledge = vi.fn(async () => []);
     const listSkillDrafts = vi.fn(async () => []);
 
     const api = createMirrorBrainService(
@@ -1536,7 +1535,6 @@ describe('mirrorbrain service', () => {
       },
       {
         queryMemory,
-        listKnowledge,
         listSkillDrafts,
       },
     );
@@ -1549,7 +1547,6 @@ describe('mirrorbrain service', () => {
       },
       sourceTypes: ['browser'],
     });
-    await api.listKnowledge();
     await api.listSkillDrafts();
 
     expect(queryMemory).toHaveBeenCalledWith({
@@ -1560,9 +1557,6 @@ describe('mirrorbrain service', () => {
         endAt: '2026-03-20T23:59:59.999Z',
       },
       sourceTypes: ['browser'],
-    });
-    expect(listKnowledge).toHaveBeenCalledWith({
-      workspaceDir: '/tmp/mirrorbrain-workspace',
     });
     expect(listSkillDrafts).toHaveBeenCalledWith({
       workspaceDir: '/tmp/mirrorbrain-workspace',
@@ -1670,7 +1664,6 @@ describe('mirrorbrain service', () => {
           writeMemoryEvent,
         })),
         importSourceLedgers,
-        listKnowledge: vi.fn(async () => []),
         listSkillDrafts: vi.fn(async () => []),
         now: () => '2026-05-12T10:31:00.000Z',
       },
@@ -1750,7 +1743,6 @@ describe('mirrorbrain service', () => {
       },
       {
         createSourceLedgerStateStore: vi.fn(() => stateStore),
-        listKnowledge: vi.fn(async () => []),
         listSkillDrafts: vi.fn(async () => []),
       },
     );
@@ -2019,7 +2011,6 @@ describe('mirrorbrain service', () => {
       },
       {
         createSourceLedgerStateStore: vi.fn(() => stateStore),
-        listKnowledge: vi.fn(async () => []),
         listSkillDrafts: vi.fn(async () => []),
         now: () => '2026-05-12T11:00:00.000Z',
       },
@@ -2120,7 +2111,6 @@ describe('mirrorbrain service', () => {
           sourcePath: '/tmp/memory-narrative.json',
           rootUri: 'qmd://mirrorbrain/memory-narrative',
         })),
-        listKnowledge: vi.fn(async () => []),
         listSkillDrafts: vi.fn(async () => []),
       },
     );
@@ -2182,7 +2172,6 @@ describe('mirrorbrain service', () => {
       {
         listMemoryEvents,
         listWorkspaceMemoryEvents,
-        listKnowledge: vi.fn(async () => []),
         listSkillDrafts: vi.fn(async () => []),
       },
     );
@@ -2292,8 +2281,7 @@ describe('mirrorbrain service', () => {
             },
           })),
           listWorkspaceMemoryEvents: vi.fn(async () => memoryEvents),
-          listKnowledge: vi.fn(async () => []),
-          listSkillDrafts: vi.fn(async () => []),
+            listSkillDrafts: vi.fn(async () => []),
         },
       );
 
@@ -2390,7 +2378,6 @@ describe('mirrorbrain service', () => {
           sourcePath: '/tmp/candidate.json',
           rootUri: 'qmd://mirrorbrain/candidate',
         })),
-        listKnowledge: vi.fn(async () => []),
         listSkillDrafts: vi.fn(async () => []),
       },
     );
@@ -2492,7 +2479,6 @@ describe('mirrorbrain service', () => {
           sourcePath: '/tmp/candidate.json',
           rootUri: 'qmd://mirrorbrain/candidate',
         })),
-        listKnowledge: vi.fn(async () => []),
         listSkillDrafts: vi.fn(async () => []),
       },
     );
@@ -2506,469 +2492,6 @@ describe('mirrorbrain service', () => {
       'listRawWorkspaceMemoryEvents',
       'createCandidateMemories',
     ]);
-  });
-
-  it('persists knowledge and skill artifacts through the configured qmd workspace writers', async () => {
-    const service = {
-      status: 'running' as const,
-      config: getMirrorBrainConfig(),
-      syncBrowserMemory: vi.fn(async () => ({
-        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
-        strategy: 'incremental' as const,
-        importedCount: 0,
-        lastSyncedAt: '2026-03-20T10:00:00.000Z',
-      })),
-      syncShellMemory: vi.fn(async () => ({
-        sourceKey: 'shell-history:/tmp/.zsh_history',
-        strategy: 'incremental' as const,
-        importedCount: 0,
-        lastSyncedAt: '2026-03-20T10:00:00.000Z',
-      })),
-      stop: vi.fn(),
-    };
-    const publishKnowledge = vi.fn(async () => ({
-      sourcePath: '/tmp/knowledge.md',
-      rootUri: 'qmd://mirrorbrain/knowledge/knowledge-draft:reviewed:candidate:browser:aw-event-1.md',
-    }));
-    const publishSkill = vi.fn(async () => ({
-      sourcePath: '/tmp/skill-draft.md',
-      uri: 'qmd://mirrorbrain/skill-drafts/skill-draft:reviewed:candidate:browser:aw-event-1.md',
-    }));
-
-    const api = createMirrorBrainService(
-      {
-        service,
-        workspaceDir: '/tmp/mirrorbrain-workspace',
-      },
-      {
-        publishKnowledge,
-        publishSkill,
-      },
-    );
-
-    await api.publishKnowledge({
-      id: 'knowledge-draft:reviewed:candidate:browser:aw-event-1',
-      draftState: 'draft',
-      sourceReviewedMemoryIds: ['reviewed:candidate:browser:aw-event-1'],
-    });
-    await api.publishSkillDraft({
-      id: 'skill-draft:reviewed:candidate:browser:aw-event-1',
-      approvalState: 'draft',
-      workflowEvidenceRefs: ['reviewed:candidate:browser:aw-event-1'],
-      executionSafetyMetadata: {
-        requiresConfirmation: true,
-      },
-    });
-
-    expect(publishKnowledge).toHaveBeenCalledWith({
-      workspaceDir: '/tmp/mirrorbrain-workspace',
-      artifact: {
-        id: 'knowledge-draft:reviewed:candidate:browser:aw-event-1',
-        draftState: 'draft',
-        sourceReviewedMemoryIds: ['reviewed:candidate:browser:aw-event-1'],
-      },
-    });
-    expect(publishSkill).toHaveBeenCalledWith({
-      workspaceDir: '/tmp/mirrorbrain-workspace',
-      artifact: {
-        id: 'skill-draft:reviewed:candidate:browser:aw-event-1',
-        approvalState: 'draft',
-        workflowEvidenceRefs: ['reviewed:candidate:browser:aw-event-1'],
-        executionSafetyMetadata: {
-          requiresConfirmation: true,
-        },
-      },
-    });
-  });
-
-  it('falls back to workspace copies when qmd listings are empty', async () => {
-    const workspaceDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-service-'));
-    mkdirSync(join(workspaceDir, 'mirrorbrain', 'knowledge'), {
-      recursive: true,
-    });
-    mkdirSync(join(workspaceDir, 'mirrorbrain', 'skill-drafts'), {
-      recursive: true,
-    });
-
-    writeFileSync(
-      join(
-        workspaceDir,
-        'mirrorbrain',
-        'knowledge',
-        'knowledge-draft:workspace.md',
-      ),
-      [
-        '# knowledge-draft:workspace',
-        '',
-        '- artifactType: daily-review-draft',
-        '- draftState: draft',
-        '- topicKey: workspace-topic',
-        '- title: Workspace knowledge',
-        '- summary: Workspace summary',
-        '- version: 1',
-        '- isCurrentBest: false',
-        '- supersedesKnowledgeId: ',
-        '- updatedAt: 2026-04-29T10:00:00.000Z',
-        '- reviewedAt: 2026-04-29T09:00:00.000Z',
-        '- recencyLabel: 2026-04-29',
-        '',
-        '## Body',
-        'Workspace body',
-        '',
-        '## Source Reviewed Memories',
-        '- reviewed:workspace',
-        '',
-        '## Derived Knowledge Artifacts',
-        '',
-        '## Provenance Refs',
-        '- reviewed-memory:reviewed:workspace',
-      ].join('\n'),
-    );
-    writeFileSync(
-      join(
-        workspaceDir,
-        'mirrorbrain',
-        'skill-drafts',
-        'skill-draft:workspace.md',
-      ),
-      [
-        '# skill-draft:workspace',
-        '',
-        '- approvalState: draft',
-        '- requiresConfirmation: true',
-        '',
-        '## Workflow Evidence',
-        '- reviewed:workspace',
-      ].join('\n'),
-    );
-
-    const api = createMirrorBrainService(
-      {
-        service: {
-          status: 'running' as const,
-          config: getMirrorBrainConfig(),
-          syncBrowserMemory: vi.fn(async () => ({
-            sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
-            strategy: 'incremental' as const,
-            importedCount: 0,
-            lastSyncedAt: '2026-04-29T10:00:00.000Z',
-          })),
-          syncShellMemory: vi.fn(async () => ({
-            sourceKey: 'shell-history:/tmp/.zsh_history',
-            strategy: 'incremental' as const,
-            importedCount: 0,
-            lastSyncedAt: '2026-04-29T10:00:00.000Z',
-          })),
-          stop: vi.fn(),
-        },
-        workspaceDir,
-      },
-      {
-        listKnowledge: vi.fn(async () => []),
-        listSkillDrafts: vi.fn(async () => []),
-      },
-    );
-
-    await expect(api.listKnowledge()).resolves.toEqual([
-      expect.objectContaining({
-        id: 'knowledge-draft:workspace',
-        title: 'Workspace knowledge',
-        body: 'Workspace body',
-        sourceReviewedMemoryIds: ['reviewed:workspace'],
-      }),
-    ]);
-    await expect(api.listSkillDrafts()).resolves.toEqual([
-      expect.objectContaining({
-        id: 'skill-draft:workspace',
-        approvalState: 'draft',
-        workflowEvidenceRefs: ['reviewed:workspace'],
-      }),
-    ]);
-  });
-
-  it('keeps approved workspace knowledge visible when a stale deletion marker exists for the same id', async () => {
-    const workspaceDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-service-'));
-    const artifactId = 'topic-knowledge:workspace-approved:v1';
-    mkdirSync(join(workspaceDir, 'mirrorbrain', 'knowledge'), {
-      recursive: true,
-    });
-    mkdirSync(join(workspaceDir, 'mirrorbrain', 'deleted-artifacts', 'knowledge'), {
-      recursive: true,
-    });
-    writeFileSync(
-      join(workspaceDir, 'mirrorbrain', 'knowledge', `${artifactId}.md`),
-      [
-        `# ${artifactId}`,
-        '',
-        '- artifactType: topic-knowledge',
-        '- draftState: published',
-        '- topicKey: workspace-approved',
-        '- title: Workspace approved knowledge',
-        '- summary: Workspace approved summary',
-        '- version: 1',
-        '- isCurrentBest: true',
-        '- supersedesKnowledgeId: ',
-        '- updatedAt: 2026-05-10T10:00:00.000Z',
-        '- reviewedAt: 2026-05-10T09:00:00.000Z',
-        '- recencyLabel: 2026-05-10',
-        '',
-        '## Body',
-        'Workspace approved body',
-        '',
-        '## Source Reviewed Memories',
-        '- reviewed:workspace-approved',
-        '',
-        '## Derived Knowledge Artifacts',
-        '- knowledge-draft:workspace-approved',
-        '',
-        '## Provenance Refs',
-        '- reviewed-memory:reviewed:workspace-approved',
-      ].join('\n'),
-    );
-    writeFileSync(
-      join(
-        workspaceDir,
-        'mirrorbrain',
-        'deleted-artifacts',
-        'knowledge',
-        `${encodeURIComponent(artifactId)}.json`,
-      ),
-      JSON.stringify({ artifactId, deletedAt: '2026-05-09T10:00:00.000Z' }),
-    );
-
-    const api = createMirrorBrainService(
-      {
-        service: {
-          status: 'running' as const,
-          config: getMirrorBrainConfig(),
-          syncBrowserMemory: vi.fn(async () => ({
-            sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
-            strategy: 'incremental' as const,
-            importedCount: 0,
-            lastSyncedAt: '2026-05-10T10:00:00.000Z',
-          })),
-          syncShellMemory: vi.fn(async () => ({
-            sourceKey: 'shell-history:/tmp/.zsh_history',
-            strategy: 'incremental' as const,
-            importedCount: 0,
-            lastSyncedAt: '2026-05-10T10:00:00.000Z',
-          })),
-          stop: vi.fn(),
-        },
-        workspaceDir,
-      },
-      {
-        listKnowledge: vi.fn(async () => []),
-        listSkillDrafts: vi.fn(async () => []),
-      },
-    );
-
-    await expect(api.listKnowledge()).resolves.toEqual([
-      expect.objectContaining({
-        id: artifactId,
-        draftState: 'published',
-        title: 'Workspace approved knowledge',
-        body: 'Workspace approved body',
-      }),
-    ]);
-  });
-
-  it('deletes persisted knowledge and skill artifacts and filters them from later reads', async () => {
-    const workspaceDir = mkdtempSync(join(tmpdir(), 'mirrorbrain-service-'));
-    mkdirSync(join(workspaceDir, 'mirrorbrain', 'knowledge'), {
-      recursive: true,
-    });
-    mkdirSync(join(workspaceDir, 'mirrorbrain', 'skill-drafts'), {
-      recursive: true,
-    });
-
-    const knowledgeArtifact = {
-      id: 'knowledge-draft:workspace-delete',
-      draftState: 'draft' as const,
-      artifactType: 'daily-review-draft' as const,
-      title: 'Workspace knowledge',
-      summary: 'Workspace summary',
-      body: 'Workspace body',
-      sourceReviewedMemoryIds: ['reviewed:workspace'],
-      derivedFromKnowledgeIds: [],
-      version: 1,
-      isCurrentBest: false,
-      supersedesKnowledgeId: null,
-      updatedAt: '2026-04-29T10:00:00.000Z',
-      reviewedAt: '2026-04-29T09:00:00.000Z',
-      recencyLabel: '2026-04-29',
-      provenanceRefs: [{ kind: 'reviewed-memory' as const, id: 'reviewed:workspace' }],
-    };
-    const skillArtifact = {
-      id: 'skill-draft:workspace-delete',
-      approvalState: 'draft' as const,
-      workflowEvidenceRefs: ['reviewed:workspace'],
-      executionSafetyMetadata: { requiresConfirmation: true },
-      updatedAt: '2026-04-29T10:00:00.000Z',
-    };
-
-    writeFileSync(
-      join(workspaceDir, 'mirrorbrain', 'knowledge', `${knowledgeArtifact.id}.md`),
-      [
-        `# ${knowledgeArtifact.id}`,
-        '',
-        '- artifactType: daily-review-draft',
-        '- draftState: draft',
-        '- topicKey: ',
-        `- title: ${knowledgeArtifact.title}`,
-        `- summary: ${knowledgeArtifact.summary}`,
-        '- version: 1',
-        '- isCurrentBest: false',
-        '- supersedesKnowledgeId: ',
-        `- updatedAt: ${knowledgeArtifact.updatedAt}`,
-        `- reviewedAt: ${knowledgeArtifact.reviewedAt}`,
-        '- recencyLabel: 2026-04-29',
-        '',
-        '## Body',
-        knowledgeArtifact.body,
-        '',
-        '## Source Reviewed Memories',
-        '- reviewed:workspace',
-        '',
-        '## Derived Knowledge Artifacts',
-        '',
-        '## Provenance Refs',
-        '- reviewed-memory:reviewed:workspace',
-      ].join('\n'),
-    );
-    writeFileSync(
-      join(workspaceDir, 'mirrorbrain', 'skill-drafts', `${skillArtifact.id}.md`),
-      [
-        `# ${skillArtifact.id}`,
-        '',
-        '- approvalState: draft',
-        '- requiresConfirmation: true',
-        '',
-        '## Workflow Evidence',
-        '- reviewed:workspace',
-      ].join('\n'),
-    );
-
-    const api = createMirrorBrainService(
-      {
-        service: {
-          status: 'running' as const,
-          config: getMirrorBrainConfig(),
-          syncBrowserMemory: vi.fn(async () => ({
-            sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
-            strategy: 'incremental' as const,
-            importedCount: 0,
-            lastSyncedAt: '2026-04-29T10:00:00.000Z',
-          })),
-          syncShellMemory: vi.fn(async () => ({
-            sourceKey: 'shell-history:/tmp/.zsh_history',
-            strategy: 'incremental' as const,
-            importedCount: 0,
-            lastSyncedAt: '2026-04-29T10:00:00.000Z',
-          })),
-          stop: vi.fn(),
-        },
-        workspaceDir,
-      },
-      {
-        listKnowledge: vi.fn(async () => [knowledgeArtifact]),
-        listSkillDrafts: vi.fn(async () => [skillArtifact]),
-      },
-    );
-
-    await api.deleteKnowledgeArtifact(knowledgeArtifact.id);
-    await api.deleteSkillArtifact(skillArtifact.id);
-
-    await expect(
-      access(join(workspaceDir, 'mirrorbrain', 'knowledge', `${knowledgeArtifact.id}.md`)),
-    ).rejects.toThrow();
-    await expect(
-      access(join(workspaceDir, 'mirrorbrain', 'skill-drafts', `${skillArtifact.id}.md`)),
-    ).rejects.toThrow();
-    await expect(api.listKnowledge()).resolves.toEqual([]);
-    await expect(api.listSkillDrafts()).resolves.toEqual([]);
-  });
-
-  it('generates and publishes knowledge and skill artifacts from reviewed memories', async () => {
-    const service = {
-      status: 'running' as const,
-      config: getMirrorBrainConfig(),
-      syncBrowserMemory: vi.fn(async () => ({
-        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
-        strategy: 'incremental' as const,
-        importedCount: 0,
-        lastSyncedAt: '2026-03-20T10:00:00.000Z',
-      })),
-      syncShellMemory: vi.fn(async () => ({
-        sourceKey: 'shell-history:/tmp/.zsh_history',
-        strategy: 'incremental' as const,
-        importedCount: 0,
-        lastSyncedAt: '2026-03-20T10:00:00.000Z',
-      })),
-      stop: vi.fn(),
-    };
-    const reviewedMemories = [createReviewedMemoryFixture()];
-    const generateKnowledge = vi.fn(() => ({
-      id: 'knowledge-draft:reviewed:candidate:browser:aw-event-1',
-      draftState: 'draft' as const,
-      sourceReviewedMemoryIds: ['reviewed:candidate:browser:aw-event-1'],
-    }));
-    const generateSkillDraft = vi.fn(() => ({
-      id: 'skill-draft:reviewed:candidate:browser:aw-event-1',
-      approvalState: 'draft' as const,
-      workflowEvidenceRefs: ['reviewed:candidate:browser:aw-event-1'],
-      executionSafetyMetadata: {
-        requiresConfirmation: true,
-      },
-    }));
-    const publishKnowledge = vi.fn(async () => ({
-      sourcePath: '/tmp/knowledge.md',
-      rootUri: 'qmd://mirrorbrain/knowledge/knowledge-draft:reviewed:candidate:browser:aw-event-1.md',
-    }));
-    const publishSkill = vi.fn(async () => ({
-      sourcePath: '/tmp/skill-draft.md',
-      uri: 'qmd://mirrorbrain/skill-drafts/skill-draft:reviewed:candidate:browser:aw-event-1.md',
-    }));
-
-    const api = createMirrorBrainService(
-      {
-        service,
-        workspaceDir: '/tmp/mirrorbrain-workspace',
-      },
-      {
-        generateKnowledge,
-        generateSkillDraft,
-        publishKnowledge,
-        publishSkill,
-      },
-    );
-
-    await api.generateKnowledgeFromReviewedMemories(reviewedMemories);
-    await api.generateSkillDraftFromReviewedMemories(reviewedMemories);
-
-    expect(generateKnowledge).toHaveBeenCalledWith({
-      reviewedMemories,
-    });
-    expect(generateSkillDraft).toHaveBeenCalledWith(reviewedMemories);
-    expect(publishKnowledge).toHaveBeenCalledWith({
-      workspaceDir: '/tmp/mirrorbrain-workspace',
-      artifact: {
-        id: 'knowledge-draft:reviewed:candidate:browser:aw-event-1',
-        draftState: 'draft',
-        sourceReviewedMemoryIds: ['reviewed:candidate:browser:aw-event-1'],
-      },
-    });
-    expect(publishSkill).toHaveBeenCalledWith({
-      workspaceDir: '/tmp/mirrorbrain-workspace',
-      artifact: {
-        id: 'skill-draft:reviewed:candidate:browser:aw-event-1',
-        approvalState: 'draft',
-        workflowEvidenceRefs: ['reviewed:candidate:browser:aw-event-1'],
-        executionSafetyMetadata: {
-          requiresConfirmation: true,
-        },
-      },
-    });
   });
 
   it('reviews a candidate memory through the service contract', async () => {
@@ -3300,7 +2823,6 @@ describe('mirrorbrain service', () => {
       },
     })),
         listCandidateMemories: vi.fn(async () => allCandidates),
-        listKnowledge: vi.fn(async () => []),
         listSkillDrafts: vi.fn(async () => []),
       },
     );
@@ -3373,7 +2895,6 @@ describe('mirrorbrain service', () => {
           sourcePath: '/tmp/candidate.json',
           rootUri: 'qmd://mirrorbrain/candidate',
         })),
-        listKnowledge: vi.fn(async () => []),
         listSkillDrafts: vi.fn(async () => []),
       },
     );
@@ -3513,7 +3034,6 @@ describe('mirrorbrain service', () => {
         createCandidateMemories,
         importSourceLedgers,
         publishCandidateMemory,
-        listKnowledge: vi.fn(async () => []),
         listSkillDrafts: vi.fn(async () => []),
       },
     );
@@ -3534,163 +3054,6 @@ describe('mirrorbrain service', () => {
         artifact: regeneratedCandidates[0],
       }),
     );
-  });
-
-  it('excludes memory events already used by published knowledge from regenerated candidates', async () => {
-    const service = {
-      status: 'running' as const,
-      config: getMirrorBrainConfig(),
-      syncBrowserMemory: vi.fn(async () => ({
-        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
-        strategy: 'incremental' as const,
-        importedCount: 1,
-        lastSyncedAt: '2026-05-10T12:05:00.000Z',
-        importedEvents: [
-          {
-            id: 'browser:new-event',
-            sourceType: 'activitywatch-browser',
-            sourceRef: 'new-event',
-            timestamp: '2026-05-10T12:05:00.000Z',
-            authorizationScopeId: 'scope-browser',
-            content: {
-              url: 'https://example.com/new-url',
-              title: 'New URL',
-            },
-            captureMetadata: {
-              upstreamSource: 'activitywatch',
-              checkpoint: '2026-05-10T12:05:00.000Z',
-            },
-          },
-        ],
-      })),
-      syncShellMemory: vi.fn(async () => ({
-        sourceKey: 'shell-history:/tmp/.zsh_history',
-        strategy: 'incremental' as const,
-        importedCount: 0,
-        lastSyncedAt: '2026-05-10T12:05:00.000Z',
-      })),
-      stop: vi.fn(),
-    };
-    const memoryEvents: MemoryEvent[] = [
-      {
-        id: 'browser:consumed-event',
-        sourceType: 'activitywatch-browser',
-        sourceRef: 'consumed-event',
-        timestamp: '2026-05-10T08:05:00.000Z',
-        authorizationScopeId: 'scope-browser',
-        content: {
-          url: 'https://example.com/already-used',
-          title: 'Already used',
-        },
-        captureMetadata: {
-          upstreamSource: 'activitywatch',
-          checkpoint: '2026-05-10T08:05:00.000Z',
-        },
-      },
-      {
-        id: 'browser:new-event',
-        sourceType: 'activitywatch-browser',
-        sourceRef: 'new-event',
-        timestamp: '2026-05-10T12:05:00.000Z',
-        authorizationScopeId: 'scope-browser',
-        content: {
-          url: 'https://example.com/new-url',
-          title: 'New URL',
-        },
-        captureMetadata: {
-          upstreamSource: 'activitywatch',
-          checkpoint: '2026-05-10T12:05:00.000Z',
-        },
-      },
-      {
-        id: 'browser:revisited-consumed-url',
-        sourceType: 'activitywatch-browser',
-        sourceRef: 'revisited-consumed-url',
-        timestamp: '2026-05-10T12:10:00.000Z',
-        authorizationScopeId: 'scope-browser',
-        content: {
-          url: 'https://example.com/already-used',
-          title: 'Already used revisited',
-        },
-        captureMetadata: {
-          upstreamSource: 'activitywatch',
-          checkpoint: '2026-05-10T12:10:00.000Z',
-        },
-      },
-    ];
-    const publishedKnowledge = {
-      id: 'topic-knowledge:used:v1',
-      artifactType: 'topic-knowledge' as const,
-      draftState: 'published' as const,
-      sourceReviewedMemoryIds: ['reviewed:candidate:used'],
-    };
-    const reviewedMemory = {
-      id: 'reviewed:candidate:used',
-      candidateMemoryId: 'candidate:used',
-      candidateTitle: 'Already used candidate',
-      candidateSummary: 'Already used summary',
-      candidateTheme: 'used',
-      memoryEventIds: ['browser:consumed-event'],
-      candidateSourceRefs: [
-        {
-          id: 'browser:consumed-event',
-          sourceType: 'activitywatch-browser',
-          timestamp: '2026-05-10T08:05:00.000Z',
-          url: 'https://example.com/already-used',
-        },
-      ],
-      reviewDate: '2026-05-10',
-      decision: 'keep' as const,
-      reviewedAt: '2026-05-10T09:00:00.000Z',
-    };
-    const createCandidateMemories = vi.fn(() => [
-      createCandidateMemoryFixture({
-        id: 'candidate:2026-05-10:activitywatch-browser:example-com:new-url',
-        memoryEventIds: ['browser:new-event'],
-        reviewDate: '2026-05-10',
-      }),
-    ]);
-    const importSourceLedgers = vi.fn(async () => ({
-      importedCount: 1,
-      skippedCount: 0,
-      scannedLedgerCount: 1,
-      changedLedgerCount: 1,
-      ledgerResults: [],
-    }));
-
-    const api = createMirrorBrainService(
-      {
-        service,
-        workspaceDir: '/tmp/mirrorbrain-workspace',
-      },
-      {
-        listCandidateMemories: vi.fn(async () => [
-          createCandidateMemoryFixture({
-            id: 'candidate:2026-05-10:activitywatch-browser:example-com:old',
-            memoryEventIds: ['browser:consumed-event'],
-            reviewDate: '2026-05-10',
-          }),
-        ]),
-        listRawWorkspaceMemoryEvents: vi.fn(async () => memoryEvents),
-        listKnowledge: vi.fn(async () => [publishedKnowledge]),
-        listReviewedMemories: vi.fn(async () => [reviewedMemory]),
-        createCandidateMemories,
-        importSourceLedgers,
-        publishCandidateMemory: vi.fn(async () => ({
-          sourcePath: '/tmp/candidate.json',
-          rootUri: 'qmd://mirrorbrain/candidate',
-        })),
-        listSkillDrafts: vi.fn(async () => []),
-      },
-    );
-
-    await api.createDailyCandidateMemories('2026-05-10', 'Asia/Shanghai');
-
-    expect(createCandidateMemories).toHaveBeenCalledWith({
-      reviewDate: '2026-05-10',
-      reviewTimeZone: 'Asia/Shanghai',
-      memoryEvents: [memoryEvents[1]],
-    });
   });
 
   it('returns candidate review suggestions without publishing review artifacts', async () => {
@@ -3837,7 +3200,6 @@ describe('mirrorbrain service', () => {
       {
         listCandidateMemories: vi.fn(async () => []),
         listRawWorkspaceMemoryEvents: vi.fn(async () => memoryEvents),
-        listKnowledge: vi.fn(async () => []),
         listReviewedMemories: vi.fn(async () => []),
         importSourceLedgers: vi.fn(async () => ({
           importedCount: 0,
@@ -3913,8 +3275,7 @@ describe('mirrorbrain service', () => {
             items: [],
             pagination: { total: 0, page: 1, pageSize: 10, totalPages: 1 },
           })),
-          listKnowledge: vi.fn(async () => []),
-          listSkillDrafts: vi.fn(async () => []),
+            listSkillDrafts: vi.fn(async () => []),
         },
       );
 
@@ -3967,8 +3328,7 @@ describe('mirrorbrain service', () => {
             items: [],
             pagination: { total: 0, page: 1, pageSize: 10, totalPages: 1 },
           })),
-          listKnowledge: vi.fn(async () => []),
-          listSkillDrafts: vi.fn(async () => []),
+            listSkillDrafts: vi.fn(async () => []),
           deleteCandidateMemoryResource,
         },
       );
@@ -4019,8 +3379,7 @@ describe('mirrorbrain service', () => {
             items: [],
             pagination: { total: 0, page: 1, pageSize: 10, totalPages: 1 },
           })),
-          listKnowledge: vi.fn(async () => []),
-          listSkillDrafts: vi.fn(async () => []),
+            listSkillDrafts: vi.fn(async () => []),
           deleteCandidateMemoryResource,
         },
       );
@@ -4066,8 +3425,7 @@ describe('mirrorbrain service', () => {
             items: [],
             pagination: { total: 0, page: 1, pageSize: 10, totalPages: 1 },
           })),
-          listKnowledge: vi.fn(async () => []),
-          listSkillDrafts: vi.fn(async () => []),
+            listSkillDrafts: vi.fn(async () => []),
         },
       );
 
@@ -4108,8 +3466,7 @@ describe('mirrorbrain service', () => {
             items: [],
             pagination: { total: 0, page: 1, pageSize: 10, totalPages: 1 },
           })),
-          listKnowledge: vi.fn(async () => []),
-          listSkillDrafts: vi.fn(async () => []),
+            listSkillDrafts: vi.fn(async () => []),
         },
       );
 

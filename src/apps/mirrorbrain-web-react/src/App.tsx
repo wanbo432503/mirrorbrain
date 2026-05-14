@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import AppShell from './components/layout/AppShell'
 import TabNavigation from './components/layout/TabNavigation'
 import FeedbackBanner from './components/layout/FeedbackBanner'
-import KnowledgeTabPanel from './components/artifacts/KnowledgeTabPanel'
 import SkillTabPanel from './components/artifacts/SkillTabPanel'
 import SourceManagementPanel from './components/sources/SourceManagementPanel'
 import WorkSessionAnalysisPanel from './components/work-sessions/WorkSessionAnalysisPanel'
@@ -10,12 +9,12 @@ import { createMirrorBrainBrowserApi } from './api/client'
 import { MirrorBrainProvider } from './contexts/MirrorBrainContext'
 import { useMirrorBrainState } from './hooks/useMirrorBrainState'
 
-type TabType = 'memory-sources' | 'preview' | 'published' | 'knowledge' | 'skill'
+type TabType = 'memory-sources' | 'preview' | 'published' | 'skill'
 type FeedbackKind = 'success' | 'error' | 'info'
 type VisitedTabs = Record<TabType, boolean>
 type ThemeMode = 'light' | 'dark'
 
-const TABS: TabType[] = ['memory-sources', 'preview', 'published', 'knowledge', 'skill']
+const TABS: TabType[] = ['memory-sources', 'preview', 'published', 'skill']
 
 interface Feedback {
   kind: FeedbackKind
@@ -73,7 +72,6 @@ function AppContent({
     'memory-sources': true,
     preview: false,
     published: false,
-    knowledge: false,
     skill: false,
   })
 
@@ -117,7 +115,6 @@ function AppContent({
             {shouldRenderPanel && tab === 'published' && (
               <WorkSessionAnalysisPanel api={api} mode="published" active={isActive} />
             )}
-            {shouldRenderPanel && tab === 'knowledge' && <KnowledgeTabPanel />}
             {shouldRenderPanel && tab === 'skill' && <SkillTabPanel />}
             {shouldRenderPanel && tab === 'memory-sources' && <SourceManagementPanel api={api} />}
           </div>

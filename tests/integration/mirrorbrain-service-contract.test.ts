@@ -58,55 +58,41 @@ function createReviewedMemoryFixture(): ReviewedMemory {
   };
 }
 
+function createRuntimeService() {
+  return {
+    status: 'running' as const,
+    config: getMirrorBrainConfig(),
+    syncBrowserMemory: async () => ({
+      sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+      strategy: 'incremental' as const,
+      importedCount: 0,
+      lastSyncedAt: '2026-03-20T10:00:00.000Z',
+    }),
+    syncShellMemory: async () => ({
+      sourceKey: 'shell-history:/tmp/.zsh_history',
+      strategy: 'incremental' as const,
+      importedCount: 0,
+      lastSyncedAt: '2026-03-20T10:00:00.000Z',
+    }),
+    stop: () => undefined,
+  };
+}
+
 describe('mirrorbrain service contract integration', () => {
-  it('publishes knowledge and skill artifacts through the service contract', async () => {
-    const published: Array<{
-      kind: 'knowledge' | 'skill';
-      payload: unknown;
-    }> = [];
+  it('publishes skill artifacts through the service contract', async () => {
+    const published: unknown[] = [];
 
     const api = createMirrorBrainService(
       {
-        service: {
-          status: 'running',
-          config: getMirrorBrainConfig(),
-          syncBrowserMemory: async () => ({
-            sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
-            strategy: 'incremental' as const,
-            importedCount: 0,
-            lastSyncedAt: '2026-03-20T10:00:00.000Z',
-          }),
-          syncShellMemory: async () => ({
-            sourceKey: 'shell-history:/tmp/.zsh_history',
-            strategy: 'incremental' as const,
-            importedCount: 0,
-            lastSyncedAt: '2026-03-20T10:00:00.000Z',
-          }),
-          stop: () => undefined,
-        },
+        service: createRuntimeService(),
         workspaceDir: '/tmp/mirrorbrain-workspace',
       },
       {
         queryMemory: async () => ({ items: [] }),
         listMemoryEvents: async () => [],
-        listKnowledge: async () => [],
         listSkillDrafts: async () => [],
-        publishKnowledge: async (input) => {
-          published.push({
-            kind: 'knowledge',
-            payload: input,
-          });
-
-          return {
-            sourcePath: '/tmp/mirrorbrain-workspace/knowledge.md',
-            rootUri: 'qmd://mirrorbrain/knowledge/knowledge-draft:reviewed:candidate:browser:aw-event-1.md',
-          };
-        },
         publishSkill: async (input) => {
-          published.push({
-            kind: 'skill',
-            payload: input,
-          });
+          published.push(input);
 
           return {
             sourcePath: '/tmp/mirrorbrain-workspace/skill-draft.md',
@@ -116,11 +102,6 @@ describe('mirrorbrain service contract integration', () => {
       },
     );
 
-    await api.publishKnowledge({
-      id: 'knowledge-draft:reviewed:candidate:browser:aw-event-1',
-      draftState: 'draft',
-      sourceReviewedMemoryIds: ['reviewed:candidate:browser:aw-event-1'],
-    });
     await api.publishSkillDraft({
       id: 'skill-draft:reviewed:candidate:browser:aw-event-1',
       approvalState: 'draft',
@@ -132,71 +113,32 @@ describe('mirrorbrain service contract integration', () => {
 
     expect(published).toEqual([
       {
-        kind: 'knowledge',
-        payload: {
-          workspaceDir: '/tmp/mirrorbrain-workspace',
-          artifact: {
-            id: 'knowledge-draft:reviewed:candidate:browser:aw-event-1',
-            draftState: 'draft',
-            sourceReviewedMemoryIds: ['reviewed:candidate:browser:aw-event-1'],
-          },
-        },
-      },
-      {
-        kind: 'skill',
-        payload: {
-          workspaceDir: '/tmp/mirrorbrain-workspace',
-          artifact: {
-            id: 'skill-draft:reviewed:candidate:browser:aw-event-1',
-            approvalState: 'draft',
-            workflowEvidenceRefs: ['reviewed:candidate:browser:aw-event-1'],
-            executionSafetyMetadata: {
-              requiresConfirmation: true,
-            },
+        workspaceDir: '/tmp/mirrorbrain-workspace',
+        artifact: {
+          id: 'skill-draft:reviewed:candidate:browser:aw-event-1',
+          approvalState: 'draft',
+          workflowEvidenceRefs: ['reviewed:candidate:browser:aw-event-1'],
+          executionSafetyMetadata: {
+            requiresConfirmation: true,
           },
         },
       },
     ]);
   });
 
-  it('generates and publishes artifacts from reviewed memories through the service contract', async () => {
-    const generated: Array<{
-      kind: 'knowledge' | 'skill';
-      payload: unknown;
-    }> = [];
+  it('generates and publishes skill artifacts from reviewed memories through the service contract', async () => {
+    const generated: unknown[] = [];
     const reviewedMemories = [createReviewedMemoryFixture()];
 
     const api = createMirrorBrainService(
       {
-        service: {
-          status: 'running',
-          config: getMirrorBrainConfig(),
-          syncBrowserMemory: async () => ({
-            sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
-            strategy: 'incremental' as const,
-            importedCount: 0,
-            lastSyncedAt: '2026-03-20T10:00:00.000Z',
-          }),
-          syncShellMemory: async () => ({
-            sourceKey: 'shell-history:/tmp/.zsh_history',
-            strategy: 'incremental' as const,
-            importedCount: 0,
-            lastSyncedAt: '2026-03-20T10:00:00.000Z',
-          }),
-          stop: () => undefined,
-        },
+        service: createRuntimeService(),
         workspaceDir: '/tmp/mirrorbrain-workspace',
       },
       {
         queryMemory: async () => ({ items: [] }),
         listMemoryEvents: async () => [],
-        listKnowledge: async () => [],
         listSkillDrafts: async () => [],
-        generateKnowledge: () => ({
-          id: 'knowledge-draft:reviewed:candidate:browser:aw-event-1',
-          draftState: 'draft',
-          sourceReviewedMemoryIds: ['reviewed:candidate:browser:aw-event-1'],
-        }),
         generateSkillDraft: () => ({
           id: 'skill-draft:reviewed:candidate:browser:aw-event-1',
           approvalState: 'draft',
@@ -205,22 +147,8 @@ describe('mirrorbrain service contract integration', () => {
             requiresConfirmation: true,
           },
         }),
-        publishKnowledge: async (input) => {
-          generated.push({
-            kind: 'knowledge',
-            payload: input,
-          });
-
-          return {
-            sourcePath: '/tmp/mirrorbrain-workspace/knowledge.md',
-            rootUri: 'qmd://mirrorbrain/knowledge/knowledge-draft:reviewed:candidate:browser:aw-event-1.md',
-          };
-        },
         publishSkill: async (input) => {
-          generated.push({
-            kind: 'skill',
-            payload: input,
-          });
+          generated.push(input);
 
           return {
             sourcePath: '/tmp/mirrorbrain-workspace/skill-draft.md',
@@ -230,32 +158,17 @@ describe('mirrorbrain service contract integration', () => {
       },
     );
 
-    await api.generateKnowledgeFromReviewedMemories(reviewedMemories);
     await api.generateSkillDraftFromReviewedMemories(reviewedMemories);
 
     expect(generated).toEqual([
       {
-        kind: 'knowledge',
-        payload: {
-          workspaceDir: '/tmp/mirrorbrain-workspace',
-          artifact: {
-            id: 'knowledge-draft:reviewed:candidate:browser:aw-event-1',
-            draftState: 'draft',
-            sourceReviewedMemoryIds: ['reviewed:candidate:browser:aw-event-1'],
-          },
-        },
-      },
-      {
-        kind: 'skill',
-        payload: {
-          workspaceDir: '/tmp/mirrorbrain-workspace',
-          artifact: {
-            id: 'skill-draft:reviewed:candidate:browser:aw-event-1',
-            approvalState: 'draft',
-            workflowEvidenceRefs: ['reviewed:candidate:browser:aw-event-1'],
-            executionSafetyMetadata: {
-              requiresConfirmation: true,
-            },
+        workspaceDir: '/tmp/mirrorbrain-workspace',
+        artifact: {
+          id: 'skill-draft:reviewed:candidate:browser:aw-event-1',
+          approvalState: 'draft',
+          workflowEvidenceRefs: ['reviewed:candidate:browser:aw-event-1'],
+          executionSafetyMetadata: {
+            requiresConfirmation: true,
           },
         },
       },
@@ -267,28 +180,11 @@ describe('mirrorbrain service contract integration', () => {
 
     const api = createMirrorBrainService(
       {
-        service: {
-          status: 'running',
-          config: getMirrorBrainConfig(),
-          syncBrowserMemory: async () => ({
-            sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
-            strategy: 'incremental' as const,
-            importedCount: 0,
-            lastSyncedAt: '2026-03-20T10:00:00.000Z',
-          }),
-          syncShellMemory: async () => ({
-            sourceKey: 'shell-history:/tmp/.zsh_history',
-            strategy: 'incremental' as const,
-            importedCount: 0,
-            lastSyncedAt: '2026-03-20T10:00:00.000Z',
-          }),
-          stop: () => undefined,
-        },
+        service: createRuntimeService(),
       },
       {
         queryMemory: async () => ({ items: [] }),
         listMemoryEvents: async () => [],
-        listKnowledge: async () => [],
         listSkillDrafts: async () => [],
         publishReviewedMemory: async (input) => {
           published.push(input.artifact);
@@ -348,29 +244,12 @@ describe('mirrorbrain service contract integration', () => {
 
     const api = createMirrorBrainService(
       {
-        service: {
-          status: 'running',
-          config: getMirrorBrainConfig(),
-          syncBrowserMemory: async () => ({
-            sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
-            strategy: 'incremental' as const,
-            importedCount: 0,
-            lastSyncedAt: '2026-03-20T10:00:00.000Z',
-          }),
-          syncShellMemory: async () => ({
-            sourceKey: 'shell-history:/tmp/.zsh_history',
-            strategy: 'incremental' as const,
-            importedCount: 0,
-            lastSyncedAt: '2026-03-20T10:00:00.000Z',
-          }),
-          stop: () => undefined,
-        },
+        service: createRuntimeService(),
       },
       {
         queryMemory: async () => ({ items: [] }),
         listMemoryEvents: async () => memoryEvents,
         listRawWorkspaceMemoryEvents: async () => memoryEvents,
-        listKnowledge: async () => [],
         listSkillDrafts: async () => [],
         publishCandidateMemory: async (input) => {
           published.push(input.artifact);
@@ -394,28 +273,11 @@ describe('mirrorbrain service contract integration', () => {
     const candidate = createCandidateMemoryFixture();
     const api = createMirrorBrainService(
       {
-        service: {
-          status: 'running',
-          config: getMirrorBrainConfig(),
-          syncBrowserMemory: async () => ({
-            sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
-            strategy: 'incremental' as const,
-            importedCount: 0,
-            lastSyncedAt: '2026-03-20T10:00:00.000Z',
-          }),
-          syncShellMemory: async () => ({
-            sourceKey: 'shell-history:/tmp/.zsh_history',
-            strategy: 'incremental' as const,
-            importedCount: 0,
-            lastSyncedAt: '2026-03-20T10:00:00.000Z',
-          }),
-          stop: () => undefined,
-        },
+        service: createRuntimeService(),
       },
       {
         queryMemory: async () => ({ items: [] }),
         listMemoryEvents: async () => [],
-        listKnowledge: async () => [],
         listSkillDrafts: async () => [],
       },
     );

@@ -44,7 +44,6 @@ Reviewed areas:
   - `src/modules/memory-review/index.ts`
   - `src/modules/memory-events-cache/index.ts`
   - `src/modules/knowledge-generation-llm/index.ts`
-  - `src/modules/knowledge-graph/graph-builder.ts`
   - `src/workflows/memory-source-sync/index.ts`
   - `src/workflows/browser-memory-sync/index.ts`
   - `src/workflows/shell-memory-sync/index.ts`
@@ -592,7 +591,6 @@ Refactor direction:
 
 Evidence:
 
-- `src/modules/knowledge-graph/graph-builder.ts:164` calls `buildKnowledgeRelationGraph`.
 - At `:205`, the similarity value is set to `undefined` with a comment saying the relation builder would need modification.
 
 Why this is unreasonable:

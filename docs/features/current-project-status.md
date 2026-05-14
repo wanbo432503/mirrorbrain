@@ -142,7 +142,6 @@ Use it for:
 - API contracts: `docs/components/api-contracts.md`
 - Authorization scope policy: `docs/components/authorization-scope-policy.md`
 - Memory source sync: `docs/components/memory-source-sync.md`
-- Topic knowledge merge: `docs/components/topic-knowledge-merge.md`
 - Topic knowledge read surface: `docs/components/topic-knowledge-read.md`
 - Topic knowledge quality: `docs/components/topic-knowledge-quality.md`
 

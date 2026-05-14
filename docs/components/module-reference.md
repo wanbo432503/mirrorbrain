@@ -66,7 +66,6 @@ Dependencies:
 - `qmd-workspace-store`, `agent-memory-api`, `file-sync-checkpoint-store`,
   `activitywatch-browser-source`, `browser-page-content`.
 - `memory-events-cache`, `memory-review`, `knowledge-generation-llm`,
-  `knowledge-relation-network`, `knowledge-graph`.
 - Browser/shell sync, narrative, topic merge, knowledge lint, and skill builder
   workflows.
 
@@ -108,9 +107,6 @@ Key endpoints:
 - `POST /reviewed-memories`, `DELETE /reviewed-memories/:id`
 - `GET /knowledge`, `POST /knowledge`, `DELETE /knowledge/:artifactId`
 - `GET /knowledge/topics`, `GET /knowledge/topics/:topicKey`,
-  `GET /knowledge/topics/:topicKey/history`, `GET /knowledge/graph`
-- `POST /knowledge/generate`, `POST /knowledge/regenerate`,
-  `POST /knowledge/approve`
 - `GET /skills`, `POST /skills`, `DELETE /skills/:artifactId`,
   `POST /skills/generate`
 - `POST /sources/import`, `GET /sources/audit`, `GET /sources/status`
@@ -892,7 +888,6 @@ Verification:
 
 - `src/modules/knowledge-relation-network/*.test.ts`
 
-### `src/modules/knowledge-graph`
 
 Purpose: build UI-ready knowledge graph snapshots from topic knowledge.
 
@@ -924,7 +919,6 @@ Failure modes and constraints:
 
 Verification:
 
-- `src/modules/knowledge-graph/*.test.ts`
 
 ### `src/modules/skill-draft-management`
 
@@ -1211,7 +1205,6 @@ Verification:
 
 - `src/workflows/shell-problem-narratives/index.test.ts`
 
-### `src/workflows/topic-knowledge-merge`
 
 Purpose: turn daily-review drafts into topic-oriented current-best knowledge.
 
@@ -1240,9 +1233,7 @@ Constraints:
 
 Verification:
 
-- `src/workflows/topic-knowledge-merge/index.test.ts`
 
-### `src/workflows/knowledge-lint`
 
 Purpose: keep generated knowledge sets coherent after new writes.
 
@@ -1270,7 +1261,6 @@ Constraints:
 
 Verification:
 
-- `src/workflows/knowledge-lint/index.test.ts`
 
 ### `src/workflows/topic-knowledge-quality`
 

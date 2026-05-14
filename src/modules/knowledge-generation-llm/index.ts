@@ -2,7 +2,6 @@ import type { BrowserPageContentArtifact } from '../../integrations/browser-page
 import { loadBrowserPageContentArtifactFromWorkspace } from '../../integrations/browser-page-content/index.js';
 import { loadLLMConfig } from '../../shared/llm-title-generation/http-fetch.js';
 import type {
-  KnowledgeArtifact,
   MemoryEvent,
   ReviewedMemory,
 } from '../../shared/types/index.js';
@@ -32,10 +31,6 @@ export interface KnowledgeGenerationDependencies {
   ) => Promise<ContentRetrievalResult>;
   now?: () => string;
   workspaceDir?: string;
-}
-
-interface GenerateKnowledgeOptions extends KnowledgeGenerationDependencies {
-  existingDraft?: KnowledgeArtifact;
 }
 
 interface BuildKnowledgeSynthesisPromptInput {
@@ -705,94 +700,5 @@ async function synthesizeKnowledgeBody(input: {
       title: input.fallbackTitle,
     }),
     usedDegradedFallback: true,
-  };
-}
-
-export async function generateKnowledgeFromReviewedMemories(
-  reviewedMemories: ReviewedMemory[],
-  options: GenerateKnowledgeOptions = {},
-): Promise<KnowledgeArtifact> {
-  if (reviewedMemories.length === 0) {
-    throw new Error('No reviewed memories provided for knowledge generation.');
-  }
-
-  const retrieve = options.retrievePageContent ?? retrievePageContent;
-  const retrievedContent: ContentRetrievalResult[] = [];
-
-  for (const memory of reviewedMemories) {
-    for (const eventId of memory.memoryEventIds) {
-      retrievedContent.push(await retrieve(eventId, options));
-    }
-  }
-
-  const urls = Array.from(
-    new Set(
-      [
-        ...retrievedContent.map((item) => item.url),
-        ...reviewedMemories.flatMap((memory) =>
-          (memory.candidateSourceRefs ?? []).map((source) => source.url),
-        ),
-      ].filter((url): url is string => url !== undefined && url.length > 0),
-    ),
-  );
-  const combinedContent = retrievedContent
-    .map((item) => item.content)
-    .filter((content) => content.trim().length > 0)
-    .join('\n\n');
-  const noteType = await classifyNoteType(combinedContent, options);
-  const resolvedTheme = resolveTheme(reviewedMemories, urls);
-  const topicKey = slugifyTopicKey(
-    resolvedTheme.length > 0
-      ? resolvedTheme
-      : await extractThemeFromUrls(urls, options),
-  );
-  const firstMemory = reviewedMemories[0]!;
-  const now = options.now?.() ?? new Date().toISOString();
-  const fallbackTitle = resolveKnowledgeTitle(firstMemory);
-  const synthesizedBody = await synthesizeKnowledgeBody({
-    noteType,
-    reviewedMemories,
-    retrievedContent,
-    analyzeWithLLM: options.analyzeWithLLM,
-    fallbackTitle,
-  });
-  const title = resolveArtifactTitle({
-    synthesizedBody: synthesizedBody.body,
-    reviewedMemories,
-  });
-
-  return {
-    artifactType: 'daily-review-draft',
-    id: options.existingDraft
-      ? `knowledge-draft:${firstMemory.id}:revision-${now}`
-      : `knowledge-draft:${firstMemory.id}`,
-    draftState: 'draft',
-    topicKey: topicKey.length > 0 ? topicKey : null,
-    title,
-    summary: `${reviewedMemories.length} reviewed ${
-      reviewedMemories.length === 1 ? 'memory' : 'memories'
-    } synthesized into ${noteType} knowledge.`,
-    body: replaceMarkdownH1(synthesizedBody.body, title),
-    sourceReviewedMemoryIds: reviewedMemories.map((memory) => memory.id),
-    derivedFromKnowledgeIds: options.existingDraft ? [options.existingDraft.id] : [],
-    version: (options.existingDraft?.version ?? 0) + 1,
-    isCurrentBest: false,
-    supersedesKnowledgeId: null,
-    updatedAt: now,
-    reviewedAt: firstMemory.reviewedAt,
-    recencyLabel: firstMemory.reviewDate,
-    provenanceRefs: reviewedMemories.map((memory) => ({
-      kind: 'reviewed-memory',
-      id: memory.id,
-    })),
-    compilationMetadata: synthesizedBody.usedDegradedFallback
-      ? {
-          discoveryInsights: [
-            'LLM synthesis unavailable; generated degraded scaffold without source excerpt synthesis.',
-          ],
-          generationMethod: 'legacy',
-          executeStageCompletedAt: now,
-        }
-      : undefined,
   };
 }

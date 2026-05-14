@@ -1,12 +1,10 @@
 import type {
   MemoryEvent,
-  KnowledgeArtifact,
   SkillArtifact,
   CandidateMemory,
   CandidateReviewSuggestion,
   ReviewedMemory,
   BrowserSyncSummary,
-  KnowledgeGraphSnapshot,
   SourceAuditEvent,
   SourceInstanceConfig,
   SourceInstanceSummary,
@@ -48,17 +46,6 @@ export interface MirrorBrainWebAppApi {
       sourceInstanceId?: string;
     },
   ): Promise<PaginatedMemoryEvents>;
-  listKnowledge(): Promise<KnowledgeArtifact[]>;
-  listKnowledgeTopics(): Promise<
-    Array<{
-      topicKey: string;
-      title: string;
-      summary: string;
-      currentBestKnowledgeId: string;
-      updatedAt?: string;
-      recencyLabel: string;
-    }>
-  >;
   listSkills(): Promise<SkillArtifact[]>;
   listCandidateMemoriesByDate?(reviewDate: string): Promise<CandidateMemory[]>;
   syncShell(): Promise<BrowserSyncSummary>;
@@ -105,26 +92,10 @@ export interface MirrorBrainWebAppApi {
     review: { decision: ReviewedMemory['decision']; reviewedAt: string }
   ): Promise<ReviewedMemory>;
   undoCandidateReview(reviewedMemoryId: string): Promise<void>;
-  generateKnowledge(
-    reviewedMemories: ReviewedMemory[]
-  ): Promise<KnowledgeArtifact>;
-  regenerateKnowledge?(
-    existingDraft: KnowledgeArtifact,
-    reviewedMemories: ReviewedMemory[]
-  ): Promise<KnowledgeArtifact>;
-  approveKnowledge?(draft: KnowledgeArtifact): Promise<{
-    publishedArtifact: KnowledgeArtifact;
-    assignedTopic: { topicKey: string; title: string };
-  }>;
   generateSkill(reviewedMemories: ReviewedMemory[]): Promise<SkillArtifact>;
-  saveKnowledgeArtifact?(
-    artifact: KnowledgeArtifact
-  ): Promise<KnowledgeArtifact>;
   saveSkillArtifact?(artifact: SkillArtifact): Promise<SkillArtifact>;
-  deleteKnowledgeArtifact?(artifactId: string): Promise<void>;
   deleteSkillArtifact?(artifactId: string): Promise<void>;
   deleteCandidateMemory?(candidateMemoryId: string): Promise<void>;
-  getKnowledgeGraph?(): Promise<KnowledgeGraphSnapshot>;
 }
 
 export function createMirrorBrainBrowserApi(
@@ -204,27 +175,6 @@ export function createMirrorBrainBrowserApi(
       const response = await fetch(url);
       const body = await readJson<PaginatedMemoryEvents>(response);
       return body;
-    },
-
-    async listKnowledge() {
-      const response = await fetch(`${baseUrl}/knowledge`);
-      const body = await readJson<{ items: KnowledgeArtifact[] }>(response);
-      return body.items;
-    },
-
-    async listKnowledgeTopics() {
-      const response = await fetch(`${baseUrl}/knowledge/topics`);
-      const body = await readJson<{
-        items: Array<{
-          topicKey: string;
-          title: string;
-          summary: string;
-          currentBestKnowledgeId: string;
-          updatedAt?: string;
-          recencyLabel: string;
-        }>;
-      }>(response);
-      return body.items;
     },
 
     async listSkills() {
@@ -423,42 +373,6 @@ export function createMirrorBrainBrowserApi(
       // Success (204 No Content) - return void implicitly
     },
 
-    async generateKnowledge(reviewedMemories: ReviewedMemory[]) {
-      const response = await fetch(`${baseUrl}/knowledge/generate`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ reviewedMemories }),
-      });
-      const body = await readJson<{ artifact: KnowledgeArtifact }>(response);
-      return body.artifact;
-    },
-
-    async regenerateKnowledge(
-      existingDraft: KnowledgeArtifact,
-      reviewedMemories: ReviewedMemory[]
-    ) {
-      const response = await fetch(`${baseUrl}/knowledge/regenerate`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ existingDraft, reviewedMemories }),
-      });
-      const body = await readJson<{ artifact: KnowledgeArtifact }>(response);
-      return body.artifact;
-    },
-
-    async approveKnowledge(draft: KnowledgeArtifact) {
-      const response = await fetch(`${baseUrl}/knowledge/approve`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ draftId: draft.id, draft }),
-      });
-      const body = await readJson<{
-        publishedArtifact: KnowledgeArtifact;
-        assignedTopic: { topicKey: string; title: string };
-      }>(response);
-      return body;
-    },
-
     async generateSkill(reviewedMemories: ReviewedMemory[]) {
       const response = await fetch(`${baseUrl}/skills/generate`, {
         method: 'POST',
@@ -467,27 +381,6 @@ export function createMirrorBrainBrowserApi(
       });
       const body = await readJson<{ artifact: SkillArtifact }>(response);
       return body.artifact;
-    },
-
-    async deleteKnowledgeArtifact(artifactId: string) {
-      const response = await fetch(`${baseUrl}/knowledge/${artifactId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        let errorMessage = 'Failed to delete knowledge artifact';
-
-        try {
-          const body = await response.json();
-          if (body.message || body.error) {
-            errorMessage = body.message || body.error;
-          }
-        } catch {
-          errorMessage += `: ${response.statusText}`;
-        }
-
-        throw new Error(errorMessage);
-      }
     },
 
     async deleteSkillArtifact(artifactId: string) {
@@ -509,16 +402,6 @@ export function createMirrorBrainBrowserApi(
 
         throw new Error(errorMessage);
       }
-    },
-
-    async saveKnowledgeArtifact(artifact: KnowledgeArtifact) {
-      const response = await fetch(`${baseUrl}/knowledge`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ artifact }),
-      });
-      const body = await readJson<{ artifact: KnowledgeArtifact }>(response);
-      return body.artifact;
     },
 
     async saveSkillArtifact(artifact: SkillArtifact) {
@@ -551,12 +434,6 @@ export function createMirrorBrainBrowserApi(
         }
         throw new Error(errorMessage);
       }
-    },
-
-    async getKnowledgeGraph() {
-      const response = await fetch(`${baseUrl}/knowledge/graph`);
-      const body = await readJson<{ graph: KnowledgeGraphSnapshot }>(response);
-      return body.graph;
     },
   };
 }

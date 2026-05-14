@@ -10,7 +10,6 @@ import { ValidationError } from '../mirrorbrain-service/errors.js';
 import type {
   CandidateMemory,
   CandidateReviewSuggestion,
-  KnowledgeArtifact,
   MemoryQueryResult,
   MemoryEvent,
   ReviewedMemory,
@@ -99,26 +98,6 @@ describe('mirrorbrain http server', () => {
         totalPages: 1,
       },
     }));
-    const listKnowledge = vi.fn(async (): Promise<KnowledgeArtifact[]> => [
-      {
-        id: 'knowledge-draft:reviewed:candidate:browser:aw-event-1',
-        artifactType: 'daily-review-draft',
-        draftState: 'draft',
-        topicKey: null,
-        title: 'Example Tasks',
-        summary: 'Daily review draft for Example Tasks.',
-        body: '- Example Tasks\n\n1 reviewed memory item included.',
-        sourceReviewedMemoryIds: ['reviewed:candidate:browser:aw-event-1'],
-        derivedFromKnowledgeIds: [],
-        version: 1,
-        isCurrentBest: false,
-        supersedesKnowledgeId: null,
-        updatedAt: '2026-03-20T10:00:00.000Z',
-        reviewedAt: '2026-03-20T10:00:00.000Z',
-        recencyLabel: 'reviewed on 2026-03-20',
-        provenanceRefs: [{ kind: 'reviewed-memory', id: 'reviewed:candidate:browser:aw-event-1' }],
-      },
-    ]);
     const listSkillDrafts = vi.fn(async (): Promise<SkillArtifact[]> => [
       {
         id: 'skill-draft:reviewed:candidate:browser:aw-event-1',
@@ -151,7 +130,6 @@ describe('mirrorbrain http server', () => {
       },
       listMemoryEvents,
       queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
-      listKnowledge,
       listSkillDrafts,
       syncBrowserMemory,
       syncShellMemory,
@@ -160,9 +138,7 @@ describe('mirrorbrain http server', () => {
       reviewCandidateMemory: vi.fn(),
       undoCandidateReview: vi.fn(),
       deleteCandidateMemory: vi.fn(),
-      generateKnowledgeFromReviewedMemories: vi.fn(),
       generateSkillDraftFromReviewedMemories: vi.fn(),
-      publishKnowledge: vi.fn(),
       publishSkillDraft: vi.fn(),
     };
 
@@ -180,8 +156,6 @@ describe('mirrorbrain http server', () => {
       `${server.origin}/memory?page=1&pageSize=5&sourceKind=browser&sourceInstanceId=chrome-main`,
     );
     const filteredMemoryBody = await filteredMemoryResponse.json();
-    const knowledgeResponse = await fetch(`${server.origin}/knowledge`);
-    const knowledgeBody = await knowledgeResponse.json();
     const skillsResponse = await fetch(`${server.origin}/skills`);
     const skillsBody = await skillsResponse.json();
     const legacyBrowserSyncResponse = await fetch(`${server.origin}/sync/browser`, {
@@ -230,34 +204,6 @@ describe('mirrorbrain http server', () => {
       pageSize: 5,
       sourceKind: 'browser',
       sourceInstanceId: 'chrome-main',
-    });
-    expect(knowledgeResponse.status).toBe(200);
-    expect(knowledgeBody).toEqual({
-      items: [
-        {
-          id: 'knowledge-draft:reviewed:candidate:browser:aw-event-1',
-          artifactType: 'daily-review-draft',
-          draftState: 'draft',
-          topicKey: null,
-          title: 'Example Tasks',
-          summary: 'Daily review draft for Example Tasks.',
-          body: '- Example Tasks\n\n1 reviewed memory item included.',
-          sourceReviewedMemoryIds: ['reviewed:candidate:browser:aw-event-1'],
-          derivedFromKnowledgeIds: [],
-          version: 1,
-          isCurrentBest: false,
-          supersedesKnowledgeId: null,
-          updatedAt: '2026-03-20T10:00:00.000Z',
-          reviewedAt: '2026-03-20T10:00:00.000Z',
-          recencyLabel: 'reviewed on 2026-03-20',
-          provenanceRefs: [
-            {
-              kind: 'reviewed-memory',
-              id: 'reviewed:candidate:browser:aw-event-1',
-            },
-          ],
-        },
-      ],
     });
     expect(skillsResponse.status).toBe(200);
     expect(skillsBody).toEqual({
@@ -345,16 +291,13 @@ describe('mirrorbrain http server', () => {
       syncShellMemory: vi.fn(),
       listMemoryEvents: vi.fn(),
       queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
-      listKnowledge: vi.fn(async () => []),
       listSkillDrafts: vi.fn(async () => []),
       createDailyCandidateMemories: vi.fn(),
       suggestCandidateReviews: vi.fn(),
       reviewCandidateMemory: vi.fn(),
       undoCandidateReview: vi.fn(),
       deleteCandidateMemory: vi.fn(),
-      generateKnowledgeFromReviewedMemories: vi.fn(),
       generateSkillDraftFromReviewedMemories: vi.fn(),
-      publishKnowledge: vi.fn(),
       publishSkillDraft: vi.fn(),
       importSourceLedgers,
       listSourceAuditEvents,
@@ -495,16 +438,13 @@ describe('mirrorbrain http server', () => {
       syncShellMemory: vi.fn(),
       listMemoryEvents: vi.fn(),
       queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
-      listKnowledge: vi.fn(async () => []),
       listSkillDrafts: vi.fn(async () => []),
       createDailyCandidateMemories: vi.fn(),
       suggestCandidateReviews: vi.fn(),
       reviewCandidateMemory: vi.fn(),
       undoCandidateReview: vi.fn(),
       deleteCandidateMemory: vi.fn(),
-      generateKnowledgeFromReviewedMemories: vi.fn(),
       generateSkillDraftFromReviewedMemories: vi.fn(),
-      publishKnowledge: vi.fn(),
       publishSkillDraft: vi.fn(),
       analyzeWorkSessions,
     };
@@ -602,16 +542,13 @@ describe('mirrorbrain http server', () => {
       syncShellMemory: vi.fn(),
       listMemoryEvents: vi.fn(),
       queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
-      listKnowledge: vi.fn(async () => []),
       listSkillDrafts: vi.fn(async () => []),
       createDailyCandidateMemories: vi.fn(),
       suggestCandidateReviews: vi.fn(),
       reviewCandidateMemory: vi.fn(),
       undoCandidateReview: vi.fn(),
       deleteCandidateMemory: vi.fn(),
-      generateKnowledgeFromReviewedMemories: vi.fn(),
       generateSkillDraftFromReviewedMemories: vi.fn(),
-      publishKnowledge: vi.fn(),
       publishSkillDraft: vi.fn(),
       reviewWorkSessionCandidate,
     };
@@ -764,16 +701,13 @@ describe('mirrorbrain http server', () => {
       syncShellMemory: vi.fn(),
       listMemoryEvents: vi.fn(),
       queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
-      listKnowledge: vi.fn(async () => []),
       listSkillDrafts: vi.fn(async () => []),
       createDailyCandidateMemories: vi.fn(),
       suggestCandidateReviews: vi.fn(),
       reviewCandidateMemory: vi.fn(),
       undoCandidateReview: vi.fn(),
       deleteCandidateMemory: vi.fn(),
-      generateKnowledgeFromReviewedMemories: vi.fn(),
       generateSkillDraftFromReviewedMemories: vi.fn(),
-      publishKnowledge: vi.fn(),
       publishSkillDraft: vi.fn(),
       generateKnowledgeArticlePreview: vi.fn(async () => preview),
       generateKnowledgeArticleDraft: vi.fn(async () => draft),
@@ -913,16 +847,13 @@ describe('mirrorbrain http server', () => {
       syncShellMemory: vi.fn(),
       listMemoryEvents: vi.fn(async () => []),
       queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
-      listKnowledge: vi.fn(async () => []),
       listSkillDrafts: vi.fn(async () => []),
       createDailyCandidateMemories: vi.fn(),
       suggestCandidateReviews: vi.fn(),
       reviewCandidateMemory: vi.fn(),
       undoCandidateReview: vi.fn(),
       deleteCandidateMemory: vi.fn(),
-      generateKnowledgeFromReviewedMemories: vi.fn(),
       generateSkillDraftFromReviewedMemories: vi.fn(),
-      publishKnowledge: vi.fn(),
       publishSkillDraft: vi.fn(),
       deleteKnowledgeArticle: vi.fn(async () => undefined),
     };
@@ -957,16 +888,13 @@ describe('mirrorbrain http server', () => {
       syncShellMemory: vi.fn(),
       listMemoryEvents: vi.fn(),
       queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
-      listKnowledge: vi.fn(async () => []),
       listSkillDrafts: vi.fn(async () => []),
       createDailyCandidateMemories: vi.fn(),
       suggestCandidateReviews: vi.fn(),
       reviewCandidateMemory: vi.fn(),
       undoCandidateReview: vi.fn(),
       deleteCandidateMemory: vi.fn(),
-      generateKnowledgeFromReviewedMemories: vi.fn(),
       generateSkillDraftFromReviewedMemories: vi.fn(),
-      publishKnowledge: vi.fn(),
       publishSkillDraft: vi.fn(),
       generateKnowledgeArticleDraft,
     };
@@ -994,177 +922,6 @@ describe('mirrorbrain http server', () => {
 
     expect(response.status).toBe(400);
     expect(generateKnowledgeArticleDraft).not.toHaveBeenCalled();
-  });
-
-  it('serializes minimal valid knowledge artifacts without requiring optional topic fields', async () => {
-    const service = {
-      service: {
-        status: 'running' as const,
-        config: getMirrorBrainConfig(),
-      },
-      syncBrowserMemory: vi.fn(),
-      syncShellMemory: vi.fn(),
-      listMemoryEvents: vi.fn(async () => []),
-      queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
-      listKnowledge: vi.fn(async (): Promise<KnowledgeArtifact[]> => [
-        {
-          id: 'knowledge-draft:minimal',
-          draftState: 'draft',
-          sourceReviewedMemoryIds: ['reviewed:minimal'],
-          tags: ['release'],
-          relatedKnowledgeIds: ['topic-knowledge:release-process'],
-          compilationMetadata: {
-            discoveryInsights: ['The release process repeats weekly.'],
-            generationMethod: 'two-stage-compilation',
-            discoveryStageCompletedAt: '2026-05-11T09:00:00.000Z',
-            executeStageCompletedAt: '2026-05-11T09:05:00.000Z',
-          },
-        },
-      ]),
-      listSkillDrafts: vi.fn(async () => []),
-      createDailyCandidateMemories: vi.fn(),
-      suggestCandidateReviews: vi.fn(),
-      reviewCandidateMemory: vi.fn(),
-      undoCandidateReview: vi.fn(),
-      deleteCandidateMemory: vi.fn(),
-      generateKnowledgeFromReviewedMemories: vi.fn(),
-      generateSkillDraftFromReviewedMemories: vi.fn(),
-    };
-    const server = await startMirrorBrainHttpServer({
-      service,
-      port: 0,
-    });
-    servers.push(server);
-
-    const response = await fetch(`${server.origin}/knowledge`);
-    const body = await response.json();
-
-    expect(response.status).toBe(200);
-    expect(body).toEqual({
-      items: [
-        {
-          id: 'knowledge-draft:minimal',
-          draftState: 'draft',
-          sourceReviewedMemoryIds: ['reviewed:minimal'],
-          tags: ['release'],
-          relatedKnowledgeIds: ['topic-knowledge:release-process'],
-          compilationMetadata: {
-            discoveryInsights: ['The release process repeats weekly.'],
-            generationMethod: 'two-stage-compilation',
-            discoveryStageCompletedAt: '2026-05-11T09:00:00.000Z',
-            executeStageCompletedAt: '2026-05-11T09:05:00.000Z',
-          },
-        },
-      ],
-    });
-  });
-
-  it('publishes edited knowledge and skill drafts through save endpoints', async () => {
-    const publishKnowledge = vi.fn(async (input) => input);
-    const publishSkillDraft = vi.fn(async (input) => input);
-    const service = {
-      service: {
-        status: 'running' as const,
-        config: getMirrorBrainConfig(),
-        stop: vi.fn(),
-      },
-      listMemoryEvents: vi.fn(async () => ({
-        items: [],
-        pagination: {
-          total: 0,
-          page: 1,
-          pageSize: 10,
-          totalPages: 1,
-        },
-      })),
-      queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
-      listKnowledge: vi.fn(async () => []),
-      listSkillDrafts: vi.fn(async () => []),
-      syncBrowserMemory: vi.fn(),
-      syncShellMemory: vi.fn(),
-      createDailyCandidateMemories: vi.fn(),
-      suggestCandidateReviews: vi.fn(),
-      reviewCandidateMemory: vi.fn(),
-      undoCandidateReview: vi.fn(),
-      deleteCandidateMemory: vi.fn(),
-      generateKnowledgeFromReviewedMemories: vi.fn(),
-      generateSkillDraftFromReviewedMemories: vi.fn(),
-      publishKnowledge,
-      publishSkillDraft,
-    };
-
-    const server = await startMirrorBrainHttpServer({
-      service,
-      port: 0,
-    });
-    servers.push(server);
-
-    const knowledgeArtifact = {
-      id: 'knowledge-draft:1',
-      artifactType: 'daily-review-draft',
-      draftState: 'draft',
-      topicKey: null,
-      title: 'Edited title',
-      summary: 'Edited summary',
-      body: 'Edited body',
-      sourceReviewedMemoryIds: ['reviewed:1'],
-      derivedFromKnowledgeIds: [],
-      version: 1,
-      isCurrentBest: false,
-      supersedesKnowledgeId: null,
-      reviewedAt: null,
-      recencyLabel: 'today',
-      provenanceRefs: [],
-    };
-    const skillArtifact = {
-      id: 'skill-draft:1',
-      approvalState: 'approved',
-      workflowEvidenceRefs: ['reviewed:1', 'reviewed:2'],
-      executionSafetyMetadata: {
-        requiresConfirmation: false,
-      },
-    };
-
-    const knowledgeResponse = await fetch(`${server.origin}/knowledge`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        artifact: knowledgeArtifact,
-      }),
-    });
-    const skillResponse = await fetch(`${server.origin}/skills`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        artifact: skillArtifact,
-      }),
-    });
-
-    expect(knowledgeResponse.status).toBe(201);
-    expect(skillResponse.status).toBe(201);
-    expect(publishKnowledge).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: 'knowledge-draft:1',
-        title: 'Edited title',
-        summary: 'Edited summary',
-        body: 'Edited body',
-        draftState: 'draft',
-      }),
-    );
-    expect(publishSkillDraft).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: 'skill-draft:1',
-        approvalState: 'approved',
-        workflowEvidenceRefs: ['reviewed:1', 'reviewed:2'],
-        executionSafetyMetadata: {
-          requiresConfirmation: false,
-        },
-      }),
-    );
   });
 
   it('serves theme-level memory retrieval results through a query endpoint', async () => {
@@ -1210,7 +967,6 @@ describe('mirrorbrain http server', () => {
           },
         ],
       })),
-      listKnowledge: vi.fn(async () => []),
       listSkillDrafts: vi.fn(async () => []),
       syncBrowserMemory: vi.fn(async () => ({
         sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
@@ -1229,9 +985,7 @@ describe('mirrorbrain http server', () => {
       reviewCandidateMemory: vi.fn(),
       undoCandidateReview: vi.fn(),
       deleteCandidateMemory: vi.fn(),
-      generateKnowledgeFromReviewedMemories: vi.fn(),
       generateSkillDraftFromReviewedMemories: vi.fn(),
-      publishKnowledge: vi.fn(),
       publishSkillDraft: vi.fn(),
     };
 
@@ -1306,16 +1060,13 @@ describe('mirrorbrain http server', () => {
       syncShellMemory: vi.fn(),
       listMemoryEvents: vi.fn(),
       queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
-      listKnowledge: vi.fn(async () => []),
       listSkillDrafts: vi.fn(async () => []),
       createDailyCandidateMemories: vi.fn(),
       suggestCandidateReviews: vi.fn(),
       reviewCandidateMemory: vi.fn(),
       undoCandidateReview: vi.fn(),
       deleteCandidateMemory: vi.fn(),
-      generateKnowledgeFromReviewedMemories: vi.fn(),
       generateSkillDraftFromReviewedMemories: vi.fn(),
-      publishKnowledge: vi.fn(),
       publishSkillDraft: vi.fn(),
     };
 
@@ -1399,26 +1150,6 @@ describe('mirrorbrain http server', () => {
         },
       ): Promise<ReviewedMemory> => createReviewedMemoryFixture(),
     );
-    const generateKnowledgeFromReviewedMemories = vi.fn(
-      async (reviewedMemories: ReviewedMemory[]): Promise<KnowledgeArtifact> => ({
-        id: `knowledge-draft:${reviewedMemories[0]?.id ?? 'empty'}`,
-        artifactType: 'daily-review-draft',
-        draftState: 'draft',
-        topicKey: null,
-        title: reviewedMemories[0]?.candidateTitle ?? 'Daily Review Draft',
-        summary: `Daily review draft for ${reviewedMemories[0]?.candidateTitle ?? 'reviewed memory'}.`,
-        body: `- ${reviewedMemories[0]?.candidateTitle ?? 'Reviewed memory'}\n\n${reviewedMemories.length} reviewed memory item${reviewedMemories.length === 1 ? '' : 's'} included.`,
-        sourceReviewedMemoryIds: reviewedMemories.map((memory) => memory.id),
-        derivedFromKnowledgeIds: [],
-        version: 1,
-        isCurrentBest: false,
-        supersedesKnowledgeId: null,
-        updatedAt: reviewedMemories[0]?.reviewedAt,
-        reviewedAt: reviewedMemories[0]?.reviewedAt ?? null,
-        recencyLabel: `reviewed on ${reviewedMemories[0]?.reviewDate ?? ''}`.trim(),
-        provenanceRefs: reviewedMemories.map((memory) => ({ kind: 'reviewed-memory', id: memory.id })),
-      }),
-    );
     const generateSkillDraftFromReviewedMemories = vi.fn(
       async (reviewedMemories: ReviewedMemory[]): Promise<SkillArtifact> => ({
         id: `skill-draft:${reviewedMemories[0]?.id ?? 'empty'}`,
@@ -1447,7 +1178,6 @@ describe('mirrorbrain http server', () => {
         },
       })),
       queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
-      listKnowledge: vi.fn(async () => []),
       listSkillDrafts: vi.fn(async () => []),
       syncBrowserMemory: vi.fn(async () => ({
         sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
@@ -1466,9 +1196,7 @@ describe('mirrorbrain http server', () => {
       reviewCandidateMemory,
       undoCandidateReview,
       deleteCandidateMemory,
-      generateKnowledgeFromReviewedMemories,
       generateSkillDraftFromReviewedMemories,
-      publishKnowledge: vi.fn(),
       publishSkillDraft: vi.fn(),
     };
 
@@ -1518,16 +1246,6 @@ describe('mirrorbrain http server', () => {
       }),
     });
     const reviewBody = await reviewResponse.json();
-    const knowledgeResponse = await fetch(`${server.origin}/knowledge/generate`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        reviewedMemories: [createReviewedMemoryFixture()],
-      }),
-    });
-    const knowledgeBody = await knowledgeResponse.json();
     const skillResponse = await fetch(`${server.origin}/skills/generate`, {
       method: 'POST',
       headers: {
@@ -1582,34 +1300,6 @@ describe('mirrorbrain http server', () => {
     expect(reviewBody).toEqual({
       reviewedMemory: createReviewedMemoryFixture(),
     });
-    expect(knowledgeResponse.status).toBe(201);
-    expect(knowledgeBody).toEqual({
-      artifact: {
-        id: 'knowledge-draft:reviewed:candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
-        artifactType: 'daily-review-draft',
-        draftState: 'draft',
-        topicKey: null,
-        title: 'Docs Example Com / guides',
-        summary: 'Daily review draft for Docs Example Com / guides.',
-        body: '- Docs Example Com / guides\n\n1 reviewed memory item included.',
-        sourceReviewedMemoryIds: [
-          'reviewed:candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
-        ],
-        derivedFromKnowledgeIds: [],
-        version: 1,
-        isCurrentBest: false,
-        supersedesKnowledgeId: null,
-        updatedAt: '2026-03-20T10:00:00.000Z',
-        reviewedAt: '2026-03-20T10:00:00.000Z',
-        recencyLabel: 'reviewed on 2026-03-20',
-        provenanceRefs: [
-          {
-            kind: 'reviewed-memory',
-            id: 'reviewed:candidate:2026-03-20:activitywatch-browser:docs-example-com:guides',
-          },
-        ],
-      },
-    });
     expect(skillResponse.status).toBe(201);
     expect(skillBody).toEqual({
       artifact: {
@@ -1623,124 +1313,6 @@ describe('mirrorbrain http server', () => {
         },
       },
     });
-  });
-
-  it('passes the current draft snapshot to the knowledge approval service', async () => {
-    const draft: KnowledgeArtifact = {
-      id: 'knowledge-draft:reviewed:candidate:browser:vitest',
-      artifactType: 'daily-review-draft',
-      draftState: 'draft',
-      topicKey: 'vitest-testing',
-      title: 'Vitest setup and debugging',
-      summary: '1 reviewed memory synthesized into tutorial knowledge.',
-      body: '## Source Synthesis\nStep 1: install Vitest and configure projects.',
-      sourceReviewedMemoryIds: ['reviewed:candidate:browser:vitest'],
-      derivedFromKnowledgeIds: [],
-      version: 1,
-      isCurrentBest: false,
-      supersedesKnowledgeId: null,
-      updatedAt: '2026-04-21T12:00:00.000Z',
-      reviewedAt: '2026-04-21T10:00:00.000Z',
-      recencyLabel: '2026-04-21',
-      provenanceRefs: [
-        {
-          kind: 'reviewed-memory',
-          id: 'reviewed:candidate:browser:vitest',
-        },
-      ],
-    };
-    const publishedArtifact: KnowledgeArtifact = {
-      ...draft,
-      id: 'knowledge:topic:vitest-testing:v1',
-      artifactType: 'topic-knowledge',
-      draftState: 'published',
-      isCurrentBest: true,
-    };
-    const approveKnowledgeDraft = vi.fn(
-      async (
-        _draftId: string,
-        _draftSnapshot?: KnowledgeArtifact,
-      ): Promise<{
-        publishedArtifact: KnowledgeArtifact;
-        assignedTopic: { topicKey: string; title: string };
-      }> => ({
-        publishedArtifact,
-        assignedTopic: {
-          topicKey: 'vitest-testing',
-          title: 'Vitest setup and debugging',
-        },
-      }),
-    );
-    const service = {
-      service: {
-        status: 'running' as const,
-        config: getMirrorBrainConfig(),
-        stop: vi.fn(),
-      },
-      listMemoryEvents: vi.fn(async () => ({
-        items: [],
-        pagination: {
-          total: 0,
-          page: 1,
-          pageSize: 10,
-          totalPages: 1,
-        },
-      })),
-      queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
-      listKnowledge: vi.fn(async () => []),
-      listSkillDrafts: vi.fn(async () => []),
-      syncBrowserMemory: vi.fn(async () => ({
-        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
-        strategy: 'incremental' as const,
-        importedCount: 0,
-        lastSyncedAt: '2026-03-20T10:00:00.000Z',
-      })),
-      syncShellMemory: vi.fn(async () => ({
-        sourceKey: 'shell-history:/tmp/.zsh_history',
-        strategy: 'incremental' as const,
-        importedCount: 0,
-        lastSyncedAt: '2026-03-20T10:05:00.000Z',
-      })),
-      createDailyCandidateMemories: vi.fn(),
-      suggestCandidateReviews: vi.fn(),
-      reviewCandidateMemory: vi.fn(),
-      undoCandidateReview: vi.fn(),
-      deleteCandidateMemory: vi.fn(),
-      generateKnowledgeFromReviewedMemories: vi.fn(),
-      regenerateKnowledgeDraft: vi.fn(),
-      approveKnowledgeDraft,
-      generateSkillDraftFromReviewedMemories: vi.fn(),
-      publishKnowledge: vi.fn(),
-      publishSkillDraft: vi.fn(),
-    };
-
-    const server = await startMirrorBrainHttpServer({
-      service,
-      port: 0,
-    });
-    servers.push(server);
-
-    const response = await fetch(`${server.origin}/knowledge/approve`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        draftId: draft.id,
-        draft,
-      }),
-    });
-    const body = await response.json();
-
-    expect(response.status).toBe(201);
-    expect(body).toEqual({
-      publishedArtifact,
-      assignedTopic: {
-        topicKey: 'vitest-testing',
-        title: 'Vitest setup and debugging',
-      },
-    });
-    expect(approveKnowledgeDraft).toHaveBeenCalledWith(draft.id, draft);
   });
 
   it('serves the standalone UI shell and static assets when a static directory is configured', async () => {
@@ -1769,7 +1341,6 @@ describe('mirrorbrain http server', () => {
         },
       })),
       queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
-      listKnowledge: vi.fn(async () => []),
       listSkillDrafts: vi.fn(async () => []),
       syncBrowserMemory: vi.fn(async () => ({
         sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
@@ -1788,9 +1359,7 @@ describe('mirrorbrain http server', () => {
       reviewCandidateMemory: vi.fn(),
       undoCandidateReview: vi.fn(),
       deleteCandidateMemory: vi.fn(),
-      generateKnowledgeFromReviewedMemories: vi.fn(),
       generateSkillDraftFromReviewedMemories: vi.fn(),
-      publishKnowledge: vi.fn(),
       publishSkillDraft: vi.fn(),
     };
 
@@ -1830,7 +1399,6 @@ describe('mirrorbrain http server', () => {
         },
       })),
       queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
-      listKnowledge: vi.fn(async () => []),
       listSkillDrafts: vi.fn(async () => []),
       syncBrowserMemory: vi.fn(async () => ({
         sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
@@ -1849,9 +1417,7 @@ describe('mirrorbrain http server', () => {
       reviewCandidateMemory: vi.fn(),
       undoCandidateReview: vi.fn(),
       deleteCandidateMemory: vi.fn(),
-      generateKnowledgeFromReviewedMemories: vi.fn(),
       generateSkillDraftFromReviewedMemories: vi.fn(),
-      publishKnowledge: vi.fn(),
       publishSkillDraft: vi.fn(),
     };
 
@@ -1901,7 +1467,6 @@ describe('mirrorbrain http server', () => {
         },
       })),
       queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
-      listKnowledge: vi.fn(async () => []),
       listSkillDrafts: vi.fn(async () => []),
       syncBrowserMemory: vi.fn(async () => ({
         sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
@@ -1920,9 +1485,7 @@ describe('mirrorbrain http server', () => {
       reviewCandidateMemory: vi.fn(),
       undoCandidateReview: vi.fn(),
       deleteCandidateMemory: vi.fn(),
-      generateKnowledgeFromReviewedMemories: vi.fn(),
       generateSkillDraftFromReviewedMemories: vi.fn(),
-      publishKnowledge: vi.fn(),
       publishSkillDraft: vi.fn(),
     };
 
@@ -1982,7 +1545,6 @@ describe('mirrorbrain http server', () => {
         },
       })),
       queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
-      listKnowledge: vi.fn(async () => []),
       listSkillDrafts: vi.fn(async () => []),
       syncBrowserMemory: vi.fn(),
       syncShellMemory: vi.fn(),
@@ -2003,9 +1565,7 @@ describe('mirrorbrain http server', () => {
         }
       }),
       deleteCandidateMemory: vi.fn(),
-      generateKnowledgeFromReviewedMemories: vi.fn(),
       generateSkillDraftFromReviewedMemories: vi.fn(),
-      publishKnowledge: vi.fn(),
       publishSkillDraft: vi.fn(),
     };
 
@@ -2044,7 +1604,6 @@ describe('mirrorbrain http server', () => {
         },
       })),
       queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
-      listKnowledge: vi.fn(async () => []),
       listSkillDrafts: vi.fn(async () => []),
       syncBrowserMemory: vi.fn(),
       syncShellMemory: vi.fn(),
@@ -2057,9 +1616,7 @@ describe('mirrorbrain http server', () => {
         }
       }),
       deleteCandidateMemory: vi.fn(),
-      generateKnowledgeFromReviewedMemories: vi.fn(),
       generateSkillDraftFromReviewedMemories: vi.fn(),
-      publishKnowledge: vi.fn(),
       publishSkillDraft: vi.fn(),
     };
 
@@ -2095,7 +1652,6 @@ describe('mirrorbrain http server', () => {
         },
       })),
       queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
-      listKnowledge: vi.fn(async () => []),
       listSkillDrafts: vi.fn(async () => []),
       syncBrowserMemory: vi.fn(),
       syncShellMemory: vi.fn(),
@@ -2113,9 +1669,7 @@ describe('mirrorbrain http server', () => {
         await rm(filePath, { force: true });
       }),
       deleteCandidateMemory: vi.fn(),
-      generateKnowledgeFromReviewedMemories: vi.fn(),
       generateSkillDraftFromReviewedMemories: vi.fn(),
-      publishKnowledge: vi.fn(),
       publishSkillDraft: vi.fn(),
     };
 
@@ -2189,7 +1743,6 @@ describe('mirrorbrain http server', () => {
         },
       })),
       queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
-      listKnowledge: vi.fn(async () => []),
       listSkillDrafts: vi.fn(async () => []),
       syncBrowserMemory: vi.fn(),
       syncShellMemory: vi.fn(),
@@ -2198,9 +1751,7 @@ describe('mirrorbrain http server', () => {
       reviewCandidateMemory: vi.fn(),
       undoCandidateReview: vi.fn(),
       deleteCandidateMemory,
-      generateKnowledgeFromReviewedMemories: vi.fn(),
       generateSkillDraftFromReviewedMemories: vi.fn(),
-      publishKnowledge: vi.fn(),
       publishSkillDraft: vi.fn(),
     };
 
@@ -2250,7 +1801,6 @@ describe('mirrorbrain http server', () => {
         },
       })),
       queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
-      listKnowledge: vi.fn(async () => []),
       listSkillDrafts: vi.fn(async () => []),
       syncBrowserMemory: vi.fn(),
       syncShellMemory: vi.fn(),
@@ -2259,9 +1809,7 @@ describe('mirrorbrain http server', () => {
       reviewCandidateMemory: vi.fn(),
       undoCandidateReview: vi.fn(),
       deleteCandidateMemory,
-      generateKnowledgeFromReviewedMemories: vi.fn(),
       generateSkillDraftFromReviewedMemories: vi.fn(),
-      publishKnowledge: vi.fn(),
       publishSkillDraft: vi.fn(),
     };
 
@@ -2304,7 +1852,6 @@ describe('mirrorbrain http server', () => {
         },
       })),
       queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
-      listKnowledge: vi.fn(async () => []),
       listSkillDrafts: vi.fn(async () => []),
       syncBrowserMemory: vi.fn(),
       syncShellMemory: vi.fn(),
@@ -2313,9 +1860,7 @@ describe('mirrorbrain http server', () => {
       reviewCandidateMemory: vi.fn(),
       undoCandidateReview: vi.fn(),
       deleteCandidateMemory,
-      generateKnowledgeFromReviewedMemories: vi.fn(),
       generateSkillDraftFromReviewedMemories: vi.fn(),
-      publishKnowledge: vi.fn(),
       publishSkillDraft: vi.fn(),
     };
 
@@ -2333,61 +1878,4 @@ describe('mirrorbrain http server', () => {
     await rm(workspaceDir, { recursive: true, force: true });
   });
 
-  it('DELETE /knowledge/:id and /skills/:id should forward artifact deletion to the service', async () => {
-    const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-test-'));
-    const deleteKnowledgeArtifact = vi.fn(async () => undefined);
-    const deleteSkillArtifact = vi.fn(async () => undefined);
-
-    const service = {
-      service: {
-        status: 'running' as const,
-        config: getMirrorBrainConfig(),
-        stop: vi.fn(),
-      },
-      listMemoryEvents: vi.fn(async () => ({
-        items: [],
-        pagination: {
-          total: 0,
-          page: 1,
-          pageSize: 10,
-          totalPages: 1,
-        },
-      })),
-      queryMemory: vi.fn(async (): Promise<MemoryQueryResult> => ({ items: [] })),
-      listKnowledge: vi.fn(async () => []),
-      listSkillDrafts: vi.fn(async () => []),
-      syncBrowserMemory: vi.fn(),
-      syncShellMemory: vi.fn(),
-      createDailyCandidateMemories: vi.fn(),
-      suggestCandidateReviews: vi.fn(),
-      reviewCandidateMemory: vi.fn(),
-      undoCandidateReview: vi.fn(),
-      deleteCandidateMemory: vi.fn(),
-      deleteKnowledgeArtifact,
-      deleteSkillArtifact,
-      generateKnowledgeFromReviewedMemories: vi.fn(),
-      generateSkillDraftFromReviewedMemories: vi.fn(),
-      publishKnowledge: vi.fn(),
-      publishSkillDraft: vi.fn(),
-    };
-
-    const server = await startMirrorBrainHttpServer({ service, workspaceDir, port: 0 });
-    servers.push(server);
-
-    const knowledgeResponse = await fetch(
-      `${server.origin}/knowledge/knowledge-draft:delete-me`,
-      { method: 'DELETE' },
-    );
-    const skillResponse = await fetch(
-      `${server.origin}/skills/skill-draft:delete-me`,
-      { method: 'DELETE' },
-    );
-
-    expect(knowledgeResponse.status).toBe(204);
-    expect(skillResponse.status).toBe(204);
-    expect(deleteKnowledgeArtifact).toHaveBeenCalledWith('knowledge-draft:delete-me');
-    expect(deleteSkillArtifact).toHaveBeenCalledWith('skill-draft:delete-me');
-
-    await rm(workspaceDir, { recursive: true, force: true });
-  });
 });

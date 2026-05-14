@@ -18,13 +18,11 @@ import {
   createQmdWorkspaceMemoryEventRecord,
   createQmdWorkspaceMemoryEventWriter,
   ingestCandidateMemoryToQmdWorkspace,
-  ingestKnowledgeArtifactToQmdWorkspace,
   ingestMemoryNarrativeToQmdWorkspace,
   ingestReviewedMemoryToQmdWorkspace,
   ingestSkillArtifactToQmdWorkspace,
   listMirrorBrainCandidateMemoriesFromQmdWorkspace,
   listMirrorBrainMemoryEventsFromQmdFiles,
-  listMirrorBrainKnowledgeArtifactsFromQmdWorkspace,
   listMirrorBrainMemoryEventsFromQmdWorkspace,
   listMirrorBrainMemoryNarrativesFromQmdWorkspace,
   listMirrorBrainReviewedMemoriesFromQmdWorkspace,
@@ -66,10 +64,6 @@ import {
 import { generateBrowserThemeNarratives } from '../../workflows/browser-theme-narratives/index.js';
 import { generateShellProblemNarratives } from '../../workflows/shell-problem-narratives/index.js';
 import {
-  buildTopicKnowledgeCandidates,
-  mergeDailyReviewIntoTopicKnowledge,
-} from '../../workflows/topic-knowledge-merge/index.js';
-import {
   importChangedSourceLedgers,
   startSourceLedgerImportPolling,
   type SourceLedgerImportResult,
@@ -88,18 +82,6 @@ import {
   type AnalysisWindowPreset,
   type WorkSessionAnalysisResult,
 } from '../../workflows/work-session-analysis/index.js';
-import {
-  lintKnowledgeArtifacts,
-  type KnowledgeLintInput,
-  type KnowledgeLintPlan,
-} from '../../workflows/knowledge-lint/index.js';
-import {
-  analyzeKnowledgeWithConfiguredLLM,
-  generateKnowledgeFromReviewedMemories as generateKnowledgeWithSourceContent,
-} from '../../modules/knowledge-generation-llm/index.js';
-import { buildKnowledgeRelationGraph } from '../../modules/knowledge-relation-network/index.js';
-import { buildKnowledgeGraphSnapshot } from '../../modules/knowledge-graph/index.js';
-import { extractTags } from '../../modules/knowledge-compilation-engine/index.js';
 import { buildSkillDraftFromReviewedMemories } from '../../workflows/skill-draft-builder/index.js';
 import {
   createCandidateMemories,
@@ -131,20 +113,19 @@ import {
   type GenerateKnowledgeArticlePreviewInput as GeneratePhase4KnowledgeArticlePreviewInput,
   type KnowledgeArticlePreview,
 } from '../../modules/knowledge-article-preview/index.js';
+import { analyzeKnowledgeWithConfiguredLLM } from '../../modules/knowledge-generation-llm/index.js';
 import { reviseKnowledgeArticleContent } from '../../modules/knowledge-article-revision/index.js';
 import { createFileKnowledgeArticleStore } from '../../integrations/knowledge-article-store/index.js';
 import type {
   AuthorizationScope,
   CandidateMemory,
   CandidateReviewSuggestion,
-  KnowledgeArtifact,
   MemoryEvent,
   MemoryNarrative,
   MemoryQueryInput,
   ReviewedMemory,
   SkillArtifact,
 } from '../../shared/types/index.js';
-import type { KnowledgeGraphSnapshot } from '../../modules/knowledge-graph/index.js';
 import type { WorkSessionCandidate } from '../../workflows/work-session-analysis/index.js';
 
 interface StartMirrorBrainServiceInput {
@@ -306,20 +287,12 @@ type ListReviewedMemoriesDependency = (
   input: WorkspaceStorageInput,
 ) => Promise<ReviewedMemory[]>;
 
-type ListKnowledgeArtifactsDependency = (
-  input: WorkspaceStorageInput,
-) => Promise<KnowledgeArtifact[]>;
-
 type ListSkillArtifactsDependency = (
   input: WorkspaceStorageInput,
 ) => Promise<SkillArtifact[]>;
 
 type PublishMemoryNarrativeDependency = (
   input: WorkspaceStorageInput & { artifact: MemoryNarrative },
-) => Promise<unknown>;
-
-type PublishKnowledgeDependency = (
-  input: WorkspaceStorageInput & { artifact: KnowledgeArtifact },
 ) => Promise<unknown>;
 
 type PublishSkillDependency = (
@@ -342,10 +315,6 @@ type CreateCandidateMemoriesDependency = (
   input: Parameters<typeof createCandidateMemories>[0],
 ) => CandidateMemory[] | Promise<CandidateMemory[]>;
 
-type LintKnowledgeDependency = (
-  input: KnowledgeLintInput,
-) => KnowledgeLintPlan | Promise<KnowledgeLintPlan>;
-
 type AnalyzeWorkSessionCandidatesDependency = (
   input: Parameters<typeof analyzeWorkSessionCandidates>[0],
 ) => WorkSessionAnalysisResult | Promise<WorkSessionAnalysisResult>;
@@ -359,10 +328,8 @@ interface CreateMirrorBrainServiceDependencies {
   listCandidateMemories?: ListCandidateMemoriesDependency;
   listWorkspaceCandidateMemories?: typeof listMirrorBrainCandidateMemoriesFromQmdWorkspace;
   listReviewedMemories?: ListReviewedMemoriesDependency;
-  listKnowledge?: ListKnowledgeArtifactsDependency;
   listSkillDrafts?: ListSkillArtifactsDependency;
   publishMemoryNarrative?: PublishMemoryNarrativeDependency;
-  publishKnowledge?: PublishKnowledgeDependency;
   publishSkill?: PublishSkillDependency;
   publishCandidateMemory?: PublishCandidateMemoryDependency;
   publishReviewedMemory?: PublishReviewedMemoryDependency;
@@ -370,13 +337,6 @@ interface CreateMirrorBrainServiceDependencies {
   undoReviewedMemory?: (reviewedMemoryId: string, workspaceDir: string) => Promise<void>;
   buildBrowserThemeNarratives?: typeof generateBrowserThemeNarratives;
   buildShellProblemNarratives?: typeof generateShellProblemNarratives;
-  buildTopicKnowledgeCandidates?: typeof buildTopicKnowledgeCandidates;
-  mergeTopicKnowledge?: typeof mergeDailyReviewIntoTopicKnowledge;
-  lintKnowledge?: LintKnowledgeDependency;
-  generateKnowledge?: (input: {
-    reviewedMemories: ReviewedMemory[];
-    existingDraft?: KnowledgeArtifact;
-  }) => KnowledgeArtifact | Promise<KnowledgeArtifact>;
   generateSkillDraft?: typeof buildSkillDraftFromReviewedMemories;
   reviewMemory?: typeof reviewCandidateMemory;
   createCandidateMemories?: CreateCandidateMemoriesDependency;
@@ -465,32 +425,6 @@ function isReviewedWorkSessionLike(value: unknown): value is ReviewedWorkSession
   );
 }
 
-function getKnowledgeConsumedMemoryRefs(
-  knowledgeArtifacts: KnowledgeArtifact[],
-  reviewedMemories: ReviewedMemory[],
-): { eventIds: Set<string>; urls: Set<string> } {
-  const reviewedMemoryIdsUsedByPublishedKnowledge = new Set(
-    knowledgeArtifacts
-      .filter((artifact) => artifact.draftState === 'published')
-      .flatMap((artifact) => artifact.sourceReviewedMemoryIds ?? []),
-  );
-  const consumedReviewedMemories = reviewedMemories.filter((reviewedMemory) =>
-    reviewedMemoryIdsUsedByPublishedKnowledge.has(reviewedMemory.id),
-  );
-
-  return {
-    eventIds: new Set(
-      consumedReviewedMemories.flatMap((reviewedMemory) => reviewedMemory.memoryEventIds),
-    ),
-    urls: new Set(
-      consumedReviewedMemories
-        .flatMap((reviewedMemory) => reviewedMemory.candidateSourceRefs ?? [])
-        .map((sourceRef) => sourceRef.url?.trim())
-        .filter((url): url is string => url !== undefined && url.length > 0),
-    ),
-  };
-}
-
 function mergeArtifactsById<T extends { id: string }>(
   primary: T[],
   fallback: T[],
@@ -508,7 +442,7 @@ function mergeArtifactsById<T extends { id: string }>(
   return [...merged.values()];
 }
 
-type DeletedArtifactKind = 'knowledge' | 'skills';
+type DeletedArtifactKind = 'skills';
 
 function isUnsafeArtifactId(artifactId: string): boolean {
   return (
@@ -516,17 +450,6 @@ function isUnsafeArtifactId(artifactId: string): boolean {
     artifactId.includes('/') ||
     artifactId.includes('\\')
   );
-}
-
-function validateKnowledgeArtifactId(artifactId: string): void {
-  const validPrefix =
-    artifactId.startsWith('knowledge-draft:') ||
-    artifactId.startsWith('topic-knowledge:') ||
-    artifactId.startsWith('topic-merge-candidate:');
-
-  if (!validPrefix || isUnsafeArtifactId(artifactId)) {
-    throw new ValidationError(`Invalid knowledge artifact ID format: ${artifactId}`);
-  }
 }
 
 function validateKnowledgeArticleId(articleId: string): void {
@@ -856,14 +779,10 @@ export function createMirrorBrainService(
     dependencies.listCandidateMemories ?? listMirrorBrainCandidateMemoriesFromQmdWorkspace;
   const listWorkspaceCandidateMemories =
     dependencies.listWorkspaceCandidateMemories ?? listMirrorBrainCandidateMemoriesFromQmdWorkspace;
-  const listKnowledge =
-    dependencies.listKnowledge ?? listMirrorBrainKnowledgeArtifactsFromQmdWorkspace;
   const listSkillDrafts =
     dependencies.listSkillDrafts ?? listMirrorBrainSkillArtifactsFromQmdWorkspace;
   const publishMemoryNarrative =
     dependencies.publishMemoryNarrative ?? ingestMemoryNarrativeToQmdWorkspace;
-  const publishKnowledge =
-    dependencies.publishKnowledge ?? ingestKnowledgeArtifactToQmdWorkspace;
   const publishSkill =
     dependencies.publishSkill ?? ingestSkillArtifactToQmdWorkspace;
   const publishCandidateMemory =
@@ -960,25 +879,6 @@ export function createMirrorBrainService(
       throw workspaceDeleteError;
     }
   };
-  const deleteKnowledgeArtifactById = async (artifactId: string): Promise<void> => {
-    validateKnowledgeArtifactId(artifactId);
-    await deleteWorkspaceArtifactFile('knowledge', artifactId);
-    await recordDeletedArtifact('knowledge', artifactId);
-  };
-  const deleteKnowledgeArtifact = async (artifactId: string): Promise<void> => {
-    const knowledgeArtifacts = await loadKnowledgeArtifacts();
-    const artifact = knowledgeArtifacts.find((item) => item.id === artifactId);
-    const sourceDraftIds =
-      artifact?.draftState === 'published'
-        ? artifact.derivedFromKnowledgeIds?.filter((id) => id.startsWith('knowledge-draft:')) ?? []
-        : [];
-
-    await Promise.all(
-      Array.from(new Set([artifactId, ...sourceDraftIds])).map((id) =>
-        deleteKnowledgeArtifactById(id),
-      ),
-    );
-  };
   const deleteSkillArtifact = async (artifactId: string): Promise<void> => {
     validateSkillArtifactId(artifactId);
     await deleteWorkspaceArtifactFile('skill-drafts', artifactId);
@@ -988,37 +888,12 @@ export function createMirrorBrainService(
     dependencies.buildBrowserThemeNarratives ?? generateBrowserThemeNarratives;
   const buildShellProblemNarratives =
     dependencies.buildShellProblemNarratives ?? generateShellProblemNarratives;
-  const buildTopicCandidates =
-    dependencies.buildTopicKnowledgeCandidates ?? buildTopicKnowledgeCandidates;
-  const mergeTopicKnowledge =
-    dependencies.mergeTopicKnowledge ?? mergeDailyReviewIntoTopicKnowledge;
-  const lintKnowledge = dependencies.lintKnowledge ?? lintKnowledgeArtifacts;
   const loadBrowserPageArtifact =
     dependencies.loadBrowserPageContentArtifactFromWorkspace ??
     loadBrowserPageContentArtifactFromWorkspace;
-  const analyzeKnowledge =
-    dependencies.analyzeKnowledge ?? analyzeKnowledgeWithConfiguredLLM;
+  const analyzeKnowledge = dependencies.analyzeKnowledge ?? analyzeKnowledgeWithConfiguredLLM;
   const generateArticlePreview =
     dependencies.generateKnowledgeArticlePreview ?? generatePhase4KnowledgeArticlePreview;
-  const generateKnowledge =
-    dependencies.generateKnowledge ??
-    ((input: {
-      reviewedMemories: ReviewedMemory[];
-      existingDraft?: KnowledgeArtifact;
-    }) =>
-      generateKnowledgeWithSourceContent(input.reviewedMemories, {
-        existingDraft: input.existingDraft,
-        workspaceDir,
-        getMemoryEvent: async (eventId) => {
-          const memoryEvents = await listRawWorkspaceMemoryEvents({
-            workspaceDir,
-          });
-
-          return memoryEvents.find((event) => event.id === eventId) ?? null;
-        },
-        loadBrowserPageContentArtifactFromWorkspace: loadBrowserPageArtifact,
-        analyzeWithLLM: analyzeKnowledge,
-      }));
   const generateSkillDraft =
     dependencies.generateSkillDraft ?? buildSkillDraftFromReviewedMemories;
   const reviewMemory = dependencies.reviewMemory ?? reviewCandidateMemory;
@@ -1116,22 +991,6 @@ export function createMirrorBrainService(
       throw error;
     }
   };
-  const loadKnowledgeArtifacts = async (): Promise<KnowledgeArtifact[]> => {
-    const [storedKnowledge, workspaceKnowledge, deletedKnowledgeIds] = await Promise.all([
-      listKnowledge({
-        workspaceDir,
-      }).catch(() => [] as KnowledgeArtifact[]),
-      listMirrorBrainKnowledgeArtifactsFromQmdWorkspace({
-        workspaceDir,
-      }).catch(() => [] as KnowledgeArtifact[]),
-      loadDeletedArtifactIds('knowledge'),
-    ]);
-
-    return mergeArtifactsById(
-      storedKnowledge.filter((artifact) => !deletedKnowledgeIds.has(artifact.id)),
-      workspaceKnowledge,
-    );
-  };
   const loadSkillArtifacts = async (): Promise<SkillArtifact[]> => {
     const [storedSkills, workspaceSkills, deletedSkillIds] = await Promise.all([
       listSkillDrafts({
@@ -1157,146 +1016,6 @@ export function createMirrorBrainService(
         }),
       ),
     );
-  };
-  const buildRelationTags = (artifact: KnowledgeArtifact): string[] => {
-    if (artifact.tags !== undefined && artifact.tags.length > 0) {
-      return Array.from(new Set(artifact.tags));
-    }
-
-    return extractTags(
-      [
-        artifact.topicKey,
-        artifact.title,
-        artifact.summary,
-        artifact.body,
-      ]
-        .filter((value): value is string => typeof value === 'string')
-        .filter((value) => value.length > 0)
-        .join('\n'),
-    );
-  };
-  const refreshKnowledgeRelations = async (
-    updatedArtifacts: KnowledgeArtifact[],
-  ): Promise<KnowledgeArtifact[]> => {
-    const existingArtifacts = await loadKnowledgeArtifacts();
-    const mergedById = new Map<string, KnowledgeArtifact>();
-
-    for (const artifact of existingArtifacts) {
-      mergedById.set(artifact.id, artifact);
-    }
-
-    for (const artifact of updatedArtifacts) {
-      mergedById.set(artifact.id, artifact);
-    }
-
-    const artifacts = [...mergedById.values()];
-    const relationInput = artifacts.map((artifact) => ({
-      ...artifact,
-      tags: buildRelationTags(artifact),
-    }));
-    const graph = buildKnowledgeRelationGraph(relationInput);
-    const relatedArtifacts = artifacts.map((artifact) => {
-      const relatedKnowledgeIds = graph.get(artifact.id) ?? [];
-
-      if (relatedKnowledgeIds.length > 0) {
-        return {
-          ...artifact,
-          relatedKnowledgeIds,
-        };
-      }
-
-      if (artifact.relatedKnowledgeIds !== undefined) {
-        return {
-          ...artifact,
-          relatedKnowledgeIds,
-        };
-      }
-
-      return artifact;
-    });
-
-    const updatedIds = updatedArtifacts.map((artifact) => artifact.id);
-    const updatedIdSet = new Set(updatedIds);
-    const publishOrder = [
-      ...updatedIds
-        .map((id) => relatedArtifacts.find((artifact) => artifact.id === id))
-        .filter((artifact): artifact is KnowledgeArtifact => artifact !== undefined),
-      ...relatedArtifacts.filter((artifact) => !updatedIdSet.has(artifact.id)),
-    ];
-
-    const criticalArtifacts = publishOrder.filter((artifact) =>
-      updatedIdSet.has(artifact.id),
-    );
-    const relationOnlyArtifacts = publishOrder.filter(
-      (artifact) => !updatedIdSet.has(artifact.id),
-    );
-
-    await Promise.all(
-      criticalArtifacts.map((artifact) =>
-        publishKnowledge({
-          workspaceDir,
-          artifact,
-        }),
-      ),
-    );
-    void Promise.all(
-      relationOnlyArtifacts.map((artifact) =>
-        publishKnowledge({
-          workspaceDir,
-          artifact,
-        }),
-      ),
-    ).catch((error) => {
-      console.error(
-        `[knowledge-relations] Failed to refresh related knowledge artifacts: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      );
-    });
-
-    return relatedArtifacts.filter((artifact) =>
-      updatedArtifacts.some((updated) => updated.id === artifact.id),
-    );
-  };
-  const scheduleKnowledgeLint = (seedArtifacts: KnowledgeArtifact[]): void => {
-    const seedKnowledgeIds = seedArtifacts.map((artifact) => artifact.id);
-
-    void (async () => {
-      const existingArtifacts = await loadKnowledgeArtifacts();
-      const knowledgeArtifacts = mergeArtifactsById(existingArtifacts, seedArtifacts);
-      const plan = await lintKnowledge({
-        knowledgeArtifacts,
-        seedKnowledgeIds,
-      });
-
-      await Promise.all(
-        plan.deleteArtifactIds.map((artifactId) =>
-          deleteKnowledgeArtifactById(artifactId),
-        ),
-      );
-      await Promise.all(
-        plan.updateArtifacts.map((artifact) =>
-          publishKnowledge({
-            workspaceDir,
-            artifact,
-          }),
-        ),
-      );
-      await Promise.all(
-        plan.mergeCandidateArtifacts.map((artifact) =>
-          publishKnowledge({
-            workspaceDir,
-            artifact,
-          }),
-        ),
-      );
-    })().catch((error) => {
-      console.error(
-        `[knowledge-lint] Failed to lint knowledge artifacts: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      );
-    });
   };
   const listStoredMemoryEventArray = async (
     input: WorkspaceStorageInput & { query?: string },
@@ -1571,42 +1290,6 @@ export function createMirrorBrainService(
 
     void refreshMemoryNarratives(buildNarratives).catch(() => undefined);
   };
-  const mergeTopicKnowledgeCandidate = async (
-    mergeCandidate: KnowledgeArtifact,
-    mergedAt?: string,
-  ): Promise<ReturnType<typeof mergeDailyReviewIntoTopicKnowledge>> => {
-    const knowledgeArtifacts = await loadKnowledgeArtifacts();
-    const result = mergeTopicKnowledge({
-      candidate: mergeCandidate,
-      existingKnowledgeArtifacts: knowledgeArtifacts,
-      mergedAt: mergedAt ?? mergeCandidate.updatedAt,
-    });
-
-    const updatedArtifacts = result.supersededArtifact
-      ? [result.supersededArtifact, result.artifact]
-      : [result.artifact];
-    const refreshedArtifacts = await refreshKnowledgeRelations(updatedArtifacts);
-    const refreshedById = new Map(
-      refreshedArtifacts.map((artifact) => [artifact.id, artifact]),
-    );
-
-    return {
-      ...result,
-      artifact: refreshedById.get(result.artifact.id) ?? result.artifact,
-      supersededArtifact:
-        result.supersededArtifact === undefined
-          ? undefined
-          : refreshedById.get(result.supersededArtifact.id) ?? result.supersededArtifact,
-    };
-  };
-  const listTopicKnowledgeArtifacts = async (): Promise<KnowledgeArtifact[]> => {
-    const knowledgeArtifacts = await loadKnowledgeArtifacts();
-
-    return knowledgeArtifacts.filter(
-      (artifact) => artifact.artifactType === 'topic-knowledge',
-    );
-  };
-
   return {
     service: input.service,
     syncBrowserMemory: async () => {
@@ -1880,97 +1563,7 @@ export function createMirrorBrainService(
         timeRange: input.timeRange,
         sourceTypes: input.sourceTypes,
       }),
-    listKnowledge: loadKnowledgeArtifacts,
-    listKnowledgeTopics: async () => {
-      const topicKnowledgeArtifacts = await listTopicKnowledgeArtifacts();
-      const currentBestByTopicKey = new Map<string, KnowledgeArtifact>();
-
-      for (const artifact of topicKnowledgeArtifacts) {
-        if (artifact.topicKey === null) {
-          continue;
-        }
-
-        const current = currentBestByTopicKey.get(artifact.topicKey ?? '');
-
-        if (
-          current === undefined ||
-          artifact.isCurrentBest ||
-          (current.isCurrentBest === false && (artifact.version ?? 0) > (current.version ?? 0))
-        ) {
-          currentBestByTopicKey.set(artifact.topicKey ?? '', artifact);
-        }
-      }
-
-      return Array.from(currentBestByTopicKey.entries())
-        .map(([topicKey, artifact]) => ({
-          topicKey,
-          title: artifact.title ?? artifact.id,
-          summary: artifact.summary ?? '',
-          currentBestKnowledgeId: artifact.id,
-          updatedAt: artifact.updatedAt,
-          recencyLabel: artifact.recencyLabel ?? '',
-        }))
-        .sort((left, right) =>
-          (right.updatedAt ?? '').localeCompare(left.updatedAt ?? ''),
-        );
-    },
-    getKnowledgeTopic: async (topicKey: string) => {
-      const topicKnowledgeArtifacts = await listTopicKnowledgeArtifacts();
-
-      return (
-        topicKnowledgeArtifacts
-          .filter((artifact) => artifact.topicKey === topicKey)
-          .sort((left, right) => {
-            if (left.isCurrentBest !== right.isCurrentBest) {
-              return left.isCurrentBest ? -1 : 1;
-            }
-
-            return (right.version ?? 0) - (left.version ?? 0);
-          })[0] ?? null
-      );
-    },
-    listKnowledgeHistory: async (topicKey: string) => {
-      const topicKnowledgeArtifacts = await listTopicKnowledgeArtifacts();
-
-      return topicKnowledgeArtifacts
-        .filter((artifact) => artifact.topicKey === topicKey)
-        .sort((left, right) => (right.version ?? 0) - (left.version ?? 0));
-    },
-    getKnowledgeGraph: async (): Promise<KnowledgeGraphSnapshot> => {
-      const knowledgeArtifacts = await loadKnowledgeArtifacts();
-
-      return buildKnowledgeGraphSnapshot(knowledgeArtifacts, {
-        includeSimilarityRelations: true,
-        similarityThreshold: 0.3,
-        topKSimilar: 5,
-      });
-    },
-    buildTopicKnowledgeCandidates: async (): Promise<KnowledgeArtifact[]> => {
-      const knowledgeArtifacts = await loadKnowledgeArtifacts();
-
-      return buildTopicCandidates({
-        knowledgeDrafts: knowledgeArtifacts,
-      });
-    },
-    mergeTopicKnowledgeCandidate,
-    mergeDailyReviewIntoTopicKnowledge: async (
-      draftOrCandidate: KnowledgeArtifact,
-      mergedAt?: string,
-    ): Promise<ReturnType<typeof mergeDailyReviewIntoTopicKnowledge>> => {
-      const mergeCandidate =
-        draftOrCandidate.artifactType === 'topic-merge-candidate'
-          ? draftOrCandidate
-          : buildTopicCandidates({
-              knowledgeDrafts: [draftOrCandidate],
-            })[0] ?? draftOrCandidate;
-
-      return mergeTopicKnowledgeCandidate(mergeCandidate, mergedAt);
-    },
     listSkillDrafts: loadSkillArtifacts,
-    publishKnowledge: async (artifact: KnowledgeArtifact) => {
-      await clearDeletedArtifact('knowledge', artifact.id);
-      await refreshKnowledgeRelations([artifact]);
-    },
     publishSkillDraft: (artifact: SkillArtifact) =>
       clearDeletedArtifact('skills', artifact.id).then(() =>
         publishSkill({
@@ -1978,21 +1571,7 @@ export function createMirrorBrainService(
           artifact,
         }),
       ),
-    deleteKnowledgeArtifact,
     deleteSkillArtifact,
-    generateKnowledgeFromReviewedMemories: async (
-      reviewedMemories: ReviewedMemory[],
-    ): Promise<KnowledgeArtifact> => {
-      const artifact = await generateKnowledge({
-        reviewedMemories,
-      });
-
-      await clearDeletedArtifact('knowledge', artifact.id);
-      const [refreshedArtifact] = await refreshKnowledgeRelations([artifact]);
-      scheduleKnowledgeLint([refreshedArtifact ?? artifact]);
-
-      return refreshedArtifact ?? artifact;
-    },
     generateSkillDraftFromReviewedMemories: async (
       reviewedMemories: ReviewedMemory[],
     ): Promise<SkillArtifact> => {
@@ -2005,82 +1584,6 @@ export function createMirrorBrainService(
       });
 
       return artifact;
-    },
-    regenerateKnowledgeDraft: async (
-      existingDraft: KnowledgeArtifact,
-      reviewedMemories: ReviewedMemory[],
-    ): Promise<KnowledgeArtifact> => {
-      // Use existing draft as context for refinement
-      const artifact = await generateKnowledge({
-        reviewedMemories,
-        existingDraft,
-      });
-
-      await clearDeletedArtifact('knowledge', artifact.id);
-      const [refreshedArtifact] = await refreshKnowledgeRelations([artifact]);
-      scheduleKnowledgeLint([refreshedArtifact ?? artifact]);
-
-      return refreshedArtifact ?? artifact;
-    },
-    approveKnowledgeDraft: async (
-      draftId: string,
-      draftSnapshot?: KnowledgeArtifact,
-    ): Promise<{
-      publishedArtifact: KnowledgeArtifact;
-      assignedTopic: { topicKey: string; title: string };
-    }> => {
-      if (draftSnapshot !== undefined && draftSnapshot.id !== draftId) {
-        throw new Error(
-          `Knowledge draft id mismatch: expected ${draftId}, received ${draftSnapshot.id}`,
-        );
-      }
-
-      const knowledgeArtifacts = await loadKnowledgeArtifacts();
-      const persistedDraft = knowledgeArtifacts.find((artifact) => artifact.id === draftId);
-      const draft = draftSnapshot ?? persistedDraft;
-
-      if (draft === undefined) {
-        throw new Error(`Knowledge draft not found: ${draftId}`);
-      }
-
-      const mergeCandidate =
-        draft.artifactType === 'topic-merge-candidate'
-          ? draft
-          : buildTopicCandidates({
-              knowledgeDrafts: [draft],
-            })[0] ?? draft;
-      const result = await mergeTopicKnowledgeCandidate(
-        mergeCandidate,
-        new Date().toISOString(),
-      );
-      const publishedArtifact = result.artifact;
-      const topicKey = publishedArtifact.topicKey ?? draft.topicKey ?? 'untitled-topic';
-      const title = publishedArtifact.title ?? draft.title ?? 'Untitled Knowledge';
-      const sourceArtifactIdsToDelete = new Set(
-        (publishedArtifact.derivedFromKnowledgeIds ?? []).filter((id) =>
-          id.startsWith('knowledge-draft:'),
-        ),
-      );
-
-      if (
-        draft.id.startsWith('knowledge-draft:') ||
-        draft.artifactType === 'topic-merge-candidate'
-      ) {
-        sourceArtifactIdsToDelete.add(draft.id);
-      }
-
-      await Promise.all(
-        [...sourceArtifactIdsToDelete]
-          .map((id) => deleteKnowledgeArtifactById(id)),
-      );
-
-      return {
-        publishedArtifact,
-        assignedTopic: {
-          topicKey,
-          title,
-        },
-      };
     },
     reviewCandidateMemory: async (
       candidate: CandidateMemory,
@@ -2129,22 +1632,8 @@ export function createMirrorBrainService(
         return candidatesForDate;
       }
 
-      const memoryEvents = await listRawWorkspaceMemoryEvents({
+      const candidateSourceEvents = await listRawWorkspaceMemoryEvents({
         workspaceDir,
-      });
-      const knowledgeArtifacts = await loadKnowledgeArtifacts();
-      const reviewedMemories = await loadReviewedMemories();
-      const consumedMemoryRefs = getKnowledgeConsumedMemoryRefs(
-        knowledgeArtifacts,
-        reviewedMemories,
-      );
-      const candidateSourceEvents = memoryEvents.filter((event) => {
-        if (consumedMemoryRefs.eventIds.has(event.id)) {
-          return false;
-        }
-
-        const url = typeof event.content.url === 'string' ? event.content.url.trim() : '';
-        return url.length === 0 || !consumedMemoryRefs.urls.has(url);
       });
       const enrichedMemoryEvents = await Promise.all(
         candidateSourceEvents.map(async (event) => {

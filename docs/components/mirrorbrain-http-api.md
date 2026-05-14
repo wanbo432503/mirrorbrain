@@ -1167,39 +1167,6 @@ Constraints:
 - Deleting a published topic artifact may also delete source draft artifacts
   derived from it.
 
-### `POST /knowledge/generate`
-
-Generates a knowledge draft from reviewed memories.
-
-Request:
-
-```json
-{
-  "reviewedMemories": []
-}
-```
-
-Response status: `201`
-
-Response:
-
-```json
-{
-  "artifact": {
-    "id": "knowledge-draft:reviewed:candidate:2026-05-11:docs",
-    "draftState": "draft",
-    "artifactType": "daily-review-draft",
-    "sourceReviewedMemoryIds": ["reviewed:candidate:2026-05-11:docs"]
-  }
-}
-```
-
-Notes:
-
-- The service tries to use captured page text for richer synthesis when source
-  browser events have page-content artifacts.
-- Missing source content degrades to reviewed-memory summaries.
-
 ### `POST /knowledge/regenerate`
 
 Regenerates a knowledge draft with the existing draft as context.
@@ -1234,55 +1201,6 @@ Response:
 Failure mode:
 
 - Returns `501` if the supplied service object does not expose regeneration.
-
-### `POST /knowledge/approve`
-
-Approves and publishes a knowledge draft into topic knowledge.
-
-Request:
-
-```json
-{
-  "draftId": "knowledge-draft:reviewed:candidate:2026-05-11:docs",
-  "draft": {
-    "id": "knowledge-draft:reviewed:candidate:2026-05-11:docs",
-    "draftState": "draft",
-    "artifactType": "daily-review-draft",
-    "topicKey": "docs",
-    "sourceReviewedMemoryIds": ["reviewed:candidate:2026-05-11:docs"],
-    "body": "# Work on Docs\n\n..."
-  }
-}
-```
-
-Response status: `201`
-
-Response:
-
-```json
-{
-  "publishedArtifact": {
-    "id": "topic-knowledge:docs:v1",
-    "draftState": "published",
-    "artifactType": "topic-knowledge",
-    "topicKey": "docs",
-    "version": 1,
-    "isCurrentBest": true,
-    "sourceReviewedMemoryIds": ["reviewed:candidate:2026-05-11:docs"]
-  },
-  "assignedTopic": {
-    "topicKey": "docs",
-    "title": "Work on Docs"
-  }
-}
-```
-
-Notes:
-
-- `draft` is optional, but passing it lets the service approve the UI-visible
-  draft even if storage indexing has not exposed it yet.
-- If `draft` is present, `draft.id` must match `draftId`.
-- Approval may supersede an existing current-best topic version.
 
 ### `GET /knowledge/topics`
 
@@ -1356,35 +1274,6 @@ Response:
   ]
 }
 ```
-
-### `GET /knowledge/graph`
-
-Returns a graph snapshot for topic and knowledge-artifact visualization.
-
-Response:
-
-```json
-{
-  "graph": {
-    "generatedAt": "2026-05-11T09:00:00.000Z",
-    "stats": {
-      "topics": 1,
-      "knowledgeArtifacts": 2,
-      "wikilinkReferences": 0,
-      "similarityRelations": 1
-    },
-    "nodes": [],
-    "edges": []
-  }
-}
-```
-
-Notes:
-
-- Graph nodes include topic nodes and knowledge artifact version nodes.
-- Edges can include `CONTAINS`, `REFERENCES`, and `SIMILAR`.
-
-## Skill Endpoints
 
 ### `GET /skills`
 

@@ -53,9 +53,6 @@ Those concerns remain in the service, workflow, module, and integration layers.
 - `POST /candidate-memories/daily`
 - `POST /candidate-reviews/suggestions`
 - `POST /reviewed-memories`
-- `POST /knowledge/generate`
-- `POST /knowledge/regenerate`
-- `POST /knowledge/approve`
 - `POST /knowledge-articles/preview`
 - `POST /knowledge-articles/drafts`
 - `POST /knowledge-articles/publish`
@@ -81,7 +78,6 @@ Those concerns remain in the service, workflow, module, and integration layers.
 14. Daily candidate creation returns task-oriented candidates with source URL refs, bounded result counts, and explicit time ranges.
 15. AI review suggestions stay separate from reviewed-memory writes, and now include a keep-score plus supporting reasons so the UI can explain why a candidate exists and why it may be worth keeping.
 16. Knowledge generation, regeneration, and approval routes delegate to the service layer and return structured errors when a capability is unavailable.
-17. `POST /knowledge/approve` accepts the current draft snapshot along with `draftId` so the service can publish the visible draft even if the storage index has not exposed it yet.
 18. Knowledge Article routes expose the Phase 4 Project -> Topic -> Knowledge
     Article preview, draft, publish, history, delete, and Published tree flow.
 

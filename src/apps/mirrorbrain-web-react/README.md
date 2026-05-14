@@ -78,10 +78,9 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and an
   - Knowledge approval errors preserve the backend error detail in the review feedback banner
   - Candidate lists, selected candidate details, and draft editors stretch to available viewport height and scroll internally
 
-### Phase 5: Knowledge / Skill Panels + Forms ✅ (Completed)
+### Phase 5: Skill Panel + Forms ✅ (Completed)
 - **Artifacts Hooks:**
-  - `useArtifacts.ts` - Artifact operations (generate/save)
-  - `useKnowledgeDraft.ts` - Knowledge draft management
+  - `useArtifacts.ts` - Skill artifact operations (generate/save/delete)
   - `useSkillDraft.ts` - Skill draft management
 
 - **Form Components:**
@@ -89,40 +88,25 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and an
   - `TextArea.tsx` - Multi-line text input
   - `Checkbox.tsx` - Checkbox input
 
-- **Knowledge / Skill Components:**
-  - `KnowledgeTabPanel.tsx` - Knowledge tab container and graph loading
-  - `KnowledgePanel.tsx` - Approved knowledge list, List/Graph subtabs, detail display, and local edit conversation notes
+- **Skill Components:**
   - `SkillTabPanel.tsx` - Skill tab container
   - `SkillPanel.tsx` - Skill artifact timeline, detail display, and local edit conversation notes
-  - `ArtifactsPanel.tsx` - Legacy combined artifacts tab container kept for compatibility while the top-level tab split settles
+  - `ArtifactsPanel.tsx` - Legacy combined artifacts tab container retained only for code paths that still reference it
   - `SubtabNavigation.tsx` - History Topics / Draft Generation subtabs
   - `HistoryTable.tsx` - Legacy reusable history table
-  - `HistoryTopics.tsx` - Legacy combined Knowledge / Skill artifact timeline
-  - `KnowledgeGraphPanel.tsx` - SVG knowledge graph renderer supporting global and selected-artifact-focused views
-  - `KnowledgeDetailModal.tsx` - Topic knowledge detail dialog
+  - `HistoryTopics.tsx` - Legacy combined artifact timeline
   - `CandidateContext.tsx` - Reviewed memory context
-  - `DraftEditor.tsx` - Knowledge/Skill draft editor
+  - `DraftEditor.tsx` - Draft editor
 
   - **Features:**
-  - Top-level Knowledge and Skill tabs replace the former combined Artifacts tab
-  - Knowledge tab displays approved knowledge under stable left-side List / Graph subtabs
-  - Knowledge List mode defaults the detail panel to the newest approved knowledge item and updates on item selection
-  - Knowledge Graph mode defaults the right panel to the global knowledge graph and switches to a selected-artifact-centered SVG graph when a knowledge item is clicked
+  - Top-level tabs are Memory Sources, Preview, Published, and Skill
+  - Preview and Published use the Phase 4 Knowledge Article workflow backed by `/knowledge-articles/*`
+  - The legacy Knowledge tab and legacy `/knowledge*` artifact API are removed from the web runtime
   - Skill tab displays generated skills in a separate timeline and detail panel
-  - Artifact lists are ordered newest first using artifact update or review timestamps
   - Artifact timestamps are displayed in the user's IANA timezone instead of raw UTC ISO strings
-  - The app loads persisted knowledge and skill artifacts on startup so the Knowledge and Skill tabs restore after refresh
-  - Approved knowledge drafts are replaced by their published topic artifact in the Knowledge timeline, while older published topic versions remain available as history
-  - Selecting a knowledge or skill shows its details in the corresponding right-side display
-  - Knowledge details render the artifact body as Markdown with wiki-links, tags, related knowledge refs, lifecycle metadata, topic/version metadata, source refs, derived refs, and provenance refs
-  - The artifact detail display includes a local conversation area for recording requested edits against the selected artifact
-  - Generate knowledge from reviewed memories
   - Generate skill from reviewed memories
-  - Generated knowledge and skill drafts remain in shared app state across top-level tab switches and are written back through the artifact API so refresh restores them from QMD workspace copies
-  - Review-generated knowledge displays the final note body directly in a single scrolling field, with a separate full-width one-line revision request input and send action below it
-  - Artifact edit message uses the same single-line full-width input + send row pattern in the knowledge and skill detail panels
-  - Artifact history and detail panels stretch to the available tab height and scroll internally instead of using fixed pixel heights
-  - Draft editing (body-first note editing for knowledge)
+  - Generated skill drafts remain in shared app state across top-level tab switches and are written back through the artifact API so refresh restores them from QMD workspace copies
+  - Artifact edit message uses the same single-line full-width input + send row pattern in the skill detail panel
   - Draft editing (approval state/confirmation for skill)
   - Save artifacts to API
 

@@ -10,18 +10,14 @@ export function useMirrorBrainState(api: MirrorBrainWebAppApi) {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [health, memory, knowledge, topics, skills] = await Promise.all([
+        const [health, memory, skills] = await Promise.all([
           api.getHealth(),
           api.listMemory(1, MEMORY_PAGE_SIZE),
-          api.listKnowledge(),
-          api.listKnowledgeTopics(),
           api.listSkills(),
         ])
 
         dispatch({ type: 'SET_SERVICE_STATUS', payload: health.status })
         dispatch({ type: 'LOAD_MEMORY_EVENTS', payload: memory })
-        dispatch({ type: 'LOAD_KNOWLEDGE', payload: knowledge })
-        dispatch({ type: 'LOAD_KNOWLEDGE_TOPICS', payload: topics })
         dispatch({ type: 'LOAD_SKILLS', payload: skills })
       } catch (error) {
         console.error('Failed to load initial data:', error)

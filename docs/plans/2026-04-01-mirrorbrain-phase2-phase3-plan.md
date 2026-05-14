@@ -613,7 +613,6 @@ contract is now captured in component documentation rather than historical
 execution handoff files:
 
 - `docs/components/module-reference.md`
-- `docs/components/topic-knowledge-merge.md`
 - `docs/components/topic-knowledge-read.md`
 - `docs/components/topic-knowledge-quality.md`
 
