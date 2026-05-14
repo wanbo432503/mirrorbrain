@@ -268,7 +268,7 @@ describe('App', () => {
     return fetchMock
   }
 
-  it('keeps a visited review tab mounted when switching to knowledge', async () => {
+  it('keeps a visited preview tab mounted when switching to knowledge', async () => {
     const fetchMock = stubInitialAppFetch()
 
     render(<App />)
@@ -279,10 +279,10 @@ describe('App', () => {
       ).toContain(`${window.location.origin}/memory?page=1&pageSize=10`)
     })
 
-    fireEvent.click(screen.getByRole('tab', { name: /review/i }))
+    fireEvent.click(screen.getByRole('tab', { name: /preview/i }))
 
-    const reviewPanel = await waitFor(() => {
-      const panel = document.getElementById('review-panel')
+    const previewPanel = await waitFor(() => {
+      const panel = document.getElementById('preview-panel')
       expect(panel).not.toBeNull()
       expect(panel?.textContent).toContain('Last 6h')
       return panel as HTMLElement
@@ -290,9 +290,10 @@ describe('App', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: /knowledge/i }))
 
-    expect(document.getElementById('review-panel')).toBe(reviewPanel)
-    expect(reviewPanel.hidden).toBe(true)
-    expect(reviewPanel.textContent).toContain('Preview')
+    expect(document.getElementById('preview-panel')).toBe(previewPanel)
+    expect(previewPanel.hidden).toBe(true)
+    expect(previewPanel.textContent).toContain('Last 6h')
+    expect(previewPanel.textContent).not.toContain('Published')
   }, 15_000)
 
   it('loads persisted knowledge data on refresh', async () => {
@@ -365,7 +366,7 @@ describe('App', () => {
     ).toContain(`${window.location.origin}/sources/status`)
   })
 
-  it('uses Review as the Phase 4 work-session review surface', async () => {
+  it('uses Preview and Published as top-level work-session knowledge tabs', async () => {
     const user = userEvent.setup()
     const fetchMock = stubInitialAppFetch()
 
@@ -378,10 +379,14 @@ describe('App', () => {
     })
 
     expect(screen.queryByRole('tab', { name: /work sessions/i })).toBeNull()
+    expect(screen.queryByRole('tab', { name: /^review$/i })).toBeNull()
+    expect(screen.getByRole('tab', { name: /^preview$/i })).not.toBeNull()
+    expect(screen.getByRole('tab', { name: /^published$/i })).not.toBeNull()
 
-    await user.click(screen.getByRole('tab', { name: /^review$/i }))
+    await user.click(screen.getByRole('tab', { name: /^preview$/i }))
 
-    expect(document.getElementById('review-panel')).not.toBeNull()
+    expect(document.getElementById('preview-panel')).not.toBeNull()
+    expect(document.getElementById('preview-panel')?.textContent).not.toContain('Published')
     await user.click(screen.getByRole('button', { name: 'Last 6h' }))
 
     await waitFor(() => {
@@ -389,6 +394,14 @@ describe('App', () => {
         fetchMock.mock.calls.map((call) => String(call[0]))
       ).toContain(`${window.location.origin}/work-sessions/analyze`)
     })
+
+    await user.click(screen.getByRole('tab', { name: /^published$/i }))
+
+    expect(document.getElementById('published-panel')).not.toBeNull()
+    expect(document.getElementById('published-panel')?.textContent).not.toContain('Last 6h')
+    expect(document.getElementById('published-panel')?.textContent).toContain(
+      'No published knowledge articles yet.',
+    )
   })
 
   it('creates a continuous flex height chain for tab panels', async () => {

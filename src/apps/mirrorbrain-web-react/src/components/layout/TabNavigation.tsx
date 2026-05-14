@@ -1,17 +1,18 @@
 import { KeyboardEvent } from 'react'
 
-type TabType = 'memory-sources' | 'review' | 'knowledge' | 'skill'
+type TabType = 'memory-sources' | 'preview' | 'published' | 'knowledge' | 'skill'
 
 interface TabNavigationProps {
   activeTab: TabType
   onTabChange: (tab: TabType) => void
 }
 
-const TABS: TabType[] = ['memory-sources', 'review', 'knowledge', 'skill']
+const TABS: TabType[] = ['memory-sources', 'preview', 'published', 'knowledge', 'skill']
 
 const TAB_LABELS: Record<TabType, string> = {
   'memory-sources': 'memory sources',
-  review: 'review',
+  preview: 'preview',
+  published: 'published',
   knowledge: 'knowledge',
   skill: 'skill',
 }

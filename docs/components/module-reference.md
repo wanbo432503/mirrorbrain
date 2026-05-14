@@ -147,7 +147,7 @@ Purpose: provide the current standalone and embeddable MirrorBrain operator UI.
 
 Responsibilities:
 
-- Render the memory, review, knowledge, skill, and source management tabs.
+- Render the memory sources, preview, published, knowledge, and skill tabs.
 - Consume only the HTTP API through `src/api/client.ts`.
 - Manage shared UI state with `MirrorBrainContext` and feature hooks.
 - Provide sync controls, paginated memory event listing, daily candidate review,
@@ -169,8 +169,9 @@ Primary modules:
   rendering, topic modal, graph panel, and wikilink hover cards.
 - `components/sources/*`: Phase 4 source status, audit, and manual import
   controls.
-- `components/work-sessions/*`: Phase 4 manual work-session analysis controls
-  and pending candidate display.
+- `components/work-sessions/*`: Phase 4 Preview and Published tab surfaces for
+  manual work-session analysis, pending candidate display, publication, and
+  durable knowledge tree inspection.
 - `components/common`, `components/forms`, `components/layout`: local design
   system primitives.
 

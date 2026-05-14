@@ -1,6 +1,6 @@
 # MirrorBrain Web UI - React Implementation
 
-Modern React-based web interface for MirrorBrain, built with Tailwind CSS and an Apple-style control, review, and artifact inspection surface.
+Modern React-based web interface for MirrorBrain, built with Tailwind CSS and an Apple-style control, preview, published knowledge, and artifact inspection surface.
 
 ## Project Status
 
@@ -13,7 +13,7 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and an
 
 ### Phase 2: Core Components ✅ (Completed)
 - **Layout Components:**
-  - `TabNavigation.tsx` - Memory Sources/Review/Knowledge/Skill/Work Sessions tabs with keyboard navigation
+  - `TabNavigation.tsx` - Memory Sources/Preview/Published/Knowledge/Skill tabs with keyboard navigation
   - `FeedbackBanner.tsx` - Success/Error/Info messages with auto-dismiss
   - `Header.tsx` - App brand row aligned to the main content container with a light/dark theme toggle
 
@@ -57,7 +57,7 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and an
   - `useReviewWorkflow.ts` - Review workflow logic (create/select/review candidates)
 
 - **Review Components:**
-  - `ReviewPanel.tsx` - Review tab container (3-column layout)
+  - `ReviewPanel.tsx` - Legacy daily review panel container (3-column layout)
   - `ReviewActions.tsx` - Create/Keep/Discard buttons
   - `MetricGrid.tsx` - Review metrics display
   - `CandidateList.tsx` - Candidate streams list
@@ -258,19 +258,16 @@ pnpm dev
    - Click "Import Sources" to import source-ledger events, including browser events recorded as daily JSONL ledgers
    - Navigate through pagination
 
-2. **Review Tab:**
-   - Click "Review" tab
-   - Click "Create Daily Candidates" to generate candidates for yesterday in your local timezone
-   - Click candidates to view details
-   - Review AI suggestions (confidence/priority/rationale)
-   - Click "Keep Candidate" or "Discard Candidate"
-
-3. **Work Sessions Tab:**
+2. **Preview Tab:**
+   - Click "Preview" tab
    - Click an analysis window
    - Confirm or edit the project name on a candidate
    - Click "Generate", then "Publish" to add it under the edited project name,
      or click "Discard"
-   - In Published, click "Delete" on a knowledge article to remove that
+
+3. **Published Tab:**
+   - Click "Published" tab
+   - Click "Delete" on a knowledge article to remove that
      published article lineage
 
 4. **Knowledge / Skill Tabs:**
@@ -278,7 +275,7 @@ pnpm dev
    - In Knowledge Graph mode, leave the list unselected for the global graph or click a knowledge item for a centered graph
    - Click the "Skill" tab to browse generated skills separately
    - Select an artifact to inspect its detail panel and local edit conversation notes
-   - Keep generating knowledge and skill from the Review tab, where drafts are written back through the artifact API so they survive refresh
+   - Keep generating knowledge and skill from reviewed memory workflows, where drafts are written back through the artifact API so they survive refresh
 
 ## Testing Strategy
 

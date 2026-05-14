@@ -70,7 +70,7 @@ describe('WorkSessionAnalysisPanel', () => {
     } as unknown as MirrorBrainWebAppApi
     const user = userEvent.setup()
 
-    render(<WorkSessionAnalysisPanel api={api} />)
+    render(<WorkSessionAnalysisPanel api={api} mode="preview" />)
 
     await user.click(screen.getByRole('button', { name: 'Last 6h' }))
 
@@ -163,8 +163,8 @@ describe('WorkSessionAnalysisPanel', () => {
     await user.click(screen.getByRole('button', { name: 'Last 6h' }))
 
     const treeRail = await screen.findByTestId('work-session-tree-rail')
-    expect(within(treeRail).getByRole('tab', { name: 'Preview' })).not.toBeNull()
-    expect(within(treeRail).getByRole('tab', { name: 'Published' })).not.toBeNull()
+    expect(within(treeRail).queryByRole('tab', { name: 'Preview' })).toBeNull()
+    expect(within(treeRail).queryByRole('tab', { name: 'Published' })).toBeNull()
     expect(within(treeRail).getByText('mirrorbrain')).not.toBeNull()
     expect(within(treeRail).getByText('Source ledger')).not.toBeNull()
     expect(within(treeRail).getByText('Knowledge not generated')).not.toBeNull()
@@ -172,10 +172,12 @@ describe('WorkSessionAnalysisPanel', () => {
       screen.getByRole('button', { name: 'Generate knowledge for Source ledger' }),
     ).not.toBeNull()
 
-    await user.click(within(treeRail).getByRole('tab', { name: 'Published' }))
+    cleanup()
+    render(<WorkSessionAnalysisPanel api={api} mode="published" />)
+    const publishedTreeRail = await screen.findByTestId('work-session-tree-rail')
 
-    expect(within(treeRail).getByText('MirrorBrain')).not.toBeNull()
-    expect(within(treeRail).getByText('Published source ledger')).not.toBeNull()
+    expect(within(publishedTreeRail).getByText('MirrorBrain')).not.toBeNull()
+    expect(within(publishedTreeRail).getByText('Published source ledger')).not.toBeNull()
   })
 
   it('publishes preview knowledge through review, draft generation, and article publication', async () => {
@@ -363,28 +365,11 @@ describe('WorkSessionAnalysisPanel', () => {
       topicAssignment: { kind: 'confirmed-new-topic', name: 'Source ledger' },
     })
 
-    const treeRail = screen.getByTestId('work-session-tree-rail')
-    expect(within(treeRail).getByRole('tab', { name: 'Preview' }).getAttribute('aria-selected')).toBe(
-      'true',
-    )
-    expect(within(treeRail).getByRole('tab', { name: 'Published' }).getAttribute('aria-selected')).toBe(
-      'false',
-    )
     expect(await screen.findByText('Published preview knowledge.')).not.toBeNull()
     expect(screen.queryByRole('button', { name: 'Publish' })).toBeNull()
+    const treeRail = screen.getByTestId('work-session-tree-rail')
     expect(within(treeRail).queryByText('Source ledger architecture')).toBeNull()
     expect(screen.queryByTestId('published-knowledge-panel')).toBeNull()
-
-    await user.click(within(treeRail).getByRole('tab', { name: 'Published' }))
-    expect(screen.getByTestId('published-knowledge-panel').textContent).toContain(
-      'Source ledger architecture',
-    )
-    expect(screen.getByTestId('published-knowledge-panel').textContent).toContain(
-      'Custom Research / Source ledger',
-    )
-    expect(screen.getByTestId('published-knowledge-panel').textContent).toContain(
-      expectedPreviewBody,
-    )
   })
 
   it('deletes published knowledge from the Published panel and refreshes the tree', async () => {
@@ -452,10 +437,9 @@ describe('WorkSessionAnalysisPanel', () => {
     } as unknown as MirrorBrainWebAppApi
     const user = userEvent.setup()
 
-    render(<WorkSessionAnalysisPanel api={api} />)
+    render(<WorkSessionAnalysisPanel api={api} mode="published" />)
 
     const treeRail = await screen.findByTestId('work-session-tree-rail')
-    await user.click(within(treeRail).getByRole('tab', { name: 'Published' }))
     expect(screen.getByTestId('published-knowledge-panel').textContent).toContain(
       'Source ledger architecture',
     )
