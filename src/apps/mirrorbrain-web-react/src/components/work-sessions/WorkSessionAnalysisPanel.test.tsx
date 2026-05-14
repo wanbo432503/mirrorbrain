@@ -100,6 +100,8 @@ describe('WorkSessionAnalysisPanel', () => {
       },
     )
     expect(await screen.findByText('Reviewed into project: project:mirrorbrain')).not.toBeNull()
+    expect(screen.queryByRole('button', { name: 'Keep as project' })).toBeNull()
+    expect(screen.queryByText('Phase 4 design')).toBeNull()
   })
 
   it('renders preview and published knowledge trees for the merged review flow', async () => {
@@ -242,6 +244,24 @@ describe('WorkSessionAnalysisPanel', () => {
       provenanceRefs: [{ kind: 'reviewed-work-session' as const, id: reviewedWorkSession.id }],
       generatedAt: '2026-05-12T12:10:00.000Z',
     }
+    const publishedArticle = {
+      id: 'knowledge-article:source-ledger:v1',
+      articleId: 'article:source-ledger',
+      projectId: 'project:mirrorbrain',
+      topicId: 'topic:project-mirrorbrain:source-ledger',
+      title: candidate.title,
+      summary: candidate.summary,
+      body: draft.body,
+      version: 1,
+      isCurrentBest: true,
+      supersedesArticleId: null,
+      sourceReviewedWorkSessionIds: [reviewedWorkSession.id],
+      sourceMemoryEventIds: candidate.memoryEventIds,
+      provenanceRefs: draft.provenanceRefs,
+      publishState: 'published' as const,
+      publishedAt: '2026-05-12T12:20:00.000Z',
+      publishedBy: 'mirrorbrain-web',
+    }
     const publishedTree = {
       projects: [
         {
@@ -266,8 +286,8 @@ describe('WorkSessionAnalysisPanel', () => {
                 {
                   articleId: 'article:source-ledger',
                   title: 'Source ledger architecture',
-                  currentBestArticle: null,
-                  history: [],
+                  currentBestArticle: publishedArticle,
+                  history: [publishedArticle],
                 },
               ],
             },
@@ -298,24 +318,7 @@ describe('WorkSessionAnalysisPanel', () => {
       })),
       generateKnowledgeArticleDraft: vi.fn(async () => draft),
       publishKnowledgeArticleDraft: vi.fn(async () => ({
-        article: {
-          id: 'knowledge-article:source-ledger:v1',
-          articleId: 'article:source-ledger',
-          projectId: 'project:mirrorbrain',
-          topicId: 'topic:project-mirrorbrain:source-ledger',
-          title: candidate.title,
-          summary: candidate.summary,
-          body: draft.body,
-          version: 1,
-          isCurrentBest: true,
-          supersedesArticleId: null,
-          sourceReviewedWorkSessionIds: [reviewedWorkSession.id],
-          sourceMemoryEventIds: candidate.memoryEventIds,
-          provenanceRefs: draft.provenanceRefs,
-          publishState: 'published' as const,
-          publishedAt: '2026-05-12T12:20:00.000Z',
-          publishedBy: 'mirrorbrain-web',
-        },
+        article: publishedArticle,
       })),
       listKnowledgeArticleTree: vi
         .fn()
@@ -372,7 +375,83 @@ describe('WorkSessionAnalysisPanel', () => {
     })
 
     const treeRail = screen.getByTestId('work-session-tree-rail')
-    await user.click(within(treeRail).getByRole('tab', { name: 'Published' }))
-    expect(within(treeRail).getByText('Source ledger architecture')).not.toBeNull()
+    expect(within(treeRail).getByRole('tab', { name: 'Published' }).getAttribute('aria-selected')).toBe(
+      'true',
+    )
+    expect(await screen.findByText('Published preview knowledge.')).not.toBeNull()
+    expect(screen.queryByRole('button', { name: 'Publish' })).toBeNull()
+    expect(screen.getByTestId('published-knowledge-panel').textContent).toContain(
+      'Source ledger architecture',
+    )
+    expect(screen.getByTestId('published-knowledge-panel').textContent).toContain(
+      expectedPreviewBody,
+    )
+
+    await user.click(within(treeRail).getByRole('tab', { name: 'Preview' }))
+    expect(within(treeRail).queryByText('Source ledger architecture')).toBeNull()
+  })
+
+  it('discards a preview work-session candidate and removes it from preview', async () => {
+    const candidate = {
+      id: 'work-session-candidate:discard-me',
+      projectHint: 'mirrorbrain',
+      title: 'Disposable candidate',
+      summary: 'This candidate should be removed from preview.',
+      memoryEventIds: ['browser-1'],
+      sourceTypes: ['browser'],
+      timeRange: {
+        startAt: '2026-05-12T10:00:00.000Z',
+        endAt: '2026-05-12T10:30:00.000Z',
+      },
+      relationHints: ['Disposable topic'],
+      reviewState: 'pending' as const,
+    }
+    const api = {
+      analyzeWorkSessions: vi.fn(async () => ({
+        analysisWindow: {
+          preset: 'last-6-hours' as const,
+          startAt: '2026-05-12T06:00:00.000Z',
+          endAt: '2026-05-12T12:00:00.000Z',
+        },
+        generatedAt: '2026-05-12T12:00:00.000Z',
+        candidates: [candidate],
+        excludedMemoryEventIds: [],
+      })),
+      reviewWorkSessionCandidate: vi.fn(async () => ({
+        reviewedWorkSession: {
+          id: 'reviewed-work-session:discard-me',
+          candidateId: candidate.id,
+          projectId: null,
+          title: candidate.title,
+          summary: candidate.summary,
+          memoryEventIds: candidate.memoryEventIds,
+          sourceTypes: candidate.sourceTypes,
+          timeRange: candidate.timeRange,
+          relationHints: candidate.relationHints,
+          reviewState: 'discarded' as const,
+          reviewedAt: '2026-05-12T12:05:00.000Z',
+          reviewedBy: 'mirrorbrain-web',
+        },
+      })),
+      listKnowledgeArticleTree: vi.fn(async () => ({ projects: [] })),
+    } as unknown as MirrorBrainWebAppApi
+    const user = userEvent.setup()
+
+    render(<WorkSessionAnalysisPanel api={api} />)
+
+    await user.click(screen.getByRole('button', { name: 'Last 6h' }))
+    expect(await screen.findAllByText('Disposable topic')).toHaveLength(2)
+
+    await user.click(screen.getByRole('button', { name: 'Discard' }))
+
+    expect(api.reviewWorkSessionCandidate).toHaveBeenCalledWith(candidate, {
+      decision: 'discard',
+      reviewedBy: 'mirrorbrain-web',
+      title: candidate.title,
+      summary: candidate.summary,
+    })
+    expect(await screen.findByText('Discarded work session.')).not.toBeNull()
+    expect(screen.queryByText('Disposable topic')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Discard' })).toBeNull()
   })
 })

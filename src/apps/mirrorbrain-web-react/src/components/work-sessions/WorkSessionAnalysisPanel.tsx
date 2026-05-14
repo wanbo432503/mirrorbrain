@@ -53,9 +53,20 @@ export default function WorkSessionAnalysisPanel({
   const [reviewResults, setReviewResults] = useState<
     Record<string, WorkSessionReviewResult>
   >({})
+  const [removedPreviewCandidateIds, setRemovedPreviewCandidateIds] = useState<
+    Set<string>
+  >(() => new Set())
+  const [actionFeedback, setActionFeedback] = useState<string | null>(null)
+  const activePreviewCandidates = useMemo(
+    () =>
+      (analysis?.candidates ?? []).filter(
+        (candidate) => !removedPreviewCandidateIds.has(candidate.id),
+      ),
+    [analysis, removedPreviewCandidateIds],
+  )
   const previewTree = useMemo(
-    () => buildWorkSessionPreviewTree(analysis?.candidates ?? []),
-    [analysis],
+    () => buildWorkSessionPreviewTree(activePreviewCandidates),
+    [activePreviewCandidates],
   )
   const previewTopicItems = useMemo(
     () =>
@@ -67,6 +78,24 @@ export default function WorkSessionAnalysisPanel({
         })),
       ),
     [generatedKnowledgeByCandidateId, previewTree],
+  )
+  const publishedArticleItems = useMemo(
+    () =>
+      publishedTree.projects.flatMap((projectNode) =>
+        projectNode.topics.flatMap((topicNode) =>
+          topicNode.articles.map((articleNode) => ({
+            projectNode,
+            topicNode,
+            articleNode,
+            article:
+              articleNode.currentBestArticle ??
+              articleNode.history.find((article) => article.isCurrentBest) ??
+              articleNode.history[0] ??
+              null,
+          })),
+        ),
+      ),
+    [publishedTree],
   )
 
   useEffect(() => {
@@ -97,6 +126,7 @@ export default function WorkSessionAnalysisPanel({
   const runAnalysis = async (preset: AnalysisWindowPreset) => {
     setRunningPreset(preset)
     setError(null)
+    setActionFeedback(null)
 
     try {
       const result = await api.analyzeWorkSessions(preset)
@@ -104,6 +134,7 @@ export default function WorkSessionAnalysisPanel({
       setProjectNames({})
       setGeneratedKnowledgeByCandidateId({})
       setReviewResults({})
+      setRemovedPreviewCandidateIds(new Set())
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
@@ -122,6 +153,7 @@ export default function WorkSessionAnalysisPanel({
   ) => {
     setReviewingCandidateId(candidate.id)
     setError(null)
+    setActionFeedback(null)
 
     try {
       const projectName =
@@ -147,6 +179,16 @@ export default function WorkSessionAnalysisPanel({
         ...current,
         [candidate.id]: result,
       }))
+      setRemovedPreviewCandidateIds((current) => {
+        const next = new Set(current)
+        next.add(candidate.id)
+        return next
+      })
+      setActionFeedback(
+        decision === 'keep'
+          ? `Reviewed into project: ${result.reviewedWorkSession.projectId}`
+          : 'Discarded work session.',
+      )
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
@@ -166,6 +208,7 @@ export default function WorkSessionAnalysisPanel({
     const candidate = knowledge.candidate
     setPublishingCandidateId(candidate.id)
     setError(null)
+    setActionFeedback(null)
 
     try {
       const projectName = projectNames[candidate.id]?.trim() || project.projectName
@@ -208,6 +251,13 @@ export default function WorkSessionAnalysisPanel({
         [candidate.id]: reviewResult,
       }))
       setPublishedTree(await api.listKnowledgeArticleTree())
+      setRemovedPreviewCandidateIds((current) => {
+        const next = new Set(current)
+        next.add(candidate.id)
+        return next
+      })
+      setActionFeedback('Published preview knowledge.')
+      setActiveTreeMode('published')
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
@@ -308,6 +358,46 @@ export default function WorkSessionAnalysisPanel({
     )
   }
 
+  const renderPublishedKnowledgePanel = () => {
+    if (publishedArticleItems.length === 0) {
+      return (
+        <div
+          data-testid="published-knowledge-panel"
+          className="rounded border border-slate-200 px-4 py-8 text-center text-sm text-inkMuted"
+        >
+          No published knowledge articles yet.
+        </div>
+      )
+    }
+
+    return (
+      <div data-testid="published-knowledge-panel" className="grid gap-sm">
+        {publishedArticleItems.map(({ projectNode, topicNode, articleNode, article }) => (
+          <article
+            key={article?.id ?? articleNode.articleId}
+            className="min-w-0 rounded border border-slate-200 bg-canvas px-4 py-3"
+          >
+            <h3 className="break-words font-heading text-base font-semibold text-ink">
+              {articleNode.title}
+            </h3>
+            <p className="mt-1 text-sm text-inkMuted">
+              {projectNode.project.name} / {topicNode.topic.name}
+            </p>
+            {article ? (
+              <div className="mt-3 max-h-[52vh] overflow-y-auto whitespace-pre-wrap break-words rounded border border-slate-200 bg-slate-50 px-3 py-3 text-sm leading-6 text-ink">
+                {article.body}
+              </div>
+            ) : (
+              <div className="mt-3 rounded border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-sm text-inkMuted">
+                Published article content is not available in the current tree response.
+              </div>
+            )}
+          </article>
+        ))}
+      </div>
+    )
+  }
+
   return (
     <section className="flex min-h-0 flex-1 flex-col gap-md px-md pb-md">
       <header className="flex flex-wrap items-center justify-between gap-sm">
@@ -339,13 +429,22 @@ export default function WorkSessionAnalysisPanel({
         </div>
       )}
 
+      {actionFeedback && (
+        <div
+          role="status"
+          className="rounded border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700"
+        >
+          {actionFeedback}
+        </div>
+      )}
+
       {analysis && (
         <div className="flex flex-wrap items-center gap-sm text-xs text-inkMuted">
           <span className="rounded border border-slate-200 px-2 py-1">
             {formatWindow(analysis)}
           </span>
           <span className="rounded border border-slate-200 px-2 py-1">
-            {analysis.candidates.length} candidates
+            {activePreviewCandidates.length} candidates
           </span>
           <span className="rounded border border-slate-200 px-2 py-1">
             {analysis.excludedMemoryEventIds.length} excluded
@@ -396,13 +495,15 @@ export default function WorkSessionAnalysisPanel({
             </div>
           )}
 
-          {analysis && analysis.candidates.length === 0 && (
+          {analysis && activePreviewCandidates.length === 0 && activeTreeMode === 'preview' && (
             <div className="rounded border border-slate-200 px-4 py-8 text-center text-sm text-inkMuted">
               No work-session candidates found in this window.
             </div>
           )}
 
-          {analysis && previewTopicItems.length > 0 && (
+          {activeTreeMode === 'published' && renderPublishedKnowledgePanel()}
+
+          {analysis && activeTreeMode === 'preview' && previewTopicItems.length > 0 && (
             <div className="grid gap-sm">
               {previewTopicItems.map(({ project, topic, knowledge }) => (
                 <article

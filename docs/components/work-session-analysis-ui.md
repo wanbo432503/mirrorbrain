@@ -41,6 +41,10 @@ The component owns:
   per topic.
 - Letting the user confirm a project name before keeping a candidate.
 - Letting the user discard a candidate.
+- Removing kept, published, and discarded candidates from the Preview tree so
+  Preview remains a queue of work still waiting for review.
+- Showing the Published article body in the right panel when the user switches
+  to the Published tree.
 - Displaying request errors without mutating candidate state.
 
 The component does not own:
@@ -91,10 +95,16 @@ Output:
 6. The user clicks `Generate` for a topic, creating one preview knowledge item
    for that topic. The generated body includes a References section built from
    the supporting memory events.
-7. The user publishes a generated preview knowledge item.
-8. The panel records the reviewed work session, generates a Knowledge Article
+7. The user can keep the candidate as a reviewed project assignment without
+   publishing knowledge. This records the reviewed work session and removes the
+   candidate from Preview.
+8. The user can discard the candidate. This records a discard review and removes
+   the candidate from Preview.
+9. The user publishes a generated preview knowledge item.
+10. The panel records the reviewed work session, generates a Knowledge Article
    Draft, publishes it, refreshes the Published tree, and removes or marks the
-   preview item.
+   preview item. After publication, the panel switches to Published so the user
+   can see the durable article in its Project -> Topic -> Knowledge location.
 
 ## Failure Modes And Constraints
 
@@ -105,6 +115,11 @@ Output:
   action.
 - The UI does not silently create knowledge articles or skills. Knowledge
   Article publication requires an explicit Publish action on the preview item.
+- `Keep as project` is intentionally not a publish operation. It confirms the
+  project assignment and reviewed work-session state only.
+- `Publish` moves the preview candidate out of the Preview queue and refreshes
+  Published. It should not leave the same knowledge visible in both tree modes.
+- `Discard` removes the preview candidate after the discard review succeeds.
 
 ## Test Strategy
 
@@ -126,5 +141,9 @@ The tests verify:
   provenance metadata block.
 - The panel publishes preview knowledge through review, draft generation, and
   article publication API calls.
+- Publishing moves the candidate from Preview to Published and renders the
+  published article body in the Published panel.
+- Keeping and discarding candidates remove them from the Preview queue and show
+  explicit status feedback.
 - The app routes the Review surface to the work-session review panel and no
   longer exposes Work Sessions as a separate primary route.
