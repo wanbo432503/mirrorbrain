@@ -67,6 +67,10 @@ It is not responsible for:
   browser source-ledger capture; when omitted, MirrorBrain auto-discovers the
   most recently updated `aw-watcher-web*` bucket
 - `MIRRORBRAIN_LLM_API_BASE`, `MIRRORBRAIN_LLM_API_KEY`, and `MIRRORBRAIN_LLM_MODEL` configure the OpenAI-compatible chat model used by MirrorBrain title and knowledge generation
+- the web UI `configure` tab can store LLM, embedding, and Tavily provider
+  resource settings under `<workspaceDir>/mirrorbrain/state/`; current
+  knowledge-generation code still uses the explicit LLM environment variables
+  until runtime consumers are migrated to the resource-configuration API
 - QMD stores derived SQLite/vector index state under
   `<workspaceDir>/mirrorbrain/qmd/`; deleting that directory should be treated
   as index loss, not durable data loss

@@ -2051,6 +2051,99 @@ describe('mirrorbrain service', () => {
     );
   });
 
+  it('updates resource configuration without returning provider secrets', async () => {
+    const resourceStore = {
+      readResourceConfiguration: vi.fn(async () => ({
+        llm: {
+          enabled: false,
+          providerName: 'OpenAI-compatible chat',
+          baseUrl: 'https://api.openai.com/v1',
+          model: '',
+          apiKey: 'existing-llm-key',
+        },
+        embedding: {
+          enabled: false,
+          providerName: 'OpenAI-compatible embeddings',
+          baseUrl: 'https://api.openai.com/v1',
+          model: '',
+        },
+        search: {
+          enabled: false,
+          providerName: 'tavily' as const,
+          baseUrl: 'https://api.tavily.com',
+          maxResults: 5,
+        },
+      })),
+      writeResourceConfiguration: vi.fn(async () => undefined),
+    };
+    const service = {
+      status: 'running' as const,
+      config: getMirrorBrainConfig(),
+      syncBrowserMemory: vi.fn(async () => ({
+        sourceKey: 'activitywatch-browser:aw-watcher-web-chrome',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:00:00.000Z',
+      })),
+      syncShellMemory: vi.fn(async () => ({
+        sourceKey: 'shell-history:/tmp/.zsh_history',
+        strategy: 'incremental' as const,
+        importedCount: 0,
+        lastSyncedAt: '2026-03-20T10:00:00.000Z',
+      })),
+      stop: vi.fn(),
+    };
+
+    const api = createMirrorBrainService(
+      {
+        service,
+        workspaceDir: '/tmp/mirrorbrain-workspace',
+      },
+      {
+        createResourceConfigurationStore: vi.fn(() => resourceStore),
+        listSkillDrafts: vi.fn(async () => []),
+        now: () => '2026-05-14T10:00:00.000Z',
+      },
+    );
+
+    await expect(api.getResourceConfiguration()).resolves.toMatchObject({
+      llm: {
+        apiKeyConfigured: true,
+      },
+      embedding: {
+        apiKeyConfigured: false,
+      },
+    });
+    await expect(
+      api.updateResourceConfiguration({
+        llm: {
+          enabled: true,
+          providerName: 'OpenAI-compatible chat',
+          baseUrl: 'https://llm.example.com/v1',
+          model: 'gpt-example',
+          updatedBy: 'mirrorbrain-web',
+        },
+      }),
+    ).resolves.toMatchObject({
+      llm: {
+        enabled: true,
+        baseUrl: 'https://llm.example.com/v1',
+        model: 'gpt-example',
+        apiKeyConfigured: true,
+      },
+    });
+
+    expect(resourceStore.writeResourceConfiguration).toHaveBeenCalledWith(
+      expect.objectContaining({
+        llm: expect.objectContaining({
+          apiKey: 'existing-llm-key',
+          updatedAt: '2026-05-14T10:00:00.000Z',
+          updatedBy: 'mirrorbrain-web',
+        }),
+      }),
+    );
+  });
+
   it('returns only the most recent imported browser events in explicit sync responses', async () => {
     const importedEvents: MemoryEvent[] = Array.from({ length: 60 }, (_, index) => {
       const minute = String(index).padStart(2, '0');

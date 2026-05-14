@@ -3,18 +3,19 @@ import AppShell from './components/layout/AppShell'
 import TabNavigation from './components/layout/TabNavigation'
 import FeedbackBanner from './components/layout/FeedbackBanner'
 import SkillTabPanel from './components/artifacts/SkillTabPanel'
+import ConfigurePanel from './components/configure/ConfigurePanel'
 import SourceManagementPanel from './components/sources/SourceManagementPanel'
 import WorkSessionAnalysisPanel from './components/work-sessions/WorkSessionAnalysisPanel'
 import { createMirrorBrainBrowserApi } from './api/client'
 import { MirrorBrainProvider } from './contexts/MirrorBrainContext'
 import { useMirrorBrainState } from './hooks/useMirrorBrainState'
 
-type TabType = 'memory-sources' | 'preview' | 'published' | 'skill'
+type TabType = 'memory-sources' | 'preview' | 'published' | 'skill' | 'configure'
 type FeedbackKind = 'success' | 'error' | 'info'
 type VisitedTabs = Record<TabType, boolean>
 type ThemeMode = 'light' | 'dark'
 
-const TABS: TabType[] = ['memory-sources', 'preview', 'published', 'skill']
+const TABS: TabType[] = ['memory-sources', 'preview', 'published', 'skill', 'configure']
 
 interface Feedback {
   kind: FeedbackKind
@@ -73,6 +74,7 @@ function AppContent({
     preview: false,
     published: false,
     skill: false,
+    configure: false,
   })
 
   useMirrorBrainState(api)
@@ -116,6 +118,7 @@ function AppContent({
               <WorkSessionAnalysisPanel api={api} mode="published" active={isActive} />
             )}
             {shouldRenderPanel && tab === 'skill' && <SkillTabPanel />}
+            {shouldRenderPanel && tab === 'configure' && <ConfigurePanel api={api} />}
             {shouldRenderPanel && tab === 'memory-sources' && <SourceManagementPanel api={api} />}
           </div>
         )

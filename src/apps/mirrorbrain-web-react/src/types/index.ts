@@ -92,6 +92,55 @@ export interface MirrorBrainConfig {
   service: MirrorBrainServiceConfig;
 }
 
+export interface OpenAICompatibleResourceConfig {
+  enabled: boolean;
+  providerName: string;
+  baseUrl: string;
+  model: string;
+  apiKeyConfigured: boolean;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
+export interface TavilySearchResourceConfig {
+  enabled: boolean;
+  providerName: 'tavily';
+  baseUrl: string;
+  apiKeyConfigured: boolean;
+  maxResults: number;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
+export interface ResourceConfiguration {
+  llm: OpenAICompatibleResourceConfig;
+  embedding: OpenAICompatibleResourceConfig;
+  search: TavilySearchResourceConfig;
+}
+
+export interface OpenAICompatibleResourceConfigUpdate {
+  enabled: boolean;
+  providerName: string;
+  baseUrl: string;
+  model: string;
+  apiKey?: string;
+  updatedBy: string;
+}
+
+export interface TavilySearchResourceConfigUpdate {
+  enabled: boolean;
+  baseUrl: string;
+  apiKey?: string;
+  maxResults: number;
+  updatedBy: string;
+}
+
+export interface ResourceConfigurationUpdate {
+  llm?: OpenAICompatibleResourceConfigUpdate;
+  embedding?: OpenAICompatibleResourceConfigUpdate;
+  search?: TavilySearchResourceConfigUpdate;
+}
+
 export interface AuthorizationScope {
   id: string;
   sourceCategory: MirrorBrainSourceCategory;

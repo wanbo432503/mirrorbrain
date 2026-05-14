@@ -20,6 +20,10 @@ import type {
   SourceInstanceSummary,
 } from '../../integrations/source-ledger-state-store/index.js';
 import type {
+  ResourceConfiguration,
+  ResourceConfigurationUpdate,
+} from '../../modules/resource-configuration/index.js';
+import type {
   SourceLedgerImportResult,
 } from '../../workflows/source-ledger-import/index.js';
 import type {
@@ -54,6 +58,10 @@ interface MirrorBrainHttpService {
     enabled: boolean;
     updatedBy: string;
   }): Promise<SourceInstanceConfig>;
+  getResourceConfiguration?(): Promise<ResourceConfiguration>;
+  updateResourceConfiguration?(
+    update: ResourceConfigurationUpdate,
+  ): Promise<ResourceConfiguration>;
   analyzeWorkSessions?(input: {
     preset: AnalysisWindowPreset;
   }): Promise<WorkSessionAnalysisResult>;
@@ -456,6 +464,90 @@ const sourceInstanceConfigSchema = {
     'updatedAt',
     'updatedBy',
   ],
+} as const;
+
+const openAICompatibleResourceConfigSchema = {
+  type: 'object',
+  properties: {
+    enabled: { type: 'boolean' },
+    providerName: { type: 'string' },
+    baseUrl: { type: 'string' },
+    model: { type: 'string' },
+    apiKeyConfigured: { type: 'boolean' },
+    updatedAt: { type: 'string' },
+    updatedBy: { type: 'string' },
+  },
+  required: [
+    'enabled',
+    'providerName',
+    'baseUrl',
+    'model',
+    'apiKeyConfigured',
+  ],
+} as const;
+
+const tavilySearchResourceConfigSchema = {
+  type: 'object',
+  properties: {
+    enabled: { type: 'boolean' },
+    providerName: { type: 'string' },
+    baseUrl: { type: 'string' },
+    apiKeyConfigured: { type: 'boolean' },
+    maxResults: { type: 'number' },
+    updatedAt: { type: 'string' },
+    updatedBy: { type: 'string' },
+  },
+  required: [
+    'enabled',
+    'providerName',
+    'baseUrl',
+    'apiKeyConfigured',
+    'maxResults',
+  ],
+} as const;
+
+const resourceConfigurationSchema = {
+  type: 'object',
+  properties: {
+    llm: openAICompatibleResourceConfigSchema,
+    embedding: openAICompatibleResourceConfigSchema,
+    search: tavilySearchResourceConfigSchema,
+  },
+  required: ['llm', 'embedding', 'search'],
+} as const;
+
+const openAICompatibleResourceConfigUpdateSchema = {
+  type: 'object',
+  properties: {
+    enabled: { type: 'boolean' },
+    providerName: { type: 'string' },
+    baseUrl: { type: 'string' },
+    model: { type: 'string' },
+    apiKey: { type: 'string' },
+    updatedBy: { type: 'string' },
+  },
+  required: ['enabled', 'providerName', 'baseUrl', 'model', 'updatedBy'],
+} as const;
+
+const tavilySearchResourceConfigUpdateSchema = {
+  type: 'object',
+  properties: {
+    enabled: { type: 'boolean' },
+    baseUrl: { type: 'string' },
+    apiKey: { type: 'string' },
+    maxResults: { type: 'number' },
+    updatedBy: { type: 'string' },
+  },
+  required: ['enabled', 'baseUrl', 'maxResults', 'updatedBy'],
+} as const;
+
+const resourceConfigurationUpdateSchema = {
+  type: 'object',
+  properties: {
+    llm: openAICompatibleResourceConfigUpdateSchema,
+    embedding: openAICompatibleResourceConfigUpdateSchema,
+    search: tavilySearchResourceConfigUpdateSchema,
+  },
 } as const;
 
 const workSessionEvidenceItemSchema = {
@@ -990,6 +1082,71 @@ export async function startMirrorBrainHttpServer(
 
       return {
         config: await input.service.updateSourceInstanceConfig(request.body),
+      };
+    },
+  );
+
+  app.get(
+    '/resources/config',
+    {
+      schema: {
+        summary: 'Get provider resource configuration without returning secrets',
+        response: {
+          200: createArtifactResponseSchema('config', resourceConfigurationSchema),
+          501: {
+            type: 'object',
+            properties: {
+              message: { type: 'string' },
+            },
+            required: ['message'],
+          },
+        },
+      },
+    },
+    async (_request, reply) => {
+      if (input.service.getResourceConfiguration === undefined) {
+        reply.code(501);
+        return {
+          message: 'Resource configuration is not available.',
+        };
+      }
+
+      return {
+        config: await input.service.getResourceConfiguration(),
+      };
+    },
+  );
+
+  app.patch<{
+    Body: ResourceConfigurationUpdate;
+  }>(
+    '/resources/config',
+    {
+      schema: {
+        summary: 'Update provider resource configuration',
+        body: resourceConfigurationUpdateSchema,
+        response: {
+          200: createArtifactResponseSchema('config', resourceConfigurationSchema),
+          501: {
+            type: 'object',
+            properties: {
+              message: { type: 'string' },
+            },
+            required: ['message'],
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      if (input.service.updateResourceConfiguration === undefined) {
+        reply.code(501);
+        return {
+          message: 'Resource configuration is not available.',
+        };
+      }
+
+      return {
+        config: await input.service.updateResourceConfiguration(request.body),
       };
     },
   );

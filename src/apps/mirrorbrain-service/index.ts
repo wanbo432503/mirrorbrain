@@ -15,6 +15,10 @@ import {
   type SourceLedgerStateStore,
 } from '../../integrations/source-ledger-state-store/index.js';
 import {
+  createFileResourceConfigurationStore,
+  type ResourceConfigurationStore,
+} from '../../integrations/resource-configuration-store/index.js';
+import {
   createQmdWorkspaceMemoryEventRecord,
   createQmdWorkspaceMemoryEventWriter,
   ingestCandidateMemoryToQmdWorkspace,
@@ -114,6 +118,12 @@ import {
   type KnowledgeArticlePreview,
 } from '../../modules/knowledge-article-preview/index.js';
 import { analyzeKnowledgeWithConfiguredLLM } from '../../modules/knowledge-generation-llm/index.js';
+import {
+  mergeResourceConfigurationUpdate,
+  redactResourceConfiguration,
+  type ResourceConfiguration,
+  type ResourceConfigurationUpdate,
+} from '../../modules/resource-configuration/index.js';
 import { reviseKnowledgeArticleContent } from '../../modules/knowledge-article-revision/index.js';
 import { createFileKnowledgeArticleStore } from '../../integrations/knowledge-article-store/index.js';
 import type {
@@ -354,6 +364,9 @@ interface CreateMirrorBrainServiceDependencies {
   createSourceLedgerStateStore?: (input: {
     workspaceDir: string;
   }) => SourceLedgerStateStore;
+  createResourceConfigurationStore?: (input: {
+    workspaceDir: string;
+  }) => ResourceConfigurationStore;
   importSourceLedgers?: typeof importChangedSourceLedgers;
   captureBrowserLedgerRecords?: typeof captureActivityWatchBrowserLedgerRecords;
   fetchActivityWatchBuckets?: typeof fetchActivityWatchBuckets;
@@ -804,6 +817,11 @@ export function createMirrorBrainService(
   });
   const sourceLedgerStateStore = (
     dependencies.createSourceLedgerStateStore ?? createFileSourceLedgerStateStore
+  )({
+    workspaceDir,
+  });
+  const resourceConfigurationStore = (
+    dependencies.createResourceConfigurationStore ?? createFileResourceConfigurationStore
   )({
     workspaceDir,
   });
@@ -1370,6 +1388,20 @@ export function createMirrorBrainService(
       mergeDefaultSourceInstanceSummaries(
         await sourceLedgerStateStore.listSourceInstanceSummaries(),
       ),
+    getResourceConfiguration: async (): Promise<ResourceConfiguration> =>
+      redactResourceConfiguration(
+        await resourceConfigurationStore.readResourceConfiguration(),
+      ),
+    updateResourceConfiguration: async (
+      update: ResourceConfigurationUpdate,
+    ): Promise<ResourceConfiguration> => {
+      const current = await resourceConfigurationStore.readResourceConfiguration();
+      const updated = mergeResourceConfigurationUpdate(current, update, now());
+
+      await resourceConfigurationStore.writeResourceConfiguration(updated);
+
+      return redactResourceConfiguration(updated);
+    },
     analyzeWorkSessions: async (
       input: AnalyzeWorkSessionsInput,
     ): Promise<WorkSessionAnalysisResult> => {
