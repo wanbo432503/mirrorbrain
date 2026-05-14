@@ -125,6 +125,11 @@ import {
   type PublishKnowledgeArticleDraftResult,
   type TopicAssignment,
 } from '../../modules/knowledge-article/index.js';
+import {
+  generateKnowledgeArticlePreview as generatePhase4KnowledgeArticlePreview,
+  type GenerateKnowledgeArticlePreviewInput as GeneratePhase4KnowledgeArticlePreviewInput,
+  type KnowledgeArticlePreview,
+} from '../../modules/knowledge-article-preview/index.js';
 import { createFileKnowledgeArticleStore } from '../../integrations/knowledge-article-store/index.js';
 import type {
   AuthorizationScope,
@@ -376,6 +381,7 @@ interface CreateMirrorBrainServiceDependencies {
   suggestCandidateReviews?: typeof suggestCandidateReviews;
   loadBrowserPageContentArtifactFromWorkspace?: typeof loadBrowserPageContentArtifactFromWorkspace;
   analyzeKnowledge?: typeof analyzeKnowledgeWithConfiguredLLM;
+  generateKnowledgeArticlePreview?: typeof generatePhase4KnowledgeArticlePreview;
   createMemoryEventWriter?: (input: {
     config: ReturnType<typeof getMirrorBrainConfig>;
     workspaceDir: string;
@@ -411,6 +417,11 @@ type GenerateKnowledgeArticleDraftInput = Omit<
 > & {
   reviewedWorkSessionIds: string[];
 };
+
+type GenerateKnowledgeArticlePreviewServiceInput = Omit<
+  GeneratePhase4KnowledgeArticlePreviewInput,
+  'generatedAt' | 'analyzeWithLLM'
+>;
 
 interface PublishKnowledgeArticleDraftServiceInput {
   draft: KnowledgeArticleDraft;
@@ -977,6 +988,8 @@ export function createMirrorBrainService(
     loadBrowserPageContentArtifactFromWorkspace;
   const analyzeKnowledge =
     dependencies.analyzeKnowledge ?? analyzeKnowledgeWithConfiguredLLM;
+  const generateArticlePreview =
+    dependencies.generateKnowledgeArticlePreview ?? generatePhase4KnowledgeArticlePreview;
   const generateKnowledge =
     dependencies.generateKnowledge ??
     ((input: {
@@ -1697,6 +1710,14 @@ export function createMirrorBrainService(
 
       return result;
     },
+    generateKnowledgeArticlePreview: async (
+      input: GenerateKnowledgeArticlePreviewServiceInput,
+    ): Promise<KnowledgeArticlePreview> =>
+      generateArticlePreview({
+        ...input,
+        generatedAt: now(),
+        analyzeWithLLM: analyzeKnowledge,
+      }),
     generateKnowledgeArticleDraft: async (
       input: GenerateKnowledgeArticleDraftInput,
     ): Promise<KnowledgeArticleDraft> => {

@@ -9,7 +9,6 @@ import type {
 } from '../../types'
 import {
   buildWorkSessionPreviewTree,
-  generateWorkSessionPreviewKnowledge,
   type WorkSessionPreviewKnowledgeNode,
   type WorkSessionPreviewProjectNode,
   type WorkSessionPreviewTopicNode,
@@ -48,6 +47,7 @@ export default function WorkSessionAnalysisPanel({
   })
   const [projectNames, setProjectNames] = useState<Record<string, string>>({})
   const [reviewingCandidateId, setReviewingCandidateId] = useState<string | null>(null)
+  const [generatingCandidateId, setGeneratingCandidateId] = useState<string | null>(null)
   const [publishingCandidateId, setPublishingCandidateId] = useState<string | null>(null)
   const [deletingArticleId, setDeletingArticleId] = useState<string | null>(null)
   const [generatedKnowledgeByCandidateId, setGeneratedKnowledgeByCandidateId] =
@@ -231,11 +231,33 @@ export default function WorkSessionAnalysisPanel({
     }
   }
 
-  const generatePreviewKnowledge = (topic: WorkSessionPreviewTopicNode) => {
-    setGeneratedKnowledgeByCandidateId((current) => ({
-      ...current,
-      [topic.candidate.id]: generateWorkSessionPreviewKnowledge(topic),
-    }))
+  const generatePreviewKnowledge = async (topic: WorkSessionPreviewTopicNode) => {
+    setGeneratingCandidateId(topic.candidate.id)
+    setError(null)
+    setActionFeedback(null)
+
+    try {
+      const preview = await api.generateKnowledgeArticlePreview({
+        candidate: topic.candidate,
+        topicName: topic.topicName,
+      })
+
+      setGeneratedKnowledgeByCandidateId((current) => ({
+        ...current,
+        [topic.candidate.id]: {
+          ...preview,
+          candidate: topic.candidate,
+        },
+      }))
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : 'Failed to generate preview knowledge.'
+      )
+    } finally {
+      setGeneratingCandidateId(null)
+    }
   }
 
   const deletePublishedKnowledge = async (articleId: string) => {
@@ -531,10 +553,18 @@ export default function WorkSessionAnalysisPanel({
                     type="button"
                     aria-label={`Generate knowledge for ${topic.topicName}`}
                     className="h-9 rounded border border-primary bg-primary px-3 text-sm font-medium text-white disabled:opacity-60"
-                    disabled={knowledge !== undefined}
-                    onClick={() => generatePreviewKnowledge(topic)}
+                    disabled={
+                      knowledge !== undefined || generatingCandidateId !== null
+                    }
+                    onClick={() => {
+                      void generatePreviewKnowledge(topic)
+                    }}
                   >
-                    {knowledge === undefined ? 'Generate' : 'Generated'}
+                    {generatingCandidateId === topic.candidate.id
+                      ? 'Generating'
+                      : knowledge === undefined
+                        ? 'Generate'
+                        : 'Generated'}
                   </button>
                   {knowledge && (
                     <button

@@ -4,6 +4,7 @@ import { cleanup, render, screen, waitFor, within } from '@testing-library/react
 import userEvent from '@testing-library/user-event'
 
 import type { MirrorBrainWebAppApi } from '../../api/client'
+import type { WorkSessionCandidate } from '../../types'
 import WorkSessionAnalysisPanel from './WorkSessionAnalysisPanel'
 
 afterEach(() => {
@@ -63,6 +64,15 @@ describe('WorkSessionAnalysisPanel', () => {
           createdAt: '2026-05-12T12:05:00.000Z',
           updatedAt: '2026-05-12T12:05:00.000Z',
         },
+      })),
+      generateKnowledgeArticlePreview: vi.fn(async ({ candidate }: { candidate: WorkSessionCandidate }) => ({
+        candidateId: candidate.id,
+        title: candidate.title,
+        summary: candidate.summary,
+        body: '# Phase 4 design\n\n## Core insight\nGenerated preview knowledge.',
+        knowledgeType: 'systematic-knowledge' as const,
+        sourceTypes: candidate.sourceTypes,
+        memoryEventCount: candidate.memoryEventIds.length,
       })),
       generateKnowledgeArticleDraft: vi.fn(),
       publishKnowledgeArticleDraft: vi.fn(),
@@ -209,16 +219,17 @@ describe('WorkSessionAnalysisPanel', () => {
       reviewedAt: '2026-05-12T12:05:00.000Z',
       reviewedBy: 'mirrorbrain-web',
     }
-    const expectedPreviewBody = [
-      '## Systematic knowledge',
-      '',
-      candidate.summary,
-      '',
-      '## References',
-      '',
-      '- [1] Source ledger (browser; memory event: browser-1)',
-      '- [2] Run tests (shell; memory event: shell-1)',
-    ].join('\n')
+    const expectedPreviewBody = '# Source ledger architecture\n\n## Core insight\nLLM synthesized source ledger knowledge.'
+    const previewKnowledge = {
+      candidateId: candidate.id,
+      title: candidate.title,
+      summary: candidate.summary,
+      body: expectedPreviewBody,
+      knowledgeType: 'systematic-knowledge' as const,
+      sourceTypes: candidate.sourceTypes,
+      memoryEventCount: candidate.memoryEventIds.length,
+      candidate,
+    }
     const draft = {
       id: 'knowledge-article-draft:source-ledger',
       draftState: 'draft' as const,
@@ -305,6 +316,7 @@ describe('WorkSessionAnalysisPanel', () => {
           updatedAt: '2026-05-12T12:05:00.000Z',
         },
       })),
+      generateKnowledgeArticlePreview: vi.fn(async () => previewKnowledge),
       generateKnowledgeArticleDraft: vi.fn(async () => draft),
       publishKnowledgeArticleDraft: vi.fn(async () => ({
         article: publishedArticle,
@@ -328,10 +340,8 @@ describe('WorkSessionAnalysisPanel', () => {
     )
     const knowledgeBody = await screen.findByTestId('preview-knowledge-body')
     expect(knowledgeBody.className).toContain('overflow-y-auto')
-    expect(knowledgeBody.textContent).toContain('## Systematic knowledge')
-    expect(knowledgeBody.textContent).toContain('## References')
-    expect(knowledgeBody.textContent).toContain('Source ledger')
-    expect(knowledgeBody.textContent).toContain('Run tests')
+    expect(knowledgeBody.textContent).toContain('## Core insight')
+    expect(knowledgeBody.textContent).toContain('LLM synthesized source ledger knowledge.')
     expect(screen.queryByText('Associated memory events')).toBeNull()
     expect(screen.queryByText('Project')).toBeNull()
     expect(screen.queryByText('Topic')).toBeNull()
@@ -350,6 +360,10 @@ describe('WorkSessionAnalysisPanel', () => {
         kind: 'confirmed-new-project',
         name: 'Custom Research',
       },
+    })
+    expect(api.generateKnowledgeArticlePreview).toHaveBeenCalledWith({
+      candidate,
+      topicName: 'Source ledger',
     })
     expect(api.generateKnowledgeArticleDraft).toHaveBeenCalledWith({
       reviewedWorkSessionIds: [reviewedWorkSession.id],

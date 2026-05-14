@@ -665,6 +665,29 @@ describe('mirrorbrain http server', () => {
   });
 
   it('exposes Knowledge Article draft, publish, and history endpoints', async () => {
+    const candidate = {
+      id: 'work-session-candidate:source-ledger',
+      projectHint: 'mirrorbrain',
+      title: 'Source ledger architecture',
+      summary: 'How source ledgers feed memory.',
+      memoryEventIds: ['browser-1'],
+      sourceTypes: ['browser'],
+      timeRange: {
+        startAt: '2026-05-12T06:00:00.000Z',
+        endAt: '2026-05-12T12:00:00.000Z',
+      },
+      relationHints: ['Source ledger'],
+      reviewState: 'pending' as const,
+    };
+    const preview = {
+      candidateId: candidate.id,
+      title: candidate.title,
+      summary: candidate.summary,
+      body: '# Source ledger architecture\n\n## Core insight\nLLM preview.',
+      knowledgeType: 'systematic-knowledge' as const,
+      sourceTypes: candidate.sourceTypes,
+      memoryEventCount: candidate.memoryEventIds.length,
+    };
     const draft = {
       id: 'knowledge-article-draft:source-ledger',
       draftState: 'draft' as const,
@@ -752,6 +775,7 @@ describe('mirrorbrain http server', () => {
       generateSkillDraftFromReviewedMemories: vi.fn(),
       publishKnowledge: vi.fn(),
       publishSkillDraft: vi.fn(),
+      generateKnowledgeArticlePreview: vi.fn(async () => preview),
       generateKnowledgeArticleDraft: vi.fn(async () => draft),
       publishKnowledgeArticleDraft: vi.fn(async () => ({ article })),
       listKnowledgeArticleHistory: vi.fn(async () => [article]),
@@ -761,6 +785,15 @@ describe('mirrorbrain http server', () => {
     const server = await startMirrorBrainHttpServer({ service, port: 0 });
     servers.push(server);
 
+    const previewResponse = await fetch(`${server.origin}/knowledge-articles/preview`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        candidate,
+        topicName: 'Source ledger',
+      }),
+    });
+    const previewBody = await previewResponse.json();
     const draftResponse = await fetch(`${server.origin}/knowledge-articles/drafts`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -800,6 +833,12 @@ describe('mirrorbrain http server', () => {
       },
     );
 
+    expect(previewResponse.status).toBe(201);
+    expect(service.generateKnowledgeArticlePreview).toHaveBeenCalledWith({
+      candidate,
+      topicName: 'Source ledger',
+    });
+    expect(previewBody).toEqual({ preview });
     expect(draftResponse.status).toBe(201);
     expect(service.generateKnowledgeArticleDraft).toHaveBeenCalledWith({
       reviewedWorkSessionIds: draft.sourceReviewedWorkSessionIds,

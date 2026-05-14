@@ -72,6 +72,8 @@ Input:
   - `analyzeWorkSessions(preset)` calls `POST /work-sessions/analyze`.
   - `reviewWorkSessionCandidate(candidate, review)` calls
     `POST /work-sessions/reviews`.
+  - `generateKnowledgeArticlePreview(request)` calls
+    `POST /knowledge-articles/preview`.
   - `generateKnowledgeArticleDraft(request)` calls
     `POST /knowledge-articles/drafts`.
   - `publishKnowledgeArticleDraft(request)` calls
@@ -102,10 +104,13 @@ Output:
    project names.
 5. The user can edit the proposed project name and inspect the topic evidence
    through the generated article references.
-6. The user clicks `Generate` for a topic, creating one preview knowledge item
-   for that topic. The generated body uses the candidate's evidence excerpts,
-   including browser `pageContent` excerpts when available, and includes a
-   References section built from the supporting memory events.
+6. The user clicks `Generate` for a topic. The panel sends the full
+   work-session candidate to `POST /knowledge-articles/preview`; the service
+   builds a synthesis prompt from candidate evidence excerpts, including
+   browser `pageContent` excerpts when available, and asks the configured LLM
+   for a complete preview article with source references. If the LLM is
+   unavailable, the backend returns an explicit fallback article that preserves
+   evidence excerpts and tells the user to regenerate after configuration.
 7. The user can discard the candidate. This records a discard review and removes
    the candidate from Preview.
 8. The user publishes a generated preview knowledge item.

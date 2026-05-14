@@ -677,6 +677,59 @@ Notes:
 
 ## Knowledge Article Endpoints
 
+### `POST /knowledge-articles/preview`
+
+Generates a non-durable Phase 4 Knowledge Article preview from one pending
+work-session candidate. The endpoint uses the configured LLM when available and
+feeds it the candidate's source-attributed evidence excerpts, including browser
+page-content excerpts captured in the memory event evidence pipeline. The
+response is still preview-state knowledge: it can be read by the user, but it
+does not become durable Published knowledge until the explicit review, draft,
+and publish flow runs.
+
+Request:
+
+```json
+{
+  "candidate": {
+    "id": "work-session-candidate:source-ledger",
+    "projectHint": "mirrorbrain",
+    "title": "Source ledger architecture",
+    "summary": "How source ledgers feed memory.",
+    "memoryEventIds": ["browser-1"],
+    "sourceTypes": ["browser"],
+    "timeRange": {
+      "startAt": "2026-05-12T06:00:00.000Z",
+      "endAt": "2026-05-12T12:00:00.000Z"
+    },
+    "relationHints": ["Source ledger"],
+    "evidenceItems": [
+      {
+        "memoryEventId": "browser-1",
+        "sourceType": "browser",
+        "title": "Source ledger design",
+        "excerpt": "Source ledgers are the acquisition boundary."
+      }
+    ],
+    "reviewState": "pending"
+  },
+  "topicName": "Source ledger"
+}
+```
+
+Response `201`:
+
+```json
+{
+  "preview": {
+    "candidateId": "work-session-candidate:source-ledger",
+    "title": "Source ledger architecture",
+    "knowledgeType": "systematic-knowledge",
+    "memoryEventCount": 1
+  }
+}
+```
+
 ### `POST /knowledge-articles/drafts`
 
 Generates and persists a Phase 4 Knowledge Article Draft from previously

@@ -294,6 +294,21 @@ export interface KnowledgeArticleTree {
   }>;
 }
 
+export interface KnowledgeArticlePreview {
+  candidateId: string;
+  title: string;
+  summary: string;
+  body: string;
+  knowledgeType: 'systematic-knowledge' | 'workflow' | 'news';
+  sourceTypes: string[];
+  memoryEventCount: number;
+}
+
+export interface GenerateKnowledgeArticlePreviewRequest {
+  candidate: WorkSessionCandidate;
+  topicName?: string;
+}
+
 export interface GenerateKnowledgeArticleDraftRequest {
   reviewedWorkSessionIds: string[];
   title: string;

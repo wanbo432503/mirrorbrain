@@ -64,6 +64,7 @@ interface MirrorBrainHttpService {
     candidate: unknown,
     review: unknown,
   ): Promise<unknown>;
+  generateKnowledgeArticlePreview?(input: unknown): Promise<unknown>;
   generateKnowledgeArticleDraft?(input: unknown): Promise<unknown>;
   publishKnowledgeArticleDraft?(input: unknown): Promise<unknown>;
   listKnowledgeArticleHistory?(filter: {
@@ -1384,6 +1385,59 @@ export async function startMirrorBrainHttpServer(
         request.body.candidate,
         request.body.review,
       );
+    },
+  );
+
+  app.post<{ Body: unknown }>(
+    '/knowledge-articles/preview',
+    {
+      schema: {
+        summary: 'Generate a Phase 4 Knowledge Article Preview',
+        body: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            candidate: {
+              type: 'object',
+              additionalProperties: true,
+            },
+            topicName: { type: 'string' },
+          },
+          required: ['candidate'],
+        },
+        response: {
+          201: {
+            type: 'object',
+            properties: {
+              preview: {
+                type: 'object',
+                additionalProperties: true,
+              },
+            },
+            required: ['preview'],
+          },
+          501: {
+            type: 'object',
+            properties: {
+              message: { type: 'string' },
+            },
+            required: ['message'],
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      if (input.service.generateKnowledgeArticlePreview === undefined) {
+        reply.code(501);
+        return {
+          message: 'Knowledge Article Preview generation is not available.',
+        };
+      }
+
+      reply.code(201);
+      return {
+        preview: await input.service.generateKnowledgeArticlePreview(request.body),
+      };
     },
   );
 

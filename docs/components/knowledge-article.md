@@ -23,7 +23,9 @@ The module does not own:
 
 - Work-session candidate analysis.
 - Work-session review and project assignment.
-- LLM text generation.
+- LLM text generation. Preview synthesis lives in
+  `docs/components/knowledge-article-preview.md` and must remain non-durable
+  until the review/draft/publish flow completes.
 - Durable storage or retrieval indexes.
 - UI controls for topic correction or publish approval.
 - Skill generation or execution.

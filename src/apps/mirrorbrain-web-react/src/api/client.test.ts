@@ -544,6 +544,29 @@ describe('createMirrorBrainBrowserApi', () => {
   });
 
   it('generates and publishes Phase 4 knowledge article drafts', async () => {
+    const candidate = {
+      id: 'work-session-candidate:source-ledger',
+      projectHint: 'mirrorbrain',
+      title: 'Source ledger architecture',
+      summary: 'How source ledgers feed memory.',
+      memoryEventIds: ['browser-1'],
+      sourceTypes: ['browser'],
+      timeRange: {
+        startAt: '2026-05-12T06:00:00.000Z',
+        endAt: '2026-05-12T12:00:00.000Z',
+      },
+      relationHints: ['Source ledger'],
+      reviewState: 'pending' as const,
+    };
+    const preview = {
+      candidateId: candidate.id,
+      title: candidate.title,
+      summary: candidate.summary,
+      body: '# Source ledger architecture\n\n## Core insight\nLLM preview.',
+      knowledgeType: 'systematic-knowledge' as const,
+      sourceTypes: candidate.sourceTypes,
+      memoryEventCount: candidate.memoryEventIds.length,
+    };
     const draft = {
       id: 'knowledge-article-draft:source-ledger',
       draftState: 'draft' as const,
@@ -581,6 +604,11 @@ describe('createMirrorBrainBrowserApi', () => {
       .mockResolvedValueOnce({
         ok: true,
         status: 201,
+        json: async () => ({ preview }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 201,
         json: async () => ({ draft }),
       })
       .mockResolvedValueOnce({
@@ -600,6 +628,12 @@ describe('createMirrorBrainBrowserApi', () => {
       articleOperationProposal: draft.articleOperationProposal,
     };
 
+    await expect(
+      api.generateKnowledgeArticlePreview({
+        candidate,
+        topicName: 'Source ledger',
+      }),
+    ).resolves.toEqual(preview);
     await expect(api.generateKnowledgeArticleDraft(draftRequest)).resolves.toEqual(draft);
     await expect(
       api.publishKnowledgeArticleDraft({
@@ -611,6 +645,17 @@ describe('createMirrorBrainBrowserApi', () => {
 
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
+      'http://localhost:3000/knowledge-articles/preview',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          candidate,
+          topicName: 'Source ledger',
+        }),
+      }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
       'http://localhost:3000/knowledge-articles/drafts',
       expect.objectContaining({
         method: 'POST',
@@ -618,7 +663,7 @@ describe('createMirrorBrainBrowserApi', () => {
       }),
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
-      2,
+      3,
       'http://localhost:3000/knowledge-articles/publish',
       expect.objectContaining({
         method: 'POST',

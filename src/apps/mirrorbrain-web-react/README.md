@@ -8,7 +8,7 @@ Modern React-based web interface for MirrorBrain, built with Tailwind CSS and an
 - React + TypeScript + Vite configuration
 - Tailwind CSS with Apple-style design tokens
 - Refined light/dark-ready product UI styling
-- API client (15 methods, preserved logic)
+- API client (20+ methods, preserved logic)
 - Types system (165+ types)
 
 ### Phase 2: Core Components ✅ (Completed)
@@ -236,7 +236,10 @@ Core API methods include:
 17. `listSourceStatuses()` - List source instance status summaries
 18. `analyzeWorkSessions()` - Run Phase 4 manual work-session analysis
 19. `reviewWorkSessionCandidate()` - Keep or discard a work-session candidate with explicit project assignment
-20. `deleteKnowledgeArticle()` - Delete a published Project -> Topic -> Knowledge Article lineage
+20. `generateKnowledgeArticlePreview()` - Generate an LLM-backed, non-durable Preview-tab knowledge article from a work-session candidate
+21. `generateKnowledgeArticleDraft()` - Create a persisted Knowledge Article draft after explicit work-session review
+22. `publishKnowledgeArticleDraft()` - Publish a reviewed draft into the durable Project -> Topic -> Knowledge tree
+23. `deleteKnowledgeArticle()` - Delete a published Project -> Topic -> Knowledge Article lineage
 
 **API Logic Preservation:** 95% identical to original vanilla TypeScript implementation.
 
@@ -262,8 +265,8 @@ pnpm dev
    - Click "Preview" tab
    - Click an analysis window
    - Confirm or edit the project name on a candidate
-   - Click "Generate", then "Publish" to add it under the edited project name,
-     or click "Discard"
+   - Click "Generate" to call the LLM-backed preview endpoint, then "Publish"
+     to add it under the edited project name, or click "Discard"
 
 3. **Published Tab:**
    - Click "Published" tab

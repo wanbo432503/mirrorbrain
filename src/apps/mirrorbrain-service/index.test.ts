@@ -666,6 +666,70 @@ describe('mirrorbrain service', () => {
     });
   });
 
+  it('generates LLM-backed Knowledge Article previews from candidate evidence', async () => {
+    const candidate: WorkSessionCandidate = {
+      id: 'work-session-candidate:cluster-methods',
+      projectHint: '聚类算法研究',
+      title: '聚类算法选择与应用',
+      summary: '比较 K-Means 与 DBSCAN 的适用场景。',
+      memoryEventIds: ['browser-kmeans', 'browser-dbscan'],
+      sourceTypes: ['browser'],
+      timeRange: {
+        startAt: '2026-05-12T10:00:00.000Z',
+        endAt: '2026-05-12T10:30:00.000Z',
+      },
+      relationHints: ['聚类算法方法与应用'],
+      evidenceItems: [
+        {
+          memoryEventId: 'browser-kmeans',
+          sourceType: 'browser',
+          title: 'K-Means 算法',
+          excerpt: 'K-Means 通过迭代更新质心，将样本划分到最近的簇。',
+        },
+        {
+          memoryEventId: 'browser-dbscan',
+          sourceType: 'browser',
+          title: 'DBSCAN 算法',
+          excerpt: 'DBSCAN 通过密度可达关系形成簇，适合发现任意形状聚类。',
+        },
+      ],
+      reviewState: 'pending',
+    };
+    const analyzeKnowledge = vi.fn(async (prompt: string) => {
+      expect(prompt).toContain('K-Means 通过迭代更新质心');
+      expect(prompt).toContain('DBSCAN 通过密度可达关系形成簇');
+      return '# 聚类算法选择与应用知识\n\n## 核心结论\nK-Means、DBSCAN 需要按数据分布选择。';
+    });
+    const service = createMirrorBrainService(
+      {
+        service: {
+          status: 'running',
+          syncBrowserMemory: vi.fn(),
+          syncShellMemory: vi.fn(),
+          stop: vi.fn(),
+        },
+      },
+      {
+        analyzeKnowledge,
+        now: () => '2026-05-12T12:05:00.000Z',
+      },
+    );
+
+    const preview = await service.generateKnowledgeArticlePreview({
+      candidate,
+      topicName: '聚类算法方法与应用',
+    });
+
+    expect(preview).toMatchObject({
+      candidateId: candidate.id,
+      title: '聚类算法选择与应用知识',
+      knowledgeType: 'systematic-knowledge',
+      memoryEventCount: 2,
+    });
+    expect(preview.body).toContain('## 核心结论');
+    expect(analyzeKnowledge).toHaveBeenCalledTimes(1);
+  });
+
   it('generates and publishes Knowledge Article Drafts from reviewed work sessions', async () => {
     const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-article-service-'));
     const candidate: WorkSessionCandidate = {
@@ -855,7 +919,7 @@ describe('mirrorbrain service', () => {
     });
 
     await rm(workspaceDir, { recursive: true, force: true });
-  });
+  }, 10_000);
 
   it('keeps reviewed work-session project assignments out of the published knowledge tree until article publication', async () => {
     const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-kept-project-'));

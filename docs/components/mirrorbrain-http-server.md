@@ -56,6 +56,7 @@ Those concerns remain in the service, workflow, module, and integration layers.
 - `POST /knowledge/generate`
 - `POST /knowledge/regenerate`
 - `POST /knowledge/approve`
+- `POST /knowledge-articles/preview`
 - `POST /knowledge-articles/drafts`
 - `POST /knowledge-articles/publish`
 - `GET /knowledge-articles/history`
@@ -82,7 +83,7 @@ Those concerns remain in the service, workflow, module, and integration layers.
 16. Knowledge generation, regeneration, and approval routes delegate to the service layer and return structured errors when a capability is unavailable.
 17. `POST /knowledge/approve` accepts the current draft snapshot along with `draftId` so the service can publish the visible draft even if the storage index has not exposed it yet.
 18. Knowledge Article routes expose the Phase 4 Project -> Topic -> Knowledge
-    Article draft, publish, history, delete, and Published tree flow.
+    Article preview, draft, publish, history, delete, and Published tree flow.
 
 ## Dependencies
 

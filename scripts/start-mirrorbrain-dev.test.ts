@@ -387,6 +387,15 @@ describe('start mirrorbrain dev runtime', () => {
           reviewedBy: 'user',
         },
       })),
+      generateKnowledgeArticlePreview: vi.fn(async () => ({
+        candidateId: 'work-session-candidate:example',
+        title: 'Example',
+        summary: '',
+        body: '# Example',
+        knowledgeType: 'systematic-knowledge' as const,
+        sourceTypes: [],
+        memoryEventCount: 0,
+      })),
       generateKnowledgeArticleDraft: vi.fn(async () => ({
         id: 'knowledge-article-draft:example',
         draftState: 'draft' as const,
@@ -608,6 +617,15 @@ describe('start mirrorbrain dev runtime', () => {
               reviewedAt: '2026-05-12T12:00:00.000Z',
               reviewedBy: 'user',
             },
+          })),
+          generateKnowledgeArticlePreview: vi.fn(async () => ({
+            candidateId: 'work-session-candidate:example',
+            title: 'Example',
+            summary: '',
+            body: '# Example',
+            knowledgeType: 'systematic-knowledge' as const,
+            sourceTypes: [],
+            memoryEventCount: 0,
           })),
           generateKnowledgeArticleDraft: vi.fn(async () => ({
             id: 'knowledge-article-draft:example',
@@ -902,6 +920,15 @@ describe('start mirrorbrain dev runtime', () => {
               reviewedAt: '2026-05-12T12:00:00.000Z',
               reviewedBy: 'user',
             },
+          })),
+          generateKnowledgeArticlePreview: vi.fn(async () => ({
+            candidateId: 'work-session-candidate:example',
+            title: 'Example',
+            summary: '',
+            body: '# Example',
+            knowledgeType: 'systematic-knowledge' as const,
+            sourceTypes: [],
+            memoryEventCount: 0,
           })),
           generateKnowledgeArticleDraft: vi.fn(async () => ({
             id: 'knowledge-article-draft:example',

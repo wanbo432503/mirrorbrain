@@ -1,13 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
 import type { WorkSessionCandidate } from '../../types'
-import {
-  buildWorkSessionPreviewTree,
-  generateWorkSessionPreviewKnowledge,
-} from './work-session-preview-tree'
+import { buildWorkSessionPreviewTree } from './work-session-preview-tree'
 
 describe('buildWorkSessionPreviewTree', () => {
-  it('groups pending work-session candidates into project, topic, and one generated preview knowledge node per topic', () => {
+  it('groups pending work-session candidates into project and topic nodes', () => {
     const candidates: WorkSessionCandidate[] = [
       {
         id: 'work-session-candidate:source-ledger',
@@ -116,7 +113,7 @@ describe('buildWorkSessionPreviewTree', () => {
     ])
   })
 
-  it('generates preview knowledge only when a topic is explicitly generated', () => {
+  it('leaves topic nodes ungenerated until the UI calls the preview API', () => {
     const candidate: WorkSessionCandidate = {
       id: 'work-session-candidate:source-ledger',
       projectHint: 'mirrorbrain',
@@ -160,31 +157,6 @@ describe('buildWorkSessionPreviewTree', () => {
     const topic = buildWorkSessionPreviewTree([candidate]).projects[0].topics[0]
 
     expect('knowledge' in topic).toBe(false)
-    expect(generateWorkSessionPreviewKnowledge(topic)).toEqual({
-      candidateId: 'work-session-candidate:source-ledger',
-      title: 'Source ledger',
-      summary: 'Imported ledgers, handled bad lines, and tested source status.',
-      body: [
-        '## Systematic knowledge',
-        '',
-        'Imported ledgers, handled bad lines, and tested source status.',
-        '',
-        '## Supporting evidence synthesis',
-        '',
-        '- Source ledger design: Source ledgers are the acquisition boundary. They preserve source-specific payloads, provenance, and bad-line handling before memory import.',
-        '- Run source ledger tests: Ran Vitest for source-ledger importer.',
-        '- Source ledger status UI: The source status UI separates operational import state from durable memory retrieval.',
-        '',
-        '## References',
-        '',
-        '- [1] Source ledger design (browser; memory event: browser-1; https://docs.example.com/source-ledger)',
-        '- [2] Run source ledger tests (shell; memory event: shell-1)',
-        '- [3] Source ledger status UI (browser; memory event: browser-2)',
-      ].join('\n'),
-      knowledgeType: 'systematic-knowledge',
-      sourceTypes: ['browser', 'shell'],
-      memoryEventCount: 3,
-      candidate,
-    })
+    expect(topic.candidate).toBe(candidate)
   })
 })

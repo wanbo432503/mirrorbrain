@@ -18,6 +18,8 @@ import type {
   WorkSessionCandidate,
   WorkSessionReviewResult,
   KnowledgeArticleTree,
+  GenerateKnowledgeArticlePreviewRequest,
+  KnowledgeArticlePreview,
   GenerateKnowledgeArticleDraftRequest,
   KnowledgeArticleDraft,
   PublishKnowledgeArticleDraftRequest,
@@ -76,6 +78,9 @@ export interface MirrorBrainWebAppApi {
     review: ReviewWorkSessionInput
   ): Promise<WorkSessionReviewResult>;
   listKnowledgeArticleTree(): Promise<KnowledgeArticleTree>;
+  generateKnowledgeArticlePreview(
+    request: GenerateKnowledgeArticlePreviewRequest
+  ): Promise<KnowledgeArticlePreview>;
   generateKnowledgeArticleDraft(
     request: GenerateKnowledgeArticleDraftRequest
   ): Promise<KnowledgeArticleDraft>;
@@ -301,6 +306,16 @@ export function createMirrorBrainBrowserApi(
     async listKnowledgeArticleTree() {
       const response = await fetch(`${baseUrl}/knowledge-articles/tree`);
       return readJson<KnowledgeArticleTree>(response);
+    },
+
+    async generateKnowledgeArticlePreview(request) {
+      const response = await fetch(`${baseUrl}/knowledge-articles/preview`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(request),
+      });
+      const body = await readJson<{ preview: KnowledgeArticlePreview }>(response);
+      return body.preview;
     },
 
     async generateKnowledgeArticleDraft(request) {
