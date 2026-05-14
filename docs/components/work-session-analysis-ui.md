@@ -5,13 +5,12 @@
 `src/apps/mirrorbrain-web-react/src/components/work-sessions/WorkSessionAnalysisPanel.tsx`
 is the Phase 4 operator UI behind the top-level Preview and Published tabs. In
 Preview mode, it exposes the three planned analysis windows, renders pending
-`WorkSessionCandidate` results as a Preview Project -> Topic -> Knowledge tree,
-and lets the user publish useful preview knowledge into the durable Published
-tree. In Published mode, it renders the durable historical Project -> Topic ->
-Knowledge tree directly. Preview and Published intentionally share the same
-three-level mental model, but they have different lifecycles: Preview is
-regenerated from the selected analysis window, while Published is durable
-historical knowledge.
+`WorkSessionCandidate` results as a full-width candidate review list, and lets
+the user publish useful preview knowledge into the durable Published tree. In
+Published mode, it renders the durable historical Project -> Topic -> Knowledge
+tree directly. Preview and Published intentionally use different layouts:
+Preview is a regenerated review queue for the selected analysis window, while
+Published is durable historical knowledge that benefits from a navigable tree.
 Preview knowledge is no longer generated automatically. A topic appears first,
 then the user explicitly clicks `Generate` to create the preview knowledge body,
 and only generated knowledge can be published.
@@ -32,18 +31,18 @@ The component owns:
 - Revising the currently selected published Knowledge Article through an
   explicit user instruction, then refreshing the tree so the new current-best
   article version is shown.
-- Rendering the returned analysis window, excluded event count, and generated
-  knowledge content.
+- Rendering the returned analysis window, excluded event count, compact
+  candidate memory-event evidence, and generated knowledge content.
 - Rendering generated preview knowledge as a complete scrollable article body.
-  Supporting memory-event labels, source types, provenance ids, and evidence
-  excerpts are folded into the article body and References section instead of
-  being shown in a separate metadata block.
+  Candidate evidence remains visible as a compact list of memory-event titles
+  and source-type badges so the review queue stays source-attributed before and
+  after knowledge generation.
 - Rendering either the top-level Preview view or the top-level Published view
   through the explicit component `mode` prop, without nested Preview/Published
   subtabs.
-- Rendering Preview as Project -> Topic -> one generated Knowledge item per
-  topic, where the project is task-level and must not simply mirror source
-  hosts such as `arxiv.org`.
+- Rendering Preview as a full-width list of pending topic candidates. The
+  internal grouping still derives task-level project and topic defaults, but
+  Preview does not show a separate left-side directory tree.
 - Rendering ungenerated Preview topics with an explicit `Generate` action
   instead of silently showing a knowledge artifact.
 - Rendering Published as Project -> Topic -> many historical Knowledge Articles
@@ -51,7 +50,7 @@ The component owns:
 - Letting the user edit the project name that will be used when publishing a
   generated preview knowledge item.
 - Letting the user discard a candidate.
-- Removing published and discarded candidates from the Preview tree so
+- Removing published and discarded candidates from the Preview list so
   Preview remains a queue of work still waiting for review.
 - Showing Published article bodies in the right panel when the user opens the
   top-level Published tab.
@@ -104,7 +103,8 @@ Output:
 
 - A rendered list of generated preview knowledge items derived from pending
   work-session candidates.
-- A preview Project -> Topic -> Knowledge tree for the latest analysis window.
+- A full-width preview candidate list for the latest analysis window, with each
+  candidate showing compact memory-event titles and source types.
 - A published Project -> Topic -> Knowledge tree for durable articles.
 - Explicit discard review requests sent to the service.
 - Explicit publish requests sent to the service.
@@ -117,11 +117,13 @@ Output:
 2. The user chooses an analysis window.
 3. The browser API client posts the selected preset to
    `/work-sessions/analyze`.
-4. The panel derives a Preview Project -> Topic tree. Source-like
-   hints such as browser hostnames are treated as source evidence, not as final
+4. The panel derives project and topic defaults from the analysis result, then
+   renders the pending topics as full-width candidate cards. Source-like hints
+   such as browser hostnames are treated as source evidence, not as final
    project names.
-5. The user can edit the proposed project name and inspect the topic evidence
-   through the generated article references.
+5. The user can edit the proposed project name and inspect topic evidence
+   directly through the compact memory-event list. Each row includes the event
+   title and source type such as `browser`, `files`, or `shell`.
 6. The user clicks `Generate` for a topic. The panel sends the full
    work-session candidate to `POST /knowledge-articles/preview`; the service
    builds a synthesis prompt from candidate evidence excerpts, including
@@ -183,9 +185,11 @@ The tests verify:
 - The panel calls the API with the selected preset and renders candidates.
 - The panel does not render a standalone `Keep as project` action.
 - The app exposes Preview and Published as top-level tabs, with no nested
-  Preview/Published subtab inside the tree rail.
-- The panel renders the selected mode with Project -> Topic -> Knowledge
-  hierarchy.
+  Preview/Published subtab inside the Published tree rail.
+- Preview renders as a full-width candidate list; Published renders with a
+  Project -> Topic -> Knowledge hierarchy.
+- Preview candidate cards render compact memory-event title rows with
+  source-type badges.
 - Preview topics do not expose `Publish` until the user explicitly generates
   preview knowledge.
 - Generated preview knowledge renders as a complete scrollable article body

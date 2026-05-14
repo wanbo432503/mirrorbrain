@@ -46,6 +46,47 @@ function normalizeProjectName(value: string): string {
     .trim()
 }
 
+function formatSourceType(sourceType: string): string {
+  if (sourceType === 'file-activity' || sourceType === 'file') {
+    return 'files'
+  }
+
+  return sourceType
+}
+
+function formatSourceTypes(sourceTypes: string[]): string {
+  return Array.from(new Set(sourceTypes.map(formatSourceType))).join(', ')
+}
+
+function getCandidateEventRows(candidate: WorkSessionCandidate): Array<{
+  id: string
+  title: string
+  sourceTypes: string[]
+}> {
+  if (candidate.evidenceItems && candidate.evidenceItems.length > 0) {
+    return candidate.evidenceItems.map((item, index) => ({
+      id: item.memoryEventId || `${candidate.id}:evidence:${index}`,
+      title:
+        item.title.trim() ||
+        item.summary?.trim() ||
+        item.excerpt.trim() ||
+        item.memoryEventId,
+      sourceTypes: [item.sourceType],
+    }))
+  }
+
+  const fallbackSourceTypes =
+    candidate.sourceTypes.length > 0 ? candidate.sourceTypes : ['memory']
+  const fallbackTitles =
+    candidate.relationHints.length > 0 ? candidate.relationHints : [candidate.title]
+
+  return fallbackTitles.map((title, index) => ({
+    id: candidate.memoryEventIds[index] ?? `${candidate.id}:event:${index}`,
+    title,
+    sourceTypes: [fallbackSourceTypes[index] ?? fallbackSourceTypes[0] ?? 'memory'],
+  }))
+}
+
 function TreeChevron({ expanded }: { expanded: boolean }) {
   return (
     <span
@@ -437,49 +478,6 @@ export default function WorkSessionAnalysisPanel({
     })
   }
 
-  const renderPreviewTree = () => {
-    if (previewTree.projects.length === 0) {
-      return (
-        <p className="px-3 py-4 text-sm text-inkMuted">
-          Run an analysis window to generate preview knowledge.
-        </p>
-      )
-    }
-
-    return (
-      <div className="grid gap-sm">
-        {previewTree.projects.map((project) => (
-          <div key={project.projectKey} className="grid gap-xs">
-            <div className="text-sm font-semibold text-ink">{project.projectName}</div>
-            {project.topics.map((topic) => (
-              <div key={topic.topicKey} className="ml-3 grid gap-xs border-l border-slate-200 pl-3">
-                <div className="text-sm font-medium text-ink">{topic.topicName}</div>
-                {generatedKnowledgeByCandidateId[topic.candidate.id] ? (
-                  <button
-                    type="button"
-                    className="min-w-0 rounded border border-slate-200 bg-canvas px-3 py-2 text-left text-sm text-ink transition-colors hover:border-primary"
-                  >
-                    <span className="block break-words font-medium">
-                      {generatedKnowledgeByCandidateId[topic.candidate.id].title}
-                    </span>
-                    <span className="mt-1 block text-xs text-inkMuted">
-                      generated knowledge ·{' '}
-                      {generatedKnowledgeByCandidateId[topic.candidate.id].knowledgeType}
-                    </span>
-                  </button>
-                ) : (
-                  <span className="rounded border border-dashed border-slate-200 px-3 py-2 text-xs text-inkMuted">
-                    Knowledge not generated
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-    )
-  }
-
   const renderPublishedTree = () => {
     if (publishedTree.projects.length === 0) {
       return (
@@ -709,14 +707,21 @@ export default function WorkSessionAnalysisPanel({
         </div>
       )}
 
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(220px,280px)_minmax(0,1fr)] gap-md">
-        <aside
-          data-testid="work-session-tree-rail"
-          className="min-h-0 overflow-y-auto border-r border-slate-200 pr-md"
-        >
-          {isPreviewMode ? renderPreviewTree() : renderPublishedTree()}
-        </aside>
-
+      <div
+        className={
+          isPreviewMode
+            ? 'min-h-0 flex-1'
+            : 'grid min-h-0 flex-1 grid-cols-[minmax(220px,280px)_minmax(0,1fr)] gap-md'
+        }
+      >
+        {!isPreviewMode && (
+          <aside
+            data-testid="work-session-tree-rail"
+            className="min-h-0 overflow-y-auto border-r border-slate-200 pr-md"
+          >
+            {renderPublishedTree()}
+          </aside>
+        )}
         <div
           className={
             isPreviewMode
@@ -745,86 +750,96 @@ export default function WorkSessionAnalysisPanel({
                   key={topic.candidate.id}
                   className="min-w-0 rounded border border-slate-200 bg-canvas px-4 py-3"
                 >
-                <div className="flex flex-wrap items-start justify-between gap-sm">
-                  <div className="min-w-0 flex-1">
-                    <h3 className="break-words font-heading text-base font-semibold text-ink">
-                      {topic.topicName}
-                    </h3>
-                    {knowledge === undefined && (
-                      <p className="mt-1 break-words text-sm text-inkMuted">
-                        {topic.candidate.summary}
-                      </p>
-                    )}
-                    {knowledge ? (
-                      <div
-                        data-testid="preview-knowledge-body"
-                        className="mt-3 max-h-[52vh] overflow-y-auto whitespace-pre-wrap break-words rounded border border-slate-200 bg-slate-50 px-3 py-3 text-sm leading-6 text-ink"
-                      >
-                        {knowledge.body}
-                      </div>
-                    ) : (
-                      <div className="mt-3 rounded border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-sm text-inkMuted">
-                        Knowledge has not been generated for this topic.
-                      </div>
-                    )}
+                  <div className="flex flex-wrap items-start justify-between gap-sm">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="break-words font-heading text-base font-semibold text-ink">
+                        {topic.topicName}
+                      </h3>
+                      <ol className="mt-2 grid gap-1 rounded border border-slate-200 bg-slate-50 px-2 py-2">
+                        {getCandidateEventRows(topic.candidate).map((eventRow) => (
+                          <li
+                            key={eventRow.id}
+                            className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 text-xs"
+                          >
+                            <span className="min-w-0 truncate text-ink" title={eventRow.title}>
+                              {eventRow.title}
+                            </span>
+                            <span className="shrink-0 rounded border border-slate-200 bg-canvas px-2 py-0.5 font-medium text-inkMuted">
+                              {formatSourceTypes(eventRow.sourceTypes)}
+                            </span>
+                          </li>
+                        ))}
+                      </ol>
+                      {knowledge ? (
+                        <div
+                          data-testid="preview-knowledge-body"
+                          className="mt-3 max-h-[52vh] overflow-y-auto whitespace-pre-wrap break-words rounded border border-slate-200 bg-slate-50 px-3 py-3 text-sm leading-6 text-ink"
+                        >
+                          {knowledge.body}
+                        </div>
+                      ) : (
+                        <div className="mt-3 rounded border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-sm text-inkMuted">
+                          Knowledge has not been generated for this topic.
+                        </div>
+                      )}
+                    </div>
+                    <span className="rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700">
+                      {topic.candidate.reviewState}
+                    </span>
                   </div>
-                  <span className="rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700">
-                    {topic.candidate.reviewState}
-                  </span>
-                </div>
 
-                <div className="mt-3 flex flex-wrap items-end gap-sm border-t border-slate-200 pt-3">
-                  <label className="grid gap-1 text-sm text-inkMuted">
-                    <span>Project name</span>
-                    <input
-                      aria-label={`Project name for ${topic.topicName}`}
-                      className="h-9 w-56 rounded border border-slate-300 px-3 text-sm text-ink focus:border-primary focus:outline-none"
-                      value={projectNames[topic.candidate.id] ?? project.projectName}
-                      onChange={(event) =>
-                        setProjectNames((current) => ({
-                          ...current,
-                          [topic.candidate.id]: event.target.value,
-                        }))
-                      }
-                    />
-                  </label>
+                  <div className="mt-3 flex flex-wrap items-end gap-sm border-t border-slate-200 pt-3">
+                    <label className="grid gap-1 text-sm text-inkMuted">
+                      <span>Project name</span>
+                      <input
+                        aria-label={`Project name for ${topic.topicName}`}
+                        className="h-9 w-56 rounded border border-slate-300 px-3 text-sm text-ink focus:border-primary focus:outline-none"
+                        value={projectNames[topic.candidate.id] ?? project.projectName}
+                        onChange={(event) =>
+                          setProjectNames((current) => ({
+                            ...current,
+                            [topic.candidate.id]: event.target.value,
+                          }))
+                        }
+                      />
+                    </label>
 
-                  <button
-                    type="button"
-                    aria-label={`Generate knowledge for ${topic.topicName}`}
-                    className="h-9 rounded border border-primary bg-primary px-3 text-sm font-medium text-white disabled:opacity-60"
-                    disabled={
-                      knowledge !== undefined || generatingCandidateId !== null
-                    }
-                    onClick={() => {
-                      void generatePreviewKnowledge(topic)
-                    }}
-                  >
-                    {generatingCandidateId === topic.candidate.id
-                      ? 'Generating'
-                      : knowledge === undefined
-                        ? 'Generate'
-                        : 'Generated'}
-                  </button>
-                  {knowledge && (
                     <button
                       type="button"
-                      className="h-9 rounded border border-primary bg-primary px-3 text-sm font-medium text-white disabled:cursor-wait disabled:opacity-60"
-                      disabled={reviewingCandidateId !== null || publishingCandidateId !== null}
-                      onClick={() => void publishPreviewKnowledge(project, topic, knowledge)}
+                      aria-label={`Generate knowledge for ${topic.topicName}`}
+                      className="h-9 rounded border border-primary bg-primary px-3 text-sm font-medium text-white disabled:opacity-60"
+                      disabled={
+                        knowledge !== undefined || generatingCandidateId !== null
+                      }
+                      onClick={() => {
+                        void generatePreviewKnowledge(topic)
+                      }}
                     >
-                      {publishingCandidateId === knowledge.candidateId ? 'Publishing' : 'Publish'}
+                      {generatingCandidateId === topic.candidate.id
+                        ? 'Generating'
+                        : knowledge === undefined
+                          ? 'Generate'
+                          : 'Generated'}
                     </button>
-                  )}
-                  <button
-                    type="button"
-                    className="h-9 rounded border border-slate-300 px-3 text-sm font-medium text-ink transition-colors hover:border-red-400 hover:text-red-700 disabled:cursor-wait disabled:opacity-60"
-                    disabled={reviewingCandidateId !== null || publishingCandidateId !== null}
-                    onClick={() => void discardCandidate(topic.candidate)}
-                  >
-                    Discard
-                  </button>
-                </div>
+                    {knowledge && (
+                      <button
+                        type="button"
+                        className="h-9 rounded border border-primary bg-primary px-3 text-sm font-medium text-white disabled:cursor-wait disabled:opacity-60"
+                        disabled={reviewingCandidateId !== null || publishingCandidateId !== null}
+                        onClick={() => void publishPreviewKnowledge(project, topic, knowledge)}
+                      >
+                        {publishingCandidateId === knowledge.candidateId ? 'Publishing' : 'Publish'}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="h-9 rounded border border-slate-300 px-3 text-sm font-medium text-ink transition-colors hover:border-red-400 hover:text-red-700 disabled:cursor-wait disabled:opacity-60"
+                      disabled={reviewingCandidateId !== null || publishingCandidateId !== null}
+                      onClick={() => void discardCandidate(topic.candidate)}
+                    >
+                      Discard
+                    </button>
+                  </div>
                 </article>
               ))}
             </div>

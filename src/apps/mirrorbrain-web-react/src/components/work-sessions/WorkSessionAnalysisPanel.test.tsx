@@ -34,6 +34,22 @@ describe('WorkSessionAnalysisPanel', () => {
               endAt: '2026-05-12T10:30:00.000Z',
             },
             relationHints: ['Phase 4 design', 'Run tests'],
+            evidenceItems: [
+              {
+                memoryEventId: 'browser-1',
+                sourceType: 'browser',
+                title: 'Phase 4 design',
+                url: 'https://docs.example.test/phase-4',
+                excerpt: 'Phase 4 design context.',
+              },
+              {
+                memoryEventId: 'shell-1',
+                sourceType: 'file-activity',
+                title: 'Run tests',
+                filePath: '/tmp/mirrorbrain/test.log',
+                excerpt: 'Ran source tests.',
+              },
+            ],
             reviewState: 'pending' as const,
           },
         ],
@@ -88,7 +104,11 @@ describe('WorkSessionAnalysisPanel', () => {
       expect(api.analyzeWorkSessions).toHaveBeenCalledWith('last-6-hours')
     })
     expect(await screen.findAllByText('Phase 4 design')).toHaveLength(2)
-    expect(screen.getAllByText('mirrorbrain').length).toBeGreaterThan(0)
+    expect(screen.getByText('Run tests')).not.toBeNull()
+    expect(screen.getByText('browser')).not.toBeNull()
+    expect(screen.getByText('files')).not.toBeNull()
+    expect(screen.queryByText('Imported source ledgers and ran source tests.')).toBeNull()
+    expect(screen.getByDisplayValue('mirrorbrain')).not.toBeNull()
     expect(screen.getByText('1 excluded')).not.toBeNull()
     expect(screen.queryByRole('button', { name: 'Publish' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Keep as project' })).toBeNull()
@@ -172,12 +192,9 @@ describe('WorkSessionAnalysisPanel', () => {
     })
     await user.click(screen.getByRole('button', { name: 'Last 6h' }))
 
-    const treeRail = await screen.findByTestId('work-session-tree-rail')
-    expect(within(treeRail).queryByRole('tab', { name: 'Preview' })).toBeNull()
-    expect(within(treeRail).queryByRole('tab', { name: 'Published' })).toBeNull()
-    expect(within(treeRail).getByText('mirrorbrain')).not.toBeNull()
-    expect(within(treeRail).getByText('Source ledger')).not.toBeNull()
-    expect(within(treeRail).getByText('Knowledge not generated')).not.toBeNull()
+    expect(screen.queryByTestId('work-session-tree-rail')).toBeNull()
+    expect(screen.getAllByText('Source ledger').length).toBeGreaterThan(0)
+    expect(screen.getByText('Knowledge has not been generated for this topic.')).not.toBeNull()
     expect(
       screen.getByRole('button', { name: 'Generate knowledge for Source ledger' }),
     ).not.toBeNull()
@@ -382,8 +399,8 @@ describe('WorkSessionAnalysisPanel', () => {
 
     expect(await screen.findByText('Published preview knowledge.')).not.toBeNull()
     expect(screen.queryByRole('button', { name: 'Publish' })).toBeNull()
-    const treeRail = screen.getByTestId('work-session-tree-rail')
-    expect(within(treeRail).queryByText('Source ledger architecture')).toBeNull()
+    expect(screen.queryByTestId('work-session-tree-rail')).toBeNull()
+    expect(screen.queryByText('Source ledger architecture')).toBeNull()
     expect(screen.queryByTestId('published-knowledge-panel')).toBeNull()
   })
 
