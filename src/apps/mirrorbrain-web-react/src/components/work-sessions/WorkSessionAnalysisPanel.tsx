@@ -6,7 +6,6 @@ import type {
   KnowledgeArticleTree,
   WorkSessionCandidate,
   WorkSessionAnalysisResult,
-  WorkSessionReviewResult,
 } from '../../types'
 import {
   buildWorkSessionPreviewTree,
@@ -51,9 +50,6 @@ export default function WorkSessionAnalysisPanel({
   const [deletingArticleId, setDeletingArticleId] = useState<string | null>(null)
   const [generatedKnowledgeByCandidateId, setGeneratedKnowledgeByCandidateId] =
     useState<Record<string, WorkSessionPreviewKnowledgeNode>>({})
-  const [reviewResults, setReviewResults] = useState<
-    Record<string, WorkSessionReviewResult>
-  >({})
   const [removedPreviewCandidateIds, setRemovedPreviewCandidateIds] = useState<
     Set<string>
   >(() => new Set())
@@ -134,7 +130,6 @@ export default function WorkSessionAnalysisPanel({
       setAnalysis(result)
       setProjectNames({})
       setGeneratedKnowledgeByCandidateId({})
-      setReviewResults({})
       setRemovedPreviewCandidateIds(new Set())
     } catch (caughtError) {
       setError(
@@ -147,49 +142,25 @@ export default function WorkSessionAnalysisPanel({
     }
   }
 
-  const reviewCandidate = async (
-    candidate: WorkSessionCandidate,
-    decision: 'keep' | 'discard',
-    fallbackProjectName?: string,
-  ) => {
+  const discardCandidate = async (candidate: WorkSessionCandidate) => {
     setReviewingCandidateId(candidate.id)
     setError(null)
     setActionFeedback(null)
 
     try {
-      const projectName =
-        projectNames[candidate.id]?.trim() ||
-        fallbackProjectName ||
-        candidate.projectHint
-      const result = await api.reviewWorkSessionCandidate(candidate, {
-        decision,
+      await api.reviewWorkSessionCandidate(candidate, {
+        decision: 'discard',
         reviewedBy: 'mirrorbrain-web',
         title: candidate.title,
         summary: candidate.summary,
-        ...(decision === 'keep'
-          ? {
-              projectAssignment: {
-                kind: 'confirmed-new-project' as const,
-                name: projectName,
-              },
-            }
-          : {}),
       })
 
-      setReviewResults((current) => ({
-        ...current,
-        [candidate.id]: result,
-      }))
       setRemovedPreviewCandidateIds((current) => {
         const next = new Set(current)
         next.add(candidate.id)
         return next
       })
-      setActionFeedback(
-        decision === 'keep'
-          ? `Reviewed into project: ${result.reviewedWorkSession.projectId}`
-          : 'Discarded work session.',
-      )
+      setActionFeedback('Discarded work session.')
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
@@ -247,10 +218,6 @@ export default function WorkSessionAnalysisPanel({
         },
       })
 
-      setReviewResults((current) => ({
-        ...current,
-        [candidate.id]: reviewResult,
-      }))
       setPublishedTree(await api.listKnowledgeArticleTree())
       setRemovedPreviewCandidateIds((current) => {
         const next = new Set(current)
@@ -597,16 +564,6 @@ export default function WorkSessionAnalysisPanel({
                   >
                     {knowledge === undefined ? 'Generate' : 'Generated'}
                   </button>
-                  <button
-                    type="button"
-                    className="h-9 rounded border border-primary bg-primary px-3 text-sm font-medium text-white disabled:cursor-wait disabled:opacity-60"
-                    disabled={reviewingCandidateId !== null || publishingCandidateId !== null}
-                    onClick={() =>
-                      void reviewCandidate(topic.candidate, 'keep', project.projectName)
-                    }
-                  >
-                    {reviewingCandidateId === topic.candidate.id ? 'Saving' : 'Keep as project'}
-                  </button>
                   {knowledge && (
                     <button
                       type="button"
@@ -621,18 +578,10 @@ export default function WorkSessionAnalysisPanel({
                     type="button"
                     className="h-9 rounded border border-slate-300 px-3 text-sm font-medium text-ink transition-colors hover:border-red-400 hover:text-red-700 disabled:cursor-wait disabled:opacity-60"
                     disabled={reviewingCandidateId !== null || publishingCandidateId !== null}
-                    onClick={() => void reviewCandidate(topic.candidate, 'discard')}
+                    onClick={() => void discardCandidate(topic.candidate)}
                   >
                     Discard
                   </button>
-
-                  {reviewResults[topic.candidate.id] && (
-                    <span className="text-sm font-medium text-green-700">
-                      {reviewResults[topic.candidate.id].reviewedWorkSession.projectId
-                        ? `Reviewed into project: ${reviewResults[topic.candidate.id].reviewedWorkSession.projectId}`
-                        : 'Discarded work session'}
-                    </span>
-                  )}
                 </div>
                 </article>
               ))}

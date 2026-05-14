@@ -268,7 +268,8 @@ pnpm dev
 3. **Work Sessions Tab:**
    - Click an analysis window
    - Confirm or edit the project name on a candidate
-   - Click "Keep as project" or "Discard"
+   - Click "Generate", then "Publish" to add it under the edited project name,
+     or click "Discard"
    - In Published, click "Delete" on a knowledge article to remove that
      published article lineage
 

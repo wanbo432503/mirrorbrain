@@ -41,9 +41,10 @@ The component owns:
   instead of silently showing a knowledge artifact.
 - Rendering Published as Project -> Topic -> many historical Knowledge Articles
   per topic.
-- Letting the user confirm a project name before keeping a candidate.
+- Letting the user edit the project name that will be used when publishing a
+  generated preview knowledge item.
 - Letting the user discard a candidate.
-- Removing kept, published, and discarded candidates from the Preview tree so
+- Removing published and discarded candidates from the Preview tree so
   Preview remains a queue of work still waiting for review.
 - Showing the Published article body in the right panel when the user switches
   to the Published tree.
@@ -81,7 +82,7 @@ Output:
   work-session candidates.
 - A preview Project -> Topic -> Knowledge tree for the latest analysis window.
 - A published Project -> Topic -> Knowledge tree for durable articles.
-- Explicit keep/discard review requests sent to the service.
+- Explicit discard review requests sent to the service.
 - Explicit publish requests sent to the service.
 - Explicit delete requests for published Knowledge Article lineages.
 - Local loading and error state.
@@ -100,17 +101,15 @@ Output:
 6. The user clicks `Generate` for a topic, creating one preview knowledge item
    for that topic. The generated body includes a References section built from
    the supporting memory events.
-7. The user can keep the candidate as a reviewed project assignment without
-   publishing knowledge. This records the reviewed work session and removes the
-   candidate from Preview.
-8. The user can discard the candidate. This records a discard review and removes
+7. The user can discard the candidate. This records a discard review and removes
    the candidate from Preview.
-9. The user publishes a generated preview knowledge item.
-10. The panel records the reviewed work session, generates a Knowledge Article
+8. The user publishes a generated preview knowledge item.
+9. The panel records the reviewed work session, generates a Knowledge Article
    Draft, publishes it, refreshes the Published tree, and removes or marks the
    preview item. After publication, the panel switches to Published so the user
-   can see the durable article in its Project -> Topic -> Knowledge location.
-11. In Published, the user can delete one Knowledge Article. The panel deletes
+   can see the durable article under the edited Project -> Topic -> Knowledge
+   location.
+10. In Published, the user can delete one Knowledge Article. The panel deletes
     that article lineage through the API and refreshes the Published tree.
 
 ## Failure Modes And Constraints
@@ -118,14 +117,14 @@ Output:
 - A failed analysis request is shown as a local error.
 - Buttons are disabled while one analysis request is in flight.
 - Analysis results are not stored in browser local storage.
-- Candidates remain `pending` until the user clicks an explicit keep/discard
-  action.
+- Candidates remain `pending` until the user clicks an explicit publish or
+  discard action.
 - The UI does not silently create knowledge articles or skills. Knowledge
   Article publication requires an explicit Publish action on the preview item.
-- `Keep as project` is intentionally not a publish operation. It confirms the
-  project assignment and reviewed work-session state only.
 - `Publish` moves the preview candidate out of the Preview queue and refreshes
   Published. It should not leave the same knowledge visible in both tree modes.
+- Project name edits are applied by `Publish`; there is no standalone
+  project-only keep action in this surface.
 - `Discard` removes the preview candidate after the discard review succeeds.
 - Published deletion applies to the selected Knowledge Article lineage. It does
   not delete source memory events or preview candidates.
@@ -139,8 +138,7 @@ and `src/apps/mirrorbrain-web-react/src/App.test.tsx`.
 The tests verify:
 
 - The panel calls the API with the selected preset and renders candidates.
-- The panel sends explicit keep review payloads with confirmed project
-  assignment.
+- The panel does not render a standalone `Keep as project` action.
 - The panel renders Preview and Published tree modes with Project -> Topic ->
   Knowledge hierarchy.
 - Preview topics do not expose `Publish` until the user explicitly generates
@@ -149,11 +147,12 @@ The tests verify:
   with references inside the article, without a separate associated-memory or
   provenance metadata block.
 - The panel publishes preview knowledge through review, draft generation, and
-  article publication API calls.
+  article publication API calls, using the edited project name in the publish
+  review payload.
 - Publishing moves the candidate from Preview to Published and renders the
   published article body in the Published panel.
-- Keeping and discarding candidates remove them from the Preview queue and show
-  explicit status feedback.
+- Discarding candidates removes them from the Preview queue and shows explicit
+  status feedback.
 - Published Knowledge Article deletion calls the dedicated article delete API,
   refreshes the Published tree, and shows explicit status feedback.
 - The app routes the Review surface to the work-session review panel and no

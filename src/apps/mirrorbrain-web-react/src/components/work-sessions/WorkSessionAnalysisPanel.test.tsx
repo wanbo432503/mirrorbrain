@@ -11,7 +11,7 @@ afterEach(() => {
 })
 
 describe('WorkSessionAnalysisPanel', () => {
-  it('runs a manual analysis window and renders pending work-session candidates', async () => {
+  it('runs a manual analysis window and renders pending work-session candidates without standalone keep action', async () => {
     const api = {
       analyzeWorkSessions: vi.fn(async () => ({
         analysisWindow: {
@@ -81,34 +81,14 @@ describe('WorkSessionAnalysisPanel', () => {
     expect(screen.getAllByText('mirrorbrain').length).toBeGreaterThan(0)
     expect(screen.getByText('1 excluded')).not.toBeNull()
     expect(screen.queryByRole('button', { name: 'Publish' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Keep as project' })).toBeNull()
 
     await user.click(screen.getByRole('button', { name: 'Generate knowledge for Phase 4 design' }))
     expect(await screen.findByRole('button', { name: 'Publish' })).not.toBeNull()
-
-    await user.clear(screen.getByLabelText('Project name for Phase 4 design'))
-    await user.type(screen.getByLabelText('Project name for Phase 4 design'), 'MirrorBrain')
-    await user.click(screen.getByRole('button', { name: 'Keep as project' }))
-
-    expect(api.reviewWorkSessionCandidate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: 'work-session-candidate:mirrorbrain:2026-05-12T12:00:00.000Z',
-      }),
-      {
-        decision: 'keep',
-        reviewedBy: 'mirrorbrain-web',
-        title: 'mirrorbrain work session',
-        summary: 'Imported source ledgers and ran source tests.',
-        projectAssignment: {
-          kind: 'confirmed-new-project',
-          name: 'MirrorBrain',
-        },
-      },
-    )
+    expect(screen.queryByRole('button', { name: 'Keep as project' })).toBeNull()
+    expect(api.reviewWorkSessionCandidate).not.toHaveBeenCalled()
     expect(api.generateKnowledgeArticleDraft).not.toHaveBeenCalled()
     expect(api.publishKnowledgeArticleDraft).not.toHaveBeenCalled()
-    expect(await screen.findByText('Reviewed into project: project:mirrorbrain')).not.toBeNull()
-    expect(screen.queryByRole('button', { name: 'Keep as project' })).toBeNull()
-    expect(screen.queryByText('Phase 4 design')).toBeNull()
   })
 
   it('renders preview and published knowledge trees for the merged review flow', async () => {
@@ -216,7 +196,7 @@ describe('WorkSessionAnalysisPanel', () => {
     const reviewedWorkSession = {
       id: 'reviewed-work-session:source-ledger',
       candidateId: candidate.id,
-      projectId: 'project:mirrorbrain',
+      projectId: 'project:custom-research',
       title: candidate.title,
       summary: candidate.summary,
       memoryEventIds: candidate.memoryEventIds,
@@ -240,7 +220,7 @@ describe('WorkSessionAnalysisPanel', () => {
     const draft = {
       id: 'knowledge-article-draft:source-ledger',
       draftState: 'draft' as const,
-      projectId: 'project:mirrorbrain',
+      projectId: 'project:custom-research',
       title: candidate.title,
       summary: candidate.summary,
       body: expectedPreviewBody,
@@ -273,8 +253,8 @@ describe('WorkSessionAnalysisPanel', () => {
       projects: [
         {
           project: {
-            id: 'project:mirrorbrain',
-            name: 'MirrorBrain',
+            id: 'project:custom-research',
+            name: 'Custom Research',
             status: 'active' as const,
             createdAt: '2026-05-12T12:00:00.000Z',
             updatedAt: '2026-05-12T12:00:00.000Z',
@@ -316,8 +296,8 @@ describe('WorkSessionAnalysisPanel', () => {
       reviewWorkSessionCandidate: vi.fn(async () => ({
         reviewedWorkSession,
         project: {
-          id: 'project:mirrorbrain',
-          name: 'MirrorBrain',
+          id: 'project:custom-research',
+          name: 'Custom Research',
           status: 'active' as const,
           createdAt: '2026-05-12T12:05:00.000Z',
           updatedAt: '2026-05-12T12:05:00.000Z',
@@ -355,6 +335,8 @@ describe('WorkSessionAnalysisPanel', () => {
     expect(screen.queryByText('Topic')).toBeNull()
     expect(screen.queryByText('Sources')).toBeNull()
     expect(screen.queryByText('Provenance')).toBeNull()
+    await user.clear(screen.getByLabelText('Project name for Source ledger'))
+    await user.type(screen.getByLabelText('Project name for Source ledger'), 'Custom Research')
     await user.click(await screen.findByRole('button', { name: 'Publish' }))
 
     expect(api.reviewWorkSessionCandidate).toHaveBeenCalledWith(candidate, {
@@ -364,7 +346,7 @@ describe('WorkSessionAnalysisPanel', () => {
       summary: candidate.summary,
       projectAssignment: {
         kind: 'confirmed-new-project',
-        name: 'mirrorbrain',
+        name: 'Custom Research',
       },
     })
     expect(api.generateKnowledgeArticleDraft).toHaveBeenCalledWith({
@@ -389,6 +371,9 @@ describe('WorkSessionAnalysisPanel', () => {
     expect(screen.queryByRole('button', { name: 'Publish' })).toBeNull()
     expect(screen.getByTestId('published-knowledge-panel').textContent).toContain(
       'Source ledger architecture',
+    )
+    expect(screen.getByTestId('published-knowledge-panel').textContent).toContain(
+      'Custom Research / Source ledger',
     )
     expect(screen.getByTestId('published-knowledge-panel').textContent).toContain(
       expectedPreviewBody,
