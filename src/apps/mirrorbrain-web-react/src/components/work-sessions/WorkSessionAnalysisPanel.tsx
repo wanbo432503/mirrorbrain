@@ -35,6 +35,33 @@ function formatWindow(result: WorkSessionAnalysisResult): string {
   return `${result.analysisWindow.startAt} to ${result.analysisWindow.endAt}`
 }
 
+function formatVersionCount(count: number): string {
+  return count === 1 ? '1 version' : `${count} versions`
+}
+
+function TreeChevron({ expanded }: { expanded: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`grid h-5 w-5 shrink-0 place-items-center rounded border border-slate-200 bg-canvas text-inkMuted transition-transform duration-150 ${
+        expanded ? 'rotate-90' : ''
+      }`}
+    >
+      <svg
+        viewBox="0 0 16 16"
+        className="h-3 w-3"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      >
+        <path d="M6 4l4 4-4 4" />
+      </svg>
+    </span>
+  )
+}
+
 export default function WorkSessionAnalysisPanel({
   api,
   mode = 'preview',
@@ -455,9 +482,7 @@ export default function WorkSessionAnalysisPanel({
               onClick={() => toggleProject(projectNode.project.id)}
               className="flex min-w-0 items-center gap-2 rounded px-2 py-1 text-left text-sm font-semibold text-ink transition-colors hover:bg-slate-100"
             >
-              <span className="w-4 shrink-0 text-center text-xs text-inkMuted">
-                {expandedProjectIds.has(projectNode.project.id) ? 'v' : '>'}
-              </span>
+              <TreeChevron expanded={expandedProjectIds.has(projectNode.project.id)} />
               <span className="min-w-0 flex-1 truncate">{projectNode.project.name}</span>
               <span className="shrink-0 text-xs font-normal text-inkMuted">
                 {projectNode.topics.length}
@@ -476,9 +501,7 @@ export default function WorkSessionAnalysisPanel({
                     onClick={() => toggleTopic(topicNode.topic.id)}
                     className="flex min-w-0 items-center gap-2 rounded px-2 py-1 text-left text-sm font-medium text-ink transition-colors hover:bg-slate-100"
                   >
-                    <span className="w-4 shrink-0 text-center text-xs text-inkMuted">
-                      {expandedTopicIds.has(topicNode.topic.id) ? 'v' : '>'}
-                    </span>
+                    <TreeChevron expanded={expandedTopicIds.has(topicNode.topic.id)} />
                     <span className="min-w-0 flex-1 truncate">{topicNode.topic.name}</span>
                     <span className="shrink-0 text-xs font-normal text-inkMuted">
                       {topicNode.articles.length}
@@ -503,9 +526,6 @@ export default function WorkSessionAnalysisPanel({
                           }`}
                         >
                           <span className="block truncate font-medium">{articleNode.title}</span>
-                          <span className="mt-1 block text-xs text-inkMuted">
-                            {articleNode.history.length} versions
-                          </span>
                         </button>
                       )
                     })}
@@ -548,6 +568,16 @@ export default function WorkSessionAnalysisPanel({
             <p className="mt-1 text-sm text-inkMuted">
               {projectNode.project.name} / {topicNode.topic.name}
             </p>
+            {article && (
+              <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-inkMuted">
+                <span className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5">
+                  Version {article.version}
+                </span>
+                <span className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5">
+                  {formatVersionCount(articleNode.history.length)}
+                </span>
+              </p>
+            )}
           </div>
           <button
             type="button"

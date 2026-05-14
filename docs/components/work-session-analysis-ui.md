@@ -58,7 +58,9 @@ The component owns:
 - Rendering Published with a collapsible Project -> Topic -> Knowledge tree in
   the left rail. Project and topic nodes can be opened or collapsed, and
   clicking one knowledge article displays that single article in the right
-  panel. The first project, first topic, and first article are selected by
+  panel. Knowledge rows in the tree stay focused on the article title; version
+  metadata is shown in the selected article detail header instead of under the
+  tree row. The first project, first topic, and first article are selected by
   default when the tree loads.
 - Rendering a compact one-line revision request control fixed to the bottom of
   the selected Published article panel. The article body scrolls independently,
@@ -201,6 +203,8 @@ The tests verify:
 - The Published tree opens the first project/topic/article by default, allows
   project and topic collapse, and switches the right panel when a knowledge
   article is clicked.
+- Published tree article rows do not show version metadata; the selected
+  article detail header shows the current version and total stored versions.
 - Published revision sends the selected article lineage plus user instruction
   to the revision API, refreshes the tree, clears the request box, and displays
   the revised current-best article body.

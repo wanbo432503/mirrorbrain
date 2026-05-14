@@ -557,6 +557,9 @@ describe('WorkSessionAnalysisPanel', () => {
         .getAttribute('aria-expanded'),
     ).toBe('true')
     expect(screen.getByTestId('published-knowledge-panel').textContent).toContain('Alpha body.')
+    expect(within(treeRail).queryByText(/version/i)).toBeNull()
+    expect(screen.getByTestId('published-knowledge-panel').textContent).toContain('Version 1')
+    expect(screen.getByTestId('published-knowledge-panel').textContent).toContain('1 version')
 
     await user.click(within(treeRail).getByRole('button', { name: /Beta article/ }))
 
