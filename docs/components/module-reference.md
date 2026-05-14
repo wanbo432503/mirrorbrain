@@ -653,21 +653,6 @@ Failure modes and constraints:
 Verification:
 
 - `src/modules/memory-review/index.test.ts`
-- `src/modules/memory-review/normalize-memory-items.test.ts`
-
-### `src/modules/memory-review/normalize-memory-items`
-
-Purpose: normalize heterogeneous raw memory events for review UI and candidate
-generation helpers.
-
-Responsibilities:
-
-- Convert raw events into stable display items with source category, title,
-  URL/command fields, and timestamps.
-
-Verification:
-
-- `src/modules/memory-review/normalize-memory-items.test.ts`
 
 ### `src/modules/project-work-session`
 
@@ -764,36 +749,6 @@ Constraints:
 Verification:
 
 - `src/modules/memory-events-cache/memory-event-evaluator.test.ts`
-
-### `src/modules/daily-review-knowledge`
-
-Purpose: produce a structured daily-review knowledge draft from reviewed
-memories.
-
-Responsibilities:
-
-- Build `daily-review-draft` artifacts.
-- Preserve source reviewed memory ids and provenance refs.
-- Include candidate title, summary, time range, duration, primary/supporting
-  sources, and formation reasons.
-- Derive a topic key from candidate theme when available.
-
-Inputs:
-
-- `ReviewedMemory[]`.
-
-Outputs:
-
-- Draft `KnowledgeArtifact` with provenance and recency metadata.
-
-Failure modes and constraints:
-
-- Empty inputs produce a generic draft shape; durable publication still requires
-  later review/approval.
-
-Verification:
-
-- `src/modules/daily-review-knowledge/index.test.ts`
 
 ### `src/modules/knowledge-article`
 
@@ -1255,19 +1210,6 @@ Constraints:
 Verification:
 
 - `src/workflows/shell-problem-narratives/index.test.ts`
-
-### `src/workflows/daily-review`
-
-Purpose: preserve the original daily-review orchestration boundary.
-
-Responsibilities:
-
-- Convert reviewed memories into a daily-review knowledge draft through
-  `daily-review-knowledge`.
-
-Verification:
-
-- `src/workflows/daily-review/index.test.ts`
 
 ### `src/workflows/topic-knowledge-merge`
 

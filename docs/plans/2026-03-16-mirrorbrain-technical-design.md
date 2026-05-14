@@ -42,9 +42,7 @@ The Phase 1 slice is not complete as a backend-only code path. It must include:
 - `src/modules/authorization-scope-policy`
 - `src/modules/memory-capture`
 - `src/modules/memory-review`
-- `src/modules/daily-review-knowledge`
 - `src/modules/skill-draft-management`
-- `src/workflows/daily-review`
 - `src/workflows/skill-draft-builder`
 - `src/integrations/agent-memory-api`
 

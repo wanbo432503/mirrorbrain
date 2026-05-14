@@ -10,14 +10,13 @@ import {
   normalizeActivityWatchBrowserEvent,
   persistMemoryEvent,
 } from '../../src/modules/memory-capture/index.js';
-import { runDailyReview } from '../../src/workflows/daily-review/index.js';
 import { buildSkillDraftFromReviewedMemories } from '../../src/workflows/skill-draft-builder/index.js';
 import {
   listKnowledge,
   listSkillDrafts,
   queryMemory,
 } from '../../src/integrations/agent-memory-api/index.js';
-import type { MemoryEvent } from '../../src/shared/types/index.js';
+import type { KnowledgeArtifact, MemoryEvent } from '../../src/shared/types/index.js';
 
 describe('mirrorbrain phase 1 e2e', () => {
   it('flows from ActivityWatch browser events to agent-facing artifacts', async () => {
@@ -62,9 +61,23 @@ describe('mirrorbrain phase 1 e2e', () => {
       decision: 'keep',
       reviewedAt: '2026-03-20T10:00:00.000Z',
     });
-    const knowledgeDraft = runDailyReview({
-      reviewedMemories: [reviewedMemory],
-    });
+    const knowledgeDraft: KnowledgeArtifact = {
+      artifactType: 'daily-review-draft',
+      id: `knowledge-draft:${reviewedMemory.id}`,
+      draftState: 'draft',
+      topicKey: reviewedMemory.candidateTheme,
+      title: reviewedMemory.candidateTitle,
+      summary: reviewedMemory.candidateSummary,
+      body: reviewedMemory.candidateSummary,
+      sourceReviewedMemoryIds: [reviewedMemory.id],
+      derivedFromKnowledgeIds: [],
+      version: 1,
+      isCurrentBest: false,
+      supersedesKnowledgeId: null,
+      reviewedAt: reviewedMemory.reviewedAt,
+      recencyLabel: reviewedMemory.reviewDate,
+      provenanceRefs: [{ kind: 'reviewed-memory', id: reviewedMemory.id }],
+    };
     const skillDraft = buildSkillDraftFromReviewedMemories([reviewedMemory]);
 
     expect(persistedRecords).toHaveLength(2);

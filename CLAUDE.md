@@ -464,7 +464,7 @@ Use for business/domain modules that encapsulate a clear slice of logic. Example
 - candidate-note generation
 - task clustering
 - workflow detection
-- daily-review knowledge synthesis
+- knowledge synthesis from reviewed work
 - memory source attribution
 
 Prefer `src/modules/` for domain behavior and `src/shared/` only for genuinely generic code.
@@ -473,7 +473,6 @@ For Phase 1, prefer bounded modules named close to product capabilities, for exa
 
 - `memory-capture`
 - `memory-review`
-- `daily-review-knowledge`
 - `skill-draft-management`
 - `authorization-scope-policy`
 
@@ -518,7 +517,6 @@ Keep workflow execution safety checks close to the execution logic, not spread a
 - Avoid vague names such as `utils`, `helpers`, `common`, `misc`, or `temp` unless the file is truly narrow and local.
 - Prefer names that reveal responsibility, for example:
   - `candidate-note-ranker`
-  - `daily-review-knowledge-synthesizer`
   - `agent-memory-api`
   - `authorization-scope-policy`
   - `workflow-skill-draft-builder`
