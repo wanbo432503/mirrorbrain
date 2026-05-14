@@ -29,6 +29,9 @@ The component owns:
 - Loading the Published Project -> Topic -> Knowledge tree from the API.
 - Deleting published Knowledge Article lineages from the Published panel and
   refreshing the Published tree after deletion.
+- Revising the currently selected published Knowledge Article through an
+  explicit user instruction, then refreshing the tree so the new current-best
+  article version is shown.
 - Rendering the returned analysis window, excluded event count, and generated
   knowledge content.
 - Rendering generated preview knowledge as a complete scrollable article body.
@@ -52,6 +55,14 @@ The component owns:
   Preview remains a queue of work still waiting for review.
 - Showing Published article bodies in the right panel when the user opens the
   top-level Published tab.
+- Rendering Published with a collapsible Project -> Topic -> Knowledge tree in
+  the left rail. Project and topic nodes can be opened or collapsed, and
+  clicking one knowledge article displays that single article in the right
+  panel. The first project, first topic, and first article are selected by
+  default when the tree loads.
+- Rendering a revision request box below the selected Published article. The
+  box sends the user's instruction to the service, where LLM revision creates a
+  new version in the same article lineage while preserving source provenance.
 - Displaying request errors without mutating candidate state.
 
 The component does not own:
@@ -81,6 +92,8 @@ Input:
   - `listKnowledgeArticleTree()` calls `GET /knowledge-articles/tree`.
   - `deleteKnowledgeArticle(articleId)` calls
     `DELETE /knowledge-articles/:articleId`.
+  - `reviseKnowledgeArticle(request)` calls
+    `POST /knowledge-articles/revise`.
 
 Output:
 
@@ -122,6 +135,12 @@ Output:
 10. In the top-level Published tab, the user can delete one Knowledge Article.
     The panel deletes that article lineage through the API and refreshes the
     Published tree.
+11. In the top-level Published tab, the user can select one article and submit
+    a revision instruction. The panel sends the selected article lineage ids
+    and instruction to `POST /knowledge-articles/revise`; the service asks the
+    configured LLM for a complete revised article, publishes it as the next
+    current-best version, and returns the updated article. The panel refreshes
+    the tree and keeps the same article lineage selected.
 
 ## Failure Modes And Constraints
 
@@ -142,6 +161,11 @@ Output:
 - `Discard` removes the preview candidate after the discard review succeeds.
 - Published deletion applies to the selected Knowledge Article lineage. It does
   not delete source memory events or preview candidates.
+- Published revision requires an explicit user instruction and a configured LLM
+  path. It produces a new article version rather than mutating the previous
+  version in place.
+- Published revision preserves the selected article's project, topic, article
+  lineage, reviewed work-session refs, memory-event refs, and provenance refs.
 
 ## Test Strategy
 
@@ -171,6 +195,12 @@ The tests verify:
   status feedback.
 - Published Knowledge Article deletion calls the dedicated article delete API,
   refreshes the Published tree, and shows explicit status feedback.
+- The Published tree opens the first project/topic/article by default, allows
+  project and topic collapse, and switches the right panel when a knowledge
+  article is clicked.
+- Published revision sends the selected article lineage plus user instruction
+  to the revision API, refreshes the tree, clears the request box, and displays
+  the revised current-best article body.
 - The app routes the top-level Preview and Published tabs to the work-session
   panel modes and no longer exposes Review or Work Sessions as separate primary
   routes.

@@ -330,6 +330,16 @@ export interface PublishKnowledgeArticleDraftResult {
   supersededArticle?: KnowledgeArticle;
 }
 
+export interface ReviseKnowledgeArticleRequest {
+  projectId: string;
+  topicId: string;
+  articleId: string;
+  instruction: string;
+  revisedBy: string;
+}
+
+export type ReviseKnowledgeArticleResult = PublishKnowledgeArticleDraftResult;
+
 export interface WorkSessionAnalysisResult {
   analysisWindow: WorkSessionAnalysisWindow;
   generatedAt: string;

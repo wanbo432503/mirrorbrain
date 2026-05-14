@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import type { MirrorBrainWebAppApi } from '../../api/client'
+import TextArea from '../forms/TextArea'
+import { KnowledgeMarkdownRenderer } from '../artifacts/KnowledgeMarkdownRenderer'
 import type {
   AnalysisWindowPreset,
+  KnowledgeArticle,
   KnowledgeArticleTree,
   WorkSessionCandidate,
   WorkSessionAnalysisResult,
@@ -50,6 +53,11 @@ export default function WorkSessionAnalysisPanel({
   const [generatingCandidateId, setGeneratingCandidateId] = useState<string | null>(null)
   const [publishingCandidateId, setPublishingCandidateId] = useState<string | null>(null)
   const [deletingArticleId, setDeletingArticleId] = useState<string | null>(null)
+  const [revisingArticleId, setRevisingArticleId] = useState<string | null>(null)
+  const [revisionInstruction, setRevisionInstruction] = useState('')
+  const [selectedPublishedArticleId, setSelectedPublishedArticleId] = useState<string | null>(null)
+  const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(() => new Set())
+  const [expandedTopicIds, setExpandedTopicIds] = useState<Set<string>>(() => new Set())
   const [generatedKnowledgeByCandidateId, setGeneratedKnowledgeByCandidateId] =
     useState<Record<string, WorkSessionPreviewKnowledgeNode>>({})
   const [removedPreviewCandidateIds, setRemovedPreviewCandidateIds] = useState<
@@ -96,6 +104,17 @@ export default function WorkSessionAnalysisPanel({
       ),
     [publishedTree],
   )
+  const selectedPublishedItem = useMemo(() => {
+    if (publishedArticleItems.length === 0) {
+      return null
+    }
+
+    return (
+      publishedArticleItems.find(
+        (item) => item.articleNode.articleId === selectedPublishedArticleId,
+      ) ?? publishedArticleItems[0]
+    )
+  }, [publishedArticleItems, selectedPublishedArticleId])
 
   const loadPublishedTree = useCallback(async () => {
     try {
@@ -114,6 +133,40 @@ export default function WorkSessionAnalysisPanel({
       void loadPublishedTree()
     }
   }, [active, loadPublishedTree])
+
+  useEffect(() => {
+    const firstItem = publishedArticleItems[0]
+
+    if (firstItem === undefined) {
+      setSelectedPublishedArticleId(null)
+      return
+    }
+
+    setSelectedPublishedArticleId((current) =>
+      current !== null &&
+      publishedArticleItems.some((item) => item.articleNode.articleId === current)
+        ? current
+        : firstItem.articleNode.articleId,
+    )
+    setExpandedProjectIds((current) => {
+      if (current.has(firstItem.projectNode.project.id)) {
+        return current
+      }
+
+      const next = new Set(current)
+      next.add(firstItem.projectNode.project.id)
+      return next
+    })
+    setExpandedTopicIds((current) => {
+      if (current.has(firstItem.topicNode.topic.id)) {
+        return current
+      }
+
+      const next = new Set(current)
+      next.add(firstItem.topicNode.topic.id)
+      return next
+    })
+  }, [publishedArticleItems])
 
   const runAnalysis = async (preset: AnalysisWindowPreset) => {
     setRunningPreset(preset)
@@ -280,6 +333,67 @@ export default function WorkSessionAnalysisPanel({
     }
   }
 
+  const revisePublishedKnowledge = async (article: KnowledgeArticle) => {
+    const instruction = revisionInstruction.trim()
+
+    if (instruction.length === 0) {
+      return
+    }
+
+    setRevisingArticleId(article.articleId)
+    setError(null)
+    setActionFeedback(null)
+
+    try {
+      await api.reviseKnowledgeArticle({
+        projectId: article.projectId,
+        topicId: article.topicId,
+        articleId: article.articleId,
+        instruction,
+        revisedBy: 'mirrorbrain-web',
+      })
+      setPublishedTree(await api.listKnowledgeArticleTree())
+      setRevisionInstruction('')
+      setActionFeedback('Revised published knowledge.')
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : 'Failed to revise published knowledge.',
+      )
+    } finally {
+      setRevisingArticleId(null)
+    }
+  }
+
+  const toggleProject = (projectId: string) => {
+    setExpandedProjectIds((current) => {
+      const next = new Set(current)
+
+      if (next.has(projectId)) {
+        next.delete(projectId)
+      } else {
+        next.add(projectId)
+      }
+
+      return next
+    })
+  }
+
+  const toggleTopic = (topicId: string) => {
+    setExpandedTopicIds((current) => {
+      const next = new Set(current)
+
+      if (next.has(topicId)) {
+        next.delete(topicId)
+      } else {
+        next.add(topicId)
+      }
+
+      return next
+    })
+  }
+
   const renderPreviewTree = () => {
     if (previewTree.projects.length === 0) {
       return (
@@ -336,26 +450,68 @@ export default function WorkSessionAnalysisPanel({
       <div className="grid gap-sm">
         {publishedTree.projects.map((projectNode) => (
           <div key={projectNode.project.id} className="grid gap-xs">
-            <div className="text-sm font-semibold text-ink">
-              {projectNode.project.name}
-            </div>
-            {projectNode.topics.map((topicNode) => (
-              <div key={topicNode.topic.id} className="ml-3 grid gap-xs border-l border-slate-200 pl-3">
-                <div className="text-sm font-medium text-ink">{topicNode.topic.name}</div>
-                {topicNode.articles.map((articleNode) => (
+            <button
+              type="button"
+              aria-expanded={expandedProjectIds.has(projectNode.project.id)}
+              onClick={() => toggleProject(projectNode.project.id)}
+              className="flex min-w-0 items-center gap-2 rounded px-2 py-1 text-left text-sm font-semibold text-ink transition-colors hover:bg-slate-100"
+            >
+              <span className="w-4 shrink-0 text-center text-xs text-inkMuted">
+                {expandedProjectIds.has(projectNode.project.id) ? 'v' : '>'}
+              </span>
+              <span className="min-w-0 flex-1 truncate">{projectNode.project.name}</span>
+              <span className="shrink-0 text-xs font-normal text-inkMuted">
+                {projectNode.topics.length}
+              </span>
+            </button>
+
+            {expandedProjectIds.has(projectNode.project.id) &&
+              projectNode.topics.map((topicNode) => (
+                <div
+                  key={topicNode.topic.id}
+                  className="ml-3 grid gap-xs border-l border-slate-200 pl-3"
+                >
                   <button
-                    key={articleNode.articleId}
                     type="button"
-                    className="rounded border border-slate-200 bg-canvas px-3 py-2 text-left text-sm text-ink transition-colors hover:border-primary"
+                    aria-expanded={expandedTopicIds.has(topicNode.topic.id)}
+                    onClick={() => toggleTopic(topicNode.topic.id)}
+                    className="flex min-w-0 items-center gap-2 rounded px-2 py-1 text-left text-sm font-medium text-ink transition-colors hover:bg-slate-100"
                   >
-                    <span className="block font-medium">{articleNode.title}</span>
-                    <span className="mt-1 block text-xs text-inkMuted">
-                      {articleNode.history.length} versions
+                    <span className="w-4 shrink-0 text-center text-xs text-inkMuted">
+                      {expandedTopicIds.has(topicNode.topic.id) ? 'v' : '>'}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate">{topicNode.topic.name}</span>
+                    <span className="shrink-0 text-xs font-normal text-inkMuted">
+                      {topicNode.articles.length}
                     </span>
                   </button>
-                ))}
-              </div>
-            ))}
+
+                  {expandedTopicIds.has(topicNode.topic.id) &&
+                    topicNode.articles.map((articleNode) => {
+                      const selected =
+                        selectedPublishedItem?.articleNode.articleId === articleNode.articleId
+
+                      return (
+                        <button
+                          key={articleNode.articleId}
+                          type="button"
+                          data-testid="published-tree-knowledge-item"
+                          onClick={() => setSelectedPublishedArticleId(articleNode.articleId)}
+                          className={`min-w-0 rounded border px-3 py-2 text-left text-sm text-ink transition-colors ${
+                            selected
+                              ? 'border-primary bg-canvas'
+                              : 'border-slate-200 bg-slate-50 hover:border-primary hover:bg-canvas'
+                          }`}
+                        >
+                          <span className="block truncate font-medium">{articleNode.title}</span>
+                          <span className="mt-1 block text-xs text-inkMuted">
+                            {articleNode.history.length} versions
+                          </span>
+                        </button>
+                      )
+                    })}
+                </div>
+              ))}
           </div>
         ))}
       </div>
@@ -374,44 +530,79 @@ export default function WorkSessionAnalysisPanel({
       )
     }
 
+    if (selectedPublishedItem === null) {
+      return null
+    }
+
+    const { projectNode, topicNode, articleNode, article } = selectedPublishedItem
+
     return (
-      <div data-testid="published-knowledge-panel" className="grid gap-sm">
-        {publishedArticleItems.map(({ projectNode, topicNode, articleNode, article }) => (
-          <article
-            key={article?.id ?? articleNode.articleId}
-            className="min-w-0 rounded border border-slate-200 bg-canvas px-4 py-3"
+      <article
+        data-testid="published-knowledge-panel"
+        className="flex min-h-0 flex-col rounded border border-slate-200 bg-canvas"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-sm border-b border-slate-200 px-4 py-3">
+          <div className="min-w-0">
+            <h3 className="break-words font-heading text-lg font-semibold text-ink">
+              {articleNode.title}
+            </h3>
+            <p className="mt-1 text-sm text-inkMuted">
+              {projectNode.project.name} / {topicNode.topic.name}
+            </p>
+          </div>
+          <button
+            type="button"
+            aria-label={`Delete published knowledge ${articleNode.title}`}
+            className="h-8 rounded border border-red-200 px-3 text-sm font-medium text-red-700 transition-colors hover:border-red-400 hover:bg-red-50 disabled:cursor-wait disabled:opacity-60"
+            disabled={deletingArticleId !== null || revisingArticleId !== null}
+            onClick={() => void deletePublishedKnowledge(articleNode.articleId)}
           >
-            <div className="flex flex-wrap items-start justify-between gap-sm">
-              <div className="min-w-0">
-                <h3 className="break-words font-heading text-base font-semibold text-ink">
-                  {articleNode.title}
-                </h3>
-                <p className="mt-1 text-sm text-inkMuted">
-                  {projectNode.project.name} / {topicNode.topic.name}
-                </p>
-              </div>
-              <button
-                type="button"
-                aria-label={`Delete published knowledge ${articleNode.title}`}
-                className="h-8 rounded border border-red-200 px-3 text-sm font-medium text-red-700 transition-colors hover:border-red-400 hover:bg-red-50 disabled:cursor-wait disabled:opacity-60"
-                disabled={deletingArticleId !== null}
-                onClick={() => void deletePublishedKnowledge(articleNode.articleId)}
-              >
-                {deletingArticleId === articleNode.articleId ? 'Deleting' : 'Delete'}
-              </button>
+            {deletingArticleId === articleNode.articleId ? 'Deleting' : 'Delete'}
+          </button>
+        </div>
+
+        {article ? (
+          <>
+            <div className="min-h-[32vh] flex-1 overflow-y-auto bg-slate-50 px-4 py-4 text-sm leading-6 text-ink">
+              <KnowledgeMarkdownRenderer body={article.body} knowledgeId={article.id} />
             </div>
-            {article ? (
-              <div className="mt-3 max-h-[52vh] overflow-y-auto whitespace-pre-wrap break-words rounded border border-slate-200 bg-slate-50 px-3 py-3 text-sm leading-6 text-ink">
-                {article.body}
+            <form
+              className="grid gap-sm border-t border-slate-200 px-4 py-3"
+              onSubmit={(event) => {
+                event.preventDefault()
+                void revisePublishedKnowledge(article)
+              }}
+            >
+              <TextArea
+                id="published-knowledge-revision-instruction"
+                label="Revision Request"
+                value={revisionInstruction}
+                rows={3}
+                onChange={(event) => setRevisionInstruction(event.target.value)}
+                placeholder="Tell MirrorBrain how this knowledge article should change..."
+                helpText="Your request will revise this published article as a new version."
+              />
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  className="h-9 rounded border border-primary bg-primary px-4 text-sm font-medium text-white disabled:cursor-wait disabled:opacity-60"
+                  disabled={
+                    revisionInstruction.trim().length === 0 ||
+                    revisingArticleId !== null ||
+                    deletingArticleId !== null
+                  }
+                >
+                  {revisingArticleId === article.articleId ? 'Revising' : 'Send Revision'}
+                </button>
               </div>
-            ) : (
-              <div className="mt-3 rounded border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-sm text-inkMuted">
-                Published article content is not available in the current tree response.
-              </div>
-            )}
-          </article>
-        ))}
-      </div>
+            </form>
+          </>
+        ) : (
+          <div className="m-4 rounded border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-sm text-inkMuted">
+            Published article content is not available in the current tree response.
+          </div>
+        )}
+      </article>
     )
   }
 

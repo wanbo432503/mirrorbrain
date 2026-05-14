@@ -67,6 +67,7 @@ interface MirrorBrainHttpService {
   generateKnowledgeArticlePreview?(input: unknown): Promise<unknown>;
   generateKnowledgeArticleDraft?(input: unknown): Promise<unknown>;
   publishKnowledgeArticleDraft?(input: unknown): Promise<unknown>;
+  reviseKnowledgeArticle?(input: unknown): Promise<unknown>;
   listKnowledgeArticleHistory?(filter: {
     projectId: string;
     topicId: string;
@@ -1546,6 +1547,51 @@ export async function startMirrorBrainHttpServer(
 
       reply.code(201);
       return input.service.publishKnowledgeArticleDraft(request.body);
+    },
+  );
+
+  app.post<{ Body: unknown }>(
+    '/knowledge-articles/revise',
+    {
+      schema: {
+        summary: 'Revise a published Phase 4 Knowledge Article with an LLM instruction',
+        body: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            projectId: { type: 'string' },
+            topicId: { type: 'string' },
+            articleId: { type: 'string' },
+            instruction: { type: 'string' },
+            revisedBy: { type: 'string' },
+          },
+          required: ['projectId', 'topicId', 'articleId', 'instruction', 'revisedBy'],
+        },
+        response: {
+          201: {
+            type: 'object',
+            additionalProperties: true,
+          },
+          501: {
+            type: 'object',
+            properties: {
+              message: { type: 'string' },
+            },
+            required: ['message'],
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      if (input.service.reviseKnowledgeArticle === undefined) {
+        reply.code(501);
+        return {
+          message: 'Knowledge Article revision is not available.',
+        };
+      }
+
+      reply.code(201);
+      return input.service.reviseKnowledgeArticle(request.body);
     },
   );
 

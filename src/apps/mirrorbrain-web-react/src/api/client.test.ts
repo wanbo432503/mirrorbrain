@@ -675,4 +675,51 @@ describe('createMirrorBrainBrowserApi', () => {
       }),
     );
   });
+
+  it('revises a Phase 4 published knowledge article through the revision endpoint', async () => {
+    const request = {
+      projectId: 'project:mirrorbrain',
+      topicId: 'topic:source-ledger',
+      articleId: 'article:source-ledger',
+      instruction: 'Make the conclusion clearer.',
+      revisedBy: 'mirrorbrain-web',
+    };
+    const result = {
+      article: {
+        id: 'knowledge-article:source-ledger:v2',
+        articleId: request.articleId,
+        projectId: request.projectId,
+        topicId: request.topicId,
+        title: 'Source ledger architecture',
+        summary: 'Clearer source ledger notes.',
+        body: 'Revised source ledger body.',
+        version: 2,
+        isCurrentBest: true,
+        supersedesArticleId: 'knowledge-article:source-ledger:v1',
+        sourceReviewedWorkSessionIds: ['reviewed-work-session:source-ledger'],
+        sourceMemoryEventIds: ['browser-1'],
+        provenanceRefs: [],
+        publishState: 'published' as const,
+        publishedAt: '2026-05-12T12:30:00.000Z',
+        publishedBy: 'mirrorbrain-web',
+      },
+    };
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 201,
+      json: async () => result,
+    })) as unknown as typeof fetch;
+    vi.stubGlobal('fetch', fetchMock);
+
+    const api = createMirrorBrainBrowserApi('http://localhost:3000');
+
+    await expect(api.reviseKnowledgeArticle(request)).resolves.toEqual(result);
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://localhost:3000/knowledge-articles/revise',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify(request),
+      }),
+    );
+  });
 });

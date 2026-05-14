@@ -24,6 +24,8 @@ import type {
   KnowledgeArticleDraft,
   PublishKnowledgeArticleDraftRequest,
   PublishKnowledgeArticleDraftResult,
+  ReviseKnowledgeArticleRequest,
+  ReviseKnowledgeArticleResult,
 } from '../types/index';
 
 export interface PaginatedMemoryEvents {
@@ -87,6 +89,9 @@ export interface MirrorBrainWebAppApi {
   publishKnowledgeArticleDraft(
     request: PublishKnowledgeArticleDraftRequest
   ): Promise<PublishKnowledgeArticleDraftResult>;
+  reviseKnowledgeArticle(
+    request: ReviseKnowledgeArticleRequest
+  ): Promise<ReviseKnowledgeArticleResult>;
   deleteKnowledgeArticle(articleId: string): Promise<void>;
   createDailyCandidates(
     reviewDate: string,
@@ -163,7 +168,7 @@ export function createMirrorBrainBrowserApi(
       };
 
       if (body.message || body.error) {
-        errorMessage = body.message || body.error;
+        errorMessage = body.message ?? body.error ?? defaultErrorMessage;
       }
     } catch {
       errorMessage += `: ${response.statusText}`;
@@ -335,6 +340,15 @@ export function createMirrorBrainBrowserApi(
         body: JSON.stringify(request),
       });
       return readJson<PublishKnowledgeArticleDraftResult>(response);
+    },
+
+    async reviseKnowledgeArticle(request) {
+      const response = await fetch(`${baseUrl}/knowledge-articles/revise`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(request),
+      });
+      return readJson<ReviseKnowledgeArticleResult>(response);
     },
 
     async deleteKnowledgeArticle(articleId: string) {

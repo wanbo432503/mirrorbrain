@@ -118,6 +118,7 @@ import {
 } from '../../modules/project-work-session/index.js';
 import {
   createKnowledgeArticleDraft as createPhase4KnowledgeArticleDraft,
+  createKnowledgeArticleRevisionDraft as createPhase4KnowledgeArticleRevisionDraft,
   publishKnowledgeArticleDraft as publishPhase4KnowledgeArticleDraft,
   type CreateKnowledgeArticleDraftInput,
   type KnowledgeArticle,
@@ -130,6 +131,7 @@ import {
   type GenerateKnowledgeArticlePreviewInput as GeneratePhase4KnowledgeArticlePreviewInput,
   type KnowledgeArticlePreview,
 } from '../../modules/knowledge-article-preview/index.js';
+import { reviseKnowledgeArticleContent } from '../../modules/knowledge-article-revision/index.js';
 import { createFileKnowledgeArticleStore } from '../../integrations/knowledge-article-store/index.js';
 import type {
   AuthorizationScope,
@@ -427,6 +429,14 @@ interface PublishKnowledgeArticleDraftServiceInput {
   draft: KnowledgeArticleDraft;
   publishedBy: string;
   topicAssignment: TopicAssignment;
+}
+
+interface ReviseKnowledgeArticleServiceInput {
+  projectId: string;
+  topicId: string;
+  articleId: string;
+  instruction: string;
+  revisedBy: string;
 }
 
 function normalizeMemoryEventReadResult(result: MemoryEventReadResult): MemoryEvent[] {
@@ -1767,6 +1777,56 @@ export function createMirrorBrainService(
           : [result.article],
       );
       await knowledgeArticleStore.deleteDraft(input.draft.id);
+
+      return result;
+    },
+    reviseKnowledgeArticle: async (
+      input: ReviseKnowledgeArticleServiceInput,
+    ): Promise<PublishKnowledgeArticleDraftResult> => {
+      const currentArticle = await knowledgeArticleStore.getCurrentBestArticle({
+        projectId: input.projectId,
+        topicId: input.topicId,
+        articleId: input.articleId,
+      });
+
+      if (currentArticle === null) {
+        throw new ValidationError('Published Knowledge Article not found.');
+      }
+
+      const generatedAt = now();
+      const revisedContent = await reviseKnowledgeArticleContent({
+        article: currentArticle,
+        instruction: input.instruction,
+        analyzeWithLLM: analyzeKnowledge,
+      });
+      const draft = createPhase4KnowledgeArticleRevisionDraft({
+        article: currentArticle,
+        generatedAt,
+        title: revisedContent.title,
+        summary: revisedContent.summary,
+        body: revisedContent.body,
+      });
+      const existingArticles = await knowledgeArticleStore.listArticleHistory({
+        projectId: currentArticle.projectId,
+        topicId: currentArticle.topicId,
+        articleId: currentArticle.articleId,
+      });
+      const result = publishPhase4KnowledgeArticleDraft({
+        draft,
+        publishedAt: generatedAt,
+        publishedBy: input.revisedBy,
+        topicAssignment: {
+          kind: 'existing-topic',
+          topicId: currentArticle.topicId,
+        },
+        existingArticles,
+      });
+
+      await knowledgeArticleStore.saveArticles(
+        result.supersededArticle
+          ? [result.supersededArticle, result.article]
+          : [result.article],
+      );
 
       return result;
     },

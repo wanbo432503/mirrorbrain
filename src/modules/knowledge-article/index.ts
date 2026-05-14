@@ -92,6 +92,14 @@ export interface CreateKnowledgeArticleDraftInput {
   articleOperationProposal: ArticleOperationProposal;
 }
 
+export interface CreateKnowledgeArticleRevisionDraftInput {
+  article: KnowledgeArticle;
+  generatedAt: string;
+  title: string;
+  summary: string;
+  body: string;
+}
+
 export interface PublishKnowledgeArticleDraftInput {
   draft: KnowledgeArticleDraft;
   publishedAt: string;
@@ -182,6 +190,31 @@ export function createKnowledgeArticleDraft(
       sourceReviewedWorkSessionIds,
       sourceMemoryEventIds,
     }),
+    generatedAt: input.generatedAt,
+  };
+}
+
+export function createKnowledgeArticleRevisionDraft(
+  input: CreateKnowledgeArticleRevisionDraftInput,
+): KnowledgeArticleDraft {
+  return {
+    id: `knowledge-article-revision:${slugify(input.article.articleId)}:${input.generatedAt}`,
+    draftState: 'draft',
+    projectId: input.article.projectId,
+    title: input.title,
+    summary: input.summary,
+    body: input.body,
+    topicProposal: {
+      kind: 'existing-topic',
+      topicId: input.article.topicId,
+    },
+    articleOperationProposal: {
+      kind: 'update-existing-article',
+      articleId: input.article.articleId,
+    },
+    sourceReviewedWorkSessionIds: [...input.article.sourceReviewedWorkSessionIds],
+    sourceMemoryEventIds: [...input.article.sourceMemoryEventIds],
+    provenanceRefs: [...input.article.provenanceRefs],
     generatedAt: input.generatedAt,
   };
 }

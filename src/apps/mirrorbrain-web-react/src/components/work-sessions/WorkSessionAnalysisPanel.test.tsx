@@ -470,6 +470,214 @@ describe('WorkSessionAnalysisPanel', () => {
     expect(within(treeRail).queryByText('Source ledger architecture')).toBeNull()
   })
 
+  it('renders Published as a collapsible project topic knowledge tree and opens the clicked article', async () => {
+    const firstArticle = {
+      id: 'knowledge-article:alpha:v1',
+      articleId: 'article:alpha',
+      projectId: 'project:mirrorbrain',
+      topicId: 'topic:project-mirrorbrain:source-ledger',
+      title: 'Alpha article',
+      summary: 'Alpha summary.',
+      body: '# Alpha article\n\nAlpha body.',
+      version: 1,
+      isCurrentBest: true,
+      supersedesArticleId: null,
+      sourceReviewedWorkSessionIds: ['reviewed-work-session:alpha'],
+      sourceMemoryEventIds: ['browser-1'],
+      provenanceRefs: [],
+      publishState: 'published' as const,
+      publishedAt: '2026-05-12T12:20:00.000Z',
+      publishedBy: 'mirrorbrain-web',
+    }
+    const secondArticle = {
+      ...firstArticle,
+      id: 'knowledge-article:beta:v1',
+      articleId: 'article:beta',
+      title: 'Beta article',
+      summary: 'Beta summary.',
+      body: '# Beta article\n\nBeta body.',
+      sourceReviewedWorkSessionIds: ['reviewed-work-session:beta'],
+    }
+    const api = {
+      listKnowledgeArticleTree: vi.fn(async () => ({
+        projects: [
+          {
+            project: {
+              id: 'project:mirrorbrain',
+              name: 'MirrorBrain',
+              status: 'active' as const,
+              createdAt: '2026-05-12T12:00:00.000Z',
+              updatedAt: '2026-05-12T12:00:00.000Z',
+            },
+            topics: [
+              {
+                topic: {
+                  id: 'topic:project-mirrorbrain:source-ledger',
+                  projectId: 'project:mirrorbrain',
+                  name: 'Source ledger',
+                  status: 'active' as const,
+                  createdAt: '2026-05-12T12:20:00.000Z',
+                  updatedAt: '2026-05-12T12:20:00.000Z',
+                },
+                articles: [
+                  {
+                    articleId: firstArticle.articleId,
+                    title: firstArticle.title,
+                    currentBestArticle: firstArticle,
+                    history: [firstArticle],
+                  },
+                  {
+                    articleId: secondArticle.articleId,
+                    title: secondArticle.title,
+                    currentBestArticle: secondArticle,
+                    history: [secondArticle],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      })),
+      deleteKnowledgeArticle: vi.fn(),
+      reviseKnowledgeArticle: vi.fn(),
+    } as unknown as MirrorBrainWebAppApi
+    const user = userEvent.setup()
+
+    render(<WorkSessionAnalysisPanel api={api} mode="published" />)
+
+    const treeRail = await screen.findByTestId('work-session-tree-rail')
+    expect(
+      within(treeRail)
+        .getByRole('button', { name: /MirrorBrain/ })
+        .getAttribute('aria-expanded'),
+    ).toBe('true')
+    expect(
+      within(treeRail)
+        .getByRole('button', { name: /Source ledger/ })
+        .getAttribute('aria-expanded'),
+    ).toBe('true')
+    expect(screen.getByTestId('published-knowledge-panel').textContent).toContain('Alpha body.')
+
+    await user.click(within(treeRail).getByRole('button', { name: /Beta article/ }))
+
+    expect(screen.getByTestId('published-knowledge-panel').textContent).toContain('Beta body.')
+    expect(screen.getByTestId('published-knowledge-panel').textContent).not.toContain('Alpha body.')
+
+    await user.click(within(treeRail).getByRole('button', { name: /Source ledger/ }))
+    expect(within(treeRail).queryByRole('button', { name: /Beta article/ })).toBeNull()
+  })
+
+  it('sends revision feedback for the selected published article and refreshes the article body', async () => {
+    const publishedArticle = {
+      id: 'knowledge-article:source-ledger:v1',
+      articleId: 'article:source-ledger',
+      projectId: 'project:mirrorbrain',
+      topicId: 'topic:project-mirrorbrain:source-ledger',
+      title: 'Source ledger architecture',
+      summary: 'How source ledgers feed memory.',
+      body: '# Source ledger architecture\n\nOriginal body.',
+      version: 1,
+      isCurrentBest: true,
+      supersedesArticleId: null,
+      sourceReviewedWorkSessionIds: ['reviewed-work-session:source-ledger'],
+      sourceMemoryEventIds: ['browser-1'],
+      provenanceRefs: [],
+      publishState: 'published' as const,
+      publishedAt: '2026-05-12T12:20:00.000Z',
+      publishedBy: 'mirrorbrain-web',
+    }
+    const revisedArticle = {
+      ...publishedArticle,
+      id: 'knowledge-article:source-ledger:v2',
+      body: '# Source ledger architecture\n\nRevised body.',
+      version: 2,
+      supersedesArticleId: publishedArticle.id,
+      publishedAt: '2026-05-12T12:30:00.000Z',
+    }
+    const originalTree = {
+      projects: [
+        {
+          project: {
+            id: 'project:mirrorbrain',
+            name: 'MirrorBrain',
+            status: 'active' as const,
+            createdAt: '2026-05-12T12:00:00.000Z',
+            updatedAt: '2026-05-12T12:00:00.000Z',
+          },
+          topics: [
+            {
+              topic: {
+                id: 'topic:project-mirrorbrain:source-ledger',
+                projectId: 'project:mirrorbrain',
+                name: 'Source ledger',
+                status: 'active' as const,
+                createdAt: '2026-05-12T12:20:00.000Z',
+                updatedAt: '2026-05-12T12:20:00.000Z',
+              },
+              articles: [
+                {
+                  articleId: publishedArticle.articleId,
+                  title: publishedArticle.title,
+                  currentBestArticle: publishedArticle,
+                  history: [publishedArticle],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+    const revisedTree = {
+      projects: [
+        {
+          ...originalTree.projects[0],
+          topics: [
+            {
+              ...originalTree.projects[0].topics[0],
+              articles: [
+                {
+                  articleId: revisedArticle.articleId,
+                  title: revisedArticle.title,
+                  currentBestArticle: revisedArticle,
+                  history: [revisedArticle, { ...publishedArticle, isCurrentBest: false }],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+    const api = {
+      listKnowledgeArticleTree: vi
+        .fn()
+        .mockResolvedValueOnce(originalTree)
+        .mockResolvedValueOnce(revisedTree),
+      reviseKnowledgeArticle: vi.fn(async () => ({
+        article: revisedArticle,
+        supersededArticle: { ...publishedArticle, isCurrentBest: false },
+      })),
+      deleteKnowledgeArticle: vi.fn(),
+    } as unknown as MirrorBrainWebAppApi
+    const user = userEvent.setup()
+
+    render(<WorkSessionAnalysisPanel api={api} mode="published" />)
+
+    expect(await screen.findByText('Original body.')).not.toBeNull()
+    await user.type(screen.getByLabelText('Revision Request'), 'Make the conclusion sharper.')
+    await user.click(screen.getByRole('button', { name: 'Send Revision' }))
+
+    expect(api.reviseKnowledgeArticle).toHaveBeenCalledWith({
+      projectId: publishedArticle.projectId,
+      topicId: publishedArticle.topicId,
+      articleId: publishedArticle.articleId,
+      instruction: 'Make the conclusion sharper.',
+      revisedBy: 'mirrorbrain-web',
+    })
+    expect(await screen.findByText('Revised published knowledge.')).not.toBeNull()
+    expect(screen.getByTestId('published-knowledge-panel').textContent).toContain('Revised body.')
+    expect((screen.getByLabelText('Revision Request') as HTMLTextAreaElement).value).toBe('')
+  })
+
   it('discards a preview work-session candidate and removes it from preview', async () => {
     const candidate = {
       id: 'work-session-candidate:discard-me',

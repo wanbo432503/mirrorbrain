@@ -1037,6 +1037,107 @@ describe('mirrorbrain service', () => {
     await rm(workspaceDir, { recursive: true, force: true });
   });
 
+  it('revises a published Knowledge Article into a new current-best version', async () => {
+    const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-revise-article-'));
+    const candidate: WorkSessionCandidate = {
+      id: 'work-session-candidate:source-ledger-revise',
+      projectHint: 'mirrorbrain',
+      title: 'Source ledger revision',
+      summary: 'Publish then revise a knowledge article.',
+      memoryEventIds: ['browser-1'],
+      sourceTypes: ['browser'],
+      timeRange: {
+        startAt: '2026-05-12T10:00:00.000Z',
+        endAt: '2026-05-12T10:30:00.000Z',
+      },
+      relationHints: ['Source ledger'],
+      reviewState: 'pending',
+    };
+    const service = createMirrorBrainService(
+      {
+        workspaceDir,
+        service: {
+          status: 'running',
+          syncBrowserMemory: vi.fn(),
+          syncShellMemory: vi.fn(),
+          stop: vi.fn(),
+        },
+      },
+      {
+        now: () => '2026-05-12T12:10:00.000Z',
+        analyzeKnowledge: vi.fn(async () =>
+          JSON.stringify({
+            title: 'Source ledger architecture revised',
+            summary: 'Revised source ledger summary.',
+            body: '# Source ledger architecture revised\n\nRevised body.',
+          }),
+        ),
+      },
+    );
+    const review = await service.reviewWorkSessionCandidate(candidate, {
+      decision: 'keep',
+      reviewedBy: 'user',
+      projectAssignment: {
+        kind: 'confirmed-new-project',
+        name: 'MirrorBrain',
+      },
+    });
+    const draft = await service.generateKnowledgeArticleDraft({
+      reviewedWorkSessionIds: [review.reviewedWorkSession.id],
+      title: 'Source ledger architecture',
+      summary: 'How source ledgers feed memory.',
+      body: 'Original body.',
+      topicProposal: {
+        kind: 'new-topic',
+        name: 'Source ledger',
+      },
+      articleOperationProposal: {
+        kind: 'create-new-article',
+      },
+    });
+    const published = await service.publishKnowledgeArticleDraft({
+      draft,
+      publishedBy: 'user',
+      topicAssignment: {
+        kind: 'confirmed-new-topic',
+        name: 'Source ledger',
+      },
+    });
+
+    const revised = await service.reviseKnowledgeArticle({
+      projectId: published.article.projectId,
+      topicId: published.article.topicId,
+      articleId: published.article.articleId,
+      instruction: 'Make the conclusion sharper.',
+      revisedBy: 'mirrorbrain-web',
+    });
+
+    expect(revised.article).toMatchObject({
+      articleId: published.article.articleId,
+      title: 'Source ledger architecture revised',
+      body: '# Source ledger architecture revised\n\nRevised body.',
+      version: 2,
+      isCurrentBest: true,
+      supersedesArticleId: published.article.id,
+      sourceReviewedWorkSessionIds: published.article.sourceReviewedWorkSessionIds,
+      sourceMemoryEventIds: published.article.sourceMemoryEventIds,
+      publishedBy: 'mirrorbrain-web',
+    });
+    expect(revised.supersededArticle).toMatchObject({
+      id: published.article.id,
+      isCurrentBest: false,
+    });
+    await expect(
+      service.listKnowledgeArticleHistory({
+        projectId: published.article.projectId,
+        topicId: published.article.topicId,
+        articleId: published.article.articleId,
+      }),
+    ).resolves.toEqual([revised.article, revised.supersededArticle]);
+
+    await rm(workspaceDir, { recursive: true, force: true });
+  });
+
   it('rejects Knowledge Article Draft generation from unpersisted reviewed work-session ids', async () => {
     const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-article-service-'));
     const service = createMirrorBrainService(

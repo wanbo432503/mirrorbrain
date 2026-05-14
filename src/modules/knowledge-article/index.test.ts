@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ReviewedWorkSession } from '../project-work-session/index.js';
 import {
   createKnowledgeArticleDraft,
+  createKnowledgeArticleRevisionDraft,
   type KnowledgeArticle,
   publishKnowledgeArticleDraft,
 } from './index.js';
@@ -308,6 +309,53 @@ describe('knowledge article model', () => {
     expect(result.supersededArticle).toMatchObject({
       id: priorArticle.id,
       isCurrentBest: false,
+    });
+  });
+
+  it('creates a revision draft from an existing published article lineage', () => {
+    const priorArticle: KnowledgeArticle = {
+      id: 'knowledge-article:article-project-mirrorbrain-topic-source-ledger-source-ledger-import-architecture:v1',
+      articleId:
+        'article:project-mirrorbrain:topic-source-ledger:source-ledger-import-architecture',
+      projectId: 'project:mirrorbrain',
+      topicId: 'topic:source-ledger',
+      title: 'Source ledger import architecture',
+      summary: 'Prior source ledger notes.',
+      body: 'Prior body.',
+      version: 1,
+      isCurrentBest: true,
+      supersedesArticleId: null,
+      sourceReviewedWorkSessionIds: ['reviewed-work-session:old'],
+      sourceMemoryEventIds: ['old-memory'],
+      provenanceRefs: [{ kind: 'memory-event', id: 'old-memory' }],
+      publishState: 'published',
+      publishedAt: '2026-05-11T12:20:00.000Z',
+      publishedBy: 'user',
+    };
+
+    const draft = createKnowledgeArticleRevisionDraft({
+      article: priorArticle,
+      generatedAt: '2026-05-12T12:10:00.000Z',
+      title: 'Source ledger import architecture revised',
+      summary: 'Updated notes with clearer risks.',
+      body: 'Revised body.',
+    });
+
+    expect(draft).toMatchObject({
+      draftState: 'draft',
+      projectId: priorArticle.projectId,
+      title: 'Source ledger import architecture revised',
+      topicProposal: {
+        kind: 'existing-topic',
+        topicId: priorArticle.topicId,
+      },
+      articleOperationProposal: {
+        kind: 'update-existing-article',
+        articleId: priorArticle.articleId,
+      },
+      sourceReviewedWorkSessionIds: priorArticle.sourceReviewedWorkSessionIds,
+      sourceMemoryEventIds: priorArticle.sourceMemoryEventIds,
+      provenanceRefs: priorArticle.provenanceRefs,
     });
   });
 });

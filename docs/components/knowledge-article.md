@@ -18,6 +18,9 @@ The module owns:
 - Publishing drafts into durable project/topic article versions.
 - Marking prior current-best article versions as superseded when an update is
   published.
+- Creating revision drafts from existing published articles so explicit
+  user-requested LLM revisions can publish a new version in the same article
+  lineage without losing provenance.
 
 The module does not own:
 
@@ -72,6 +75,19 @@ Publish output:
 - optional created `Topic`.
 - optional superseded prior article version.
 
+Revision draft input:
+
+- existing published `KnowledgeArticle`.
+- revised title, summary, and body produced from an explicit user instruction.
+- generation timestamp.
+
+Revision draft output:
+
+- `KnowledgeArticleDraft` with `topicProposal.kind: "existing-topic"`.
+- `articleOperationProposal.kind: "update-existing-article"`.
+- the same project, topic, article lineage, source refs, and provenance refs as
+  the source article.
+
 ## Data Flow
 
 1. Reviewed work sessions provide project-scoped, source-attributed synthesis
@@ -84,6 +100,8 @@ Publish output:
    current-best.
 7. If a prior current-best version exists for the same `articleId`, the returned
    `supersededArticle` marks that prior version as no longer current-best.
+8. For user-requested article revisions, the service creates a revision draft
+   from the current-best article and publishes it through the same update path.
 
 ## Failure Modes And Constraints
 
@@ -95,6 +113,8 @@ Publish output:
 - The module does not persist the new article or superseded article; callers
   must save both atomically when storage is introduced.
 - Publishing does not create executable skills.
+- Revision drafts do not change source attribution. They only replace title,
+  summary, and body before the normal versioned publish path runs.
 
 ## Test Strategy
 
@@ -111,3 +131,5 @@ The tests verify:
   `articleId` and version streams.
 - Publishing an update creates a new current-best version and returns the prior
   version as superseded.
+- Creating a revision draft preserves the existing article lineage and
+  provenance refs.

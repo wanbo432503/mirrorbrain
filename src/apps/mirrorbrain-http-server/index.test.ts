@@ -778,6 +778,16 @@ describe('mirrorbrain http server', () => {
       generateKnowledgeArticlePreview: vi.fn(async () => preview),
       generateKnowledgeArticleDraft: vi.fn(async () => draft),
       publishKnowledgeArticleDraft: vi.fn(async () => ({ article })),
+      reviseKnowledgeArticle: vi.fn(async () => ({
+        article: {
+          ...article,
+          id: 'knowledge-article:source-ledger:v2',
+          version: 2,
+          body: 'Revised body.',
+          supersedesArticleId: article.id,
+        },
+        supersededArticle: { ...article, isCurrentBest: false },
+      })),
       listKnowledgeArticleHistory: vi.fn(async () => [article]),
       listKnowledgeArticleTree: vi.fn(async () => knowledgeArticleTree),
       deleteKnowledgeArticle: vi.fn(async () => undefined),
@@ -820,6 +830,19 @@ describe('mirrorbrain http server', () => {
       }),
     });
     const publishBody = await publishResponse.json();
+    const reviseRequest = {
+      projectId: article.projectId,
+      topicId: article.topicId,
+      articleId: article.articleId,
+      instruction: 'Make the body clearer.',
+      revisedBy: 'mirrorbrain-web',
+    };
+    const reviseResponse = await fetch(`${server.origin}/knowledge-articles/revise`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(reviseRequest),
+    });
+    const reviseBody = await reviseResponse.json();
     const historyResponse = await fetch(
       `${server.origin}/knowledge-articles/history?projectId=project%3Amirrorbrain&topicId=topic%3Aproject-mirrorbrain%3Asource-ledger`,
     );
@@ -851,6 +874,18 @@ describe('mirrorbrain http server', () => {
     expect(draftBody).toEqual({ draft });
     expect(publishResponse.status).toBe(201);
     expect(publishBody).toEqual({ article });
+    expect(reviseResponse.status).toBe(201);
+    expect(service.reviseKnowledgeArticle).toHaveBeenCalledWith(reviseRequest);
+    expect(reviseBody).toEqual({
+      article: {
+        ...article,
+        id: 'knowledge-article:source-ledger:v2',
+        version: 2,
+        body: 'Revised body.',
+        supersedesArticleId: article.id,
+      },
+      supersededArticle: { ...article, isCurrentBest: false },
+    });
     expect(historyResponse.status).toBe(200);
     expect(historyBody).toEqual({ items: [article] });
     expect(treeResponse.status).toBe(200);

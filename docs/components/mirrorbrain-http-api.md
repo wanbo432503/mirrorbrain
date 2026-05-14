@@ -792,6 +792,42 @@ Response `201`:
 }
 ```
 
+### `POST /knowledge-articles/revise`
+
+Revises one currently published Knowledge Article from an explicit user
+instruction. The service loads the current-best article, asks the configured
+LLM for a complete revised Markdown article, and publishes the result as the
+next version in the same stable article lineage.
+
+Request:
+
+```json
+{
+  "projectId": "project:mirrorbrain",
+  "topicId": "topic:project-mirrorbrain:source-ledger",
+  "articleId": "article:project-mirrorbrain:topic-source-ledger:source-ledger-architecture",
+  "instruction": "Make the operational risks clearer.",
+  "revisedBy": "mirrorbrain-web"
+}
+```
+
+Response `201`:
+
+```json
+{
+  "article": {
+    "articleId": "article:project-mirrorbrain:topic-source-ledger:source-ledger-architecture",
+    "version": 2,
+    "isCurrentBest": true,
+    "publishState": "published"
+  },
+  "supersededArticle": {
+    "version": 1,
+    "isCurrentBest": false
+  }
+}
+```
+
 ### `GET /knowledge-articles/history`
 
 Lists published Knowledge Article versions for a project/topic pair in

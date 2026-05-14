@@ -25,6 +25,9 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 - generates and publishes Phase 4 Knowledge Article Drafts from persisted reviewed work-session ids
 - lists the Published Project -> Topic -> Knowledge Article tree for the merged
   work-session review UI
+- revises an explicitly selected Published Knowledge Article with an LLM
+  instruction and publishes the result as the next current-best version in the
+  same article lineage
 - wires runtime memory-source authorization policy into browser and shell sync execution
 - wires separate page-content capture authorization into browser page text backfill
 - exposes the high-level service contract used by `openclaw`
@@ -80,16 +83,20 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 14. Record explicit work-session review decisions, save confirmed new projects, and persist reviewed work sessions in the workspace.
 15. Generate Knowledge Article Drafts by loading persisted reviewed work-session ids, then persist the draft in the article store.
 16. Publish Knowledge Article Drafts under a project/topic, saving current-best versions and any superseded prior version for the same stable `articleId`.
-17. List Knowledge Article history for a project/topic pair.
-18. List the Published Knowledge Article tree by grouping saved projects,
+17. Revise a Published Knowledge Article by loading the current-best article,
+    sending the user's instruction and article body to the configured LLM,
+    creating a revision draft, and publishing it as the next current-best
+    version while preserving provenance refs.
+18. List Knowledge Article history for a project/topic pair.
+19. List the Published Knowledge Article tree by grouping saved projects,
     topics, article lineages, current-best versions, and history, while omitting
     reviewed-project assignments that do not yet have published articles.
-19. Delete a published Knowledge Article lineage by stable `articleId`, removing
+20. Delete a published Knowledge Article lineage by stable `articleId`, removing
     all versions of that article from the Published tree.
-20. List raw imported memory when review-oriented workflows need event-level
+21. List raw imported memory when review-oriented workflows need event-level
     records, preferring the QMD workspace read path and falling back to
     workspace-cached memory-event files when storage reads fail.
-21. Forward `openclaw` memory retrieval calls through the configured workspace
+22. Forward `openclaw` memory retrieval calls through the configured workspace
     directory and return shaped retrieval results.
 22. Before daily candidate generation or refresh, run Phase 4 source-ledger import so the workspace raw-event cache reflects newly recorded daily JSONL ledgers.
 13. If candidates already exist for a review date and the sync imports no new browser events, return the existing candidates without rebuilding them.
