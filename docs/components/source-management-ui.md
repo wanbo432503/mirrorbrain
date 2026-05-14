@@ -106,7 +106,7 @@ The API responses use `SourceLedgerImportResult`, `SourceInstanceSummary`, and
   This UI only displays, imports, and configures the source; it does not start
   microphone capture.
 - Agent session records are exposed through the normalized `Agent` sessions
-  source. The source-management UI does not keep a separate Openclaw source
+  source. The source-management UI does not keep a separate host-specific source
   compatibility path.
 - Source history shows imported `MemoryEvent` records for the selected source.
   It remains read-only; review and knowledge synthesis still happen through

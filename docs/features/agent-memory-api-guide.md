@@ -1,12 +1,12 @@
-# OpenClaw Memory Demo Guide
+# Agent Memory API Guide
 
 ## Summary
 
-This guide is the minimum Phase 2A manual demo path for MirrorBrain inside `openclaw`.
+This guide is the minimum agent API manual demo path for MirrorBrain inside an agent client.
 
 The goal is not to validate every capability. The goal is to prove one thing first:
 
-- `openclaw` can successfully call MirrorBrain memory retrieval for a realistic chat question
+- agent clients can successfully call MirrorBrain memory retrieval for a realistic chat question
 
 The canonical demo question is:
 
@@ -25,7 +25,7 @@ Recommended references:
 
 - repository setup in [README.md](../../README.md)
 - startup runtime details in [local-runtime.md](../components/local-runtime.md)
-- minimum plugin example in [openclaw-memory-tool-example.md](./openclaw-memory-tool-example.md)
+- minimum agent API example in [agent-memory-tool-example.md](./agent-memory-tool-example.md)
 
 ## Happy Path
 
@@ -62,20 +62,20 @@ At minimum, confirm these endpoints exist:
 
 This verifies that the raw-memory surface and the theme-level retrieval surface are both available.
 
-### 3. Wire The Minimum `openclaw` Tool
+### 3. Wire The Minimum agent clients Tool
 
-In `openclaw`, expose a `query_memory` tool that:
+In an agent client, expose a `query_memory` tool that:
 
 - accepts `query`
 - optionally accepts `time_range`
 - optionally accepts `source_types`
 - forwards the request to MirrorBrain `POST /memory/query`
 
-Use the example shape described in [openclaw-memory-tool-example.md](./openclaw-memory-tool-example.md).
+Use the example shape described in [agent-memory-tool-example.md](./agent-memory-tool-example.md).
 
 ### 4. Ask The Demo Question In Chat
 
-In `openclaw` chat, ask:
+In an agent client chat, ask:
 
 ```text
 我昨天做了什么？
@@ -87,7 +87,7 @@ Expected host-side behavior:
 - the agent calls `query_memory`
 - the tool forwards the request to MirrorBrain
 - MirrorBrain returns theme-level results
-- `openclaw` summarizes those results in order
+- the agent client summarizes those results in order
 - each paragraph includes a lightweight source hint
 
 ### 5. Validate The Visible Success Signal
@@ -106,11 +106,11 @@ What "reasonable" means for this first demo:
 
 Troubleshooting priority for this guide is:
 
-1. `openclaw` did not invoke `query_memory` correctly
+1. the agent client did not invoke `query_memory` correctly
 2. MirrorBrain did not return useful memory
 3. answer composition produced a poor user-facing response
 
-### 1. `openclaw` Did Not Invoke `query_memory`
+### 1. Agent Client Did Not Invoke `query_memory`
 
 Symptoms:
 
@@ -120,7 +120,7 @@ Symptoms:
 
 Checks:
 
-- confirm the `query_memory` tool is actually registered in `openclaw`
+- confirm the `query_memory` tool is actually registered in the agent client
 - confirm the tool points at the correct MirrorBrain base URL
 - confirm the tool sends `query` in the request body
 - if you are using explicit source filters, confirm they do not exclude browser memory unintentionally

@@ -1123,7 +1123,7 @@ describe('start mirrorbrain dev runtime', () => {
           ActivityWatch: 'ready',
         },
         nextSteps: [
-          'Connect MirrorBrain to openclaw using the minimum memory retrieval plugin example.',
+          'Connect MirrorBrain to an agent client using the minimum memory retrieval API example.',
           'Run the minimum demo question: 我昨天做了什么？',
         ],
       },

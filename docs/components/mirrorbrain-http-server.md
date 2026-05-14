@@ -16,7 +16,7 @@ This component is responsible for:
 - exposing Phase 4 source-ledger manual import, audit, and status endpoints
 - exposing Phase 4 manual work-session analysis endpoints
 - exposing raw read endpoints for memory, knowledge, and skill drafts
-- exposing a theme-level memory retrieval endpoint for `openclaw`-style queries
+- exposing a theme-level memory retrieval endpoint for agent-style queries
 - exposing write endpoints for daily candidate creation, candidate review suggestions, explicit review decisions, and artifact generation
 - exposing OpenAPI schema output and Swagger UI docs for local exploration
 
@@ -104,7 +104,7 @@ Those concerns remain in the service, workflow, module, and integration layers.
 - candidate payloads can include `sourceRefs` so clients can render the concrete visited URLs behind each task
 - reviewed-memory writes require an explicit `reviewedAt` timestamp for auditability
 - draft save endpoints trust the caller to send a full artifact payload and do not yet offer field-level patch semantics
-- `POST /memory/query` is still a thin Phase 2A contract and does not yet expose pagination or mature ranking controls
+- `POST /memory/query` is still a thin agent API contract and does not yet expose pagination or mature ranking controls
 - `POST /sync/shell` depends on an explicitly configured shell history path in the runtime service
 - `POST /sources/import` depends on a service object that implements Phase 4 source-ledger import; otherwise it returns `501`
 - source audit and source status endpoints are operational metadata surfaces, not memory retrieval endpoints

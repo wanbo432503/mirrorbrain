@@ -2,7 +2,7 @@
 
 ## Summary
 
-This component adapts browser activity coming from `ActivityWatch`, with `aw-watcher-web` as the initial capture mechanism. It covers sync planning, HTTP event retrieval, the legacy browser source plugin used by the generic memory-source sync workflow, and the Phase 4 browser ledger bridge that converts ActivityWatch events into browser ledger payloads with best-effort readable page text.
+This component adapts browser activity coming from `ActivityWatch`, with `aw-watcher-web` as the initial capture mechanism. It covers sync planning, HTTP event retrieval, the legacy browser source agent API used by the generic memory-source sync workflow, and the Phase 4 browser ledger bridge that converts ActivityWatch events into browser ledger payloads with best-effort readable page text.
 
 ## Responsibility Boundary
 

@@ -149,10 +149,7 @@ function isRetiredSourceState(input: {
   sourceKind?: string;
   sourceInstanceId?: string;
 }): boolean {
-  return (
-    input.sourceKind === 'agent-transcript' ||
-    input.sourceInstanceId === 'openclaw-main'
-  );
+  return input.sourceKind === 'agent-transcript';
 }
 
 function deriveSourceInstanceSummaries(input: {

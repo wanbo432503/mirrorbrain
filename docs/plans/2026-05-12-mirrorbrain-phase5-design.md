@@ -116,7 +116,7 @@ Knowledge Article Draft generation.
 
 ## Non-Goals
 
-- OpenClaw-specific API design.
+- Agent Client-specific API design.
 - More broad source expansion as the main Phase 5 deliverable.
 - Public raw `MemoryEvent` search.
 - Public draft, history, source audit, or clustering APIs.

@@ -1,8 +1,8 @@
-# OpenClaw Plugin API
+# Agent Memory API
 
 ## Summary
 
-This component is MirrorBrain's plugin-facing retrieval surface for `openclaw`.
+This component is MirrorBrain's API-facing retrieval surface for agent clients.
 It exposes async read operations for memory, knowledge, and skill artifacts by
 loading them from the QMD workspace store by default, and it prefers stored
 offline memory narratives for browser work-recall and shell problem-solving
@@ -10,33 +10,33 @@ queries before falling back to raw-event shaping.
 
 ## Responsibility Boundary
 
-- exposes the retrieval contract consumed by `openclaw`
+- exposes the retrieval contract consumed by agent clients
 - delegates default storage access to the QMD workspace adapter
 - returns domain-shaped artifacts rather than raw filesystem responses
-- keeps the retrieval contract thin while shaping memory events or stored memory narratives into higher-level results that are easier for `openclaw` to use in chat
+- keeps the retrieval contract thin while shaping memory events or stored memory narratives into higher-level results that are easier for agent clients to use in chat
 - does not own sync, review, knowledge generation, or skill generation
 
 ## Key Interfaces
 
 - `queryMemory(...)`
 - `listKnowledge(...)`
-- current topic knowledge read support still lives in the MirrorBrain service/HTTP layer; the `openclaw` plugin adapter has not yet added dedicated topic list/detail/history helpers in this milestone
+- current topic knowledge read support still lives in the MirrorBrain service/HTTP layer; the agent-client API adapter has not yet added dedicated topic list/detail/history helpers in this milestone
 - `listSkillDrafts(...)`
 - `createQueryMemoryToolExample(...)`
 - `composeQueryMemoryAnswer(...)`
 
 ## Data Flow
 
-1. `openclaw` calls a MirrorBrain retrieval method with the MirrorBrain
+1. An agent client calls a MirrorBrain retrieval method with the MirrorBrain
    workspace directory and, for memory, a natural-language query plus optional
    filters.
-2. The plugin API delegates raw storage reads to the QMD workspace adapter.
+2. The agent memory API delegates raw storage reads to the QMD workspace adapter.
 3. The store adapter indexes MirrorBrain workspace markdown through QMD and
    maps result paths back to MirrorBrain artifacts.
-4. For memory retrieval, the plugin API first checks whether stored `MemoryNarrative` artifacts already exist for the relevant browser work-recall or shell solve-oriented query.
-5. If those offline narratives exist, the plugin API returns them directly as the preferred retrieval layer.
-6. If no stored narratives exist for the query, the plugin API falls back to shaping raw `MemoryEvent` records into higher-level results.
-7. When multiple grouped themes match in the raw-event fallback path, the plugin API currently prefers repeated themes ahead of one-off pages based on grouped event count, with recency as a tie-breaker.
+4. For memory retrieval, the agent memory API first checks whether stored `MemoryNarrative` artifacts already exist for the relevant browser work-recall or shell solve-oriented query.
+5. If those offline narratives exist, the agent memory API returns them directly as the preferred retrieval layer.
+6. If no stored narratives exist for the query, the agent memory API falls back to shaping raw `MemoryEvent` records into higher-level results.
+7. When multiple grouped themes match in the raw-event fallback path, the agent memory API currently prefers repeated themes ahead of one-off pages based on grouped event count, with recency as a tie-breaker.
 8. For browser sources, repeated visits to the same URL are compressed into a single representative source ref inside each grouped theme.
 9. Browser themes use a slightly more human-readable summary that reflects unique pages and repeated visits.
 10. Browser theme grouping also strips common site-title suffixes such as ` - Site` or ` | Site` before grouping.
@@ -47,7 +47,7 @@ queries before falling back to raw-event shaping.
 15. When a grouped browser theme includes obvious error, fix, bug, issue, or troubleshooting markers, the summary shifts toward a `debugged ...` phrasing.
 16. When a grouped browser theme mixes search pages with documentation pages, the summary shifts toward a more narrative `researched ... by reading documentation ...` phrasing.
 17. When a grouped browser theme mixes debugging markers with documentation pages, the summary shifts toward a more narrative `debugged ... by reading documentation ...` phrasing.
-18. For browser work-recall queries such as `What did I work on yesterday?`, the plugin API returns a top-level explanation string that tells the caller whether it used stored offline narratives or raw browser regrouping.
+18. For browser work-recall queries such as `What did I work on yesterday?`, the agent memory API returns a top-level explanation string that tells the caller whether it used stored offline narratives or raw browser regrouping.
 19. Browser work-recall detection now also recognizes more generic phrasings such as `What did I do yesterday?` and analogous Chinese `昨天/今天 ... 做了什么` queries.
 20. When browser themes have equal event counts, retrieval now prefers more action-oriented themes such as debugging, comparison, or research ahead of passive page-view themes.
 21. Single-page browser themes can still receive action-oriented summaries when their title or URL clearly signals debugging, comparison, research, or documentation work.
@@ -58,7 +58,7 @@ queries before falling back to raw-event shaping.
 26. If a shell-history theme is made of obvious inspection commands such as `status`, `diff`, or `log`, the summary shifts toward an `inspected state ...` phrasing.
 27. If a shell-history theme is made of obvious test or typecheck commands, the summary shifts toward a `verified changes with ...` phrasing.
 28. If a shell-history theme is made of obvious patch-application or inline-edit commands, the summary shifts toward an `applied changes with ...` phrasing.
-29. For solve-oriented shell queries, the plugin API first prefers stored offline shell problem narratives and otherwise falls back to raw adjacent-shell regrouping.
+29. For solve-oriented shell queries, the agent memory API first prefers stored offline shell problem narratives and otherwise falls back to raw adjacent-shell regrouping.
 30. The stored shell narratives can carry inferred workspace context and operation phases, while the raw fallback still uses a narrow time-gap heuristic.
 31. Solve-oriented shell retrieval also returns a top-level explanation string so the caller can tell whether shell commands were served from stored narratives or regrouped on the fly.
 32. If the query clearly asks about shell problem solving, this regrouping can still happen even when the caller did not explicitly narrow `sourceTypes` to `shell`.
@@ -67,8 +67,8 @@ queries before falling back to raw-event shaping.
 35. If the caller already narrowed `sourceTypes` to `shell`, solve-oriented queries do not need to repeat shell-specific wording to trigger shell problem-solving narratives.
 36. Shell solve narratives can also recognize obvious install or environment-setup commands and describe them as a `prepared dependencies ...` phase in the raw fallback path.
 37. Problem-solving query detection now also recognizes common `fix`, `debug`, and `troubleshoot` wording in both English and Chinese, not only `solve`.
-38. For knowledge and skill retrieval, the plugin API returns parsed `KnowledgeArtifact` and `SkillArtifact` objects.
-39. The example tool wrapper shows how an `openclaw`-side `query_memory` tool can forward retrieval input and then turn ordered results into a lightweight chat answer.
+38. For knowledge and skill retrieval, the agent memory API returns parsed `KnowledgeArtifact` and `SkillArtifact` objects.
+39. The example tool wrapper shows how an agent-client-side `query_memory` tool can forward retrieval input and then turn ordered results into a lightweight chat answer.
 
 ## Test Strategy
 
@@ -95,7 +95,7 @@ queries before falling back to raw-event shaping.
 - browser action-priority ranking is heuristic and currently depends on a small fixed set of narrative categories
 - browser-over-shell prioritization currently only applies to browser work-recall queries and does not yet model richer mixed-source recall policies
 - browser-only fallback for work-recall currently only applies when source types are omitted and does not yet distinguish between generic shell noise and high-value shell narratives
-- browser work-recall only uses stored offline narratives when they have already been generated and persisted; otherwise the plugin API falls back to heuristic grouping
+- browser work-recall only uses stored offline narratives when they have already been generated and persisted; otherwise the agent memory API falls back to heuristic grouping
 - shell retrieval currently groups by command name only and does not yet infer higher-level issue or workflow narratives
 - shell phase hints are still heuristic and currently only recognize a small set of obvious inspection commands
 - shell verification hints are still heuristic and currently only recognize obvious test and typecheck commands
@@ -106,4 +106,4 @@ queries before falling back to raw-event shaping.
 - shell problem-solving intent detection is still heuristic and only recognizes a small fixed vocabulary of solve/fix/debug/troubleshoot phrasing
 - shell sequence completeness scoring is currently heuristic and only counts a small fixed set of inspect/apply/verify phases
 - there is no pagination yet
-- the example tool is intentionally minimal and does not model the full `openclaw` plugin host
+- the example tool is intentionally minimal and does not model the full agent-client host

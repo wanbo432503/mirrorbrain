@@ -33,18 +33,18 @@ const topicRelationGraph: KnowledgeGraphSnapshot = {
       properties: { artifactId: 'knowledge-mirrorbrain', title: 'MirrorBrain knowledge' },
     },
     {
-      id: 'topic:openclaw',
+      id: 'topic:agent clients',
       type: 'topic',
-      label: 'OpenClaw',
-      topicKey: 'openclaw',
-      properties: { artifactId: 'knowledge-openclaw', title: 'OpenClaw' },
+      label: 'Agent Client',
+      topicKey: 'agent clients',
+      properties: { artifactId: 'knowledge-agent clients', title: 'Agent Client' },
     },
     {
-      id: 'artifact:knowledge-openclaw',
+      id: 'artifact:knowledge-agent clients',
       type: 'knowledge-artifact',
-      label: 'OpenClaw knowledge',
-      topicKey: 'openclaw',
-      properties: { artifactId: 'knowledge-openclaw', title: 'OpenClaw knowledge' },
+      label: 'Agent Client knowledge',
+      topicKey: 'agent clients',
+      properties: { artifactId: 'knowledge-agent clients', title: 'Agent Client knowledge' },
     },
   ],
   edges: [
@@ -57,18 +57,18 @@ const topicRelationGraph: KnowledgeGraphSnapshot = {
       properties: {},
     },
     {
-      id: 'contains:openclaw',
+      id: 'contains:agent clients',
       type: 'CONTAINS',
-      source: 'topic:openclaw',
-      target: 'artifact:knowledge-openclaw',
+      source: 'topic:agent clients',
+      target: 'artifact:knowledge-agent clients',
       label: 'contains',
       properties: {},
     },
     {
-      id: 'references:mirrorbrain-openclaw',
+      id: 'references:mirrorbrain-agent clients',
       type: 'REFERENCES',
       source: 'topic:mirrorbrain',
-      target: 'topic:openclaw',
+      target: 'topic:agent clients',
       label: 'references',
       properties: {},
     },
@@ -88,8 +88,8 @@ describe('KnowledgeGraphPanel', () => {
     const canvas = screen.getByTestId('knowledge-graph-canvas')
     expect(within(canvas).getAllByTestId('knowledge-graph-node')).toHaveLength(4)
     expect(within(canvas).getByText('REFERENCES')).not.toBeNull()
-    expect(within(canvas).getByText('OpenClaw')).not.toBeNull()
-    expect(within(canvas).getByText('OpenClaw knowledge')).not.toBeNull()
+    expect(within(canvas).getByText('Agent Client')).not.toBeNull()
+    expect(within(canvas).getByText('Agent Client knowledge')).not.toBeNull()
 
     const focusedNode = within(canvas).getAllByTestId('knowledge-graph-node')[0]
     expect(focusedNode.querySelectorAll('circle')[1]?.getAttribute('stroke')).toBe('#facc15')

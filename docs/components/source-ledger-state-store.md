@@ -74,7 +74,7 @@ ledgers or transient process logs.
 - Corrupt JSON files surface as read errors to the caller.
 - Source summaries are derived from available audit/checkpoint records and
   therefore may be incomplete before any import or recorder audit has occurred.
-- Retired legacy source state, including `agent-transcript` / `openclaw-main`,
+- Retired legacy source state, including `agent-transcript` / `agent-main`,
   is ignored when listing audit events or deriving source summaries. Current
   agent session state is represented only by the normalized `agent` source.
 - A disabled source summary reports `lifecycleStatus: disabled` and

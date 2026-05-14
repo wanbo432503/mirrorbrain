@@ -3,7 +3,7 @@
 ## Status
 
 Accepted and implemented for the default runtime storage path. MirrorBrain
-startup, service defaults, plugin retrieval, and workspace persistence now use
+startup, service defaults, agent retrieval, and workspace persistence now use
 the QMD workspace path. The legacy OpenViking adapter source has been removed.
 
 ## Context
@@ -95,7 +95,7 @@ Completed in the first QMD integration slice:
    events, candidate memories, reviewed memories, memory narratives, knowledge,
    and skill artifacts without duplicating source text outside the workspace.
 3. Replace MirrorBrain service defaults with QMD workspace reads and writes.
-4. Replace `openclaw-plugin-api` default reads with QMD-backed retrieval while
+4. Replace `agent-memory-api` default reads with QMD-backed retrieval while
    preserving existing `MemoryQueryResult` shape.
 5. Replace startup diagnostics: keep ActivityWatch checks and require QMD
    workspace writability instead of a secondary storage service.

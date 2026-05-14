@@ -8,7 +8,7 @@ MirrorBrain / 镜像大脑 is a local-first personal memory system for authorize
 - **Knowledge**: reviewed, human-readable knowledge articles organized by project and topic.
 - **Skill**: draft or approved Agent Skill artifacts distilled from repeatable workflow evidence.
 
-MirrorBrain is API-first and local-first. It runs as an independent local service with a React control UI, and host applications such as `openclaw` can consume its memory, knowledge, and skill capabilities through explicit APIs.
+MirrorBrain is API-first and local-first. It runs as an independent local service with a React control UI, and agent clients can consume its memory, knowledge, and skill capabilities through explicit APIs.
 
 ## Current Status
 
@@ -215,7 +215,7 @@ Start with:
 - [Knowledge Article](./docs/components/knowledge-article.md)
 - [Knowledge Article Revision](./docs/components/knowledge-article-revision.md)
 - [QMD workspace store](./docs/components/qmd-workspace-store.md)
-- [OpenClaw plugin API](./docs/components/openclaw-plugin-api.md)
+- [Agent memory API](./docs/components/agent-memory-api.md)
 
 ## Common Commands
 

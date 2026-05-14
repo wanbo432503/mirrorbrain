@@ -6,7 +6,7 @@ import {
   queryMemory,
 } from './index.js';
 
-describe('openclaw plugin api', () => {
+describe('agent memory api', () => {
   it('returns theme-level memory retrieval results from QMD memory events', async () => {
     await expect(
       queryMemory(

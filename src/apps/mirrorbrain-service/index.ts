@@ -43,8 +43,8 @@ import {
   type MemoryEventSourceFilter,
 } from '../../modules/memory-events-cache/index.js';
 import {
-  queryMemory as queryMemoryFromPluginApi,
-} from '../../integrations/openclaw-plugin-api/index.js';
+  queryMemory as queryMemoryFromAgentApi,
+} from '../../integrations/agent-memory-api/index.js';
 import {
   runBrowserMemorySyncOnce,
   startBrowserMemorySyncPolling,
@@ -351,7 +351,7 @@ type AnalyzeWorkSessionCandidatesDependency = (
 ) => WorkSessionAnalysisResult | Promise<WorkSessionAnalysisResult>;
 
 interface CreateMirrorBrainServiceDependencies {
-  queryMemory?: typeof queryMemoryFromPluginApi;
+  queryMemory?: typeof queryMemoryFromAgentApi;
   listMemoryEvents?: ListMemoryEventsDependency;
   listWorkspaceMemoryEvents?: typeof listMirrorBrainMemoryEventsFromQmdFiles;
   listRawWorkspaceMemoryEvents?: typeof listRawMirrorBrainMemoryEventsFromQmdFiles;
@@ -843,7 +843,7 @@ export function createMirrorBrainService(
     workspaceDir,
   });
   const now = dependencies.now ?? (() => new Date().toISOString());
-  const queryMemory = dependencies.queryMemory ?? queryMemoryFromPluginApi;
+  const queryMemory = dependencies.queryMemory ?? queryMemoryFromAgentApi;
   const listMemoryEvents =
     dependencies.listMemoryEvents ?? listMirrorBrainMemoryEventsFromQmdWorkspace;
   const listWorkspaceMemoryEvents =

@@ -27,7 +27,7 @@ This component generates offline shell problem-solving narratives from raw shell
 ## Test Strategy
 
 - focused unit coverage in `src/workflows/shell-problem-narratives/index.test.ts`
-- retrieval integration coverage through `src/integrations/openclaw-plugin-api/memory-narratives.test.ts`
+- retrieval integration coverage through `src/integrations/agent-memory-api/memory-narratives.test.ts`
 - service publishing coverage through `src/apps/mirrorbrain-service/memory-narratives.test.ts`
 
 ## Known Risks And Limitations

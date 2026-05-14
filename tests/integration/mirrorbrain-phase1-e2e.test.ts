@@ -16,11 +16,11 @@ import {
   listKnowledge,
   listSkillDrafts,
   queryMemory,
-} from '../../src/integrations/openclaw-plugin-api/index.js';
+} from '../../src/integrations/agent-memory-api/index.js';
 import type { MemoryEvent } from '../../src/shared/types/index.js';
 
 describe('mirrorbrain phase 1 e2e', () => {
-  it('flows from ActivityWatch browser events to openclaw-facing artifacts', async () => {
+  it('flows from ActivityWatch browser events to agent-facing artifacts', async () => {
     const fixture = JSON.parse(
       readFileSync(
         new URL('../fixtures/activitywatch/browser-events.json', import.meta.url),

@@ -25,7 +25,7 @@ documents remain the source of operational detail.
 | `src/integrations/browser-page-content` | active | Browser page text extraction and QMD storage metadata shaping. |
 | `src/integrations/file-sync-checkpoint-store` | active | Local sync checkpoint persistence. |
 | `src/integrations/knowledge-article-store` | active | Knowledge article storage. |
-| `src/integrations/openclaw-plugin-api` | active | Plugin-facing capability adapter. |
+| `src/integrations/agent-memory-api` | active | API-facing capability adapter. |
 | `src/integrations/qmd-workspace-store` | active | Default workspace storage and retrieval adapter. |
 | `src/integrations/shell-history-source` | active | Authorized shell history source adapter. |
 | `src/integrations/source-ledger-recorders` | active | Source ledger capture helpers. |

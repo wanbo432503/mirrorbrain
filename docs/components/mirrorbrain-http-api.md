@@ -290,7 +290,7 @@ Notes:
 
 ### `POST /memory/query`
 
-Returns theme-level memory retrieval results for openclaw-style questions.
+Returns theme-level memory retrieval results for agent-style questions.
 
 Request:
 

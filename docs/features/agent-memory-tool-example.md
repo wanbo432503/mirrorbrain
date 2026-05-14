@@ -1,8 +1,8 @@
-# OpenClaw Memory Tool Example
+# Agent Memory Tool Example
 
 ## Summary
 
-This feature doc describes the minimum `openclaw`-side example for consuming MirrorBrain memory retrieval in Phase 2A.
+This feature doc describes the minimum agent-client-side example for consuming MirrorBrain memory retrieval in agent API.
 
 The example stays intentionally narrow:
 
@@ -22,13 +22,13 @@ This example is for:
 
 It is not for:
 
-- defining the full `openclaw` plugin runtime
+- defining the full agent-client runtime
 - prescribing advanced agent policies
 - replacing the eventual host-native implementation
 
 ## Key Interfaces
 
-- `src/integrations/openclaw-plugin-api/query-memory-tool-example.ts`
+- `src/integrations/agent-memory-api/query-memory-tool-example.ts`
 - `createQueryMemoryToolExample(...)`
 - `composeQueryMemoryAnswer(...)`
 - MirrorBrain `POST /memory/query`
@@ -60,8 +60,8 @@ The example answer then emits one paragraph per result, preserving order.
 
 ## Test Strategy
 
-- unit coverage in `src/integrations/openclaw-plugin-api/query-memory-tool-example.test.ts`
-- broader retrieval contract coverage in `src/integrations/openclaw-plugin-api/index.test.ts`
+- unit coverage in `src/integrations/agent-memory-api/query-memory-tool-example.test.ts`
+- broader retrieval contract coverage in `src/integrations/agent-memory-api/index.test.ts`
 
 ## Known Limitations
 

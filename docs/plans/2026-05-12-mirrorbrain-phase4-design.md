@@ -313,7 +313,7 @@ Supported source configuration should cover:
 
 - Claw transcript directories
 - Codex or coding-agent session directories
-- exported `openclaw` conversation directories
+- exported agent interaction directories
 - generic transcript import directories
 
 The transcript source prioritizes:

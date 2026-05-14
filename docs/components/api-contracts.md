@@ -2,7 +2,7 @@
 
 ## Summary
 
-This component owns shared runtime schemas for MirrorBrain HTTP transport DTOs. It is the first step toward a single API contract source that can be reused by the HTTP server, frontend clients, plugin wrappers, and contract tests.
+This component owns shared runtime schemas for MirrorBrain HTTP transport DTOs. It is the first step toward a single API contract source that can be reused by the HTTP server, frontend clients, agent client adapters, and contract tests.
 
 ## Responsibility Boundary
 
@@ -21,7 +21,7 @@ This component owns shared runtime schemas for MirrorBrain HTTP transport DTOs. 
 1. Domain services return internal `KnowledgeArtifact` and `SkillArtifact` values.
 2. HTTP routes reference the shared DTO schemas for response serialization.
 3. Contract tests send example service values through the HTTP server and verify the serialized shape.
-4. Frontend and plugin clients can later import or generate types from the same contract source.
+4. Frontend and agent clients can later import or generate types from the same contract source.
 
 ## Test Strategy
 

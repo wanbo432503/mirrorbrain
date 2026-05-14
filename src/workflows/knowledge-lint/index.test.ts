@@ -23,15 +23,15 @@ describe('lintKnowledgeArtifacts', () => {
       updatedAt: '2026-05-11T00:00:00.000Z',
     };
     const relatedKnowledge: KnowledgeArtifact = {
-      id: 'topic-knowledge:openclaw-memory:v1',
+      id: 'topic-knowledge:agent-memory:v1',
       artifactType: 'topic-knowledge',
       draftState: 'published',
-      topicKey: 'openclaw-memory',
-      title: 'OpenClaw memory',
-      summary: 'OpenClaw uses MirrorBrain memory retrieval.',
-      body: 'OpenClaw can retrieve MirrorBrain knowledge and memory context.',
+      topicKey: 'agent-memory',
+      title: 'Agent Client memory',
+      summary: 'Agent Client uses MirrorBrain memory retrieval.',
+      body: 'Agent Client can retrieve MirrorBrain knowledge and memory context.',
       sourceReviewedMemoryIds: ['reviewed:memory:2'],
-      tags: ['mirrorbrain', 'openclaw'],
+      tags: ['mirrorbrain', 'agent clients'],
       relatedKnowledgeIds: [],
     };
 

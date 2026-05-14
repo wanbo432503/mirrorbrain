@@ -9,7 +9,7 @@ knowledge, knowledge relations, skill draft generation, a local HTTP API, and a
 React control UI.
 
 The current system remains local-first and API-first. MirrorBrain owns capture,
-review, storage, knowledge generation, and skill draft generation. `openclaw`
+review, storage, knowledge generation, and skill draft generation. Agent clients
 should consume MirrorBrain through explicit capability surfaces rather than
 owning MirrorBrain's internal workflows.
 
@@ -62,7 +62,7 @@ owning MirrorBrain's internal workflows.
   path while the Web UI moves to the work-session tree flow.
 - Browser theme narratives for work-recall queries.
 - Shell problem narratives for command-line problem-solving recall.
-- `openclaw`-facing `queryMemory` helper and minimum tool example.
+- Agent-facing `queryMemory` helper and minimum tool example.
 
 ### Knowledge
 
@@ -105,11 +105,11 @@ owning MirrorBrain's internal workflows.
 - Document ingestion.
 - Full real source recorders for file activity, screenshot, shell session
   output modes, and agent session directories.
-- `openclaw` conversation capture.
+- agent interaction capture.
 - Durable authorization and revocation UX across source instances.
 - Source-instance and domain/path allowlists beyond the current injected
   runtime policies.
-- Direct `openclaw` helpers for topic list/detail/history consumption.
+- Direct agent-client helpers for topic list/detail/history consumption.
 - Stronger storage-level current-best consistency guarantees.
 - Production deployment, retention, deletion policy, and operations runbooks.
 - Skill execution orchestration beyond draft and approval metadata.
@@ -148,7 +148,7 @@ Use it for:
 
 ## Recommended Next Work
 
-1. Strengthen topic detail/history browsing and openclaw topic adapters.
+1. Strengthen topic detail/history browsing and agent-client topic adapters.
 2. Improve current-best consistency guarantees in storage and service logic.
 3. Expand source authorization UX before adding broader source coverage.
 4. Add document ingestion only after source authorization and retrieval quality

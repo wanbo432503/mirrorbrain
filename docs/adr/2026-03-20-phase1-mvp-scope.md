@@ -20,7 +20,7 @@ MirrorBrain already has a meaningful Phase 1 backend slice:
 - normalized memory persistence into `OpenViking`
 - candidate and reviewed memory domain logic
 - knowledge and skill draft generation
-- plugin-facing retrieval APIs
+- API-facing retrieval APIs
 
 That slice is valuable, but it is not enough for the product milestone the repository should call “Phase 1 MVP”. A backend-only path still leaves a new user unable to:
 

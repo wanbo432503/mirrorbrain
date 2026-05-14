@@ -38,7 +38,7 @@ interface ListSkillDraftsInput {
   workspaceDir?: string;
 }
 
-interface OpenClawPluginApiDependencies {
+interface AgentMemoryApiDependencies {
   listMemoryEvents?: (input: ListMemoryEventsInput) => Promise<MemoryEvent[]>;
   listMemoryNarratives?: (input: ListMemoryEventsInput) => Promise<MemoryNarrative[]>;
   listKnowledgeArtifacts?: (
@@ -584,7 +584,7 @@ function filterNarrativesByQuery(
 
 export async function queryMemory(
   input: QueryMemoryInput,
-  dependencies: OpenClawPluginApiDependencies = {},
+  dependencies: AgentMemoryApiDependencies = {},
 ): Promise<MemoryQueryResult> {
   const listMemoryEvents =
     dependencies.listMemoryEvents ??
@@ -850,7 +850,7 @@ export async function queryMemory(
 
 export async function listKnowledge(
   input: ListKnowledgeInput,
-  dependencies: OpenClawPluginApiDependencies = {},
+  dependencies: AgentMemoryApiDependencies = {},
 ): Promise<KnowledgeArtifact[]> {
   if (dependencies.listKnowledgeArtifacts !== undefined) {
     return dependencies.listKnowledgeArtifacts(input);
@@ -867,7 +867,7 @@ export async function listKnowledge(
 
 export async function listSkillDrafts(
   input: ListSkillDraftsInput,
-  dependencies: OpenClawPluginApiDependencies = {},
+  dependencies: AgentMemoryApiDependencies = {},
 ): Promise<SkillArtifact[]> {
   if (dependencies.listSkillArtifacts !== undefined) {
     return dependencies.listSkillArtifacts(input);

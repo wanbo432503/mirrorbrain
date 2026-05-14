@@ -65,16 +65,16 @@ these boundaries as part of the current architecture:
 - [Source Ledger State Store](./components/source-ledger-state-store.md): local
   checkpoint and source audit state used by Phase 4 import and Source
   Management surfaces.
-- [OpenClaw Plugin API](./components/openclaw-plugin-api.md): host-facing
+- [Agent Memory API](./components/agent-memory-api.md): agent-facing
   memory, knowledge, and skill capability helpers.
 - [Current Project Status](./features/current-project-status.md): concise
   implemented / not-yet-implemented status snapshot.
-- [OpenClaw Memory Tool Example](./features/openclaw-memory-tool-example.md):
-  minimum host-facing retrieval example.
-- [OpenClaw Memory Demo Guide](./features/openclaw-memory-demo-guide.md):
+- [Agent Memory Tool Example](./features/agent-memory-tool-example.md):
+  minimum agent-facing retrieval example.
+- [Agent Memory API Guide](./features/agent-memory-api-guide.md):
   manual demo path for the current memory retrieval surface.
 - [Phase 2 / Phase 3 Plan](./plans/2026-04-01-mirrorbrain-phase2-phase3-plan.md):
-  roadmap source of truth for openclaw integration and topic knowledge.
+  historical Phase 2 / Phase 3 context for agent-client integration and topic knowledge.
 - [Phase 4 Design Draft](./plans/2026-05-12-mirrorbrain-phase4-design.md):
   draft direction for multi-source ledgers, work sessions, projects, and
   atomic knowledge articles.

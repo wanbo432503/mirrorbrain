@@ -1499,7 +1499,7 @@ describe('mirrorbrain service', () => {
     );
   });
 
-  it('creates an openclaw-facing service contract that queries the qmd workspace and forwards retrieval input', async () => {
+  it('creates an agent-facing service contract that queries the qmd workspace and forwards retrieval input', async () => {
     const service = {
       status: 'running' as const,
       config: getMirrorBrainConfig(),

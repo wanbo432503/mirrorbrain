@@ -1295,7 +1295,7 @@ describe('mirrorbrain http server', () => {
     });
   });
 
-  it('accepts agent source filters and rejects retired openclaw conversation filters', async () => {
+  it('accepts agent source filters and rejects retired agent interaction filters', async () => {
     const service = {
       service: {
         status: 'running' as const,
@@ -1349,7 +1349,7 @@ describe('mirrorbrain http server', () => {
       },
       body: JSON.stringify({
         query: 'What agent sessions did I run?',
-        sourceTypes: ['openclaw-conversation'],
+        sourceTypes: ['agent-transcript'],
       }),
     });
 

@@ -167,15 +167,15 @@ describe('source ledger state store', () => {
     ]);
   });
 
-  it('omits retired openclaw source state from audit listings and summaries', async () => {
+  it('omits retired agent source state from audit listings and summaries', async () => {
     const workspaceDir = await mkdtemp(join(tmpdir(), 'mirrorbrain-state-'));
     const store = createFileSourceLedgerStateStore({ workspaceDir });
 
     await store.writeSourceAuditEvent(
       createAuditEvent({
-        id: 'source-audit:retired-openclaw-imported',
+        id: 'source-audit:retired-agent-imported',
         sourceKind: 'agent-transcript' as never,
-        sourceInstanceId: 'openclaw-main',
+        sourceInstanceId: 'agent-main',
         message: 'Imported legacy agent transcript.',
       }),
     );
@@ -189,7 +189,7 @@ describe('source ledger state store', () => {
     );
     await store.writeSourceInstanceConfig({
       sourceKind: 'agent-transcript' as never,
-      sourceInstanceId: 'openclaw-main',
+      sourceInstanceId: 'agent-main',
       enabled: true,
       updatedAt: '2026-05-12T11:00:00.000Z',
       updatedBy: 'mirrorbrain-web',

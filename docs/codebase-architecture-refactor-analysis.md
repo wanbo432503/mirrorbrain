@@ -6,17 +6,17 @@ Date: 2026-05-11
 
 This document records a code-level architecture review of the current MirrorBrain repository. It is meant to support future refactoring work, not to define new product scope.
 
-The current codebase has successfully grown past the original Phase 1 vertical slice. It now contains browser sync, shell sync, memory review, OpenClaw-facing memory retrieval, knowledge generation, topic knowledge merge, knowledge graph display, skill draft generation, a Fastify HTTP API, a legacy vanilla web UI, and a newer React web UI.
+The current codebase has successfully grown past the original Phase 1 vertical slice. It now contains browser sync, shell sync, memory review, Agent Client-facing memory retrieval, knowledge generation, topic knowledge merge, knowledge graph display, skill draft generation, a Fastify HTTP API, a legacy vanilla web UI, and a newer React web UI.
 
 The main problem is that the implementation has accumulated capability faster than boundaries. Several files now act as mixed-purpose hubs:
 
 - `src/apps/mirrorbrain-service/index.ts` is both runtime composer, product facade, storage coordinator, deletion/tombstone manager, cache updater, knowledge relation refresher, narrative publisher, candidate generator, and knowledge/skill workflow host.
 - `src/apps/mirrorbrain-http-server/index.ts` is both transport layer, OpenAPI schema registry, input normalization layer, static UI server, route implementation, and partial error handling layer.
 - `src/integrations/openviking-store/index.ts` is both OpenViking HTTP client, workspace file writer, Markdown/JSON serializer, Markdown parser, display deduplicator, and fallback read model.
-- `src/integrations/openclaw-plugin-api/index.ts` contains host-facing API helpers, but also owns retrieval ranking, natural language summaries, shell problem clustering, browser query intent detection, and source-specific heuristics.
+- `src/integrations/agent-memory-api/index.ts` contains agent-facing API helpers, but also owns retrieval ranking, natural language summaries, shell problem clustering, browser query intent detection, and source-specific heuristics.
 - `src/modules/memory-review/index.ts` contains the core candidate-generation algorithm, but also includes broad source classification, task-type inference, scoring policy, copy generation, local URL filtering, token extraction, and many product-language heuristics.
 
-The most important refactor is not a rewrite. It should be a staged boundary extraction that makes behavior easier to test, keeps privacy rules enforceable, and prevents the OpenClaw integration surface from depending on incidental implementation details.
+The most important refactor is not a rewrite. It should be a staged boundary extraction that makes behavior easier to test, keeps privacy rules enforceable, and prevents the Agent Client integration surface from depending on incidental implementation details.
 
 ## Review Scope
 
@@ -53,7 +53,7 @@ Reviewed areas:
   - `src/integrations/browser-page-content/index.ts`
   - `src/integrations/shell-history-source/index.ts`
   - `src/integrations/openviking-store/index.ts`
-  - `src/integrations/openclaw-plugin-api/index.ts`
+  - `src/integrations/agent-memory-api/index.ts`
 - Frontend surfaces:
   - `src/apps/mirrorbrain-web/main.ts`
   - `src/apps/mirrorbrain-web-react/src/api/client.ts`
@@ -94,7 +94,7 @@ The repository roughly follows the intended layout:
   - shell history source
   - browser page content fetch/extraction
   - OpenViking storage
-  - OpenClaw plugin API
+  - Agent memory API
   - file sync checkpoint store
 - `src/shared/` contains types, config, and low-level LLM HTTP helpers.
 - `tests/integration/` and `tests/e2e/` contain broader coverage.
@@ -197,12 +197,12 @@ Evidence:
 
 Why this is unreasonable:
 
-An application service can coordinate, but this file now owns multiple independent policies. Changes to knowledge graph behavior, deletion semantics, cache strategy, browser candidate creation, and OpenClaw query behavior all touch one facade. That increases regression risk and makes it unclear where lifecycle rules actually live.
+An application service can coordinate, but this file now owns multiple independent policies. Changes to knowledge graph behavior, deletion semantics, cache strategy, browser candidate creation, and Agent Client query behavior all touch one facade. That increases regression risk and makes it unclear where lifecycle rules actually live.
 
 Impact:
 
 - Test setup requires large dependency bags instead of small component contracts.
-- Business rules are hard to reuse from OpenClaw plugin wrappers without importing the entire service.
+- Business rules are hard to reuse from agent client adapters without importing the entire service.
 - Failure handling is inconsistent because local functions catch and swallow errors differently.
 - New capability work tends to add another dependency and method to the same file.
 
@@ -236,7 +236,7 @@ Impact:
 
 - A valid internal `KnowledgeArtifact` may fail HTTP response serialization.
 - Frontend code can compile against a shape that is not actually guaranteed by the server schema.
-- OpenClaw wrapper code has no single contract source to import.
+- Agent Client wrapper code has no single contract source to import.
 
 Refactor direction:
 
@@ -305,11 +305,11 @@ Refactor direction:
 - Replace copied frontend types with generated/shared API DTO types.
 - Rename sync summary types so shell sync is not typed as browser sync.
 
-### P1: OpenClaw Plugin API Contains Retrieval Domain Logic Instead Of Thin Host Adaptation
+### P1: Agent Memory API Contains Retrieval Domain Logic Instead Of Thin Host Adaptation
 
 Evidence:
 
-- `src/integrations/openclaw-plugin-api/index.ts` defines source-specific query intent detection at `:144` and `:175`.
+- `src/integrations/agent-memory-api/index.ts` defines source-specific query intent detection at `:144` and `:175`.
 - It clusters shell problem-solving sequences at `:269`.
 - It classifies browser narrative kinds at `:312`.
 - It builds natural language summaries at `:428`.
@@ -317,20 +317,20 @@ Evidence:
 
 Why this is unreasonable:
 
-The planning docs say OpenClaw-specific code should mainly adapt host APIs, events, and transport concerns. This file is named as an integration adapter, but it now owns core retrieval behavior.
+The planning docs say Agent Client-specific code should mainly adapt host APIs, events, and transport concerns. This file is named as an integration adapter, but it now owns core retrieval behavior.
 
 Impact:
 
 - Retrieval behavior cannot be reused cleanly by the HTTP service or future UI without importing an integration module.
-- OpenClaw-specific naming encourages putting more business logic in the host adapter.
-- Testing retrieval quality is tied to OpenClaw API helper tests instead of a retrieval module.
+- Agent Client-specific naming encourages putting more business logic in the host adapter.
+- Testing retrieval quality is tied to Agent Client API helper tests instead of a retrieval module.
 
 Refactor direction:
 
 - Extract `src/modules/memory-retrieval` or `src/workflows/memory-retrieval`.
 - Move query intent detection, narrative selection, grouping, source filtering, summary generation, and ranking into that module/workflow.
-- Keep `openclaw-plugin-api` as a thin adapter that calls retrieval and maps results to host/tool DTOs.
-- Add explicit retrieval-quality tests independent of OpenClaw.
+- Keep `agent-memory-api` as a thin adapter that calls retrieval and maps results to agent/tool DTOs.
+- Add explicit retrieval-quality tests independent of Agent Client.
 
 ### P1: OpenViking Store Adapter Mixes Storage, Serialization, Parsing, Display Deduplication, And Fallback Semantics
 
@@ -459,9 +459,9 @@ Refactor direction:
 Evidence:
 
 - Browser page role inference exists in `src/modules/memory-review/index.ts:1528`.
-- Browser narrative kind inference exists in `src/integrations/openclaw-plugin-api/index.ts:312`.
+- Browser narrative kind inference exists in `src/integrations/agent-memory-api/index.ts:312`.
 - Localhost filtering exists in `src/modules/memory-review/index.ts:238`, `src/integrations/activitywatch-browser-source/index.ts:186`, and `src/integrations/browser-page-content/index.ts:39`.
-- Shell phase classification exists in `src/integrations/openclaw-plugin-api/index.ts:100`, `:110`, `:121`, and `:131`, while shell narrative generation also has its own workflow.
+- Shell phase classification exists in `src/integrations/agent-memory-api/index.ts:100`, `:110`, `:121`, and `:131`, while shell narrative generation also has its own workflow.
 
 Why this is unreasonable:
 
@@ -519,11 +519,11 @@ Evidence:
 
 Why this is unreasonable:
 
-As the system becomes a plugin-facing API, errors need stable shapes. Mixed default Fastify errors, route-local catches, and client-local parsers make UX and integration behavior unpredictable.
+As the system becomes a API-facing API, errors need stable shapes. Mixed default Fastify errors, route-local catches, and client-local parsers make UX and integration behavior unpredictable.
 
 Impact:
 
-- OpenClaw wrapper code cannot depend on consistent error codes.
+- Agent Client wrapper code cannot depend on consistent error codes.
 - Frontend methods may treat failed JSON responses as successful typed data.
 - Operational diagnosis is harder because errors are logged or hidden in different places.
 
@@ -575,7 +575,7 @@ Fallbacks are useful, but they should be first-class artifact state, not only te
 
 Impact:
 
-- UI and OpenClaw may treat degraded drafts like normal drafts unless they parse body text.
+- UI and Agent Client may treat degraded drafts like normal drafts unless they parse body text.
 - Approval gates cannot easily prevent publishing degraded outputs.
 - Knowledge-quality evaluation can be polluted by fallback scaffolds.
 
@@ -673,7 +673,7 @@ Refactor direction:
 Evidence:
 
 - Candidate summaries generate English sentences in `src/modules/memory-review/index.ts:744`.
-- Retrieval summaries generate English sentences in `src/integrations/openclaw-plugin-api/index.ts:428`.
+- Retrieval summaries generate English sentences in `src/integrations/agent-memory-api/index.ts:428`.
 - Knowledge fallback body text is embedded in `src/modules/knowledge-generation-llm/index.ts:587`.
 
 Why this is unreasonable:
@@ -699,7 +699,7 @@ Evidence:
 - The repository has substantial tests, including large files:
   - `src/apps/mirrorbrain-service/index.test.ts`: 2,306 lines.
   - `src/integrations/openviking-store/index.test.ts`: 2,082 lines.
-  - `src/integrations/openclaw-plugin-api/index.test.ts`: 2,066 lines.
+  - `src/integrations/agent-memory-api/index.test.ts`: 2,066 lines.
   - `src/modules/memory-review/index.test.ts`: 1,520 lines.
 - The largest tests mirror the largest files.
 - Authorization policy tests exist, but runtime authorization enforcement is not integrated.
@@ -790,13 +790,13 @@ Goal: remove core business logic from host/integration adapters.
 
 Recommended work:
 
-- Move retrieval grouping/ranking from `openclaw-plugin-api` into a domain module.
+- Move retrieval grouping/ranking from `agent-memory-api` into a domain module.
 - Split memory review into classifier, grouper, ranker, summary writer, and review transition modules.
 - Share browser and shell classifiers.
 
 Why third:
 
-This directly supports Phase 2B retrieval quality without further coupling to OpenClaw.
+This directly supports Phase 2B retrieval quality without further coupling to Agent Client.
 
 ### Step 4: Break Up The Service Facade
 
@@ -901,18 +901,18 @@ Responsibilities:
 - refresh relations with observable operation status
 - prevent degraded fallback publication without review visibility
 
-### HTTP And OpenClaw
+### HTTP And Agent Client
 
 New or clarified components:
 
 - `src/shared/api-contract`
 - `src/apps/mirrorbrain-http-server/routes/*`
-- `src/integrations/openclaw-plugin-api`
+- `src/integrations/agent-memory-api`
 
 Responsibilities:
 
 - HTTP server validates DTOs and maps errors.
-- OpenClaw adapter calls capability services and maps results to host tools.
+- Agent Client adapter calls capability services and maps results to host tools.
 - Neither layer owns retrieval, review, or lifecycle policy.
 
 ## Concrete Refactor Task Backlog
@@ -927,7 +927,7 @@ Responsibilities:
 8. Add round-trip tests for `KnowledgeArtifact` fields including `tags`, `relatedKnowledgeIds`, and `compilationMetadata`.
 9. Centralize delete/tombstone behavior.
 10. Extract browser and shell classifiers.
-11. Move memory retrieval logic out of `openclaw-plugin-api`.
+11. Move memory retrieval logic out of `agent-memory-api`.
 12. Split `memory-review/index.ts` into grouper, ranker, classifier, summary writer, and transition modules.
 13. Add visible operation status for page content enrichment, relation refresh, cache update, and knowledge lint.
 14. Extract service facade responsibilities into memory sync, review, knowledge, and artifact services.
@@ -938,7 +938,7 @@ Responsibilities:
 
 - Do not replace handwritten schemas with another duplicated schema layer. The point is one contract source.
 - Do not move all extracted code into `src/shared`. Domain ownership should remain explicit.
-- Do not make OpenClaw the owner of retrieval policy. It should consume MirrorBrain capabilities.
+- Do not make Agent Client the owner of retrieval policy. It should consume MirrorBrain capabilities.
 - Do not keep shell raw command capture unchanged while improving shell retrieval.
 - Do not treat Markdown as the only machine-readable durable format for knowledge artifacts.
 - Do not remove broad integration tests before smaller replacement tests exist.

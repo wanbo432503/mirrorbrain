@@ -21,7 +21,7 @@ MirrorBrain preserves three product surfaces:
 | Layer | Path | Boundary |
 | --- | --- | --- |
 | Apps | `src/apps/` | Process entrypoints, service facade, HTTP transport, and UI surfaces. |
-| Integrations | `src/integrations/` | Adapters for ActivityWatch, shell history, QMD storage, browser content, checkpoints, and openclaw. |
+| Integrations | `src/integrations/` | Adapters for ActivityWatch, shell history, QMD storage, browser content, checkpoints, and agent clients. |
 | Modules | `src/modules/` | Domain rules, artifact construction, lifecycle policy, scoring, relation logic, and shared domain transformations. |
 | Workflows | `src/workflows/` | Multi-step orchestration that composes modules and integrations. |
 | Shared | `src/shared/` | Cross-cutting types, API contracts, config defaults, and low-level HTTP LLM helpers. |
@@ -63,7 +63,7 @@ Outputs:
 
 Dependencies:
 
-- `qmd-workspace-store`, `openclaw-plugin-api`, `file-sync-checkpoint-store`,
+- `qmd-workspace-store`, `agent-memory-api`, `file-sync-checkpoint-store`,
   `activitywatch-browser-source`, `browser-page-content`.
 - `memory-events-cache`, `memory-review`, `knowledge-generation-llm`,
   `knowledge-relation-network`, `knowledge-graph`.
@@ -458,9 +458,9 @@ Verification:
 
 - `src/integrations/knowledge-article-store/index.test.ts`
 
-### `src/integrations/openclaw-plugin-api`
+### `src/integrations/agent-memory-api`
 
-Purpose: expose MirrorBrain capability helpers shaped for openclaw plugin use.
+Purpose: expose MirrorBrain capability helpers shaped for agent integration use.
 
 Responsibilities:
 
@@ -494,12 +494,12 @@ Failure modes and constraints:
 
 Verification:
 
-- `src/integrations/openclaw-plugin-api/*.test.ts`
+- `src/integrations/agent-memory-api/*.test.ts`
 
-### `src/integrations/openclaw-plugin-api/query-memory-tool-example`
+### `src/integrations/agent-memory-api/query-memory-tool-example`
 
 Purpose: document and test the minimum `query_memory` tool wrapper shape for
-openclaw.
+agent clients.
 
 Responsibilities:
 
@@ -509,7 +509,7 @@ Responsibilities:
 
 Verification:
 
-- `src/integrations/openclaw-plugin-api/query-memory-tool-example.test.ts`
+- `src/integrations/agent-memory-api/query-memory-tool-example.test.ts`
 
 ## Domain Modules
 

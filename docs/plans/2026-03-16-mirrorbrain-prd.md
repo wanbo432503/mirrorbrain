@@ -2,13 +2,13 @@
 
 ## Summary
 
-MirrorBrain is an `openclaw` plugin that provides three related capabilities built from authorized PC work activity:
+MirrorBrain is a local-first unified personal memory platform that provides three related capabilities built from authorized PC work activity:
 
 - memory: source-attributed recall of what the user did
 - knowledge: high-signal notes synthesized from daily review
 - skill: reusable Agent Skills distilled from repeatable workflows
 
-Phase 1 focuses on a narrow, safe vertical slice that proves the plugin model, preserves privacy boundaries, keeps the user in control, and is runnable by a real user end to end in a documented local environment.
+Phase 1 focuses on a narrow, safe vertical slice that proves the agent API model, preserves privacy boundaries, keeps the user in control, and is runnable by a real user end to end in a documented local environment.
 
 ## Problem Statement
 
@@ -18,14 +18,14 @@ Users doing substantial work on a PC leave behind fragmented evidence across bro
 - insights from one day do not reliably become reusable knowledge
 - repeatable workflows are rediscovered manually instead of becoming durable skills
 
-`openclaw` needs a memory and capability layer that can turn authorized work traces into usable recall, high-quality knowledge, and explicit skill artifacts.
+agent clients need a memory and capability layer that can turn authorized work traces into usable recall, high-quality knowledge, and explicit skill artifacts.
 
 ## Product Goals
 
 - help users recover relevant work context with clear provenance
 - help users convert reviewed activity into strong daily knowledge notes
 - help users convert repeatable workflows into explicit Agent Skill drafts
-- make these capabilities available to `openclaw` through explicit plugin-facing APIs
+- make these capabilities available to agent clients through explicit APIs
 - preserve privacy, authorization, and human confirmation boundaries throughout
 
 ## Non-Goals
@@ -33,12 +33,12 @@ Users doing substantial work on a PC leave behind fragmented evidence across bro
 - becoming a general-purpose passive surveillance system
 - autonomous high-risk workflow execution without confirmation
 - broad enterprise integration coverage in Phase 1
-- replacing the host product `openclaw`
+- replacing the host product agent clients
 - capturing every possible source type before review and governance are solid
 
 ## Primary Users
 
-- individual knowledge workers using `openclaw` on a PC
+- individual knowledge workers using agent-assisted work on a PC
 - technically oriented users who want stronger recall across browser, documents, shell, and AI interaction history
 - users who want reviewed summaries and repeatable workflow guidance, not just raw logs
 
@@ -47,7 +47,7 @@ Users doing substantial work on a PC leave behind fragmented evidence across bro
 1. Review what I worked on and recover missing context quickly.
 2. Turn daily activity into coherent notes I can revisit later.
 3. Identify repeated workflows and convert them into reusable AI skills.
-4. Use these outputs from inside `openclaw` without losing privacy control.
+4. Use these outputs from inside an agent client without losing privacy control.
 
 ## Core Product Model
 
@@ -58,7 +58,7 @@ Memory is the raw or lightly processed recall layer. It includes authorized reco
 - browser activity
 - viewed documents
 - shell interaction history
-- `openclaw` conversation history and related agent traces
+- agent interaction history and related agent traces
 
 Memory must remain source-attributed, reviewable, and bounded by explicit authorization.
 
@@ -77,7 +77,7 @@ Skills are explicit Agent Skill artifacts derived from repeatable workflows. Ski
 
 - preserve links to workflow evidence or rationale
 - require explicit human approval before reuse or execution
-- remain portable enough to be used by `openclaw`
+- remain portable enough to be used by agent clients
 
 ## Phase 1 Scope
 
@@ -89,7 +89,7 @@ Phase 1 includes:
 - daily-review knowledge drafting from reviewed memory
 - workflow evidence detection sufficient to produce skill drafts
 - explicit approval states for skill drafts
-- plugin-facing APIs for `openclaw` to read memory, knowledge, and skills
+- APIs for agent clients to read memory, knowledge, and skills
 - a runnable local service surface for MirrorBrain
 - a minimal user-facing review flow for the first vertical slice
 - repository-level setup, startup, and usage documentation for a new user
@@ -100,7 +100,7 @@ To keep Phase 1 narrow, the initial supported sources should be:
 
 - browser history or browser session activity from an explicitly authorized browser integration
 - shell interaction history from an explicitly authorized shell environment
-- `openclaw` conversation history and related host-side interaction traces
+- agent interaction history and related host-side interaction traces
 
 For the first browser slice:
 
@@ -119,7 +119,7 @@ Current repository status:
   out of scope for this change
 - the current repository also supports configured shell-history sync and
   shell-oriented recall surfaces
-- `openclaw` conversation history remains part of the broader product plan but
+- agent interaction history remains part of the broader product plan but
   is not the current source expansion priority
 - for the up-to-date implemented baseline, see
   `docs/features/current-project-status.md`
@@ -170,10 +170,10 @@ Phase 1 excludes:
 - skill drafts include approval state and execution safety metadata
 - skill execution requires explicit confirmation
 
-### OpenClaw Integration
+### Agent Client Integration
 
-- `openclaw` can request memory, knowledge, and skill capabilities independently
-- reads and writes across the plugin boundary are auditable
+- agent clients can request memory, knowledge, and skill capabilities independently
+- reads and writes across the API boundary are auditable
 - the integration does not depend on hidden host state
 
 ### Storage And Synchronization
@@ -206,7 +206,7 @@ Phase 1 is successful only if a new user can complete the first MVP flow by foll
 - a user can review authorized memory through a user-facing review surface
 - a user can produce a daily knowledge draft from reviewed memory
 - a user can inspect at least one generated skill draft linked to workflow evidence
-- `openclaw` can retrieve these artifacts through explicit plugin-facing interfaces
+- agent clients can retrieve these artifacts through explicit API interfaces
 - the repository includes a root `README.md` that explains project purpose, setup, startup, testing, MVP usage, and known limitations
 - the system enforces authorization and confirmation boundaries in automated tests
 - the documented MVP path is covered by at least one end-to-end user-flow test
@@ -224,11 +224,11 @@ The first end-to-end slice should prove the narrowest useful path through the sy
 6. The user reviews at least one candidate memory through a user-facing review flow and marks it as kept.
 7. A daily review flow generates a knowledge draft from reviewed memory.
 8. MirrorBrain detects repeated workflow evidence from reviewed activity and produces a skill draft.
-9. `openclaw` retrieves the reviewed memory, knowledge draft, and skill draft through explicit plugin APIs.
+9. agent clients retrieve the reviewed memory, knowledge draft, and skill draft through explicit agent memory APIs.
 
 This slice is more important than broad source coverage. New source adapters should not come before this flow works end to end.
 
 ## Open Questions
 
-- what exact transport and lifecycle model should the `openclaw` plugin boundary use
+- what exact transport and lifecycle model should the agent-client API boundary use
 - what retention and deletion policy should apply to raw memory versus derived artifacts

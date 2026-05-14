@@ -81,7 +81,7 @@ const otherShellNarrative: MemoryNarrative = {
   queryHints: ['docker', 'compose'],
 };
 
-describe('openclaw plugin api memory narratives', () => {
+describe('agent memory api memory narratives', () => {
   it('prefers offline browser theme narratives for browser work-recall queries', async () => {
     await expect(
       queryMemory(

@@ -2,7 +2,7 @@
 
 ## Summary
 
-MirrorBrain is designed as the memory and capability layer for `openclaw`. The product design centers on a simple progression:
+MirrorBrain is designed as the memory and capability layer for agent clients. The product design centers on a simple progression:
 
 1. capture authorized work activity as memory
 2. review and curate that memory
@@ -61,7 +61,7 @@ The first product slice should focus on three source families:
 
 - browser activity
 - shell interaction history
-- `openclaw` conversation history
+- agent interaction history
 
 This mix is enough to prove cross-context memory value without immediately taking on the complexity of general document ingestion. Document-based memory can be added once review, provenance, and privacy flows are stable.
 
@@ -70,7 +70,7 @@ Current repository status:
 - the original MVP slice proved the browser source first
 - the current repository also implements configured shell-history sync, shell
   retrieval shaping, and shell problem narratives
-- `openclaw` conversation capture remains planned but is not the current source
+- agent interaction capture remains planned but is not the current source
   expansion priority
 - for the up-to-date implemented baseline, see
   `docs/features/current-project-status.md`
@@ -121,19 +121,19 @@ Design implications:
 
 The first implementation should optimize for one concrete flow instead of broad optionality:
 
-1. The user enables capture for browser activity and either shell history or `openclaw` conversation history.
+1. The user enables capture for browser activity and either shell history or agent interaction history.
 2. MirrorBrain captures memory events from both enabled source families.
 3. The user sees grouped candidate memories with visible provenance.
 4. The user keeps or edits at least one candidate memory.
 5. A daily review generates one knowledge draft from reviewed memory.
 6. MirrorBrain proposes one skill draft backed by reviewed workflow evidence.
-7. `openclaw` requests and displays the resulting artifacts through plugin-facing APIs.
+7. agent clients request and displays the resulting artifacts through APIs.
 
 This should be the anchor flow for early UX decisions, API design, and end-to-end testing.
 
-## OpenClaw Plugin Experience
+## Agent Client API Experience
 
-`openclaw` should be able to treat MirrorBrain as a capability provider with three distinct surfaces:
+Agent clients should be able to treat MirrorBrain as a capability provider with three distinct surfaces:
 
 - memory retrieval
 - knowledge retrieval
@@ -173,7 +173,7 @@ The UI and APIs should make the following differences visible:
 
 The initial design slice should prioritize:
 
-- browser activity, shell history, and `openclaw` conversation history as the first source set
+- browser activity, shell history, and agent interaction history as the first source set
 - a review-first memory experience
 - a daily-review-driven knowledge draft flow
 - a simple skill draft experience based on repeated reviewed workflows
@@ -185,4 +185,4 @@ It should avoid trying to solve every retrieval, ranking, and automation scenari
 - too much raw capture with too little review support will create noise
 - weak provenance will reduce trust in knowledge and skills
 - blurred states will cause unsafe assumptions about what is approved
-- over-coupling to `openclaw` internals will make the plugin hard to evolve
+- over-coupling to agent-client internals will make the platform hard to evolve

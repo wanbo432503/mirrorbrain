@@ -2,7 +2,7 @@
 
 ## Summary
 
-MirrorBrain should be implemented as an API-first, service-oriented TypeScript system that can operate as an `openclaw` plugin capability layer. The technical design preserves three distinct artifact classes:
+MirrorBrain should be implemented as an API-first, service-oriented TypeScript system that operates as an agent-client capability platform. The technical design preserves three distinct artifact classes:
 
 - memory artifacts
 - knowledge artifacts
@@ -14,7 +14,7 @@ Phase 1 should implement the narrowest viable slice that proves authorized inges
 
 ### Logical Layers
 
-- integrations: adapters for browser activity, document observation/import, shell history capture, and `openclaw` host interfaces
+- integrations: adapters for browser activity, document observation/import, shell history capture, and agent clients host interfaces
 - modules: domain logic for authorization, memory capture, memory review, knowledge synthesis, and skill draft management
 - workflows: orchestration for daily review, workflow evidence extraction, and skill generation
 - apps: runnable surfaces such as backend service entrypoints, review UIs, and optional workers
@@ -46,7 +46,7 @@ The Phase 1 slice is not complete as a backend-only code path. It must include:
 - `src/modules/skill-draft-management`
 - `src/workflows/daily-review`
 - `src/workflows/skill-draft-builder`
-- `src/integrations/openclaw-plugin-api`
+- `src/integrations/agent-memory-api`
 
 These names are defaults, not a rigid requirement, but new code should stay close to these responsibilities.
 
@@ -56,7 +56,7 @@ Phase 1 should start with adapters for:
 
 - one browser activity source
 - one shell history source
-- the `openclaw` conversation or interaction history surface
+- the agent interaction or interaction history surface
 
 For the first browser source:
 
@@ -69,7 +69,7 @@ Current repository status:
 - the original MVP slice started with the browser source adapter
 - the current repository also includes a configured shell-history source adapter,
   shell sync workflow, and shell retrieval/narrative surfaces
-- `openclaw` conversation capture remains planned but is not the current source
+- agent interaction capture remains planned but is not the current source
   expansion priority
 - for the up-to-date implemented baseline, see
   `docs/features/current-project-status.md`
@@ -163,9 +163,9 @@ Suggested fields:
 - skill approval and skill execution are separate state transitions
 - execution requires current authorization and confirmation checks
 
-## OpenClaw Plugin API Guidance
+## Agent Memory API Guidance
 
-Until a stricter interface is chosen, design the plugin boundary around explicit capability-oriented APIs such as:
+Until a stricter interface is chosen, design the API boundary around explicit capability-oriented APIs such as:
 
 - `queryMemory(...)`
 - `listKnowledge(...)`
@@ -194,7 +194,7 @@ The first implementation slice should prove this sequence:
 7. explicit review transition into `ReviewedMemory`
 8. daily review generation into `KnowledgeArtifact` draft state
 9. workflow evidence conversion into `SkillArtifact` draft state
-10. retrieval through `openclaw`-facing query APIs and the standalone MVP surface
+10. retrieval through agent-facing query APIs and the standalone MVP surface
 
 The preferred order of implementation is to make this slice pass end to end with minimal adapters before expanding source coverage or storage sophistication.
 
@@ -250,7 +250,7 @@ This keeps first-run behavior predictable while allowing the sync cadence to be 
 - deny capture from unauthorized sources by default
 - keep authorization scope attached to captured and derived artifacts where relevant
 - do not treat secrets, credentials, or tokens as valid product content
-- preserve auditable records for plugin writes and approval actions
+- preserve auditable records for agent-client writes and approval actions
 
 ## Testing Strategy
 
@@ -267,7 +267,7 @@ Use Vitest for:
 
 Use Vitest integration tests for:
 
-- plugin API request and response behavior
+- agent memory API request and response behavior
 - end-to-end flow from authorized capture to reviewed memory
 - daily-review synthesis from reviewed memory to knowledge draft
 - workflow evidence to skill draft generation with approval gating

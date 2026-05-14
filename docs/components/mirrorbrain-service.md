@@ -2,7 +2,7 @@
 
 ## Summary
 
-This component is the runnable service entrypoint for MirrorBrain. It starts the Phase 4 source-ledger recorder supervisor and import scheduler, wires source-ledger import to checkpoint and audit storage, keeps legacy explicit browser and shell sync methods available for service-internal workflows, schedules stored memory narrative rebuilds after explicit browser or shell sync operations, and exposes the `openclaw`-facing service contract for memory retrieval, source management, user-triggered work-session analysis, daily candidate generation, candidate review suggestions, explicit review decisions, and reviewed-memory-driven artifact generation.
+This component is the runnable service entrypoint for MirrorBrain. It starts the Phase 4 source-ledger recorder supervisor and import scheduler, wires source-ledger import to checkpoint and audit storage, keeps legacy explicit browser and shell sync methods available for service-internal workflows, schedules stored memory narrative rebuilds after explicit browser or shell sync operations, and exposes the agent-facing service contract for memory retrieval, source management, user-triggered work-session analysis, daily candidate generation, candidate review suggestions, explicit review decisions, and reviewed-memory-driven artifact generation.
 
 ## Responsibility Boundary
 
@@ -30,13 +30,13 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
   same article lineage
 - wires runtime memory-source authorization policy into browser and shell sync execution
 - wires separate page-content capture authorization into browser page text backfill
-- exposes the high-level service contract used by `openclaw`
-- keeps raw memory listing and `openclaw` retrieval shaping as separate concerns
+- exposes the high-level service contract used by agent clients
+- keeps raw memory listing and agent clients retrieval shaping as separate concerns
 - reads memory, knowledge, and skill artifacts from the QMD workspace by
   default, with workspace file fallback for raw review flows
 - schedules browser theme narrative rebuilds after explicit browser sync calls through the service contract
 - schedules shell problem narrative rebuilds after explicit shell sync calls through the service contract
-- forwards `openclaw` retrieval calls to the plugin API with the configured
+- forwards agent clients retrieval calls to the agent memory API with the configured
   workspace directory
 - exposes daily candidate-memory generation, refresh, and review suggestion operations
 - exposes explicit candidate review decisions as service-level operations
@@ -68,7 +68,7 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 7. Keep explicit browser and shell sync methods available through the service contract for review flows that still call them directly, using runtime source and page-content authorization policies.
 7. Return a runtime service handle with `status` and `stop()`.
 8. Create the Phase 4 source-ledger state store for per-ledger checkpoints and operational source audit records.
-9. Expose the `openclaw`-facing service contract around that runtime handle.
+9. Expose the agent-facing service contract around that runtime handle.
 10. After explicit browser or shell sync calls through the service contract, return the sync summary immediately and schedule the corresponding narrative rebuild in the background when new events were imported.
 11. When source-ledger import is requested, first capture the latest enabled
     ActivityWatch browser records into the default browser ledger, then run the
@@ -96,7 +96,7 @@ This component is the runnable service entrypoint for MirrorBrain. It starts the
 21. List raw imported memory when review-oriented workflows need event-level
     records, preferring the QMD workspace read path and falling back to
     workspace-cached memory-event files when storage reads fail.
-22. Forward `openclaw` memory retrieval calls through the configured workspace
+22. Forward agent clients memory retrieval calls through the configured workspace
     directory and return shaped retrieval results.
 22. Before daily candidate generation or refresh, run Phase 4 source-ledger import so the workspace raw-event cache reflects newly recorded daily JSONL ledgers.
 13. If candidates already exist for a review date and the sync imports no new browser events, return the existing candidates without rebuilding them.
@@ -150,7 +150,7 @@ For MVP startup and operator usage, see the repository [README](../../README.md)
   preserve stable article lineages, kept-only reviewed projects stay out of the
   Published tree, published Knowledge Article deletion removes a lineage from
   the Published tree, and the Published tree groups saved projects/topics/articles
-- unit tests verify the service forwards retrieval calls to the plugin API with
+- unit tests verify the service forwards retrieval calls to the agent memory API with
   the configured QMD workspace directory and retrieval input
 - unit tests verify review-oriented flows still use raw memory event listing where needed
 - unit tests verify raw memory reads fall back to workspace-cached events when

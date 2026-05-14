@@ -5,26 +5,27 @@ This file defines how Codex should design, implement, test, and document the Mir
 ## Project Context
 
 - Project name: MirrorBrain / 镜像大脑
-- Product direction: an `openclaw` plugin that provides memory, knowledge, and skill capabilities based on authorized PC work activity
-- Product role inside `openclaw`: MirrorBrain is not a generic note app inside this repository. It is the memory and capability layer for `openclaw`, responsible for turning authorized user activity into reusable context and operator assistance
+- Product direction: a local-first unified personal memory platform for authorized PC work activity
+- Product role for agent clients: MirrorBrain is not a generic note app and is no longer an agent-host-specific integration. It is the memory, knowledge, and skill platform that agent clients such as Codex and other assistants can consume through explicit APIs.
 - product strategy priority:
-  - first priority: be installable and usable through the existing `openclaw` plugin system
-  - second priority: deliver clear value as a personal work memory system
+  - first priority: deliver a reliable local personal memory platform with clear capture, review, knowledge, and skill lifecycles
+  - second priority: expose stable APIs so multiple agent clients can request memory, knowledge, and skill capabilities
   - long-term priority: evolve toward a personal AI operating system that can help continuously advance user goals
 - current project stage:
-  - Phase 1 MVP has already been proven in this repository as an independent local vertical slice
-  - the current roadmap focus is Phase 2 integration with `openclaw`
-  - after Phase 2 integration is stable, the next major focus is improving MirrorBrain's own knowledge and skill quality without breaking the integration boundary
+  - Phase 1 MVP proved an independent local vertical slice
+  - Phase 2/3 explored host integration and knowledge-quality improvements
+  - Phase 4 shifts the center of gravity to a unified multi-source memory platform that serves Codex and other agent clients through APIs rather than through host-specific design
 - Core capability model:
-  - memory: captured records of authorized work activity, including browser history, viewed documents, shell interaction history, and conversation history with `openclaw`; memory is the raw or lightly processed recall layer
-  - knowledge: strongly reasoned notes synthesized from daily review workflows; knowledge must be readable by both humans and agents, and should help people review past work and trigger new ideas for future work
+  - memory: captured records of authorized work activity, including browser history, viewed documents, shell interaction history, and agent interaction traces; memory is the raw or lightly processed recall layer
+  - knowledge: strongly reasoned notes synthesized from review workflows; knowledge must be readable by both humans and agents, and should help people review past work and trigger new ideas for future work
   - skill: reusable Agent Skills distilled from repeatable workflows; skills are executable guidance artifacts for AI systems and must remain explicitly confirmable by the user before activation or execution
-- Product objective: help `openclaw` remember what the user did, summarize what the user learned, and operationalize repeatable work into safe, reviewable agent skills
+- Product objective: help users remember what they did, summarize what they learned, and operationalize repeatable work into safe, reviewable agent skills that multiple agent clients can consume
 - Source-of-truth planning docs:
   - `docs/plans/2026-03-16-mirrorbrain-design.md`
   - `docs/plans/2026-03-16-mirrorbrain-prd.md`
   - `docs/plans/2026-03-16-mirrorbrain-technical-design.md`
   - `docs/plans/2026-04-01-mirrorbrain-phase2-phase3-plan.md`
+  - `docs/plans/2026-05-12-mirrorbrain-phase4-design.md`
 
 If implementation work conflicts with these documents, update the docs first or explicitly reconcile the difference in the same change.
 
@@ -44,7 +45,7 @@ This means:
 - backend capabilities must be exposed through explicit APIs
 - frontend code must consume backend interfaces rather than embed backend logic directly
 - frontend feature areas should be designed as composable modules that can be mounted inside other applications
-- plugin-facing surfaces should be designed so `openclaw` can request memory, knowledge, and skill capabilities independently
+- API-facing surfaces should be designed so multiple agent clients can request memory, knowledge, and skill capabilities independently
 
 ## Product Capability Boundaries
 
@@ -63,16 +64,16 @@ MirrorBrain memory scope can include:
 - browser records from authorized sources
 - documents the user viewed through authorized collection paths
 - shell interaction history captured from authorized environments
-- `openclaw` conversation history and related agent interaction traces
+- authorized agent interaction traces
 
 Memory capture must remain authorization-bound, source-attributed, and reviewable by the user.
 
 Current priority rules:
 
 - Phase 2 memory integration should prioritize browser memory first
-- shell memory is the next priority after browser integration is stable enough for `openclaw`
-- `openclaw` conversation capture is not a current priority because `openclaw` already maintains its own conversation history and MirrorBrain should preserve a global-memory stance rather than biasing toward host-native traces
-- when expanding sources, prefer improvements that make retrieval more useful in `openclaw` before broadening source count
+- shell memory follows browser integration when it improves platform-wide retrieval quality
+- agent conversation capture is not the default next priority; MirrorBrain should preserve a global-memory stance rather than biasing toward any single host-native trace
+- when expanding sources, prefer improvements that make retrieval more useful across agent clients before broadening source count
 
 ### Knowledge Scope
 
@@ -86,8 +87,8 @@ Knowledge should be treated as a derived layer built from review, not as raw cap
 Current priority rules:
 
 - knowledge is primarily for human reading and secondarily for agent retrieval
-- MirrorBrain generates knowledge; `openclaw` consumes it but should not own the knowledge-generation workflow
-- after `openclaw` integration is stable, knowledge quality becomes the next major product focus
+- MirrorBrain generates knowledge; agent clients consume it but should not own the knowledge-generation workflow
+- after the platform API and retrieval surfaces are stable, knowledge quality remains a major product focus
 - the preferred durable reading unit is a topic- or problem-oriented knowledge artifact rather than a daily summary page
 - the default evolution path is for topic knowledge to grow out of repeated daily review inputs, while the presented artifact remains a rewritten current-best version with provenance and a lightweight version history
 
@@ -98,11 +99,11 @@ Skill artifacts should be treated as agent-operable workflow guidance. By defaul
 - skills are derived from repeatable workflows observed in memory and clarified through review
 - skills must be explicit artifacts, not hidden prompts embedded in unrelated code
 - skill generation, approval, and execution must preserve human confirmation boundaries
-- skill outputs should be portable enough to serve as reusable Agent Skills inside `openclaw`
+- skill outputs should be portable enough to serve as reusable Agent Skills across agent clients
 
 Current priority rules:
 
-- in `openclaw`, skill usage follows memory and knowledge integration, not the reverse
+- for agent clients, skill usage follows memory and knowledge integration, not the reverse
 - the long-term emphasis is stronger execution capability, not just static skill-library management
 - skill execution should first become useful for knowledge-work progression tasks before heavier software-operation automation
 - low-risk automation exceptions must be explicitly defined in planning docs before implementation; absent that definition, explicit confirmation remains the default boundary
@@ -111,10 +112,10 @@ Current priority rules:
 
 Unless the user explicitly changes the roadmap, treat the following sequence as the default:
 
-- Phase 2A: wrap MirrorBrain for `openclaw` plugin use and prove the minimum browser-memory demo in `openclaw` chat
-- Phase 2B: improve memory retrieval quality and `openclaw` chat usefulness, while expanding carefully from browser into shell memory
-- Phase 3: improve knowledge quality, especially topic- and problem-oriented knowledge artifacts derived from daily review
-- later phases: make skill execution progressively stronger for knowledge-work task advancement
+- Phase 4: build MirrorBrain as a unified multi-source personal memory platform with durable local workspace storage, reviewable work sessions, and project/topic knowledge articles
+- Platform API: expose stable HTTP and agent-facing capability surfaces that can be consumed by Codex and other agent clients without host-specific coupling
+- Knowledge quality: improve topic- and problem-oriented knowledge artifacts derived from reviewed work sessions
+- later phases: make skill execution progressively stronger for knowledge-work task advancement while preserving confirmation boundaries
 
 North-star ordering:
 
@@ -122,41 +123,34 @@ North-star ordering:
 - second: users accumulate high-quality knowledge over time
 - third: users offload more work to a growing personal AI capability layer
 
-## OpenClaw Integration Contract
+## Agent Client Integration Contract
 
-Until a more specific technical design is committed, Codex should treat the `openclaw` integration contract as follows:
+Until a more specific technical design is committed, Codex should treat the agent-client integration contract as follows:
 
-- MirrorBrain is an independent service with its own standalone UI and operational surface
-- MirrorBrain must still be easy to wrap as an `openclaw` plugin capability provider
-- MirrorBrain is a plugin-oriented subsystem that exposes explicit capability surfaces to `openclaw`, rather than embedding business logic ad hoc inside unrelated UI or host code
-- `openclaw` must be able to request memory, knowledge, and skill capabilities independently
-- MirrorBrain-owned business logic should live in MirrorBrain modules and services; `openclaw`-specific code should mainly adapt host APIs, events, and transport concerns
+- MirrorBrain is an independent local-first service with its own standalone UI and operational surface
+- MirrorBrain exposes explicit API capability surfaces for memory, knowledge, and skill
+- Codex and other agent clients consume MirrorBrain through those APIs rather than through host-specific business logic
+- MirrorBrain-owned business logic should live in MirrorBrain modules and services; client-specific code should mainly adapt transport, tool schemas, and presentation concerns
 - integration boundaries must be explicit and documented: API shape, event payloads, lifecycle hooks, auth context, and failure handling
-- if the host/plugin boundary is still undecided, implementation should default to a narrow API-first adapter that can support either in-process embedding or out-of-process service calls later
-- the primary transport strategy is:
-  - MirrorBrain exposes a stable HTTP service surface for independent operation, testing, and debugging
-  - `openclaw` consumes MirrorBrain through a thinner plugin-facing wrapper adapted to the host's tool or plugin model
-- for user-facing adoption, `openclaw` is the primary interaction surface; MirrorBrain's own UI is mainly a control, debug, and demonstration surface
+- if an agent-client boundary is undecided, implementation should default to a narrow API-first adapter that can support either in-process embedding or out-of-process service calls later
+- for user-facing adoption, any agent client may become an interaction surface; MirrorBrain's own UI remains the control, debug, review, and demonstration surface
 
 Minimum interface expectations for new work:
 
 - memory queries should return source-attributed records or summaries with stable identifiers
 - knowledge queries should return human-readable synthesized artifacts with enough metadata for provenance and review status
 - skill queries should return draft or approved skill artifacts with approval state and execution safety metadata
-- write operations from `openclaw` into MirrorBrain must preserve auditability, including who or what initiated the action
+- write operations from agent clients into MirrorBrain must preserve auditability, including who or what initiated the action
 
-Codex must not assume hidden host state, implicit callbacks, or undocumented cross-module coupling between `openclaw` and MirrorBrain.
+Codex must not assume hidden host state, implicit callbacks, or undocumented cross-module coupling between any specific agent client and MirrorBrain.
 
-Default interaction policy for `openclaw` integration:
+Default interaction policy for agent-client integration:
 
-- first integrated user experience: the user asks in chat what they previously did or saw, and `openclaw` uses MirrorBrain to answer
-- first integrated capability order: `memory` then `knowledge` then `skill`
-- first memory retrieval mode: user-visible chat interaction backed by explicit MirrorBrain capability calls under the hood
-- hidden or implicit retrieval can evolve later, but initial implementations should stay observable, explainable, and easy to debug
-- `openclaw` should present natural language answers using MirrorBrain results as context, with lightweight source hints by default
+- retrieval should be observable, explainable, and easy to debug
+- agent clients should present natural language answers using MirrorBrain results as context, with lightweight source hints by default
 - default chat retrieval should search memory first, optionally enrich with knowledge, and should not pull skills into ordinary retrieval responses
-- `openclaw` should consume knowledge artifacts but should not own the workflow that generates them
-- `openclaw` should consume generated skills, first through explicit selection and invocation, then later through more agent-visible recommendation flows
+- agent clients may consume knowledge artifacts, but MirrorBrain owns the workflow that generates them
+- agent clients may consume generated skills, first through explicit selection and invocation, then later through more agent-visible recommendation flows
 
 ## Authorization And Privacy Policy
 
@@ -174,7 +168,7 @@ Unless explicitly approved in planning docs, treat the following as forbidden by
 - collecting data from unauthorized apps, sites, directories, or shell contexts
 - capturing secrets, credentials, tokens, or clipboard contents as a product feature
 - executing workflows automatically based only on inferred user intent
-- exposing private memory records to `openclaw` features that do not declare a need for them
+- exposing private memory records to agent clients or features that do not declare a need for them
 
 When implementation details remain open, prefer the more restrictive privacy-preserving interpretation.
 
@@ -184,7 +178,7 @@ Codex should treat MirrorBrain artifacts as moving through explicit lifecycle st
 
 ### Memory Lifecycle
 
-- raw memory event: a source-attributed captured record from an authorized browser, document, shell, or `openclaw` interaction source
+- raw memory event: a source-attributed captured record from an authorized browser, document, shell, or authorized agent interaction source
 - candidate memory: a raw event or grouped set of events prepared for review, deduplication, ranking, or summarization
 - reviewed memory: a candidate memory that has been explicitly kept, edited, merged, or annotated by a human
 
@@ -230,16 +224,16 @@ Rules:
 
 Unless the user explicitly changes the roadmap, assume the active planning focus is:
 
-- Phase 2A: `openclaw` plugin integration and the minimum browser-memory retrieval demo
-- Phase 2B: memory retrieval quality, browser-memory cleanup and grouping, and then shell-memory expansion
-- Phase 3: topic-oriented knowledge quality improvements built from daily review
+- Phase 4: unified multi-source memory platform, work-session review, and Project -> Topic -> Knowledge Article flows
+- platform API quality: stable HTTP and agent-facing retrieval surfaces for multiple agent clients
+- knowledge quality: topic-oriented knowledge quality improvements built from reviewed work sessions
 
 Active non-goals for the current focus:
 
 - broad enterprise integrations
-- over-expanding source coverage before retrieval quality is good enough
-- shifting MirrorBrain's control plane into `openclaw`
-- treating `openclaw` conversation history as the default next source before browser and shell are solid
+- over-expanding source coverage before retrieval quality and authorization UX are good enough
+- shifting MirrorBrain's control plane into any single agent host
+- treating a single host's conversation history as the default next source before browser, shell, and source-ledger flows are solid
 - building aggressive autonomous skill execution before lower-risk boundaries are defined in updated planning docs
 
 ## Working Mode
@@ -309,9 +303,9 @@ Implementation must preserve these product constraints:
 - human-in-the-loop review for knowledge synthesis before high-value knowledge is treated as durable
 - no silent high-risk automation without an explicitly documented low-risk exception model
 - workflow skills require explicit confirmation by default
-- memory sources must remain attributable to browser, document, shell, or `openclaw` conversation origins
-- `openclaw` integration must not weaken privacy, authorization, or review boundaries
-- MirrorBrain must remain independently runnable even when optimizing for `openclaw` integration
+- memory sources must remain attributable to browser, document, shell, or authorized agent interaction origins
+- agent-client integration must not weaken privacy, authorization, or review boundaries
+- MirrorBrain must remain independently runnable even when optimizing for agent-client integration
 
 ### 4. Prefer Clear Structure
 
@@ -443,7 +437,7 @@ Each app should have a local README or corresponding document in `docs/component
 
 For Phase 1, likely app surfaces include:
 
-- a MirrorBrain backend service or plugin API surface
+- a MirrorBrain backend service or agent memory API surface
 - a review-oriented frontend app or embeddable review feature
 - optional worker processes for ingestion, ranking, or synthesis jobs
 
@@ -503,7 +497,7 @@ This is the default home for adapters that connect MirrorBrain to:
 - browser activity sources
 - document observation or import paths
 - shell history collection mechanisms
-- `openclaw` plugin APIs, conversation streams, or host-side extension points
+- agent client APIs, conversation streams, or host-side extension points
 
 ### `src/workflows/`
 
@@ -525,7 +519,7 @@ Keep workflow execution safety checks close to the execution logic, not spread a
 - Prefer names that reveal responsibility, for example:
   - `candidate-note-ranker`
   - `daily-review-knowledge-synthesizer`
-  - `openclaw-memory-plugin-api`
+  - `agent-memory-api`
   - `authorization-scope-policy`
   - `workflow-skill-draft-builder`
 
