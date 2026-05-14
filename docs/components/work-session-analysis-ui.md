@@ -105,10 +105,10 @@ Output:
    the candidate from Preview.
 8. The user publishes a generated preview knowledge item.
 9. The panel records the reviewed work session, generates a Knowledge Article
-   Draft, publishes it, refreshes the Published tree, and removes or marks the
-   preview item. After publication, the panel switches to Published so the user
-   can see the durable article under the edited Project -> Topic -> Knowledge
-   location.
+   Draft, publishes it, refreshes the Published tree, and removes the preview
+   item. After publication, the active subtab remains Preview; the user can
+   switch to Published manually to inspect the durable article under the edited
+   Project -> Topic -> Knowledge location.
 10. In Published, the user can delete one Knowledge Article. The panel deletes
     that article lineage through the API and refreshes the Published tree.
 
@@ -123,6 +123,8 @@ Output:
   Article publication requires an explicit Publish action on the preview item.
 - `Publish` moves the preview candidate out of the Preview queue and refreshes
   Published. It should not leave the same knowledge visible in both tree modes.
+- `Publish` must not switch the active subtab; the Review surface should remain
+  in Preview so the user can keep working through the queue.
 - Project name edits are applied by `Publish`; there is no standalone
   project-only keep action in this surface.
 - `Discard` removes the preview candidate after the discard review succeeds.

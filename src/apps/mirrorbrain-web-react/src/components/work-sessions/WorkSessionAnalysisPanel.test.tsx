@@ -364,11 +364,18 @@ describe('WorkSessionAnalysisPanel', () => {
     })
 
     const treeRail = screen.getByTestId('work-session-tree-rail')
-    expect(within(treeRail).getByRole('tab', { name: 'Published' }).getAttribute('aria-selected')).toBe(
+    expect(within(treeRail).getByRole('tab', { name: 'Preview' }).getAttribute('aria-selected')).toBe(
       'true',
+    )
+    expect(within(treeRail).getByRole('tab', { name: 'Published' }).getAttribute('aria-selected')).toBe(
+      'false',
     )
     expect(await screen.findByText('Published preview knowledge.')).not.toBeNull()
     expect(screen.queryByRole('button', { name: 'Publish' })).toBeNull()
+    expect(within(treeRail).queryByText('Source ledger architecture')).toBeNull()
+    expect(screen.queryByTestId('published-knowledge-panel')).toBeNull()
+
+    await user.click(within(treeRail).getByRole('tab', { name: 'Published' }))
     expect(screen.getByTestId('published-knowledge-panel').textContent).toContain(
       'Source ledger architecture',
     )
@@ -378,9 +385,6 @@ describe('WorkSessionAnalysisPanel', () => {
     expect(screen.getByTestId('published-knowledge-panel').textContent).toContain(
       expectedPreviewBody,
     )
-
-    await user.click(within(treeRail).getByRole('tab', { name: 'Preview' }))
-    expect(within(treeRail).queryByText('Source ledger architecture')).toBeNull()
   })
 
   it('deletes published knowledge from the Published panel and refreshes the tree', async () => {

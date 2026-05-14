@@ -225,7 +225,6 @@ export default function WorkSessionAnalysisPanel({
         return next
       })
       setActionFeedback('Published preview knowledge.')
-      setActiveTreeMode('published')
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
