@@ -34,15 +34,21 @@ The component owns:
 - Rendering the returned analysis window, excluded event count, compact
   candidate memory-event evidence, and generated knowledge content.
 - Rendering generated preview knowledge as a complete scrollable article body.
-  Candidate evidence remains visible as a compact list of memory-event titles
-  and source-type badges so the review queue stays source-attributed before and
-  after knowledge generation.
+  Before generation, candidate evidence is shown as a compact, deduplicated
+  list of memory-event titles and source-type badges. After generation, the
+  knowledge body replaces that evidence area so the card does not show both
+  memory events and knowledge at the same time.
 - Rendering either the top-level Preview view or the top-level Published view
   through the explicit component `mode` prop, without nested Preview/Published
   subtabs.
 - Rendering Preview as a full-width list of pending topic candidates. The
   internal grouping still derives task-level project and topic defaults, but
   Preview does not show a separate left-side directory tree.
+- Limiting each ungenerated Preview candidate to five deduplicated memory-event
+  rows by default, with a `...` expansion control that reveals five additional
+  rows per click.
+- Keeping the Preview candidate list independently scrollable so multiple
+  candidates remain reachable without browser zoom changes.
 - Rendering ungenerated Preview topics with an explicit `Generate` action
   instead of silently showing a knowledge artifact.
 - Rendering Published as Project -> Topic -> many historical Knowledge Articles
@@ -104,7 +110,7 @@ Output:
 - A rendered list of generated preview knowledge items derived from pending
   work-session candidates.
 - A full-width preview candidate list for the latest analysis window, with each
-  candidate showing compact memory-event titles and source types.
+  ungenerated candidate showing compact memory-event titles and source types.
 - A published Project -> Topic -> Knowledge tree for durable articles.
 - Explicit discard review requests sent to the service.
 - Explicit publish requests sent to the service.
@@ -123,14 +129,18 @@ Output:
    project names.
 5. The user can edit the proposed project name and inspect topic evidence
    directly through the compact memory-event list. Each row includes the event
-   title and source type such as `browser`, `files`, or `shell`.
+   title and source type such as `browser`, `files`, or `shell`. Duplicate
+   title/source-type pairs are collapsed before rendering. The first five rows
+   are shown by default, and clicking `...` reveals the next five.
 6. The user clicks `Generate` for a topic. The panel sends the full
    work-session candidate to `POST /knowledge-articles/preview`; the service
    builds a synthesis prompt from candidate evidence excerpts, including
    browser `pageContent` excerpts when available, and asks the configured LLM
    for a complete preview article with source references. If the LLM is
    unavailable, the backend returns an explicit fallback article that preserves
-   evidence excerpts and tells the user to regenerate after configuration.
+   evidence excerpts and tells the user to regenerate after configuration. Once
+   generated, the preview knowledge body replaces the memory-event list in the
+   candidate card.
 7. The user can discard the candidate. This records a discard review and removes
    the candidate from Preview.
 8. The user publishes a generated preview knowledge item.
@@ -189,11 +199,14 @@ The tests verify:
 - Preview renders as a full-width candidate list; Published renders with a
   Project -> Topic -> Knowledge hierarchy.
 - Preview candidate cards render compact memory-event title rows with
-  source-type badges.
+  source-type badges, deduplicate repeated rows, show five rows by default, and
+  expand by five more rows when the user clicks `...`.
+- Preview candidate cards render inside an independently scrollable candidate
+  list.
 - Preview topics do not expose `Publish` until the user explicitly generates
   preview knowledge.
 - Generated preview knowledge renders as a complete scrollable article body
-  with evidence excerpts and references inside the article, without a separate
+  in place of the candidate memory-event list, without a separate
   associated-memory or provenance metadata block.
 - The panel publishes preview knowledge through review, draft generation, and
   article publication API calls, using the edited project name in the publish

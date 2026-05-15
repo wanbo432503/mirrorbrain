@@ -110,15 +110,81 @@ describe('WorkSessionAnalysisPanel', () => {
     expect(screen.queryByText('Imported source ledgers and ran source tests.')).toBeNull()
     expect(screen.getByDisplayValue('mirrorbrain')).not.toBeNull()
     expect(screen.getByText('1 excluded')).not.toBeNull()
+    expect(screen.getByTestId('preview-candidate-list').className).toContain('overflow-y-auto')
     expect(screen.queryByRole('button', { name: 'Publish' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Keep as project' })).toBeNull()
 
     await user.click(screen.getByRole('button', { name: 'Generate knowledge for Phase 4 design' }))
     expect(await screen.findByRole('button', { name: 'Publish' })).not.toBeNull()
+    expect(screen.queryByText('Run tests')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Keep as project' })).toBeNull()
     expect(api.reviewWorkSessionCandidate).not.toHaveBeenCalled()
     expect(api.generateKnowledgeArticleDraft).not.toHaveBeenCalled()
     expect(api.publishKnowledgeArticleDraft).not.toHaveBeenCalled()
+  })
+
+  it('deduplicates preview memory events and expands them five at a time', async () => {
+    const candidate: WorkSessionCandidate = {
+      id: 'work-session-candidate:dedupe',
+      projectHint: 'research',
+      title: 'Deduped topic',
+      summary: 'Repeated evidence should be compact.',
+      memoryEventIds: ['event-1', 'event-dup', 'event-2', 'event-3', 'event-4', 'event-5', 'event-6'],
+      sourceTypes: ['browser'],
+      timeRange: {
+        startAt: '2026-05-12T10:00:00.000Z',
+        endAt: '2026-05-12T10:30:00.000Z',
+      },
+      relationHints: [],
+      evidenceItems: [
+        {
+          memoryEventId: 'event-1',
+          sourceType: 'browser',
+          title: 'Repeated paper',
+          excerpt: 'First copy.',
+        },
+        {
+          memoryEventId: 'event-dup',
+          sourceType: 'browser',
+          title: 'Repeated paper',
+          excerpt: 'Duplicate copy.',
+        },
+        ...Array.from({ length: 5 }, (_, index) => ({
+          memoryEventId: `event-${index + 2}`,
+          sourceType: 'browser',
+          title: `Unique event ${index + 2}`,
+          excerpt: `Unique excerpt ${index + 2}.`,
+        })),
+      ],
+      reviewState: 'pending',
+    }
+    const api = {
+      analyzeWorkSessions: vi.fn(async () => ({
+        analysisWindow: {
+          preset: 'last-6-hours' as const,
+          startAt: '2026-05-12T06:00:00.000Z',
+          endAt: '2026-05-12T12:00:00.000Z',
+        },
+        generatedAt: '2026-05-12T12:00:00.000Z',
+        candidates: [candidate],
+        excludedMemoryEventIds: [],
+      })),
+      listKnowledgeArticleTree: vi.fn(async () => ({ projects: [] })),
+    } as unknown as MirrorBrainWebAppApi
+    const user = userEvent.setup()
+
+    render(<WorkSessionAnalysisPanel api={api} mode="preview" />)
+
+    await user.click(screen.getByRole('button', { name: 'Last 6h' }))
+
+    expect(await screen.findAllByText('Repeated paper')).toHaveLength(1)
+    expect(screen.getByText('Unique event 5')).not.toBeNull()
+    expect(screen.queryByText('Unique event 6')).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: /Show 5 more memory events/ }))
+
+    expect(screen.getByText('Unique event 6')).not.toBeNull()
+    expect(screen.queryByRole('button', { name: /Show 5 more memory events/ })).toBeNull()
   })
 
   it('renders preview and published knowledge trees for the merged review flow', async () => {
